@@ -317,7 +317,7 @@
           <div class="admin-user-info">
             <div class="admin-user-details">
               <h1 class="admin-user-name">Veritas Admin</h1>
-              <p class="admin-user-role">Logged in as <%= current_user.full_name %> (<%= current_user.access_level.titleize %>)</p>
+              <p class="admin-user-role">Logged in as <%= current_user.full_name %> (<%= current_user.role.titleize %>)</p>
             </div>
             <div>
               <% if impersonating? %>

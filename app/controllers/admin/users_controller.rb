@@ -6,7 +6,6 @@ class Admin::UsersController < Admin::BaseController
   before_action :ensure_not_already_impersonating, only: [:impersonate]
   skip_before_action :authenticate_user!, only: [:stop_impersonating]
   skip_before_action :require_admin, only: [:stop_impersonating]
-  skip_before_action :ensure_ui_enabled_for_admin, only: [:stop_impersonating]
 
   def index
     @users = User.all

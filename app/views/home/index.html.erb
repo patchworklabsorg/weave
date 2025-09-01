@@ -107,9 +107,6 @@
         <%# display signed in user id %>
         <% if current_user %>
           <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
-            <img src="<%= current_user.public_avatar_url(variant: :medium) %>"
-                 alt="<%= current_user.full_name %>'s avatar"
-                 style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; margin-right: 15px; border: 2px solid #ddd;">
             <div>
               <p style="margin: 0; font-weight: bold;"><%= current_user.full_name %></p>
               <p style="margin: 0; color: #666; font-size: 14px;">ID: <%= current_user.flipper_id %></p>

@@ -12,7 +12,7 @@
             local: true,
             data: { turbo_confirm: "Are you sure you want to impersonate #{@user.full_name}?" } %>
       <% end %>
-      <%= link_to 'Back to Users', admin_users_path, 
+      <%= link_to 'Back to Users', admin_users_path,
           class: 'inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500' %>
     </div>
   </div>
@@ -38,7 +38,7 @@
           <dt class="text-sm font-medium text-gray-500">Access Level</dt>
           <dd class="text-sm">
             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= @user.admin? ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800' %>">
-              <%= @user.access_level.titleize %>
+              <%= @user.role.titleize %>
             </span>
           </dd>
         </div>

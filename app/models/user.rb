@@ -42,9 +42,9 @@
 class User < ApplicationRecord
   include AASM
 
-  # set flipper id to pd_id
+  # set flipper id to p_id
   def flipper_id
-    pd_id
+    p_id
   end
 
   has_paper_trail
@@ -65,10 +65,10 @@ class User < ApplicationRecord
   scope :active, -> { last_seen_within(30.days.ago) }
   def active? = last_seen_at && (last_seen_at >= 30.days.ago)
 
-  scope :user, -> { where(access_level: %w[user admin superadmin owner]) }
-  scope :admin, -> { where(access_level: %w[admin superadmin owner]) }
-  scope :superadmin, -> { where(access_level: %w[superadmin owner]) }
-  scope :owner, -> { where(access_level: 'owner') }
+  scope :user, -> { where(role: %w[user admin superadmin owner]) }
+  scope :admin, -> { where(role: %w[admin superadmin owner]) }
+  scope :superadmin, -> { where(role: %w[superadmin owner]) }
+  scope :owner, -> { where(role: 'owner') }
 
   validates :first_name, presence: true
   validates :last_name, presence: true
@@ -152,6 +152,11 @@ class User < ApplicationRecord
   end
 
 
+  def can_authenticate?
+    # Check if user can authenticate (not locked)
+    !locked?
+  end
+
   def can_impersonate?
     # Determines if THIS user can impersonate others
     # Only active, non-pretending admins and above can impersonate
@@ -188,6 +193,49 @@ class User < ApplicationRecord
   def unlock!
     update!(locked_at: nil)
   end
+
+  def send_magic_link
+    # Generate magic link token and set expiration
+    self.magic_link_token = SecureRandom.urlsafe_base64(32)
+    self.magic_link_expires_at = 15.minutes.from_now
+    self.magic_link_sent_at = Time.current
+    self.magic_link_used_at = nil # Clear any previous usage
+
+    if save
+      MagicLinkJob.perform_later(self)
+      true
+    else
+      Rails.logger.error "Failed to save magic link for user #{email}: #{errors.full_messages.join(', ')}"
+      false
+    end
+  end
+
+  def magic_link_valid?
+    magic_link_token.present? &&
+      magic_link_expires_at.present? &&
+      magic_link_expires_at > Time.current &&
+      magic_link_used_at.nil?
+  end
+
+  def consume_magic_link_token!
+    return false unless magic_link_valid?
+
+    self.magic_link_used_at = Time.current
+    self.magic_link_token = nil
+    self.magic_link_expires_at = nil
+    save!
+  end
+
+  def email_verified?
+    # For now, assume all users are verified since we don't have email verification
+    true
+  end
+
+  def admin?
+    # Override enum method to include owner, superadmin, and admin roles
+    %w[admin superadmin owner].include?(role)
+  end
+
 
   private
 
