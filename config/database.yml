@@ -1,0 +1,49 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 7 } %>
+  url: <%= ENV['DATABASE_URL'] %>
+
+development:
+  primary: &primary_development
+    <<: *default
+    database: patchwork-idp_development
+  queue:
+    <<: *primary_development
+    database: patchwork-idp_development_queue
+    migrations_paths: db/queue_migrate
+
+test:
+  primary: &primary_test
+    <<: *default
+    host: localhost
+    database: patchwork-idp_test
+  queue:
+    <<: *primary_test
+    host: localhost
+    database: patchwork-idp_test_queue
+    migrations_paths: db/queue_migrate
+
+production:
+  primary: &primary_production
+    <<: *default
+    host: db
+    database: patchwork-idp_production
+    username: <%= ENV['DATABASE_USER'] %>
+    password: <%= ENV['DATABASE_PASSWORD'] %>
+  queue:
+    <<: *primary_production
+    database: patchwork-idp_production_queue
+    migrations_paths: db/queue_migrate
+
+staging:
+  primary: &primary_staging
+    <<: *default
+    host: db
+    database: patchwork-idp_staging
+    username: <%= ENV['DATABASE_USER'] %>
+    password: <%= ENV['DATABASE_PASSWORD'] %>
+  queue:
+    <<: *primary_staging
+    database: patchwork-idp_staging_queue
+    migrations_paths: db/queue_migrate

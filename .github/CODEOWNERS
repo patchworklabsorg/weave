@@ -1,0 +1,16 @@
+* @patchworklabsorg/idp-commiters @patchworklabsorg/idp-engineers
+
+/config @patchworklabsorg/idp-commiters
+/db @patchworklabsorg/idp-commiters
+/.ruby-version @patchworklabsorg/idp-commiters
+/app.json @patchworklabsorg/idp-commiters
+/Aptfile @patchworklabsorg/idp-commiters
+/config.ru @patchworklabsorg/idp-commiters
+/docker* @patchworklabsorg/idp-commiters
+/Dockerfile @patchworklabsorg/idp-commiters
+/Gemfile @patchworklabsorg/idp-commiters
+/Gemfile.lock @patchworklabsorg/idp-commiters
+/package.json @patchworklabsorg/idp-commiters
+/Procfile @patchworklabsorg/idp-commiters
+/webpack.config.js @patchworklabsorg/idp-commiters
+/bun.lock @patchworklabsorg/idp-commiters
