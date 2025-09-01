@@ -100,11 +100,11 @@ class Admin::UsersController < Admin::BaseController
   def regen_pid
     old_pid = @user.p_id
     new_pid = @user.regen_pid
-    
+
     Rails.logger.info "Owner #{current_user.email} regenerated p_id for user #{@user.email}: #{old_pid} -> #{new_pid}"
-    
+
     redirect_to admin_user_path(@user), notice: "Successfully regenerated p_id from #{old_pid} to #{new_pid}"
-  rescue StandardError => e
+  rescue => e
     Rails.logger.error "Failed to regenerate p_id for user #{@user.email}: #{e.message}"
     redirect_to admin_user_path(@user), alert: "Failed to regenerate p_id: #{e.message}"
   end

@@ -109,7 +109,7 @@ class AuthController < ApplicationController
 
   def magic_link_login
     token = params[:token]
-    
+
     if token.blank?
       redirect_to login_path, alert: "Invalid magic link"
       return

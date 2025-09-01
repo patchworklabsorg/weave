@@ -6,4 +6,5 @@ class MagicLinkJob < ApplicationJob
   def perform(user)
     MagicLinkMailer.login_link(user).deliver_now
   end
+
 end
