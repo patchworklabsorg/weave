@@ -22,9 +22,14 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
-    <main class="container mx-auto mt-28 px-5 flex">
-      <%= yield %>
-    </main>
+  <body class="bg-gray-50 min-h-screen">
+    <div class="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <h1 class="text-center text-3xl font-bold text-gray-900 mb-8">Identity Provider</h1>
+        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          <%= yield %>
+        </div>
+      </div>
+    </div>
   </body>
 </html>
