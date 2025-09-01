@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 
 class Admin::UsersController < Admin::BaseController
-  before_action :set_user, only: [:show, :edit, :update, :destroy, :impersonate]
+  before_action :set_user, only: [:show, :edit, :update, :destroy, :impersonate, :regen_pid]
   before_action :ensure_can_impersonate, only: [:impersonate]
   before_action :ensure_not_already_impersonating, only: [:impersonate]
+  before_action :require_owner, only: [:regen_pid]
   skip_before_action :authenticate_user!, only: [:stop_impersonating]
   skip_before_action :require_admin, only: [:stop_impersonating]
 
@@ -96,6 +97,18 @@ class Admin::UsersController < Admin::BaseController
     end
   end
 
+  def regen_pid
+    old_pid = @user.p_id
+    new_pid = @user.regen_pid
+    
+    Rails.logger.info "Owner #{current_user.email} regenerated p_id for user #{@user.email}: #{old_pid} -> #{new_pid}"
+    
+    redirect_to admin_user_path(@user), notice: "Successfully regenerated p_id from #{old_pid} to #{new_pid}"
+  rescue StandardError => e
+    Rails.logger.error "Failed to regenerate p_id for user #{@user.email}: #{e.message}"
+    redirect_to admin_user_path(@user), alert: "Failed to regenerate p_id: #{e.message}"
+  end
+
   private
 
   def ensure_can_impersonate
@@ -112,6 +125,12 @@ class Admin::UsersController < Admin::BaseController
 
   def set_user
     @user = User.find(params[:id])
+  end
+
+  def require_owner
+    return if current_user&.owner?
+
+    redirect_to admin_users_path, alert: "Only owners can perform this action"
   end
 
   def user_params

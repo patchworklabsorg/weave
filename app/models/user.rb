@@ -39,6 +39,8 @@
 #  index_users_on_magic_link_token    (magic_link_token) UNIQUE
 #  index_users_on_pd_id               (pd_id) UNIQUE
 #
+require 'securerandom'
+
 class User < ApplicationRecord
   include AASM
 
@@ -226,6 +228,15 @@ class User < ApplicationRecord
     save!
   end
 
+  def regen_pid
+    old_pid = p_id
+    self.p_id = nil
+    generate_p_id
+    save!
+    Rails.logger.info "Regenerated p_id for user #{email}: #{old_pid} -> #{p_id}"
+    p_id
+  end
+
   def email_verified?
     # For now, assume all users are verified since we don't have email verification
     true
@@ -274,16 +285,14 @@ class User < ApplicationRecord
     errors.add(:password, "must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)") unless password.match(/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/)
   end
 
-  def generate_p_id
-    # Generates global unique ID for the user
-    # Format: PWL{random digit}{9 random hex characters}
-    # EXAMPLE: PWL5A1B2C3D
+  def generate_p_id(hex_length: 9)
+    # Generates a global unique ID for the user.
+    # Format: PWL{random digit}{hex_length random hex characters, all uppercase}
+    # Example: PWL5A1B2C3D4
 
-    random_digits = SecureRandom.hex(5) # Generates 10 hex characters
-    numeric_first = rand(0..9).to_s # The first character is a random digit
-    remaining_chars = random_digits[1..-1] # Remaining 9 characters
-
-    self.p_id ||= "PWL#{numeric_first}#{remaining_chars}"
+    numeric_first = SecureRandom.random_number(10).to_s
+    bytes_needed = (hex_length / 2.0).ceil
+    hex_chars = SecureRandom.hex(bytes_needed).upcase[0, hex_length]
+    self.p_id ||= "PWL#{numeric_first}#{hex_chars}"
   end
-
 end

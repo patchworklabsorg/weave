@@ -105,7 +105,7 @@
         border-color: rgba(82, 122, 154, 0.8);
       }
 
-      .admin-nav-item:nth-child(4) {
+      .admin-nav-item:nth-child(3) {
         border-right: 2px solid transparent;
         border-color: rgba(82, 122, 154, 0.8);
       }
@@ -284,7 +284,6 @@
         .admin-content {
           padding: 20px;
         }
-
     </style>
   </head>
 
@@ -316,7 +315,7 @@
         <div class="admin-header">
           <div class="admin-user-info">
             <div class="admin-user-details">
-              <h1 class="admin-user-name">Veritas Admin</h1>
+              <h1 class="admin-user-name">Patchwork Admin</h1>
               <p class="admin-user-role">Logged in as <%= current_user.full_name %> (<%= current_user.role.titleize %>)</p>
             </div>
             <div>
@@ -336,7 +335,6 @@
             <%= link_to "Back to User Pages", root_path,
                 class: "glass-button px-4 py-2 rounded text-sm cursor-pointer" %>
 
-
           </div>
         </div>
 
@@ -353,12 +351,6 @@
               <%= link_to admin_users_path,
                   class: "admin-nav-link #{controller_name == 'users' ? 'active' : ''}" do %>
                 Users
-              <% end %>
-            </li>
-            <li class="admin-nav-item">
-              <%= link_to admin_services_path,
-                  class: "admin-nav-link #{controller_name == 'services' ? 'active' : ''}" do %>
-                Services
               <% end %>
             </li>
             <li class="admin-nav-item">

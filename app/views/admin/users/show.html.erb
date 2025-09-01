@@ -2,7 +2,7 @@
   <div class="flex justify-between items-center mb-6">
     <div>
       <h1 class="text-2xl font-bold text-gray-900"><%= @user.full_name %></h1>
-      <p class="text-gray-600">PD ID: <%= @user.pd_id %></p>
+      <p class="text-gray-600">PWL ID: <%= @user.p_id %></p>
     </div>
     <div class="space-x-2">
       <% if @user.is_impersonatable?(current_user) && !impersonating? %>
@@ -31,8 +31,15 @@
           <dd class="text-sm text-gray-900"><%= @user.email %></dd>
         </div>
         <div>
-          <dt class="text-sm font-medium text-gray-500">Username</dt>
-          <dd class="text-sm text-gray-900"><%= @user.username %></dd>
+          <dt class="text-sm font-medium text-gray-500">P_ID</dt>
+          <dd class="text-sm text-gray-900 flex items-center justify-between">
+            <span><%= @user.p_id %></span>
+            <% if current_user.owner? %>
+              <%= button_to 'Regenerate', regen_pid_admin_user_path(@user), method: :patch,
+                  class: 'ml-2 inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500',
+                  data: { turbo_confirm: "Are you sure you want to regenerate the P_ID for #{@user.full_name}? This cannot be undone." } %>
+            <% end %>
+          </dd>
         </div>
         <div>
           <dt class="text-sm font-medium text-gray-500">Access Level</dt>

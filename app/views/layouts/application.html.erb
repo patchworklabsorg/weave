@@ -23,7 +23,7 @@
 
     <title><%= content_for(:title) || "Patchwork IDP" %></title>
     <title>
-      <%= yield(:title).concat(" ~") if content_for?(:title) %> Veritas
+      <%= yield(:title).concat(" ~") if content_for?(:title) %> Patchwork IDP
     </title>
 
     <link rel="canonical" href="https://idp.patchworklabs.org/" />
@@ -49,40 +49,39 @@
     <script src="https://unpkg.com/mapkick@0.2.6/dist/mapkick.bundle.js"></script>
 
     <style>
-    body {
-      background-image: url('<%= asset_path("frame.png") %>');
-      background-size: cover;
-      background-position: center;
-      background-attachment: fixed;
-    }
+      body {
+        background-image: url('<%= asset_path("frame.png") %>');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+      }
 
 
-    #staging-warning {
-  text-align: center;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  padding: 1rem;
-  background-color: #cf3a36;
-  color: white;
-  z-index: 1000;
-}
-
-  </style>
+      #staging-warning {
+        text-align: center;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        padding: 1rem;
+        background-color: #cf3a36;
+        color: white;
+        z-index: 1000;
+      }
+    </style>
     <%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
   </head>
 
   <body>
 
     <% if Rails.env.staging? %>
-    <%# add big warning to top of page %>
-    <div class="min-w-screen flex items-center justify-center">
-      <div id="staging-warning">
-        <button class="delete" onclick="(this.parentNode.remove())"></button>
-        This is the <b>STAGING</b> environment. Please <b>DO NOT USE for production</b>.
+      <%# add big warning to top of page %>
+      <div class="min-w-screen flex items-center justify-center">
+        <div id="staging-warning">
+          <button class="delete" onclick="(this.parentNode.remove())"></button>
+          This is the <b>STAGING</b> environment. Please <b>DO NOT USE for production</b>.
+        </div>
       </div>
-    </div>
     <% end %>
 
     <% if impersonating? %>
@@ -107,19 +106,19 @@
 
   <script>
     console.log(`%c
- .-----.
-(-------|
-(-------|
-(-------|
- '-----'
+     .-----.
+    (-------|
+    (-------|
+    (-------|
+     '-----'
 
-Patchwork Labs IDP
+    Patchwork Labs IDP
 
-🌱 Want to contribute? Start here:
-→ GitHub: https://github.com/patchworklabsorg/idp
+    🌱 Want to contribute? Start here:
+    → GitHub: https://github.com/patchworklabsorg/idp
 
-🗝 Found a security issue?
-Please report it by email: security@patchworklabs.org️
+    🗝 Found a security issue?
+    Please report it by email: security@patchworklabs.org️
 
     `, 'color: #2F2F2F; font-weight: bold;');
   </script>
