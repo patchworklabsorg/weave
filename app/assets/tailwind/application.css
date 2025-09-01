@@ -1,1 +1,36 @@
 @import "tailwindcss";
+
+@theme {
+  /* Custom Color Palette */
+  
+  /* Individual brand colors */
+  --color-deep-purple: #4B006E;
+  --color-lavender-purple: #C7B7E2;
+  --color-clean-white: #FFFFFF;
+  --color-dark-grayish-blue: #2C3440;
+  --color-near-black: #18181A;
+  
+  /* Brand color scale (50-900) */
+  --color-brand-50: #F5F0FF;   /* Very light lavender */
+  --color-brand-100: #C7B7E2;  /* Lavender purple */
+  --color-brand-200: #B8A5D9;  /* Medium lavender */
+  --color-brand-300: #A892D0;  /* Darker lavender */
+  --color-brand-400: #8B6BC2;  /* Purple-lavender */
+  --color-brand-500: #4B006E;  /* Deep purple (main brand color) */
+  --color-brand-600: #3D0058;  /* Darker deep purple */
+  --color-brand-700: #300046;  /* Very dark purple */
+  --color-brand-800: #220032;  /* Almost black purple */
+  --color-brand-900: #18181A;  /* Near-black */
+  
+  /* Neutral color scale (50-900) */
+  --color-neutral-50: #FFFFFF;   /* Clean white */
+  --color-neutral-100: #F8F9FA;  /* Very light gray */
+  --color-neutral-200: #E9ECEF;  /* Light gray */
+  --color-neutral-300: #DEE2E6;  /* Medium light gray */
+  --color-neutral-400: #CED4DA;  /* Medium gray */
+  --color-neutral-500: #6C757D;  /* Base gray */
+  --color-neutral-600: #495057;  /* Dark gray */
+  --color-neutral-700: #2C3440;  /* Dark grayish-blue */
+  --color-neutral-800: #212529;  /* Darker */
+  --color-neutral-900: #18181A;  /* Near-black */
+}
