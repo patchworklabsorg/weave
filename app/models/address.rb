@@ -77,7 +77,7 @@ class Address < ApplicationRecord
 
   PARAMS = [:nickname, :contact_name, :contact_first_name, :contact_last_name, :contact_email, :contact_phone_number, :line1, :line2,
             :line3, :city, :state, :postal_code, :country, :latitude, :longitude, :residential,
-            :supports_weekend_deliveries, :allow_partial_address].freeze
+            :supports_weekend_deliveries, :allow_partial_address, :shipping_notes].freeze
 
   def complete?
     line1? && city? && country? && postal_code?

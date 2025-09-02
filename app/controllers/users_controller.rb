@@ -56,7 +56,13 @@ class UsersController < ApplicationController
         process_cropped_image(params[:user][:cropped_image_data])
       end
 
-      if @user.update(sanitized_user_params.except(:cropped_image_data))
+      sanitized = sanitized_user_params.except(:cropped_image_data)
+      if sanitized[:billing_same_as_shipping] == "1" && sanitized[:billing_address_attributes].blank?
+        sanitized[:billing_address_attributes] = sanitized[:shipping_address_attributes].dup
+        sanitized[:billing_address_attributes].delete(:id) if sanitized[:billing_address_attributes][:id]
+      end
+
+      if @user.update(sanitized)
         redirect_to root_path, notice: "Account successfully updated!"
       else
         render :edit, status: :unprocessable_entity
@@ -152,33 +158,35 @@ class UsersController < ApplicationController
   end
 
   def sanitized_user_params
-    permitted_params = params.require(:user).permit(:first_name, :last_name, :email, :password, :password_confirmation, :cropped_image_data)
+    permitted_params = params.require(:user).permit(:first_name, :last_name, :email, :password, :password_confirmation, :cropped_image_data, :billing_same_as_shipping,
+                                                    shipping_address_attributes: Address::PARAMS + [:id],
+                                                    billing_address_attributes: Address::PARAMS + [:id])
     user_email = permitted_params[:email]
 
     begin
       # Sanitize text inputs and password fields separately
-      sanitized_params = {}
+      sanitized = {}
 
       permitted_params.each do |key, value|
         if value.is_a?(String)
           case key.to_s
           when "password", "password_confirmation"
-            sanitized_params[key] = sanitize_password(value, email: user_email)
+            sanitized[key] = sanitize_password(value, email: user_email)
           else
-            sanitized_params[key] = sanitize_input(value, email: user_email, field_name: key.to_s)
+            sanitized[key] = sanitize_input(value, email: user_email, field_name: key.to_s)
           end
         else
           # Handle file uploads and other non-string parameters
-          sanitized_params[key] = value
+          sanitized[key] = value
         end
       end
 
       # Special handling for email - ensure it's properly formatted after sanitization
-      if sanitized_params[:email].present?
-        sanitized_params[:email] = sanitized_params[:email].downcase.strip
+      if sanitized[:email].present?
+        sanitized[:email] = sanitized[:email].downcase.strip
       end
 
-      sanitized_params
+      sanitized
     rescue SecurityError => e
       # Add validation error to user instance
       @user ||= User.new
@@ -188,7 +196,9 @@ class UsersController < ApplicationController
   end
 
   def user_params
-    params.require(:user).permit(:first_name, :last_name, :email, :password, :password_confirmation)
+    params.require(:user).permit(:first_name, :last_name, :email, :password, :password_confirmation,
+                                 shipping_address_attributes: UserAddress::PARAMS + [:id],
+                                 billing_address_attributes: UserAddress::PARAMS + [:id])
   end
 
 end
