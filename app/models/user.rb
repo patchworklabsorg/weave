@@ -47,11 +47,15 @@ class User < ApplicationRecord
 
   has_many :visits, class_name: "Ahoy::Visit", dependent: :destroy
   has_many :user_sessions, class_name: "User::Session", dependent: :destroy
-  
+
   # Address associations
   has_many :addresses, as: :addressable, dependent: :destroy, class_name: "UserAddress", inverse_of: :addressable
-  has_one :shipping_address, -> { where(address_type: 'Shipping') }, as: :addressable, class_name: "UserAddress", dependent: :destroy, inverse_of: :addressable
-  has_one :billing_address, -> { where(address_type: 'Billing') }, as: :addressable, class_name: "UserAddress", dependent: :destroy, inverse_of: :addressable
+  has_one :shipping_address, -> { where(address_type: "Shipping") }, as: :addressable, class_name: "UserAddress", dependent: :destroy, inverse_of: :addressable
+  has_one :billing_address, -> { where(address_type: "Billing") }, as: :addressable, class_name: "UserAddress", dependent: :destroy, inverse_of: :addressable
+
+  accepts_nested_attributes_for :shipping_address, :billing_address, allow_destroy: true
+
+  before_save :set_address_types
 
   enum :role, {
     user: 0,
@@ -292,6 +296,11 @@ class User < ApplicationRecord
     bytes_needed = (hex_length / 2.0).ceil
     hex_chars = SecureRandom.hex(bytes_needed).upcase[0, hex_length]
     self.p_id ||= "PWL#{numeric_first}#{hex_chars}"
+  end
+
+  def set_address_types
+    shipping_address&.address_type = "Shipping" if shipping_address.present?
+    billing_address&.address_type = "Billing" if billing_address.present?
   end
 
 end

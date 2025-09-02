@@ -188,7 +188,9 @@ class UsersController < ApplicationController
   end
 
   def user_params
-    params.require(:user).permit(:first_name, :last_name, :email, :password, :password_confirmation)
+    params.require(:user).permit(:first_name, :last_name, :email, :password, :password_confirmation,
+                                 shipping_address_attributes: UserAddress::PARAMS + [:id],
+                                 billing_address_attributes: UserAddress::PARAMS + [:id])
   end
 
 end

@@ -1,0 +1,106 @@
+<div class="space-y-4">
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div>
+      <%= form.label :contact_first_name, "First Name", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.text_field :contact_first_name, 
+          class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+    </div>
+    
+    <div>
+      <%= form.label :contact_last_name, "Last Name", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.text_field :contact_last_name, 
+          class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div>
+      <%= form.label :contact_email, "Email", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.email_field :contact_email, 
+          class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+    </div>
+    
+    <div>
+      <%= form.label :contact_phone_number, "Phone Number", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.telephone_field :contact_phone_number, 
+          class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+    </div>
+  </div>
+
+  <div>
+    <%= form.label :line1, "Address Line 1", class: "block text-sm font-medium text-gray-700" %>
+    <%= form.text_field :line1, 
+        class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+  </div>
+
+  <div>
+    <%= form.label :line2, "Address Line 2 (Optional)", class: "block text-sm font-medium text-gray-700" %>
+    <%= form.text_field :line2, 
+        class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div>
+      <%= form.label :city, "City", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.text_field :city, 
+          class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+    </div>
+    
+    <div>
+      <%= form.label :state, "State/Province", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.text_field :state, 
+          class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+    </div>
+    
+    <div>
+      <%= form.label :postal_code, "ZIP/Postal Code", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.text_field :postal_code, 
+          class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+    </div>
+  </div>
+
+  <div>
+    <%= form.label :country, "Country", class: "block text-sm font-medium text-gray-700" %>
+    <%= form.select :country, 
+        options_for_select([
+          ['United States', 'US'],
+          ['Canada', 'CA'],
+          ['United Kingdom', 'GB'],
+          ['Australia', 'AU'],
+          ['Germany', 'DE'],
+          ['France', 'FR'],
+          ['Japan', 'JP'],
+          ['Other', '']
+        ], form.object&.country), 
+        { prompt: "Select a country" },
+        class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+  </div>
+
+  <!-- the real meat and potatoes -->
+  <% if address_type == "shipping" %>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div>
+        <label class="inline-flex items-center">
+          <%= form.check_box :residential, class: "form-checkbox h-4 w-4 text-indigo-600" %>
+          <span class="ml-2 text-sm text-gray-700">Residential address</span>
+        </label>
+      </div>
+      
+      <div>
+        <label class="inline-flex items-center">
+          <%= form.check_box :supports_weekend_deliveries, class: "form-checkbox h-4 w-4 text-indigo-600" %>
+          <span class="ml-2 text-sm text-gray-700">Weekend deliveries OK</span>
+        </label>
+      </div>
+    </div>
+
+    <div>
+      <%= form.label :shipping_notes, "Shipping Notes", class: "block text-sm font-medium text-gray-700" %>
+      <p class="text-xs text-gray-500 mb-1">Special instructions for delivery (door codes, gate access, etc.)</p>
+      <%= form.text_area :shipping_notes, 
+          rows: 3,
+          placeholder: "e.g., Ring doorbell twice, use gate code 1234, leave at side door",
+          class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+    </div>
+  <% end %>
+</div>

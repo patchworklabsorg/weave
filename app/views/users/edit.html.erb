@@ -1,0 +1,108 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-2xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Edit Profile</h1>
+        <p class="text-gray-600">Update your account information and addresses</p>
+      </div>
+      <%= link_to 'Back to Profile', profile_path, 
+          class: 'inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50' %>
+    </div>
+
+    <%= form_with(model: @user, url: profile_path, method: :patch, local: true, class: "space-y-6") do |form| %>
+      <% if @user.errors.any? %>
+        <div class="bg-red-50 border border-red-200 rounded-md p-4">
+          <div class="flex">
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-red-800">There were <%= pluralize(@user.errors.count, "error") %> with your submission:</h3>
+              <div class="mt-2 text-sm text-red-700">
+                <ul role="list" class="list-disc space-y-1 pl-5">
+                  <% @user.errors.full_messages.each do |message| %>
+                    <li><%= message %></li>
+                  <% end %>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
+      <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Personal Information</h2>
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div>
+            <%= form.label :first_name, class: "block text-sm font-medium text-gray-700" %>
+            <%= form.text_field :first_name, 
+                class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+          </div>
+
+          <div>
+            <%= form.label :last_name, class: "block text-sm font-medium text-gray-700" %>
+            <%= form.text_field :last_name, 
+                class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+          </div>
+
+          <div class="sm:col-span-2">
+            <%= form.label :email, class: "block text-sm font-medium text-gray-700" %>
+            <%= form.email_field :email, 
+                class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Shipping Address</h2>
+        <%= form.fields_for :shipping_address, (@user.shipping_address || @user.build_shipping_address) do |address_form| %>
+          <%= render "address_form", form: address_form, address_type: "shipping" %>
+        <% end %>
+      </div>
+
+      <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Billing Address</h2>
+        <div class="mb-4">
+          <label class="inline-flex items-center">
+            <input type="checkbox" id="sameas" class="form-checkbox h-4 w-4 text-indigo-600">
+            <span class="ml-2 text-sm text-gray-700">Actually, it is the same as the shipping!</span>
+          </label>
+        </div>
+        <%= form.fields_for :billing_address, (@user.billing_address || @user.build_billing_address) do |address_form| %>
+          <%= render "address_form", form: address_form, address_type: "billing" %>
+        <% end %>
+      </div>
+
+      <div class="flex justify-end space-x-3">
+        <%= link_to 'Cancel', profile_path, 
+            class: 'px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50' %>
+        <%= form.submit "Save", 
+            class: 'px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500' %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // inline js fuck logic
+  const sameas = document.getElementById('sameas');
+  const sin = document.querySelectorAll('[name*="shipping_address"]');
+  const bin = document.querySelectorAll('[name*="billing_address"]');
+
+  sameas.addEventListener('change', function() {
+    if (this.checked) {
+      sin.forEach((si, index) => {
+        const bi = bin[index];
+        if (bi) {
+          bi.value = si.value;
+          bi.readOnly = true;
+          bi.classList.add('bg-gray-100');
+        }
+      });
+    } else {
+      bin.forEach(bi => {
+        bi.readOnly = false;
+        bi.classList.remove('bg-gray-100');
+      });
+    }
+  });
+});
+</script>
