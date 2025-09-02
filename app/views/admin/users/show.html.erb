@@ -1,10 +1,26 @@
 <div class="container mx-auto px-4 py-8">
+  <% if @user.birthday.present? && @user.birthday.month == Date.current.month && @user.birthday.day == Date.current.day %>
+    <div class="bg-gradient-to-r from-pink-500 to-violet-500 rounded-lg p-4 mb-6">
+      <div class="flex items-center">
+        <div class="text-white">
+          <div class="text-2xl">🎉</div>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-lg font-medium text-white">Happy Birthday!</h3>
+          <p class="text-pink-100">It's <%= @user.first_name %>'s birthday today!</p>
+        </div>
+      </div>
+    </div>
+  <% end %>
+  
   <div class="flex justify-between items-center mb-6">
     <div>
       <h1 class="text-2xl font-bold text-gray-900"><%= @user.full_name %></h1>
       <p class="text-gray-600">PWL ID: <%= @user.p_id %></p>
     </div>
     <div class="space-x-2">
+      <%= link_to 'Edit User', edit_admin_user_path(@user),
+          class: 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500' %>
       <% if @user.is_impersonatable?(current_user) && !impersonating? %>
         <%= button_to 'Impersonate', impersonate_admin_user_path(@user), method: :post,
             class: 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500',
@@ -30,6 +46,12 @@
           <dt class="text-sm font-medium text-gray-500">Email</dt>
           <dd class="text-sm text-gray-900"><%= @user.email %></dd>
         </div>
+        <% if @user.birthday.present? %>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Birthday</dt>
+            <dd class="text-sm text-gray-900"><%= @user.birthday.strftime("%B %d, %Y") %></dd>
+          </div>
+        <% end %>
         <div>
           <dt class="text-sm font-medium text-gray-500">P_ID</dt>
           <dd class="text-sm text-gray-900 flex items-center justify-between">

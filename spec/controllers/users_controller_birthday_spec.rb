@@ -28,24 +28,38 @@ RSpec.describe UsersController, type: :controller do
         }
       end
 
-      it "allows setting a birthday" do
+      it "allows setting a birthday initially" do
         patch :update, params: birthday_params
         expect(response).to have_http_status(:found)
         expect(user.reload.birthday).to eq(Date.parse("1990-01-15"))
       end
 
-      it "allows clearing a birthday" do
+      it "prevents changing birthday once it's set" do
         user.update!(birthday: Date.parse("1990-01-15"))
         
+        change_birthday_params = birthday_params.dup
+        change_birthday_params[:user][:birthday] = "1995-05-20"
+        
+        patch :update, params: change_birthday_params
+        expect(response).to have_http_status(:found)
+        # Birthday should remain unchanged
+        expect(user.reload.birthday).to eq(Date.parse("1990-01-15"))
+      end
+
+      it "ignores birthday parameter when already set" do
+        user.update!(birthday: Date.parse("1990-01-15"))
+        
+        # Try to clear birthday (should be ignored)
         clear_birthday_params = birthday_params.dup
         clear_birthday_params[:user][:birthday] = ""
         
         patch :update, params: clear_birthday_params
         expect(response).to have_http_status(:found)
-        expect(user.reload.birthday).to be_nil
+        # Birthday should remain unchanged
+        expect(user.reload.birthday).to eq(Date.parse("1990-01-15"))
       end
 
-      it "accepts valid date formats" do
+      it "accepts valid date formats for initial setting" do
         patch :update, params: birthday_params
         expect(response).to have_http_status(:found)
         expect(user.reload.birthday).to be_a(Date)

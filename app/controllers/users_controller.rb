@@ -186,6 +186,11 @@ class UsersController < ApplicationController
         sanitized[:email] = sanitized[:email].downcase.strip
       end
 
+      # Prevent birthday changes if already set (only allow initial setting)
+      if @user&.birthday.present? && sanitized[:birthday].present?
+        sanitized.delete(:birthday)
+      end
+
       sanitized
     rescue SecurityError => e
       # Add validation error to user instance

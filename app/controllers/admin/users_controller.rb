@@ -44,7 +44,7 @@ class Admin::UsersController < Admin::BaseController
 
   def update
     if @user.update(user_params)
-      redirect_to admin_users_path, notice: "User was successfully updated."
+      redirect_to admin_user_path(@user), notice: "User was successfully updated."
     else
       render :edit, status: :unprocessable_entity
     end
@@ -134,7 +134,7 @@ class Admin::UsersController < Admin::BaseController
   end
 
   def user_params
-    params.require(:user).permit(:first_name, :last_name, :email, :access_level, :password, :password_confirmation)
+    params.require(:user).permit(:first_name, :last_name, :email, :access_level, :password, :password_confirmation, :birthday)
   end
 
 end

@@ -32,15 +32,21 @@ RSpec.feature "User birthday management", type: :feature do
     expect(page).not_to have_content("Birthday")
   end
 
-  scenario "User can edit their birthday" do
+  scenario "User can set birthday initially but not change it" do
+    # First visit - should show birthday field
     visit edit_profile_path
     
     expect(page).to have_field("Birthday")
+    expect(page).to have_content("Birthday can only be set once")
     
-    fill_in "Birthday", with: "1990-01-15"
+    # Simulate setting birthday (in real app this would submit form)
+    user.update!(birthday: Date.parse("1990-01-15"))
     
-    # Note: This test would require the full Rails environment to work properly
-    # In a real test, we would click save and verify the change
-    expect(page).to have_field("Birthday", with: "1990-01-15")
+    # Second visit - should show read-only birthday
+    visit edit_profile_path
+    
+    expect(page).not_to have_field("Birthday")
+    expect(page).to have_content("January 15, 1990")
+    expect(page).to have_content("Birthday cannot be changed")
   end
 end
