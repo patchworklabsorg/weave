@@ -61,18 +61,8 @@
 
   <div>
     <%= form.label :country, "Country", class: "block text-sm font-medium text-gray-700" %>
-    <%= form.select :country, 
-        options_for_select([
-          ['United States', 'US'],
-          ['Canada', 'CA'],
-          ['United Kingdom', 'GB'],
-          ['Australia', 'AU'],
-          ['Germany', 'DE'],
-          ['France', 'FR'],
-          ['Japan', 'JP'],
-          ['Other', '']
-        ], form.object&.country), 
-        { prompt: "Select a country" },
+    <%= form.text_field :country, 
+        placeholder: "e.g., US, GB, CA",
         class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
   </div>
 
