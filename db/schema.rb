@@ -10,13 +10,14 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_15_190334) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_01_230619) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
 
   # Custom types defined in this database.
   # Note that some types may not work with other database engines. Be careful if changing database.
+  create_enum "address_type", ["Venue", "Shipping", "Loading Dock", "Billing"]
   create_enum "status", ["active", "suspended", "deactivated"]
 
   create_table "active_storage_attachments", force: :cascade do |t|
@@ -45,6 +46,37 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_15_190334) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "addresses", force: :cascade do |t|
+    t.string "type", default: "Address", null: false
+    t.string "nickname"
+    t.string "contact_name"
+    t.string "contact_first_name"
+    t.string "contact_last_name"
+    t.string "contact_email"
+    t.string "contact_phone_number"
+    t.enum "address_type", default: "Shipping", null: false, enum_type: "address_type"
+    t.string "line1"
+    t.string "line2"
+    t.string "line3"
+    t.string "city"
+    t.string "state"
+    t.string "country", limit: 2
+    t.string "postal_code"
+    t.float "latitude"
+    t.float "longitude"
+    t.boolean "residential", default: false, null: false
+    t.boolean "supports_weekend_deliveries", default: false, null: false
+    t.string "addressable_type", null: false
+    t.bigint "addressable_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["addressable_id"], name: "index_addresses_on_addressable_id"
+    t.index ["addressable_type", "addressable_id", "type", "address_type"], name: "unique_address_per_addressable_type_and_address_type", unique: true
+    t.index ["addressable_type", "addressable_id"], name: "index_addresses_on_addressable"
+    t.index ["addressable_type"], name: "index_addresses_on_addressable_type"
+    t.index ["type"], name: "index_addresses_on_type"
   end
 
   create_table "ahoy_clicks", force: :cascade do |t|
@@ -375,6 +407,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_15_190334) do
     t.datetime "magic_link_expires_at"
     t.datetime "magic_link_sent_at"
     t.datetime "magic_link_used_at"
+    t.date "birthday"
+    t.string "phone_number"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["magic_link_token"], name: "index_users_on_magic_link_token", unique: true
     t.index ["p_id"], name: "index_users_on_p_id", unique: true

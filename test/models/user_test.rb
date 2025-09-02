@@ -6,6 +6,7 @@
 #
 #  id                       :bigint           not null, primary key
 #  acknowledged_over_13_at  :datetime
+#  birthday                 :date
 #  email                    :string           not null
 #  first_name               :string           not null
 #  last_name                :string           not null
@@ -15,6 +16,7 @@
 #  magic_link_token         :string
 #  magic_link_used_at       :datetime
 #  password_digest          :string           not null
+#  phone_number             :string
 #  role                     :integer          default("user"), not null
 #  session_duration_seconds :integer          default(2592000), not null
 #  slack_joined_at          :datetime

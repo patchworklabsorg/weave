@@ -2,11 +2,13 @@
 
 class CreateAddresses < ActiveRecord::Migration[8.0]
   def change
-    create_enum 'address_type', ['Venue', 'Shipping', 'Loading Dock']
+    create_enum 'address_type', ['Venue', 'Shipping', 'Loading Dock', 'Billing']
 
     create_table :addresses do |t|
+      t.string :type, null: false, default: 'Address'
       t.string :nickname
 
+      t.string :contact_name
       t.string :contact_first_name
       t.string :contact_last_name
       t.string :contact_email
@@ -28,12 +30,16 @@ class CreateAddresses < ActiveRecord::Migration[8.0]
       t.boolean :residential, default: false, null: false
       t.boolean :supports_weekend_deliveries, default: false, null: false
 
-      t.references :addressable, polymorphic: true, null: false, type: :uuid
+      t.references :addressable, polymorphic: true, null: false
 
       t.timestamps
     end
 
     add_index :addresses, :addressable_id
     add_index :addresses, :addressable_type
+    add_index :addresses, :type
+    add_index :addresses, [:addressable_type, :addressable_id, :type, :address_type], 
+      unique: true, 
+      name: 'unique_address_per_addressable_type_and_address_type'
   end
 end

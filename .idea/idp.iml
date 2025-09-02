@@ -80,6 +80,7 @@
     <orderEntry type="library" scope="PROVIDED" name="connection_pool (v2.5.4, mise: 3.4.3) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="console1984 (v0.2.2, mise: 3.4.3) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="cose (v1.3.1, mise: 3.4.3) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="countries (v5.7.2, mise: 3.4.3) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="crass (v1.0.6, mise: 3.4.3) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="css_parser (v1.21.1, mise: 3.4.3) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="csv (v3.3.5, mise: 3.4.3) [gem]" level="application" />
@@ -172,6 +173,7 @@
     <orderEntry type="library" scope="PROVIDED" name="parser (v3.3.9.0, mise: 3.4.3) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="pg (v1.6.1, mise: 3.4.3) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="pg_search (v2.3.7, mise: 3.4.3) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="phonelib (v0.10.6, mise: 3.4.3) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="postmark (v1.25.1, mise: 3.4.3) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="postmark-rails (v0.22.1, mise: 3.4.3) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="pp (v0.6.2, mise: 3.4.3) [gem]" level="application" />
@@ -264,6 +266,7 @@
     <orderEntry type="library" scope="PROVIDED" name="tpm-key_attestation (v0.14.1, mise: 3.4.3) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="turbo-rails (v2.0.16, mise: 3.4.3) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="tzinfo (v2.0.6, mise: 3.4.3) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="unaccent (v0.4.0, mise: 3.4.3) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="unicode-display_width (v3.1.5, mise: 3.4.3) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="unicode-emoji (v4.0.4, mise: 3.4.3) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="uniform_notifier (v1.18.0, mise: 3.4.3) [gem]" level="application" />
