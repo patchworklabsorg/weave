@@ -47,11 +47,11 @@ class User < ApplicationRecord
 
   has_many :visits, class_name: "Ahoy::Visit", dependent: :destroy
   has_many :user_sessions, class_name: "User::Session", dependent: :destroy
-  
+
   # Address associations
   has_many :addresses, as: :addressable, dependent: :destroy, class_name: "UserAddress", inverse_of: :addressable
-  has_one :shipping_address, -> { where(address_type: 'Shipping') }, as: :addressable, class_name: "UserAddress", dependent: :destroy, inverse_of: :addressable
-  has_one :billing_address, -> { where(address_type: 'Billing') }, as: :addressable, class_name: "UserAddress", dependent: :destroy, inverse_of: :addressable
+  has_one :shipping_address, -> { where(address_type: "Shipping") }, as: :addressable, class_name: "UserAddress", dependent: :destroy, inverse_of: :addressable
+  has_one :billing_address, -> { where(address_type: "Billing") }, as: :addressable, class_name: "UserAddress", dependent: :destroy, inverse_of: :addressable
 
   enum :role, {
     user: 0,
