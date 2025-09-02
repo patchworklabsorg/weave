@@ -104,13 +104,6 @@
               <% end %>
               <%= @user.shipping_address.city %>, <%= @user.shipping_address.state %> <%= @user.shipping_address.postal_code %><br>
               <%= @user.shipping_address.country_name %>
-              
-              <% if @user.shipping_address.shipping_notes.present? %>
-                <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
-                  <p class="text-sm font-medium text-blue-800">Delivery Instructions:</p>
-                  <p class="text-sm text-blue-700 mt-1"><%= @user.shipping_address.shipping_notes %></p>
-                </div>
-              <% end %>
             </div>
           </div>
         <% end %>
