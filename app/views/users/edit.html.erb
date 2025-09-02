@@ -10,6 +10,7 @@
     </div>
 
     <%= form_with(model: @user, url: profile_path, method: :patch, local: true, class: "space-y-6") do |form| %>
+      <%= form.hidden_field :billing_same_as_shipping %>
       <% if @user.errors.any? %>
         <div class="bg-red-50 border border-red-200 rounded-md p-4">
           <div class="flex">
@@ -39,7 +40,7 @@
         <div class="mb-4">
           <label class="inline-flex items-center">
             <input type="checkbox" id="sameas" class="form-checkbox h-4 w-4 text-indigo-600">
-            <span class="ml-2 text-sm text-gray-700">Actually, it is the same as the shipping!</span>
+            <span class="ml-2 text-sm text-gray-700">Billing address same as shipping</span>
           </label>
         </div>
         <%= form.fields_for :billing_address, (@user.billing_address || @user.build_billing_address) do |address_form| %>
@@ -63,23 +64,36 @@ document.addEventListener('DOMContentLoaded', function() {
   const sameas = document.getElementById('sameas');
   const sin = document.querySelectorAll('[name*="shipping_address"]');
   const bin = document.querySelectorAll('[name*="billing_address"]');
+  const originalNames = Array.from(bin).map(bi => bi.name);
 
   sameas.addEventListener('change', function() {
+    document.getElementById('user_billing_same_as_shipping').value = this.checked ? '1' : '0';
     if (this.checked) {
-      sin.forEach((si, index) => {
-        const bi = bin[index];
-        if (bi) {
-          bi.value = si.value;
-          bi.readOnly = true;
-          bi.classList.add('bg-gray-100');
-        }
+      bin.forEach((bi, index) => {
+        bi.name = '';
+        bi.readOnly = true;
+        bi.classList.add('bg-gray-100');
       });
     } else {
-      bin.forEach(bi => {
+      bin.forEach((bi, index) => {
+        bi.name = originalNames[index];
         bi.readOnly = false;
         bi.classList.remove('bg-gray-100');
       });
     }
   });
+
+  let allSame = true;
+  sin.forEach((si, index) => {
+    const bi = bin[index];
+    if (bi && si.value !== bi.value) {
+      allSame = false;
+    }
+  });
+  if (allSame && sin.length > 0) {
+    sameas.checked = true;
+    document.getElementById('user_billing_same_as_shipping').value = '1';
+    sameas.dispatchEvent(new Event('change'));
+  }
 });
 </script>
