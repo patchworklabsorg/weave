@@ -1,46 +1,63 @@
 <div class="container mx-auto px-4 py-8">
   <div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+    <h1 class="text-2xl font-bold text-near-black">Admin Dashboard</h1>
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
     <!-- Stats Cards -->
-    <div class="bg-white overflow-hidden shadow rounded-lg">
+    <div class="bg-clean-white overflow-hidden shadow-lg shadow-brand-500/10 rounded-lg border border-lavender-purple/20">
       <div class="p-5">
         <div class="flex items-center">
           <div class="flex-shrink-0">
-            <div class="text-lg font-medium text-gray-500">Total Users</div>
+            <div class="text-lg font-medium text-dark-grayish-blue">Total Users</div>
           </div>
         </div>
-        <div class="mt-1 text-3xl font-semibold text-gray-900">
+        <div class="mt-1 text-3xl font-semibold text-deep-purple">
           <%= @users_count %>
         </div>
       </div>
     </div>
 
-    <div class="bg-white overflow-hidden shadow rounded-lg">
+    <div class="bg-clean-white overflow-hidden shadow-lg shadow-brand-500/10 rounded-lg border border-lavender-purple/20">
       <div class="p-5">
         <div class="flex items-center">
           <div class="flex-shrink-0">
-            <div class="text-lg font-medium text-gray-500">Admins</div>
+            <div class="text-lg font-medium text-dark-grayish-blue">Admins</div>
           </div>
         </div>
-        <div class="mt-1 text-3xl font-semibold text-gray-900">
+        <div class="mt-1 text-3xl font-semibold text-deep-purple">
           <%= @admin_count %>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-clean-white overflow-hidden shadow-lg shadow-brand-500/10 rounded-lg border border-lavender-purple/20">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="text-lg font-medium text-dark-grayish-blue">Active Sessions</div>
+          </div>
+        </div>
+        <div class="mt-1 text-3xl font-semibold text-deep-purple">
+          <%= User.currently_online.count %>
         </div>
       </div>
     </div>
   </div>
 
     <!-- Quick Actions -->
-    <div class="bg-white shadow rounded-lg">
+    <div class="bg-clean-white shadow-lg shadow-brand-500/10 rounded-lg border border-lavender-purple/20">
       <div class="px-4 py-5 sm:p-6">
-        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Quick Actions</h3>
+        <h3 class="text-lg leading-6 font-medium text-near-black mb-4">Quick Actions</h3>
         <div class="space-y-2">
           <%= link_to "Manage Users", admin_users_path,
-              class: "block w-full text-left px-4 py-2 text-sm text-blue-500 hover:bg-blue-50 rounded" %>
-          <%= link_to "Query Database Data", admin_blazer_path,
-              class: "block w-full text-left px-4 py-2 text-sm text-blue-500 hover:bg-blue-50 rounded" %>
+              class: "block w-full text-left px-4 py-2 text-sm text-deep-purple hover:bg-lavender-purple/20 hover:text-brand-600 rounded transition-colors" %>
+          <%= link_to "OAuth Applications", admin_oauth_applications_path,
+              class: "block w-full text-left px-4 py-2 text-sm text-deep-purple hover:bg-lavender-purple/20 hover:text-brand-600 rounded transition-colors" %>
+          <%= link_to "Query Database Data", '/admin/blazer',
+              class: "block w-full text-left px-4 py-2 text-sm text-deep-purple hover:bg-lavender-purple/20 hover:text-brand-600 rounded transition-colors" %>
+          <%= link_to "Feature Flags", '/admin/flipper',
+              class: "block w-full text-left px-4 py-2 text-sm text-deep-purple hover:bg-lavender-purple/20 hover:text-brand-600 rounded transition-colors" %>
         </div>
       </div>
     </div>

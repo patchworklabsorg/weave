@@ -61,8 +61,8 @@
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
         border-radius: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(199, 183, 226, 0.4);
+        box-shadow: 0 8px 32px rgba(75, 0, 110, 0.15);
         width: 100%;
         max-width: 1200px;
         margin-top: 20px;
@@ -70,12 +70,12 @@
       }
 
       .admin-header {
-        background: rgba(255, 255, 255, 0.4);
+        background: linear-gradient(135deg, rgba(199, 183, 226, 0.3) 0%, rgba(255, 255, 255, 0.5) 100%);
         backdrop-filter: blur(5px);
         -webkit-backdrop-filter: blur(5px);
-        color: #1f2937;
+        color: #18181A;
         padding: 20px 30px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+        border-bottom: 1px solid rgba(199, 183, 226, 0.4);
         text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
       }
 
@@ -83,7 +83,7 @@
         background: rgba(255, 255, 255, 0.4);
         backdrop-filter: blur(5px);
         -webkit-backdrop-filter: blur(5px);
-        border-bottom: 2px solid rgba(0, 0, 0, 0.15);
+        border-bottom: 2px solid rgba(199, 183, 226, 0.3);
         padding: 0;
       }
 
@@ -97,23 +97,23 @@
 
       .admin-nav-item {
         margin: 0;
-        border-right: 1px solid rgba(82, 122, 154, 0.8);
+        border-right: 1px solid rgba(199, 183, 226, 0.4);
       }
 
       .admin-nav-item:first-child {
         border-left: 2px solid transparent;
-        border-color: rgba(82, 122, 154, 0.8);
+        border-color: rgba(199, 183, 226, 0.4);
       }
 
       .admin-nav-item:last-child {
         border-right: 2px solid transparent;
-        border-color: rgba(82, 122, 154, 0.8);
+        border-color: rgba(199, 183, 226, 0.4);
       }
 
       .admin-nav-link {
         display: block;
         padding: 12px 24px;
-        color: #374151;
+        color: #2C3440;
         text-decoration: none;
         border-bottom: 3px solid transparent;
         transition: all 0.3s ease;
@@ -129,7 +129,7 @@
         top: 10%;
         height: 80%;
         width: 1px;
-        background: rgba(0, 0, 0, 0.15);
+        background: rgba(199, 183, 226, 0.3);
         transition: all 0.3s ease;
       }
 
@@ -139,16 +139,16 @@
 
       .admin-nav-link:hover,
       .admin-nav-link.active {
-        color: white;
-        background: #527a9a;
-        border-bottom-color: transparent;
-        box-shadow: none;
+        color: #2C3440;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(199, 183, 226, 0.1) 100%);
+        border-bottom-color: #4B006E;
+        box-shadow: 0 2px 8px rgba(75, 0, 110, 0.1);
       }
 
       .admin-nav-link:hover::after,
       .admin-nav-link.active::after {
-        background: rgba(0, 0, 0, 0.25);
-        box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+        background: rgba(199, 183, 226, 0.5);
+        box-shadow: 0 0 4px rgba(75, 0, 110, 0.2);
       }
 
       .admin-content {
@@ -222,8 +222,8 @@
         background: rgba(255, 255, 255, 0.4) !important;
         backdrop-filter: blur(5px) !important;
         -webkit-backdrop-filter: blur(5px) !important;
-        border: 2px solid rgba(82, 122, 154, 1) !important;
-        color: #1f2937 !important;
+        border: 2px solid #4B006E !important;
+        color: #2C3440 !important;
         text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7) !important;
         transition: all 0.3s ease !important;
         position: relative !important;
@@ -232,11 +232,12 @@
       }
 
       .glass-button:hover {
-        background: rgba(255, 255, 255, 0.6) !important;
-        border-color: rgba(0, 0, 0, 0.5) !important;
+        background: linear-gradient(135deg, #4B006E 0%, #3D0058 100%) !important;
+        border-color: #C7B7E2 !important;
         transform: translateY(-1px) !important;
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
-        color: #111827 !important;
+        box-shadow: 0 6px 16px rgba(75, 0, 110, 0.3) !important;
+        color: #FFFFFF !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
       }
 
       .admin-user-info {
