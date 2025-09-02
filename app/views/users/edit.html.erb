@@ -29,6 +29,43 @@
       <% end %>
 
       <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Personal Information</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <%= form.label :first_name, class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= form.text_field :first_name, 
+                class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          </div>
+          <div>
+            <%= form.label :last_name, class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= form.text_field :last_name, 
+                class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          </div>
+          <div>
+            <%= form.label :email, class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= form.email_field :email, 
+                class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          </div>
+          <% if @user.birthday.blank? %>
+            <div>
+              <%= form.label :birthday, class: "block text-sm font-medium text-gray-700 mb-1" %>
+              <%= form.date_field :birthday, 
+                  class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+              <p class="mt-1 text-xs text-gray-500">Birthday can only be set once. Contact an administrator to change it later.</p>
+            </div>
+          <% else %>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Birthday</label>
+              <div class="block w-full rounded-md border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                <%= @user.birthday.strftime("%B %d, %Y") %>
+              </div>
+              <p class="mt-1 text-xs text-gray-500">Birthday cannot be changed. Contact an administrator if you need to update it.</p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="bg-white shadow rounded-lg p-6">
         <h2 class="text-lg font-medium text-gray-900 mb-4">Shipping Address</h2>
         <%= form.fields_for :shipping_address, (@user.shipping_address || @user.build_shipping_address) do |address_form| %>
           <%= render "address_form", form: address_form, address_type: "shipping" %>

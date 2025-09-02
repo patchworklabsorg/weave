@@ -158,7 +158,7 @@ class UsersController < ApplicationController
   end
 
   def sanitized_user_params
-    permitted_params = params.require(:user).permit(:first_name, :last_name, :email, :password, :password_confirmation, :cropped_image_data, :billing_same_as_shipping,
+    permitted_params = params.require(:user).permit(:first_name, :last_name, :email, :password, :password_confirmation, :birthday, :cropped_image_data, :billing_same_as_shipping,
                                                     shipping_address_attributes: Address::PARAMS + [:id],
                                                     billing_address_attributes: Address::PARAMS + [:id])
     user_email = permitted_params[:email]
@@ -186,6 +186,11 @@ class UsersController < ApplicationController
         sanitized[:email] = sanitized[:email].downcase.strip
       end
 
+      # Prevent birthday changes if already set (only allow initial setting)
+      if @user&.birthday.present? && sanitized[:birthday].present?
+        sanitized.delete(:birthday)
+      end
+
       sanitized
     rescue SecurityError => e
       # Add validation error to user instance
@@ -196,7 +201,7 @@ class UsersController < ApplicationController
   end
 
   def user_params
-    params.require(:user).permit(:first_name, :last_name, :email, :password, :password_confirmation,
+    params.require(:user).permit(:first_name, :last_name, :email, :password, :password_confirmation, :birthday,
                                  shipping_address_attributes: UserAddress::PARAMS + [:id],
                                  billing_address_attributes: UserAddress::PARAMS + [:id])
   end

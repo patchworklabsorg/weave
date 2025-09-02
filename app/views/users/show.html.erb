@@ -23,6 +23,12 @@
           <dt class="text-sm font-medium text-gray-500">Email</dt>
           <dd class="text-sm text-gray-900"><%= @user.email %></dd>
         </div>
+        <% if @user.birthday.present? %>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Birthday</dt>
+            <dd class="text-sm text-gray-900"><%= @user.birthday.strftime("%B %d, %Y") %></dd>
+          </div>
+        <% end %>
         <div>
           <dt class="text-sm font-medium text-gray-500">Username</dt>
           <dd class="text-sm text-gray-900"><%= @user.username %></dd>
