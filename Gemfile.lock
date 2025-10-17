@@ -424,7 +424,7 @@ GEM
       date
       stringio
     public_suffix (6.0.2)
-    puma (6.6.1)
+    puma (7.1.0)
       nio4r (~> 2.0)
     query_count (1.1.1)
       activerecord (>= 4.2)
