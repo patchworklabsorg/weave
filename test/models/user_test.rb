@@ -38,24 +38,25 @@ class UserTest < ActiveSupport::TestCase
   test "user can have a birthday" do
     user = User.new(
       first_name: "John",
-      last_name: "Doe", 
+      last_name: "Doe",
       email: "john@example.com",
       password: "Password123!",
       birthday: Date.parse("1990-01-15")
     )
-    
+
     assert_equal Date.parse("1990-01-15"), user.birthday
   end
-  
+
   test "birthday is optional" do
     user = User.new(
       first_name: "Jane",
       last_name: "Doe",
-      email: "jane@example.com", 
+      email: "jane@example.com",
       password: "Password123!"
     )
-    
+
     assert_nil user.birthday
     assert user.valid?
   end
+
 end

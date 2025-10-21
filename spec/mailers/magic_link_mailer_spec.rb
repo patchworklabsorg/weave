@@ -4,11 +4,17 @@ require "rails_helper"
 
 RSpec.describe MagicLinkMailer, type: :mailer do
   describe "login_link" do
-    let(:mail) { MagicLinkMailer.login_link }
+    let(:mail) { described_class.login_link }
 
-    it "renders the headers" do
+    it "has correct subject" do
       expect(mail.subject).to eq("Login link")
+    end
+
+    it "sends to correct recipient" do
       expect(mail.to).to eq(["to@example.org"])
+    end
+
+    it "sends from correct sender" do
       expect(mail.from).to eq(["from@example.com"])
     end
 

@@ -78,67 +78,59 @@ RSpec.describe UsersController, type: :controller do
     end
 
     context "when input contains XSS attempts" do
-      it "handles first_name with script tags" do
+      let(:xss_params) do
         params = valid_params.dup
         params[:user][:first_name] = "<script>alert('xss')</script>John"
-        post :create, params: params
+        params
+      end
+
+      it "handles first_name with script tags" do
+        post :create, params: xss_params
         expect(response.status).to be_in([200, 302, 422])
       end
 
-      it "sanitizes or rejects XSS in first_name" do
-        params = valid_params.dup
-        params[:user][:first_name] = "<script>alert('xss')</script>John"
-        post :create, params: params
-        if response.status == 422
-          expect(assigns(:user).errors[:base]).to include(match(/Invalid input/))
-        end
+      it "shows error when rejecting XSS" do
+        post :create, params: xss_params
+        expect(assigns(:user).errors[:base]).to include(match(/Invalid input/)) if response.status == 422
       end
 
-      it "prevents script injection" do
-        params = valid_params.dup
-        params[:user][:first_name] = "<script>alert('xss')</script>John"
-        post :create, params: params
-        if response.status != 422
-          user = assigns(:user)
-          expect(user.first_name).not_to include("<script>")
-        end
+      it "sanitizes script tags when accepting" do
+        post :create, params: xss_params
+        expect(assigns(:user).first_name).not_to include("<script>") if response.status != 422
       end
     end
 
     context "when input exceeds length limits" do
-      it "handles very long first_name" do
-        long_string = "a" * 1000
+      let(:long_string) { "a" * 1000 }
+      let(:long_name_params) do
         params = valid_params.dup
         params[:user][:first_name] = long_string
-        post :create, params: params
+        params
+      end
+      let(:long_password_params) do
+        params = valid_params.dup
+        params[:user][:password] = long_string
+        params[:user][:password_confirmation] = long_string
+        params
+      end
+
+      it "handles very long first_name" do
+        post :create, params: long_name_params
         expect(response.status).to be_in([200, 302, 422])
       end
 
-      it "truncates or rejects long input" do
-        long_string = "a" * 1000
-        params = valid_params.dup
-        params[:user][:first_name] = long_string
-        post :create, params: params
-        if response.status == 422
-          expect(assigns(:user).errors[:base]).to include(match(/Invalid input/))
-        end
+      it "shows error when rejecting long input" do
+        post :create, params: long_name_params
+        expect(assigns(:user).errors[:base]).to include(match(/Invalid input/)) if response.status == 422
       end
 
       it "rejects very long password" do
-        long_password = "a" * 1000
-        params = valid_params.dup
-        params[:user][:password] = long_password
-        params[:user][:password_confirmation] = long_password
-        post :create, params: params
+        post :create, params: long_password_params
         expect(response).to have_http_status(:unprocessable_entity)
       end
 
       it "shows error for long password" do
-        long_password = "a" * 1000
-        params = valid_params.dup
-        params[:user][:password] = long_password
-        params[:user][:password_confirmation] = long_password
-        post :create, params: params
+        post :create, params: long_password_params
         expect(assigns(:user).errors[:base]).to include(match(/Invalid input/))
       end
     end

@@ -6,9 +6,15 @@ RSpec.describe UserMailer, type: :mailer do
   describe "signup" do
     let(:mail) { described_class.signup }
 
-    it "renders the headers" do
+    it "has correct subject" do
       expect(mail.subject).to eq("Signup")
+    end
+
+    it "sends to correct recipient" do
       expect(mail.to).to eq(["to@example.org"])
+    end
+
+    it "sends from correct sender" do
       expect(mail.from).to eq(["from@example.com"])
     end
 

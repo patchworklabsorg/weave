@@ -1,8 +1,8 @@
 plugins:
   - rubocop-rails
   - rubocop-capybara
-  # - rubocop-rspec
-  # - rubocop-rspec_rails
+  - rubocop-rspec
+  - rubocop-rspec_rails
 
 AllCops:
   NewCops: disable
@@ -78,7 +78,7 @@ Layout/EmptyLines:
 Style/RaiseArgs:
   Enabled: false
 
-Naming/PredicateName:
+Naming/PredicatePrefix:
   Enabled: false
 
 Style/ConditionalAssignment:
