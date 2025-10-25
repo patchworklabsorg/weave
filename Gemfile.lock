@@ -548,7 +548,7 @@ GEM
     rswag-ui (2.16.0)
       actionpack (>= 5.2, < 8.1)
       railties (>= 5.2, < 8.1)
-    rubocop (1.81.1)
+    rubocop (1.81.6)
       json (~> 2.3)
       language_server-protocol (~> 3.17.0.2)
       lint_roller (~> 1.1.0)
@@ -624,9 +624,9 @@ GEM
       tilt (~> 2.0)
       yard (~> 0.9, >= 0.9.24)
       yard-solargraph (~> 0.1)
-    solargraph-rails (1.1.2)
+    solargraph-rails (1.2.4)
       activesupport
-      solargraph (>= 0.48.0, < 0.53.0)
+      solargraph (>= 0.48.0, <= 0.57)
     solid_cable (3.0.12)
       actioncable (>= 7.2)
       activejob (>= 7.2)
@@ -803,7 +803,7 @@ DEPENDENCIES
   safely_block
   selenium-webdriver
   solargraph
-  solargraph-rails (~> 1.1.0)
+  solargraph-rails (~> 1.2.4)
   solid_cable
   solid_queue
   stackprof
