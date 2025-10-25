@@ -55,7 +55,7 @@ gem "mission_control-jobs"               # Job monitoring
 # DATABASE TOOLS
 ###############################################################################
 gem "pg_search"                          # Full-text search
-gem "acts_as_paranoid", "~> 0.10.3"      # Soft deletions
+gem "acts_as_paranoid", "~> 0.11.0"      # Soft deletions
 gem "paper_trail", "~> 16.0.0"           # Track changes to models
 gem "strong_migrations", "~> 2.3"        # Safer database migrations
 
