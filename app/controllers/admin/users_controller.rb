@@ -14,7 +14,7 @@ class Admin::UsersController < Admin::BaseController
     if params[:search].present?
       search_term = "%#{params[:search]}%"
       @users = @users.where(
-        "first_name ILIKE ? OR last_name ILIKE ? OR email ILIKE ? OR pd_id ILIKE ?",
+        "first_name ILIKE ? OR last_name ILIKE ? OR email ILIKE ? OR p_id ILIKE ?",
         search_term, search_term, search_term, search_term
       )
     end
@@ -124,7 +124,7 @@ class Admin::UsersController < Admin::BaseController
   end
 
   def set_user
-    @user = User.find(params[:id])
+    @user = User.find_by!(p_id: params[:id])
   end
 
   def require_owner

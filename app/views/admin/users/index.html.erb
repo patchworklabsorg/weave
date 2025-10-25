@@ -10,7 +10,7 @@
       <div class="flex-1">
         <%= form.text_field :search,
             value: params[:search],
-            placeholder: "Search by name, email, or PD ID...",
+            placeholder: "Search by name, email, or PWL ID...",
             class: "block w-full rounded-md border-lavender-purple shadow-sm focus:border-deep-purple focus:ring-deep-purple sm:text-sm bg-clean-white",
             data: { search_target: "input", action: "input->search#search" } %>
       </div>
@@ -27,7 +27,7 @@
       <table class="min-w-full divide-y divide-lavender-purple/30">
       <thead class="bg-lavender-purple/20">
         <tr>
-          <th class="px-4 py-3 text-left text-xs font-medium text-deep-purple uppercase tracking-wider">PD ID</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-deep-purple uppercase tracking-wider">PWL ID</th>
           <th class="px-4 py-3 text-left text-xs font-medium text-deep-purple uppercase tracking-wider">Name</th>
           <th class="px-4 py-3 text-left text-xs font-medium text-deep-purple uppercase tracking-wider">Email</th>
           <th class="px-4 py-3 text-left text-xs font-medium text-deep-purple uppercase tracking-wider">Role</th>
