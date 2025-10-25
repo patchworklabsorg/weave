@@ -164,7 +164,7 @@ class User < ApplicationRecord
   def can_impersonate?
     # Determines if THIS user can impersonate others
     # Only active, non-pretending admins and above can impersonate
-    return false unless can_authenticate? && !pretend_is_not_admin
+    return false unless can_authenticate?
 
     admin?
   end
@@ -249,6 +249,20 @@ class User < ApplicationRecord
     %w[admin superadmin owner].include?(role)
   end
 
+  def superadmin?
+    # Override enum method to include owner and superadmin roles
+    %w[superadmin owner].include?(role)
+  end
+
+  # Make Rails URL helpers use p_id instead of id
+  def to_param
+    p_id
+  end
+
+  def username
+    # first three letters of first name plus entire last name, all lowercase
+    "#{first_name[0, 2]}#{last_name}".downcase
+  end
 
   private
 

@@ -277,12 +277,12 @@ Rails.application.routes.draw do
   post "/email_confirmation/resend", to: "email_confirmations#resend", as: :resend_email_confirmation
 
   # Profile photo routes (public, no auth required)
-  get "/user/:pd_id/pfp", to: "profile_photos#show", as: :user_profile_photo
-  get "/user/:pd_id/avatar/:variant", to: "profile_photos#avatar", as: :user_avatar
-  get "/user/:pd_id/avatar/:variant/square", to: "profile_photos#avatar_square", as: :user_avatar_square
-  get "/user/:pd_id/avatar/:variant/circle", to: "profile_photos#avatar_circle", as: :user_avatar_circle
-  get "/user/:pd_id/initials(/:variant)", to: "profile_photos#initials", as: :user_initials, defaults: { format: :svg }
-  get "/user/:pd_id/initials/:variant/circle", to: "profile_photos#initials_circle", as: :user_initials_circle, defaults: { format: :svg }
+  get "/user/:p_id/pfp", to: "profile_photos#show", as: :user_profile_photo
+  get "/user/:p_id/avatar/:variant", to: "profile_photos#avatar", as: :user_avatar
+  get "/user/:p_id/avatar/:variant/square", to: "profile_photos#avatar_square", as: :user_avatar_square
+  get "/user/:p_id/avatar/:variant/circle", to: "profile_photos#avatar_circle", as: :user_avatar_circle
+  get "/user/:p_id/initials(/:variant)", to: "profile_photos#initials", as: :user_initials, defaults: { format: :svg }
+  get "/user/:p_id/initials/:variant/circle", to: "profile_photos#initials_circle", as: :user_initials_circle, defaults: { format: :svg }
 
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
