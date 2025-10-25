@@ -819,7 +819,7 @@ DEPENDENCIES
   webauthn (~> 3.4)
 
 RUBY VERSION
-   ruby 3.4.3p32
+   ruby 3.2.3p157
 
 BUNDLED WITH
    2.7.2
