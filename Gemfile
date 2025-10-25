@@ -41,7 +41,7 @@ gem "disposable_mail"                    # Block disposable email domains
 gem "lockbox"                            # Encryption
 gem "blind_index"                        # Encrypted search
 gem "geocoder"
-gem "countries", "~> 5.0" # ISO 3166 country codes
+gem "countries", "~> 8.0" # ISO 3166 country codes
 
 ###############################################################################
 # BACKGROUND PROCESSING & CACHING
