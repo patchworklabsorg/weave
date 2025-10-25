@@ -235,9 +235,15 @@ require_relative "../lib/admin_constraint"
 Rails.application.routes.draw do
   use_doorkeeper
 
-  # OAuth 2.0 UserInfo endpoint (separate from API)
+  # OAuth 2.0 endpoints
   namespace :oauth do
     get "userinfo", to: "userinfo#show"
+    
+    # OAuth 2.0 Server Metadata (RFC 8414)
+    get ".well-known/oauth-authorization-server", to: "discovery#oauth_authorization_server", as: :oauth_metadata
+    
+    # OpenID Connect Discovery (optional)
+    get ".well-known/openid-configuration", to: "discovery#openid_configuration", as: :openid_configuration
   end
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
