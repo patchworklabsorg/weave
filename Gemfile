@@ -62,7 +62,6 @@ gem "strong_migrations", "~> 2.3"        # Safer database migrations
 ###############################################################################
 # URL & IDENTIFICATION
 ###############################################################################
-gem "hashid-rails", "~> 1.0"             # Obfuscate IDs in URLs
 gem "encoded_ids"
 gem "friendly_id", "~> 5.5.1"            # URL slugs
 
