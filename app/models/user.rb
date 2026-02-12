@@ -221,6 +221,17 @@ class User < ApplicationRecord
       magic_link_used_at.nil?
   end
 
+  # Securely verify if the provided token matches this user's magic link token
+  # Uses constant-time comparison to prevent timing attacks
+  def magic_link_token_matches?(provided_token)
+    return false if magic_link_token.blank? || provided_token.blank?
+
+    ActiveSupport::SecurityUtils.secure_compare(
+      magic_link_token,
+      provided_token
+    )
+  end
+
   def consume_magic_link_token!
     return false unless magic_link_valid?
 
@@ -261,7 +272,7 @@ class User < ApplicationRecord
 
   def username
     # first three letters of first name plus entire last name, all lowercase
-    "#{first_name[0, 2]}#{last_name}".downcase
+    "#{first_name[0, 3]}#{last_name}".downcase
   end
 
   private

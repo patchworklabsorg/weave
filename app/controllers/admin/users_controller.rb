@@ -72,7 +72,7 @@ class Admin::UsersController < Admin::BaseController
       @current_user = nil
 
       flash[:notice] = "Now impersonating #{@user.full_name}"
-      redirect_to root_path, allow_other_host: true
+      redirect_to root_path
     else
       Rails.logger.warn "Impersonation denied for user #{@user.id} by admin #{current_user.id}"
       redirect_to admin_users_path, alert: "Cannot impersonate this user"

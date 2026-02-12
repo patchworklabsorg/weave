@@ -37,19 +37,14 @@ class AuthController < ApplicationController
 
   def login
     user_email = params.dig(:user, :email)
-    begin
-      email = sanitize_input(user_email, email: user_email, field_name: "email")
-    rescue SecurityError => e
-      handle_login_error("Invalid input: #{e.message}", user_email)
-      return
-    end
+    email = user_email.to_s.strip
 
     if email.blank?
       handle_login_error("Email is required", email)
       return
     end
 
-    user = User.find_by(email: email&.downcase)
+    user = User.find_by(email: email.downcase)
 
     # Magic link flow - handle non-existent emails gracefully
     if user.nil?
@@ -74,12 +69,7 @@ class AuthController < ApplicationController
 
   def send_magic_link
     user_email = params.dig(:user, :email) || params[:email]
-    begin
-      email = sanitize_input(user_email, email: user_email, field_name: "email")
-    rescue SecurityError => e
-      handle_login_error("Invalid input: #{e.message}", user_email)
-      return
-    end
+    email = user_email.to_s.strip
 
     if email.blank?
       handle_login_error("Email is required", email)
@@ -118,7 +108,7 @@ class AuthController < ApplicationController
     user = User.find_by(magic_link_token: token)
 
     if user.nil?
-      Rails.logger.info "Magic link login failed: No user found with token #{token}"
+      Rails.logger.info "Magic link login failed: No user found (token hash: #{Digest::SHA256.hexdigest(token)[0..8]})"
       redirect_to login_path, alert: "Invalid or expired magic link"
       return
     end
@@ -174,53 +164,6 @@ class AuthController < ApplicationController
     end
   end
 
-  def sanitize_input(input, options = {})
-    return nil if input.nil?
-
-    original_input = input.to_s
-    sanitized = original_input.strip
-
-    # Check for SQL injection patterns
-    sql_injection_patterns = [
-      /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION)\b)/i,
-      /(--|\/\*|\*\/|;)/,
-      /('.*'|".*")/,
-      /(\bOR\b|\bAND\b).*[=<>]/i
-    ]
-
-    if sql_injection_patterns.any? { |pattern| sanitized.match?(pattern) }
-      notify_security_incident(
-        email: options[:email],
-        input_type: options[:field_name] || "unknown",
-        malicious_input: original_input
-      )
-      raise SecurityError, "Potentially malicious input detected"
-    end
-
-    # Remove potentially dangerous characters that could be used for XSS or injection
-    sanitized = sanitized.gsub(/[<>'"&]/, {
-                                 "<" => "&lt;",
-                                 ">" => "&gt;",
-                                 "'" => "&#39;",
-                                 '"' => "&quot;",
-                                 "&" => "&amp;"
-                               })
-
-    # Limit length to prevent buffer overflow attacks
-    max_length = options[:max_length] || 255
-    sanitized.truncate(max_length)
-  end
-
-
-  def notify_security_incident(email:, input_type:, malicious_input:)
-    NotifyOpsOnSecurityIncidentJob.perform_later(
-      email: email,
-      input_type: input_type,
-      malicious_input: malicious_input,
-      ip_address: request.remote_ip,
-      user_agent: request.user_agent
-    )
-  end
 
   def handle_login_error(message, email)
     respond_to do |format|
