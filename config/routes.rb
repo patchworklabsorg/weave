@@ -320,8 +320,27 @@ Rails.application.routes.draw do
       end
 
       resources :services do
-        resources :keys, controller: "service_keys"
-        resources :webhooks, controller: "service_webhooks"
+        member do
+          patch :activate
+          patch :deactivate
+          patch :suspend
+        end
+
+        resources :keys, controller: "service_keys" do
+          member do
+            patch :revoke
+            patch :deprecate
+            patch :activate
+          end
+        end
+
+        resources :webhooks, controller: "service_webhooks" do
+          member do
+            patch :activate
+            patch :deactivate
+            post :test
+          end
+        end
       end
 
       resources :oauth_applications do
