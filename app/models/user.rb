@@ -56,6 +56,7 @@ class User < ApplicationRecord
   accepts_nested_attributes_for :shipping_address, :billing_address, allow_destroy: true
 
   before_save :set_address_types
+  after_create :send_confirmation_email
 
   enum :role, {
     user: 0,
@@ -251,8 +252,36 @@ class User < ApplicationRecord
   end
 
   def email_verified?
-    # For now, assume all users are verified since we don't have email verification
+    email_confirmed_at.present?
+  end
+
+  def verify_email
+    update!(email_confirmed_at: Time.current, confirmation_token: nil)
+  end
+
+  def send_confirmation_email
+    generate_confirmation_token
+    self.confirmation_sent_at = Time.current
+    save!
+
+    # Queue email job
+    ConfirmationEmailJob.perform_later(self)
     true
+  rescue => e
+    Rails.logger.error "Failed to send confirmation email for user #{email}: #{e.message}"
+    false
+  end
+
+  def confirmation_period_valid?
+    return false if confirmation_sent_at.nil?
+
+    Time.current - confirmation_sent_at < 5.minutes
+  end
+
+  private
+
+  def generate_confirmation_token
+    self.confirmation_token = SecureRandom.urlsafe_base64(32)
   end
 
   def admin?
