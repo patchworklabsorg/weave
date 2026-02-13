@@ -97,7 +97,7 @@ accessories:
     image: redis:7-alpine
     host: alastor
     network: kamal
-    port: "127.0.0.1:6380:6379"
+    port: "127.0.0.1:6381:6379"
     cmd: "redis-server --save 60 1 --loglevel warning"
     directories:
       - data:/data
