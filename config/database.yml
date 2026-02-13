@@ -27,23 +27,25 @@ test:
 production:
   primary: &primary_production
     <<: *default
-    host: db
-    database: patchwork-idp_production
-    username: <%= ENV['DATABASE_USER'] %>
-    password: <%= ENV['DATABASE_PASSWORD'] %>
+    host: <%= ENV.fetch('DB_HOST') { 'idp-db' } %>
+    port: <%= ENV.fetch('DB_PORT') { 5432 } %>
+    database: <%= ENV.fetch('POSTGRES_DB') { 'idp_production' } %>
+    username: <%= ENV.fetch('POSTGRES_USER') { 'idp' } %>
+    password: <%= ENV['POSTGRES_PASSWORD'] %>
   queue:
     <<: *primary_production
-    database: patchwork-idp_production_queue
+    database: <%= ENV.fetch('POSTGRES_DB') { 'idp_production' } %>_queue
     migrations_paths: db/queue_migrate
 
 staging:
   primary: &primary_staging
     <<: *default
-    host: db
-    database: patchwork-idp_staging
-    username: <%= ENV['DATABASE_USER'] %>
-    password: <%= ENV['DATABASE_PASSWORD'] %>
+    host: <%= ENV.fetch('DB_HOST') { 'idp-db' } %>
+    port: <%= ENV.fetch('DB_PORT') { 5432 } %>
+    database: <%= ENV.fetch('POSTGRES_DB') { 'idp_staging' } %>
+    username: <%= ENV.fetch('POSTGRES_USER') { 'idp' } %>
+    password: <%= ENV['POSTGRES_PASSWORD'] %>
   queue:
     <<: *primary_staging
-    database: patchwork-idp_staging_queue
+    database: <%= ENV.fetch('POSTGRES_DB') { 'idp_staging' } %>_queue
     migrations_paths: db/queue_migrate
