@@ -16,7 +16,7 @@
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
 
-    <style>
+    <style nonce="<%= content_security_policy_nonce %>">
     body {
       background-image: url('<%= asset_path("frame.png") %>');
       background-size: cover;
