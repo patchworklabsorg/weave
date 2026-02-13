@@ -68,7 +68,8 @@ RUN apt-get update -qq && \
     libvips42 \
     libffi8 \
     libyaml-0-2 \
-    curl && \
+    curl \
+    unzip && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
