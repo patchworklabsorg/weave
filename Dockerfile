@@ -1,4 +1,4 @@
-FROM ruby:3.4.3-slim AS builder
+FROM ruby:4.0.1-slim AS builder
 
 WORKDIR /rails
 
@@ -56,7 +56,7 @@ RUN SECRET_KEY_BASE_DUMMY=1 RAILS_ENV=production ./bin/rails assets:precompile
 RUN chmod +x bin/rails bin/*
 
 # Create a clean runtime image
-FROM ruby:3.4.3-slim
+FROM ruby:4.0.1-slim
 
 # Install runtime dependencies only
 RUN apt-get update -qq && \
