@@ -37,6 +37,9 @@ require "securerandom"
 class User < ApplicationRecord
   include AASM
 
+  include EncodedIds::HashidIdentifiable
+  set_public_id_prefix :usr
+
   # set flipper id to p_id
   def flipper_id
     p_id

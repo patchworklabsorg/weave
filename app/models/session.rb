@@ -16,4 +16,6 @@
 #  index_sessions_on_updated_at  (updated_at)
 #
 class Session < ApplicationRecord
+  include EncodedIds::HashidIdentifiable
+  set_public_id_prefix :ses
 end

@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class Service::Key::Usage < ApplicationRecord
+  include EncodedIds::HashidIdentifiable
+  set_public_id_prefix :sku
+
   self.table_name = "service_key_usages"
 
   # Associations

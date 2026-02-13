@@ -38,6 +38,9 @@
 #  unique_address_per_addressable_type_and_address_type  (addressable_type,addressable_id,type,address_type) UNIQUE
 #
 class Address < ApplicationRecord
+  include EncodedIds::HashidIdentifiable
+  set_public_id_prefix :addr
+
   belongs_to :addressable, polymorphic: true, inverse_of: :addresses
   attribute :allow_partial_address, :boolean, default: false
 

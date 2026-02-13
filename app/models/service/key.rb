@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class Service::Key < ApplicationRecord
+  include EncodedIds::HashidIdentifiable
+  set_public_id_prefix :skey
+
   self.table_name = "service_keys"
 
   # Associations

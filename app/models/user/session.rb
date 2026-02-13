@@ -35,6 +35,9 @@
 #
 class User
   class Session < ApplicationRecord
+    include EncodedIds::HashidIdentifiable
+    set_public_id_prefix :usess
+
     has_paper_trail skip: [:session_token] # ciphertext columns will still be tracked
     has_encrypted :session_token
     blind_index :session_token

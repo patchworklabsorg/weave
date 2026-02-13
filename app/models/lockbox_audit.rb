@@ -20,6 +20,9 @@
 #  index_lockbox_audits_on_viewer   (viewer_type,viewer_id)
 #
 class LockboxAudit < ApplicationRecord
+  include EncodedIds::HashidIdentifiable
+  set_public_id_prefix :laud
+
   belongs_to :subject, polymorphic: true
   belongs_to :viewer, polymorphic: true
 

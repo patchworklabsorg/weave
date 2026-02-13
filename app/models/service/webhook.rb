@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class Service::Webhook < ApplicationRecord
+  include EncodedIds::HashidIdentifiable
+  set_public_id_prefix :swh
+
   self.table_name = "service_webhooks"
 
   # Associations

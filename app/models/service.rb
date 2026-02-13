@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class Service < ApplicationRecord
+  include EncodedIds::HashidIdentifiable
+  set_public_id_prefix :srvc
+
   # Associations
   belongs_to :created_by, class_name: "User"
   has_many :keys, class_name: "Service::Key", dependent: :destroy

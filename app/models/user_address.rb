@@ -38,6 +38,9 @@
 #  unique_address_per_addressable_type_and_address_type  (addressable_type,addressable_id,type,address_type) UNIQUE
 #
 class UserAddress < Address
+  include EncodedIds::HashidIdentifiable
+  set_public_id_prefix :addr
+
   # Additional validations specific to user addresses
   validates :addressable_type, inclusion: { in: ["User"] }
 

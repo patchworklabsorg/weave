@@ -16,4 +16,6 @@
 #  updated_at      :datetime         not null
 #
 class WebhookDelivery < ApplicationRecord
+  include EncodedIds::HashidIdentifiable
+  set_public_id_prefix :whkdlr
 end
