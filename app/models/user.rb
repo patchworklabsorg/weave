@@ -281,12 +281,6 @@ class User < ApplicationRecord
     Time.current - confirmation_sent_at < 5.minutes
   end
 
-  private
-
-  def generate_confirmation_token
-    self.confirmation_token = SecureRandom.urlsafe_base64(32)
-  end
-
   def admin?
     # Override enum method to include owner, superadmin, and admin roles
     %w[admin superadmin owner].include?(role)
@@ -295,6 +289,12 @@ class User < ApplicationRecord
   def superadmin?
     # Override enum method to include owner and superadmin roles
     %w[superadmin owner].include?(role)
+  end
+
+  private
+
+  def generate_confirmation_token
+    self.confirmation_token = SecureRandom.urlsafe_base64(32)
   end
 
   # Make Rails URL helpers use p_id instead of id
