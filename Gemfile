@@ -168,11 +168,15 @@ end
 
 gem "stackprof"
 gem "postmark-rails"
-gem "rollups" # todo: better utilize this package!
-gem "prophet-rb" # todo: better utilize this package!
-gem "anomaly_detection" # todo: better utilize this package!
-gem "breakout-detection" # todo: better utilize this package!
-gem "disco" # todo: better utilize this package!
+
+# Analytics/ML gems - commented out to reduce bloat
+# Uncomment and implement when needed for specific use cases:
+# gem "rollups"              # Time-series data aggregation
+# gem "prophet-rb"           # Time-series forecasting
+# gem "anomaly_detection"    # Detect anomalies in data
+# gem "breakout-detection"   # Detect breakouts/shifts in metrics
+# gem "disco"                # Recommendations engine
+
 gem "chartkick"
 gem "mapkick-rb"
 gem "phonelib"
