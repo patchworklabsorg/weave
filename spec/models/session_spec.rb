@@ -18,5 +18,39 @@
 require "rails_helper"
 
 RSpec.describe Session, type: :model do
-  pending "add some examples to (or delete) #{__FILE__}"
+  describe "validations" do
+    it { should validate_presence_of(:session_id) }
+    it { should validate_uniqueness_of(:session_id) }
+  end
+
+  describe "session data" do
+    it "stores and retrieves session data" do
+      session = Session.create!(
+        session_id: SecureRandom.hex(16),
+        data: { user_id: 123, foo: "bar" }
+      )
+
+      expect(session.data["user_id"]).to eq(123)
+      expect(session.data["foo"]).to eq("bar")
+    end
+  end
+
+  describe "cleanup" do
+    it "can find old sessions" do
+      old_session = Session.create!(
+        session_id: SecureRandom.hex(16),
+        data: {},
+        updated_at: 2.days.ago
+      )
+
+      recent_session = Session.create!(
+        session_id: SecureRandom.hex(16),
+        data: {}
+      )
+
+      old_sessions = Session.where("updated_at < ?", 1.day.ago)
+      expect(old_sessions).to include(old_session)
+      expect(old_sessions).not_to include(recent_session)
+    end
+  end
 end
