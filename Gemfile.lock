@@ -378,11 +378,6 @@ GEM
       activerecord (>= 6.1)
       activesupport (>= 6.1)
     phonelib (0.10.12)
-    postmark (1.25.1)
-      json
-    postmark-rails (0.22.1)
-      actionmailer (>= 3.0.0)
-      postmark (>= 1.21.3, < 2.0)
     pp (0.6.3)
       prettyprint
     premailer (1.27.0)
@@ -737,7 +732,6 @@ DEPENDENCIES
   pg (~> 1.5, >= 1.5.9)
   pg_search
   phonelib
-  postmark-rails
   premailer-rails
   propshaft
   puma (>= 5.0)
@@ -773,7 +767,7 @@ DEPENDENCIES
   web-console
 
 RUBY VERSION
-  ruby 4.0.1p0
+   ruby 4.0.1p0
 
 BUNDLED WITH
-  2.7.2
+   2.7.2

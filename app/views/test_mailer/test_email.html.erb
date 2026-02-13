@@ -1,0 +1,26 @@
+<h2>SMTP Test Email</h2>
+
+<p>This is a test email to verify the SMTP configuration is working correctly.</p>
+
+<table style="background: #f8f9fa; padding: 1em; border-radius: 4px; margin: 1em 0;">
+  <tr>
+    <td style="padding: 0.5em; font-weight: bold;">Environment:</td>
+    <td style="padding: 0.5em;"><%= @environment %></td>
+  </tr>
+  <tr>
+    <td style="padding: 0.5em; font-weight: bold;">Sent at:</td>
+    <td style="padding: 0.5em;"><%= @timestamp.strftime("%Y-%m-%d %H:%M:%S %Z") %></td>
+  </tr>
+  <tr>
+    <td style="padding: 0.5em; font-weight: bold;">From:</td>
+    <td style="padding: 0.5em;">idp@patchworklabs.org</td>
+  </tr>
+  <tr>
+    <td style="padding: 0.5em; font-weight: bold;">Reply-to:</td>
+    <td style="padding: 0.5em;">no-reply@patchworklabs.org</td>
+  </tr>
+</table>
+
+<p style="background: #d4edda; border-left: 4px solid #28a745; padding: 1em; margin: 1em 0;">
+  ✅ If you're reading this, your SMTP configuration is working correctly!
+</p>

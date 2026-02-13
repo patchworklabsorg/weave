@@ -1,0 +1,27 @@
+<h2>Email Throttle Warning</h2>
+
+<p>The IDP application is approaching the daily email sending limit.</p>
+
+<table style="border-collapse: collapse; margin: 1em 0;">
+  <tr>
+    <td style="padding: 0.5em; font-weight: bold;">Date:</td>
+    <td style="padding: 0.5em;"><%= @date %></td>
+  </tr>
+  <tr>
+    <td style="padding: 0.5em; font-weight: bold;">Emails sent:</td>
+    <td style="padding: 0.5em;"><%= @count %></td>
+  </tr>
+  <tr>
+    <td style="padding: 0.5em; font-weight: bold;">Daily limit:</td>
+    <td style="padding: 0.5em;"><%= @limit %></td>
+  </tr>
+  <tr style="background: #fff3cd;">
+    <td style="padding: 0.5em; font-weight: bold;">Remaining:</td>
+    <td style="padding: 0.5em; color: #856404;"><strong><%= @remaining %> emails</strong></td>
+  </tr>
+</table>
+
+<p style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 1em; margin: 1em 0;">
+  <strong>Action required:</strong> The application will automatically stop sending emails once the limit is reached.
+  Monitor email volume to ensure critical emails can be sent.
+</p>

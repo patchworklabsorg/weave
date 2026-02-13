@@ -167,7 +167,6 @@ group :test do
 end
 
 gem "stackprof"
-gem "postmark-rails"
 
 # Analytics/ML gems - commented out to reduce bloat
 # Uncomment and implement when needed for specific use cases:
