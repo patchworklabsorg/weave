@@ -135,7 +135,7 @@ class AuthController < ApplicationController
       session.delete(:admin_id)
       respond_to do |format|
         format.html { redirect_to admin_users_path, notice: "Returned to admin account" }
-        format.json { render json: { message: "Returned to admin account", user: original_admin.as_json(except: :password_digest) } }
+        format.json { render json: { message: "Returned to admin account", user: UserSerializer.render(original_admin) } }
       end
     else
       session.delete(:user_id)
@@ -149,7 +149,7 @@ class AuthController < ApplicationController
   def me
     respond_to do |format|
       format.html { render :me }
-      format.json { render json: { user: current_user.as_json(except: :password_digest) } }
+      format.json { render json: { user: UserSerializer.render(current_user) } }
     end
   end
 
@@ -160,7 +160,7 @@ class AuthController < ApplicationController
 
     respond_to do |format|
       format.html { redirect_to root_path, notice: "Logged in successfully" }
-      format.json { render json: { user: user.as_json(except: :password_digest) }, status: :ok }
+      format.json { render json: { user: UserSerializer.render(user) }, status: :ok }
     end
   end
 
