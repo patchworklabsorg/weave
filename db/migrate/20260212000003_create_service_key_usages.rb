@@ -20,7 +20,6 @@ class CreateServiceKeyUsages < ActiveRecord::Migration[8.0]
       t.timestamps
     end
 
-    add_index :service_key_usages, :service_key_id
     add_index :service_key_usages, :requested_at
     add_index :service_key_usages, :response_code
     add_index :service_key_usages, [:service_key_id, :requested_at]
