@@ -8,6 +8,14 @@ export default class extends Controller {
     this.emailCheckTimeout = null
     this.lastCheckedEmail = ""
     this.passwordLoginEnabled = false
+
+    // Ensure loading indicator is hidden on page load
+    this.hideLoadingIndicator()
+
+    // If email is pre-filled by browser, don't auto-check
+    if (this.emailTarget.value.trim() !== "") {
+      this.submitButtonTarget.disabled = false
+    }
   }
 
   disconnect() {

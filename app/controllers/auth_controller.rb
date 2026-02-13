@@ -1,13 +1,19 @@
 # frozen_string_literal: true
 
 class AuthController < ApplicationController
-  skip_before_action :authenticate_user!, only: [:login, :new_session, :oauth_login, :send_magic_link, :magic_link_login]
+  skip_before_action :authenticate_user!, only: [:login, :new_session, :password_login, :oauth_login, :send_magic_link, :magic_link_login]
 
-  layout "sessions", only: [:new_session, :oauth_login]
+  layout "sessions", only: [:new_session, :password_login, :oauth_login]
 
   def new_session
     redirect_to root_path if current_user
     @user = User.new
+  end
+
+  def password_login
+    redirect_to root_path if current_user
+    @user = User.new
+    @is_password_login = true
   end
 
   def oauth_login
@@ -37,6 +43,7 @@ class AuthController < ApplicationController
 
   def login
     user_email = params.dig(:user, :email)
+    user_password = params.dig(:user, :password)
     email = user_email.to_s.strip
 
     if email.blank?
@@ -45,6 +52,21 @@ class AuthController < ApplicationController
     end
 
     user = User.find_by(email: email.downcase)
+
+    # Password login flow (from /login/pw) - ADMIN ONLY
+    if user_password.present?
+      if user && user.authenticate(user_password)
+        # Only allow password login for admin users
+        if user.admin?
+          complete_login(user)
+        else
+          handle_login_error("Password login is only available for administrators. Please use the magic link.", email)
+        end
+      else
+        handle_login_error("Invalid email or password", email)
+      end
+      return
+    end
 
     # Magic link flow - handle non-existent emails gracefully
     if user.nil?

@@ -12,7 +12,15 @@ class UsersController < ApplicationController
 
   def create
     begin
-      @user = User.new(sanitized_user_params)
+      user_attrs = sanitized_user_params
+
+      # Generate a random secure password for non-admin users
+      # They will only use magic links to login
+      random_password = SecureRandom.urlsafe_base64(32)
+      user_attrs[:password] = random_password
+      user_attrs[:password_confirmation] = random_password
+
+      @user = User.new(user_attrs)
     rescue ActiveRecord::RecordInvalid => e
       @user = e.record
       render :new, status: :unprocessable_entity
@@ -78,7 +86,16 @@ class UsersController < ApplicationController
 
 
   def sanitized_user_params
-    permitted_params = params.require(:user).permit(:first_name, :last_name, :email, :password, :password_confirmation, :birthday, :cropped_image_data, :billing_same_as_shipping,
+    # Non-admins cannot set passwords - they use magic links only
+    # Only permit password params for existing admin users updating their profile
+    password_fields = if current_user&.admin?
+                        [:password, :password_confirmation]
+                      else
+                        []
+                      end
+
+    permitted_params = params.require(:user).permit(:first_name, :last_name, :email, :birthday, :cropped_image_data, :billing_same_as_shipping,
+                                                    *password_fields,
                                                     shipping_address_attributes: Address::PARAMS + [:id],
                                                     billing_address_attributes: Address::PARAMS + [:id])
 

@@ -13,17 +13,6 @@
 
 puts "Seeding data..."
 
-# User.find_or_create_by!(email: "internal+owner@phish.directory") do |user|
-#   user.first_name = "Internal"
-#   user.last_name = "Owner"
-#   user.password = Rails.application.credentials.dig(:seedPass, :owner)
-#   user.password_confirmation = Rails.application.credentials.dig(:seedPass, :owner)
-#   user.access_level = "owner"
-#   user.status = "active"
-#   user.email_verified = true
-#   user.email_verified_at = Time.current
-#   user.staff = true
-#   user.pd_dev = true
-# end
+# To create an owner user, run: rails user:create_owner
 
 puts "Seed data successfully created!"

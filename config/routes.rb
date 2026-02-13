@@ -262,6 +262,7 @@ Rails.application.routes.draw do
 
   # Authentication routes
   get "/login", to: "auth#new_session", as: :login
+  get "/login/pw", to: "auth#password_login", as: :password_login
   get "/oauth/login", to: "auth#oauth_login", as: :oauth_login
   post "/login", to: "auth#login"
   post "/auth/magic_link", to: "auth#send_magic_link", as: :send_magic_link
