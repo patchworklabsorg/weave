@@ -8,7 +8,7 @@ This is the Patchwork Labs Identity Provider (IDP), a comprehensive OAuth 2.0 au
 
 ### Backend
 - **Framework**: Ruby on Rails 8.0.2
-- **Ruby Version**: 3.4.3 (see `.ruby-version`)
+- **Ruby Version**: 4.0.1 (see `.ruby-version`)
 - **Database**: PostgreSQL 17
 - **Cache/Queue**: Redis 7
 - **Background Jobs**: Solid Queue (database-backed Active Job)

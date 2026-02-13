@@ -6,7 +6,7 @@ A comprehensive guide to set up the Patchwork Labs Identity Provider (IDP) appli
 
 Before you begin, ensure you have the following installed:
 
-- **Ruby**: Version 3.4.3 (specified in `.ruby-version`)
+- **Ruby**: Version 4.0.1 (specified in `.ruby-version`)
 - **Node.js**: For JavaScript dependencies
 - **Bun**: JavaScript runtime and package manager
 - **PostgreSQL**: Version 17 (or compatible)
@@ -189,7 +189,7 @@ When running locally:
    - Check that Node.js version is compatible
 
 3. **Bundle Install Failures**
-   - Ensure Ruby version 3.4.3 is installed
+   - Ensure Ruby version 4.0.1 is installed
    - Check for system dependencies (libpq-dev, build-essential on Ubuntu)
 
 4. **Redis Connection Issues**
