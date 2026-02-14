@@ -2,7 +2,9 @@
 <html lang="en">
   <head>
     <title>Patchwork IDP</title>
-    <style>
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <style nonce="<%= content_security_policy_nonce %>">
       body, html {
         margin: 0;
         padding: 0;
