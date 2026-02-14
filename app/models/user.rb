@@ -291,12 +291,6 @@ class User < ApplicationRecord
     %w[superadmin owner].include?(role)
   end
 
-  private
-
-  def generate_confirmation_token
-    self.confirmation_token = SecureRandom.urlsafe_base64(32)
-  end
-
   # Make Rails URL helpers use p_id instead of id
   def to_param
     p_id
@@ -305,6 +299,12 @@ class User < ApplicationRecord
   def username
     # first three letters of first name plus entire last name, all lowercase
     "#{first_name[0, 3]}#{last_name}".downcase
+  end
+
+  private
+
+  def generate_confirmation_token
+    self.confirmation_token = SecureRandom.urlsafe_base64(32)
   end
 
   private
