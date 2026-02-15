@@ -380,6 +380,11 @@ Rails.application.routes.draw do
     end
   end
 
+  # Webhook endpoints (external services, no CSRF/auth)
+  namespace :webhooks do
+    post "slack/events", to: "slack#events"
+  end
+
   #  # Admin routes
   #  namespace :admin do
   #   resources :users do

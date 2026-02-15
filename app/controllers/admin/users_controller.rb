@@ -134,7 +134,16 @@ class Admin::UsersController < Admin::BaseController
   end
 
   def user_params
-    params.require(:user).permit(:first_name, :last_name, :email, :access_level, :password, :password_confirmation, :birthday)
+    params.require(:user).permit(
+      :first_name, :last_name, :email, :access_level, :password, :password_confirmation, :birthday,
+      # Staff/Contractor flags
+      :is_staff, :is_contractor,
+      # Manager relationship
+      :manager_id,
+      # Slack API-editable fields
+      :slack_title, :slack_city, :slack_state, :slack_country,
+      :slack_organization, :slack_division, :slack_department, :slack_cost_center
+    )
   end
 
 end

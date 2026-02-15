@@ -59,13 +59,97 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <%= form.label :access_level, class: "block text-sm font-medium text-gray-700 mb-1" %>
-            <%= form.select :access_level, 
+            <%= form.select :access_level,
                 options_for_select([
                   ['User', 'user'],
                   ['Admin', 'admin'],
                   ['Owner', 'owner']
                 ], @user.role),
                 {},
+                class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Staff & Organization</h2>
+        <div class="space-y-4">
+          <div class="flex items-start">
+            <div class="flex items-center h-5">
+              <%= form.check_box :is_staff,
+                  class: "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" %>
+            </div>
+            <div class="ml-3 text-sm">
+              <%= form.label :is_staff, class: "font-medium text-gray-700" %>
+              <p class="text-gray-500">Mark as staff member (can have/be a manager)</p>
+            </div>
+          </div>
+
+          <div class="flex items-start">
+            <div class="flex items-center h-5">
+              <%= form.check_box :is_contractor,
+                  class: "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" %>
+            </div>
+            <div class="ml-3 text-sm">
+              <%= form.label :is_contractor, class: "font-medium text-gray-700" %>
+              <p class="text-gray-500">Mark as contractor (can have/be a manager)</p>
+            </div>
+          </div>
+
+          <div>
+            <%= form.label :manager_id, "Manager", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= form.collection_select :manager_id,
+                User.where(is_staff: true).or(User.where(is_contractor: true)).order(:first_name),
+                :id, :full_name,
+                { include_blank: "No manager" },
+                class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+            <p class="mt-1 text-xs text-gray-500">Only staff and contractors can be managers</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Professional Information</h2>
+        <p class="text-sm text-gray-500 mb-4">These fields sync with Slack (API-editable fields)</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <%= form.label :slack_title, "Job Title", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= form.text_field :slack_title,
+                class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          </div>
+          <div>
+            <%= form.label :slack_department, "Department", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= form.text_field :slack_department,
+                class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          </div>
+          <div>
+            <%= form.label :slack_division, "Division", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= form.text_field :slack_division,
+                class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          </div>
+          <div>
+            <%= form.label :slack_organization, "Organization", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= form.text_field :slack_organization,
+                class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          </div>
+          <div>
+            <%= form.label :slack_city, "City", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= form.text_field :slack_city,
+                class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          </div>
+          <div>
+            <%= form.label :slack_state, "State", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= form.text_field :slack_state,
+                class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          </div>
+          <div>
+            <%= form.label :slack_country, "Country", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= form.text_field :slack_country,
+                class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          </div>
+          <div>
+            <%= form.label :slack_cost_center, "Cost Center", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= form.text_field :slack_cost_center,
                 class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
           </div>
         </div>

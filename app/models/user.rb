@@ -56,6 +56,10 @@ class User < ApplicationRecord
   has_one :shipping_address, -> { where(address_type: "Shipping") }, as: :addressable, class_name: "UserAddress", dependent: :destroy, inverse_of: :addressable
   has_one :billing_address, -> { where(address_type: "Billing") }, as: :addressable, class_name: "UserAddress", dependent: :destroy, inverse_of: :addressable
 
+  # Manager/Reports relationships (only for staff/contractors)
+  belongs_to :manager, class_name: "User", optional: true
+  has_many :reports, class_name: "User", foreign_key: "manager_id", dependent: :nullify
+
   accepts_nested_attributes_for :shipping_address, :billing_address, allow_destroy: true
 
   before_save :set_address_types
@@ -289,6 +293,11 @@ class User < ApplicationRecord
   def superadmin?
     # Override enum method to include owner and superadmin roles
     %w[superadmin owner].include?(role)
+  end
+
+  def is_manager_or_manageable?
+    # Users who are staff or contractors can have/be managers
+    is_staff || is_contractor
   end
 
   # Make Rails URL helpers use p_id instead of id
