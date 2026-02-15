@@ -135,7 +135,7 @@ class Admin::UsersController < Admin::BaseController
 
   def user_params
     params.require(:user).permit(
-      :first_name, :last_name, :email, :access_level, :password, :password_confirmation, :birthday,
+      :first_name, :last_name, :email, :role, :password, :password_confirmation, :birthday,
       # Staff/Contractor flags
       :is_staff, :is_contractor,
       # Manager relationship

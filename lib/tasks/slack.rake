@@ -19,7 +19,7 @@ namespace :slack do
             user: user.slack_id,
             profile: {
               fields: {
-                "Xf079Z13308F9" => { value: "" }
+                "Xf09J13S96F9" => { value: "" }
               }
             }.to_json
           )

@@ -247,7 +247,7 @@ class SlackService
       user: slack_user_id,
       profile: {
         fields: {
-          "Xf079Z13308F9" => { value: p_id }
+          "Xf09J13S96F9" => { value: p_id }
         }
       }.to_json
     )
