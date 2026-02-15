@@ -30,3 +30,8 @@ blazer_send_failing_checks:
 cleanup_unverified_accounts:
   command: "CleanupUnverifiedAccountsJob.perform_later"
   schedule: every day at 2am
+
+# Slack bidirectional sync - runs every 6 hours
+slack_sync_bidirectional:
+  command: "SlackSyncJob.perform_later('both')"
+  schedule: every 6 hours

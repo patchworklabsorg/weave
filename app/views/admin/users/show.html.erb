@@ -132,6 +132,97 @@
         </div>
       </dl>
     </div>
+
+    <!-- Organization -->
+    <div class="bg-white shadow rounded-lg p-6">
+      <h2 class="text-lg font-medium text-gray-900 mb-4">Organization</h2>
+      <dl class="space-y-3">
+        <div>
+          <dt class="text-sm font-medium text-gray-500">Employment Type</dt>
+          <dd class="text-sm">
+            <% if @user.is_staff %>
+              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Staff</span>
+            <% end %>
+            <% if @user.is_contractor %>
+              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">Contractor</span>
+            <% end %>
+            <% unless @user.is_staff || @user.is_contractor %>
+              <span class="text-gray-500">Not set</span>
+            <% end %>
+          </dd>
+        </div>
+        <% if @user.manager.present? %>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Manager</dt>
+            <dd class="text-sm text-gray-900">
+              <%= link_to @user.manager.full_name, admin_user_path(@user.manager), class: "text-indigo-600 hover:text-indigo-900" %>
+            </dd>
+          </div>
+        <% end %>
+        <% if @user.reports.any? %>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Direct Reports</dt>
+            <dd class="text-sm text-gray-900">
+              <% @user.reports.each do |report| %>
+                <%= link_to report.full_name, admin_user_path(report), class: "inline-block mr-2 text-indigo-600 hover:text-indigo-900" %>
+              <% end %>
+            </dd>
+          </div>
+        <% end %>
+      </dl>
+    </div>
+
+    <!-- Professional Information -->
+    <div class="bg-white shadow rounded-lg p-6">
+      <h2 class="text-lg font-medium text-gray-900 mb-4">Professional Information</h2>
+      <p class="text-xs text-gray-500 mb-3">Synced with Slack</p>
+      <dl class="space-y-3">
+        <% if @user.slack_title.present? %>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Job Title</dt>
+            <dd class="text-sm text-gray-900"><%= @user.slack_title %></dd>
+          </div>
+        <% end %>
+        <% if @user.slack_department.present? %>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Department</dt>
+            <dd class="text-sm text-gray-900"><%= @user.slack_department %></dd>
+          </div>
+        <% end %>
+        <% if @user.slack_division.present? %>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Division</dt>
+            <dd class="text-sm text-gray-900"><%= @user.slack_division %></dd>
+          </div>
+        <% end %>
+        <% if @user.slack_organization.present? %>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Organization</dt>
+            <dd class="text-sm text-gray-900"><%= @user.slack_organization %></dd>
+          </div>
+        <% end %>
+        <% if @user.slack_city.present? || @user.slack_state.present? || @user.slack_country.present? %>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Location</dt>
+            <dd class="text-sm text-gray-900">
+              <%= [@user.slack_city, @user.slack_state, @user.slack_country].compact.join(", ") %>
+            </dd>
+          </div>
+        <% end %>
+        <% if @user.slack_cost_center.present? %>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Cost Center</dt>
+            <dd class="text-sm text-gray-900"><%= @user.slack_cost_center %></dd>
+          </div>
+        <% end %>
+        <% if @user.slack_id.present? %>
+          <div>
+            <dt class="text-sm font-medium text-gray-500">Slack ID</dt>
+            <dd class="text-sm text-gray-900 font-mono"><%= @user.slack_id %></dd>
+          </div>
+        <% end %>
+      </dl>
+    </div>
   </div>
 
   <!-- Session Locations Map -->

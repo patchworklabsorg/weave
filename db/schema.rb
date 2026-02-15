@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_02_114447) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_15_143224) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -353,6 +353,75 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_02_114447) do
     t.index ["name", "interval", "time", "dimensions"], name: "index_rollups_on_name_and_interval_and_time_and_dimensions", unique: true
   end
 
+  create_table "service_key_usages", force: :cascade do |t|
+    t.bigint "service_key_id", null: false
+    t.string "request_path"
+    t.string "request_method"
+    t.integer "response_code"
+    t.integer "duration_ms"
+    t.string "ip_address"
+    t.string "user_agent"
+    t.text "request_headers"
+    t.text "request_body"
+    t.text "response_headers"
+    t.text "response_body"
+    t.integer "user_id"
+    t.datetime "requested_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["requested_at"], name: "index_service_key_usages_on_requested_at"
+    t.index ["response_code"], name: "index_service_key_usages_on_response_code"
+    t.index ["service_key_id", "requested_at"], name: "index_service_key_usages_on_service_key_id_and_requested_at"
+    t.index ["service_key_id"], name: "index_service_key_usages_on_service_key_id"
+  end
+
+  create_table "service_keys", force: :cascade do |t|
+    t.bigint "service_id", null: false
+    t.string "name", null: false
+    t.string "api_key_digest", null: false
+    t.string "hash_key", null: false
+    t.string "status", default: "active", null: false
+    t.datetime "last_used_at"
+    t.datetime "expires_at"
+    t.bigint "created_by_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["api_key_digest"], name: "index_service_keys_on_api_key_digest", unique: true
+    t.index ["created_by_id"], name: "index_service_keys_on_created_by_id"
+    t.index ["service_id", "status"], name: "index_service_keys_on_service_id_and_status"
+    t.index ["service_id"], name: "index_service_keys_on_service_id"
+    t.index ["status"], name: "index_service_keys_on_status"
+  end
+
+  create_table "service_webhooks", force: :cascade do |t|
+    t.bigint "service_id", null: false
+    t.string "url", null: false
+    t.string "event_type", null: false
+    t.string "secret_token"
+    t.string "status", default: "active", null: false
+    t.datetime "last_triggered_at"
+    t.integer "failure_count", default: 0
+    t.bigint "created_by_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_service_webhooks_on_created_by_id"
+    t.index ["service_id", "event_type"], name: "index_service_webhooks_on_service_id_and_event_type"
+    t.index ["service_id"], name: "index_service_webhooks_on_service_id"
+    t.index ["status"], name: "index_service_webhooks_on_status"
+  end
+
+  create_table "services", force: :cascade do |t|
+    t.string "name", null: false
+    t.text "description"
+    t.string "status", default: "active", null: false
+    t.bigint "created_by_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_services_on_created_by_id"
+    t.index ["name"], name: "index_services_on_name", unique: true
+    t.index ["status"], name: "index_services_on_status"
+  end
+
   create_table "sessions", force: :cascade do |t|
     t.string "session_id", null: false
     t.text "data"
@@ -410,8 +479,38 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_02_114447) do
     t.datetime "magic_link_used_at"
     t.date "birthday"
     t.string "phone_number"
+    t.datetime "email_confirmed_at"
+    t.string "confirmation_token"
+    t.datetime "confirmation_sent_at"
+    t.string "slack_pronouns"
+    t.string "slack_display_name"
+    t.string "slack_status_text"
+    t.string "slack_status_emoji"
+    t.string "slack_phone"
+    t.date "slack_start_date"
+    t.text "slack_role_description"
+    t.string "slack_website"
+    t.string "slack_github"
+    t.string "slack_linkedin"
+    t.date "slack_birthday"
+    t.string "slack_profile_image_url"
+    t.string "slack_title"
+    t.string "slack_city"
+    t.string "slack_state"
+    t.string "slack_country"
+    t.string "slack_manager_id"
+    t.string "slack_organization"
+    t.string "slack_division"
+    t.string "slack_department"
+    t.string "slack_cost_center"
+    t.datetime "slack_profile_synced_at"
+    t.boolean "is_staff", default: false, null: false
+    t.boolean "is_contractor", default: false, null: false
+    t.bigint "manager_id"
+    t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["magic_link_token"], name: "index_users_on_magic_link_token", unique: true
+    t.index ["manager_id"], name: "index_users_on_manager_id"
     t.index ["p_id"], name: "index_users_on_p_id", unique: true
   end
 
@@ -431,6 +530,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_02_114447) do
   add_foreign_key "oauth_access_grants", "users", column: "resource_owner_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "users", column: "resource_owner_id"
+  add_foreign_key "service_key_usages", "service_keys"
+  add_foreign_key "service_keys", "services"
+  add_foreign_key "service_keys", "users", column: "created_by_id"
+  add_foreign_key "service_webhooks", "services"
+  add_foreign_key "service_webhooks", "users", column: "created_by_id"
+  add_foreign_key "services", "users", column: "created_by_id"
   add_foreign_key "user_sessions", "users"
   add_foreign_key "user_sessions", "users", column: "impersonated_by_id"
+  add_foreign_key "users", "users", column: "manager_id"
 end

@@ -44,3 +44,5 @@ node_modules
 /node_modules
 .idea/*
 config/credentials/postgres_password
+
+/config/credentials/development.key

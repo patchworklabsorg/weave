@@ -19,9 +19,9 @@ class EmailConfirmationsController < ApplicationController
       flash[:notice] = "Your email has already been confirmed."
     else
       @user.verify_email
-      # Send welcome email, invite to slack, and notify ops now that email is confirmed
+      # Send welcome email, sync to Slack, and notify ops now that email is confirmed
       WelcomeEmailJob.perform_later(@user)
-      InviteToSlackJob.perform_later(@user.email)
+      SyncUserToSlackJob.perform_later(@user.id)
       NotifyOpsOnNewUserJob.perform_later(@user)
       flash[:notice] = "Your email has been successfully confirmed! You can now log in."
     end
