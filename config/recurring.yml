@@ -27,11 +27,7 @@ blazer_send_failing_checks:
 #  command: "HeartbeatJob.set(queue: :low).perform_later('low')"
 #  schedule: every hour
 
-cleanup_unverified_accounts:
-  command: "CleanupUnverifiedAccountsJob.perform_later"
-  schedule: every day at 2am
-
 # Slack bidirectional sync - runs every 6 hours
 slack_sync_bidirectional:
-  command: "SlackSyncJob.perform_later('both')"
+  command: "SlackSyncJob.perform_later(direction: 'both')"
   schedule: every 6 hours
