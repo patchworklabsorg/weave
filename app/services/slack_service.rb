@@ -32,14 +32,27 @@ class SlackService
     raise ApiError, "Slack API error: #{e.message}"
   end
 
-  # Get user info by email
-  def find_user_by_email(email)
+  # Get user info by email with full profile including custom fields
+  def find_user_by_email(email, include_profile: false)
     raise ConfigurationError, "Slack client not configured" unless configured?
 
+    # First lookup user by email to get their ID
     response = @client.users_lookupByEmail(email: email)
 
     if response["ok"]
-      response["user"]
+      user = response["user"]
+
+      # If we need full profile with custom fields and have a user token, fetch it
+      # Custom profile fields require a user token with users.profile:read scope
+      if include_profile && @user_client
+        profile_response = @user_client.users_profile_get(user: user["id"])
+        if profile_response["ok"]
+          # Merge the full profile back into the user object
+          user["profile"] = profile_response["profile"]
+        end
+      end
+
+      user
     else
       nil
     end
@@ -73,6 +86,7 @@ class SlackService
 
       # Only include full members (not bots, deleted, guests, or deactivated)
       page_members = response["members"].reject do |m|
+        m["id"] == "USLACKBOT" ||   # Slackbot (special system account)
         m["is_bot"] ||
         m["deleted"] ||
         m["is_restricted"] ||      # Guest users
@@ -109,6 +123,16 @@ class SlackService
     members.each do |member|
       email = member.dig("profile", "email")
       next if email.blank?
+
+      # Fetch full profile with custom fields if user token is available
+      if @user_client
+        begin
+          profile_response = @user_client.users_profile_get(user: member["id"])
+          member["profile"] = profile_response["profile"] if profile_response["ok"]
+        rescue Slack::Web::Api::Errors::SlackError => e
+          Rails.logger.warn "Could not fetch full profile for #{email}: #{e.message}"
+        end
+      end
 
       # Check if user already exists
       user = User.find_by(email: email)
@@ -274,18 +298,18 @@ class SlackService
     fields = {}
 
     # Field IDs from Slack workspace configuration
-    fields["Xf079DHXGT0E"] = { value: user.slack_title } if user.slack_title.present?
-    fields["Xf079DHXCTS36"] = { value: user.slack_city } if user.slack_city.present?
-    fields["Xf079DHX7D15W"] = { value: user.slack_state } if user.slack_state.present?
-    fields["Xf079DHX6AAAF"] = { value: user.slack_country } if user.slack_country.present?
-    fields["Xf079BM6AJK7M"] = { value: user.slack_organization } if user.slack_organization.present?
-    fields["Xf079EKLUIVZD"] = { value: user.slack_division } if user.slack_division.present?
-    fields["Xf079RHARP0NP"] = { value: user.slack_department } if user.slack_department.present?
-    fields["Xf079RLV9Y5N"] = { value: user.slack_cost_center } if user.slack_cost_center.present?
+    fields["Xf0794EQ8TQE"] = { value: user.slack_title } if user.slack_title.present?
+    fields["Xf078WGTT53R"] = { value: user.slack_city } if user.slack_city.present?
+    fields["Xf079ZT2R5DW"] = { value: user.slack_state } if user.slack_state.present?
+    fields["Xf079B0K3ASF"] = { value: user.slack_country } if user.slack_country.present?
+    fields["Xf079B0K367M"] = { value: user.slack_organization } if user.slack_organization.present?
+    fields["Xf079PPEUW2D"] = { value: user.slack_division } if user.slack_division.present?
+    fields["Xf07986PJQPP"] = { value: user.slack_department } if user.slack_department.present?
+    fields["Xf079B3V5734"] = { value: user.slack_cost_center } if user.slack_cost_center.present?
 
     # Convert IDP manager_id to Slack manager_id for push
     if user.manager_id.present? && user.manager&.slack_id.present?
-      fields["Xf079DHXFKVR"] = { value: user.manager.slack_id }
+      fields["Xf07986PJV2R"] = { value: user.manager.slack_id }
     end
 
     return false if fields.empty?
@@ -314,26 +338,36 @@ class SlackService
       slack_status_text: profile["status_text"],
       slack_status_emoji: profile["status_emoji"],
       slack_phone: profile["phone"],
-      slack_role_description: fields.dig("role_description", "value") || fields.dig("Xf079DHXFB7", "value"),
-      slack_website: fields.dig("website", "value") || fields.dig("Xf079DHXFB8", "value"),
-      slack_github: fields.dig("github", "value") || fields.dig("Xf079DHXFB9", "value"),
-      slack_linkedin: fields.dig("linkedin", "value") || fields.dig("Xf079DHXFBA", "value"),
+      slack_role_description: fields.dig("Xf09E7DJ7Y1Y", "value"),
+      slack_website: fields.dig("Xf07CK5ZT401", "value"),
+      slack_github: fields.dig("Xf09JVCPFL4R", "value"),
+      slack_linkedin: fields.dig("Xf09J13F51KR", "value"),
       slack_profile_image_url: profile["image_512"] || profile["image_192"],
 
       # Push & pull fields (API editable)
-      slack_title: profile["title"] || fields.dig("Xf079DHXGT0E", "value"),
-      slack_city: fields.dig("Xf079DHXCTS36", "value"),
-      slack_state: fields.dig("Xf079DHX7D15W", "value"),
-      slack_country: fields.dig("Xf079DHX6AAAF", "value"),
-      slack_organization: fields.dig("Xf079BM6AJK7M", "value"),
-      slack_division: fields.dig("Xf079EKLUIVZD", "value"),
-      slack_department: fields.dig("Xf079RHARP0NP", "value"),
-      slack_cost_center: fields.dig("Xf079RLV9Y5N", "value"),
-      slack_manager_id: fields.dig("Xf079DHXFKVR", "value")
+      slack_title: profile["title"],
+      slack_city: fields.dig("Xf078WGTT53R", "value"),
+      slack_state: fields.dig("Xf079ZT2R5DW", "value"),
+      slack_country: fields.dig("Xf079B0K3ASF", "value"),
+      slack_organization: fields.dig("Xf079B0K367M", "value"),
+      slack_division: fields.dig("Xf079PPEUW2D", "value"),
+      slack_department: fields.dig("Xf07986PJQPP", "value"),
+      slack_cost_center: fields.dig("Xf079B3V5734", "value"),
+      slack_manager_id: fields.dig("Xf07986PJV2R", "value")
     }.compact
   end
 
   def create_user_from_slack_member(member)
+    # Fetch full profile with custom fields if user token is available
+    if @user_client
+      begin
+        profile_response = @user_client.users_profile_get(user: member["id"])
+        member["profile"] = profile_response["profile"] if profile_response["ok"]
+      rescue Slack::Web::Api::Errors::SlackError => e
+        Rails.logger.warn "Could not fetch full profile for #{member['id']}: #{e.message}"
+      end
+    end
+
     profile = member["profile"]
     email = profile["email"]
 
