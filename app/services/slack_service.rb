@@ -71,7 +71,14 @@ class SlackService
 
       break unless response["ok"]
 
-      page_members = response["members"].reject { |m| m["is_bot"] || m["deleted"] }
+      # Only include full members (not bots, deleted, guests, or deactivated)
+      page_members = response["members"].reject do |m|
+        m["is_bot"] ||
+        m["deleted"] ||
+        m["is_restricted"] ||      # Guest users
+        m["is_ultra_restricted"] || # Single-channel guests
+        m["profile"]["deactivated"]  # Deactivated accounts
+      end
       Rails.logger.info "  Found #{page_members.size} active members on page #{page_count}"
       members.concat(page_members)
 
