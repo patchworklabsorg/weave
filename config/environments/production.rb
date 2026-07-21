@@ -65,7 +65,7 @@ Rails.application.configure do
 
   # Default from and reply-to addresses
   config.action_mailer.default_options = {
-    from: "Patchwork Labs IDP <idp@patchworklabs.org>",
+    from: "Weave <idp@patchworklabs.org>",
     reply_to: "no-reply@patchworklabs.org"
   }
 

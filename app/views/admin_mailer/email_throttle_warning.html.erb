@@ -1,27 +1,27 @@
-<h2>Email Throttle Warning</h2>
+<h2 style="margin: 0 0 16px 0; color: #2a2050; font-size: 20px; font-weight: 700;">Email Throttle Warning</h2>
 
-<p>The IDP application is approaching the daily email sending limit.</p>
+<p style="margin: 0 0 16px 0; color: #2a2050;">The IDP application is approaching the daily email sending limit.</p>
 
-<table style="border-collapse: collapse; margin: 1em 0;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; margin: 1em 0; width: 100%;">
   <tr>
-    <td style="padding: 0.5em; font-weight: bold;">Date:</td>
-    <td style="padding: 0.5em;"><%= @date %></td>
+    <td style="padding: 0.5em; font-weight: bold; color: #2a2050;">Date:</td>
+    <td style="padding: 0.5em; color: #2a2050;"><%= @date %></td>
   </tr>
   <tr>
-    <td style="padding: 0.5em; font-weight: bold;">Emails sent:</td>
-    <td style="padding: 0.5em;"><%= @count %></td>
+    <td style="padding: 0.5em; font-weight: bold; color: #2a2050;">Emails sent:</td>
+    <td style="padding: 0.5em; color: #2a2050;"><%= @count %></td>
   </tr>
   <tr>
-    <td style="padding: 0.5em; font-weight: bold;">Daily limit:</td>
-    <td style="padding: 0.5em;"><%= @limit %></td>
+    <td style="padding: 0.5em; font-weight: bold; color: #2a2050;">Daily limit:</td>
+    <td style="padding: 0.5em; color: #2a2050;"><%= @limit %></td>
   </tr>
-  <tr style="background: #fff3cd;">
-    <td style="padding: 0.5em; font-weight: bold;">Remaining:</td>
-    <td style="padding: 0.5em; color: #856404;"><strong><%= @remaining %> emails</strong></td>
+  <tr style="background-color: #fdf1da;">
+    <td style="padding: 0.5em; font-weight: bold; color: #92400e;">Remaining:</td>
+    <td style="padding: 0.5em; color: #92400e;"><strong><%= @remaining %> emails</strong></td>
   </tr>
 </table>
 
-<p style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 1em; margin: 1em 0;">
+<p style="background-color: #fdf1da; border-left: 4px solid #d97706; border-radius: 0 8px 8px 0; padding: 1em; margin: 1em 0; color: #92400e;">
   <strong>Action required:</strong> The application will automatically stop sending emails once the limit is reached.
   Monitor email volume to ensure critical emails can be sent.
 </p>

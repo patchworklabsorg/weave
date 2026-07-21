@@ -7,11 +7,11 @@
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#2F2F2F" />
     <meta name="msapplication-TileColor" content="#2F2F2F" />
-    <meta name="apple-mobile-web-app-title" content="Patchwork IDP Admin" />
-    <meta name="application-name" content="Patchwork IDP Admin" />
+    <meta name="apple-mobile-web-app-title" content="Weave Admin" />
+    <meta name="application-name" content="Weave Admin" />
     <meta name="viewport" content="width=device-width,initial-scale=1">
 
-    <title><%= content_for(:title) || "Admin" %> - Patchwork IDP</title>
+    <title><%= content_for(:title) || "Admin" %> - Weave</title>
 
     <%= yield :head %>
 
@@ -22,19 +22,17 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
+    <%# Brand fonts (Geist + Shantell Sans) are self-hosted and declared via
+        @font-face in the compiled Tailwind stylesheet below — no external link. %>
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
 
     <style nonce="<%= content_security_policy_nonce %>">
       body {
-        background-image: url('<%= asset_path('frame.png') %>');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
+        background-color: #f7f5fb; /* quilt paper — matches patchworklabs.org */
         margin: 0;
         padding: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         min-height: 100vh;
       }
 
@@ -62,7 +60,7 @@
         -webkit-backdrop-filter: blur(8px);
         border-radius: 20px;
         border: 1px solid rgba(199, 183, 226, 0.4);
-        box-shadow: 0 8px 32px rgba(75, 0, 110, 0.15);
+        box-shadow: 0 8px 32px rgba(108, 62, 193, 0.15);
         width: 100%;
         max-width: 1200px;
         margin-top: 20px;
@@ -73,7 +71,7 @@
         background: linear-gradient(135deg, rgba(199, 183, 226, 0.3) 0%, rgba(255, 255, 255, 0.5) 100%);
         backdrop-filter: blur(5px);
         -webkit-backdrop-filter: blur(5px);
-        color: #18181A;
+        color: #2a2050;
         padding: 20px 30px;
         border-bottom: 1px solid rgba(199, 183, 226, 0.4);
         text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
@@ -113,7 +111,7 @@
       .admin-nav-link {
         display: block;
         padding: 12px 24px;
-        color: #2C3440;
+        color: #2a2050;
         text-decoration: none;
         border-bottom: 3px solid transparent;
         transition: all 0.3s ease;
@@ -139,16 +137,16 @@
 
       .admin-nav-link:hover,
       .admin-nav-link.active {
-        color: #2C3440;
+        color: #2a2050;
         background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(199, 183, 226, 0.1) 100%);
-        border-bottom-color: #4B006E;
-        box-shadow: 0 2px 8px rgba(75, 0, 110, 0.1);
+        border-bottom-color: #6c3ec1;
+        box-shadow: 0 2px 8px rgba(108, 62, 193, 0.1);
       }
 
       .admin-nav-link:hover::after,
       .admin-nav-link.active::after {
         background: rgba(199, 183, 226, 0.5);
-        box-shadow: 0 0 4px rgba(75, 0, 110, 0.2);
+        box-shadow: 0 0 4px rgba(108, 62, 193, 0.2);
       }
 
       .admin-content {
@@ -156,7 +154,7 @@
         background: rgba(255, 255, 255, 0.3);
         backdrop-filter: blur(3px);
         -webkit-backdrop-filter: blur(3px);
-        color: #1f2937;
+        color: #2a2050;
         text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
       }
 
@@ -167,7 +165,7 @@
       .admin-content h4,
       .admin-content h5,
       .admin-content h6 {
-        color: #111827;
+        color: #2a2050;
         text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
       }
 
@@ -182,17 +180,20 @@
 
       .admin-content th {
         background: rgba(255, 255, 255, 0.5);
-        color: #111827;
+        color: #2a2050;
         text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
         font-weight: 700;
       }
 
       .admin-content td {
-        color: #1f2937;
+        color: #2a2050;
         border-color: rgba(255, 255, 255, 0.3);
         text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
       }
 
+      /* Semantic status colors (red=error, orange=warning) are kept for legibility;
+         success/neutral badges use the quilt soft-pill tokens directly and don't
+         need an override since they already render as solid pastels. */
       .admin-content .text-red-600 {
         color: #dc2626 !important;
         text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
@@ -205,25 +206,13 @@
         font-weight: 600;
       }
 
-      .admin-content .bg-red-100 {
-        background: rgba(239, 68, 68, 0.15) !important;
-        color: #dc2626 !important;
-        text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
-      }
-
-      .admin-content .bg-green-100 {
-        background: rgba(34, 197, 94, 0.15) !important;
-        color: #059669 !important;
-        text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
-      }
-
       /* Improved button styling for glass effect */
       .glass-button {
         background: rgba(255, 255, 255, 0.4) !important;
         backdrop-filter: blur(5px) !important;
         -webkit-backdrop-filter: blur(5px) !important;
-        border: 2px solid #4B006E !important;
-        color: #2C3440 !important;
+        border: 2px solid #6c3ec1 !important;
+        color: #2a2050 !important;
         text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7) !important;
         transition: all 0.3s ease !important;
         position: relative !important;
@@ -232,11 +221,11 @@
       }
 
       .glass-button:hover {
-        background: linear-gradient(135deg, #4B006E 0%, #3D0058 100%) !important;
-        border-color: #C7B7E2 !important;
+        background: linear-gradient(135deg, #6c3ec1 0%, #2a2050 100%) !important;
+        border-color: #c7b7e2 !important;
         transform: translateY(-1px) !important;
-        box-shadow: 0 6px 16px rgba(75, 0, 110, 0.3) !important;
-        color: #FFFFFF !important;
+        box-shadow: 0 6px 16px rgba(108, 62, 193, 0.3) !important;
+        color: #fefdff !important;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
       }
 
@@ -280,10 +269,11 @@
         .admin-content {
           padding: 20px;
         }
+      }
     </style>
   </head>
 
-  <body>
+  <body class="bg-quilt text-ink font-sans">
     <div class="gradient-overlay"></div>
 
     <% if Rails.env.staging? %>
@@ -311,7 +301,7 @@
         <div class="admin-header">
           <div class="admin-user-info">
             <div class="admin-user-details">
-              <h1 class="admin-user-name">Patchwork Admin</h1>
+              <h1 class="admin-user-name">Weave Admin</h1>
               <p class="admin-user-role">Logged in as <%= current_user.full_name %> (<%= current_user.role.titleize %>)</p>
             </div>
             <div>
@@ -390,36 +380,6 @@
       </div>
     </div>
 
-    <!-- Flash Messages -->
-    <% flash.each do |type, message| %>
-      <div class="fixed top-4 right-4 z-50 max-w-sm">
-        <div class="bg-white border border-gray-200 rounded-lg shadow-lg p-4">
-          <div class="flex items-center">
-            <div class="flex-1">
-              <p class="text-sm text-gray-900"><%= message %></p>
-            </div>
-            <button onclick="this.parentElement.parentElement.parentElement.remove()"
-                    class="ml-4 text-gray-400 hover:text-gray-600">
-              <span class="sr-only">Close</span>
-              ×
-            </button>
-          </div>
-        </div>
-      </div>
-    <% end %>
-
-    <script>
-      // Auto-hide flash messages after 5 seconds
-      document.addEventListener('DOMContentLoaded', () => {
-        const flashMessages = document.querySelectorAll('.fixed.top-4.right-4');
-        flashMessages.forEach(message => {
-          setTimeout(() => {
-            if (message.parentElement) {
-              message.remove();
-            }
-          }, 5000);
-        });
-      });
-    </script>
+    <%= render 'shared/flash' %>
   </body>
 </html>

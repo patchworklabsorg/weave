@@ -2,18 +2,41 @@
 <html>
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-      /* Email styles need to be inline */
+      /* Email styles need to be inline; this block is a no-op fallback for clients that keep <style>. */
+      body { margin: 0; padding: 0; background-color: #f7f5fb; }
     </style>
   </head>
 
-  <body>
-    <%= yield %>
-
-    <hr style="margin: 2em 0; border: none; border-top: 1px solid #ddd;">
-    <p style="color: #666; font-size: 0.875em; font-style: italic;">
-      Please note: This email is sent from an automated system. We do not actively monitor replies to this address.
-      If you need assistance, please visit our support resources.
-    </p>
+  <body style="margin: 0; padding: 0; background-color: #f7f5fb; font-family: 'Geist', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f7f5fb; padding: 32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; width: 100%; background-color: #fefdff; border: 1px solid #e3ddf2; border-radius: 12px;">
+            <tr>
+              <td style="padding: 28px 32px 20px 32px; border-bottom: 1px solid #ebe3f9;">
+                <span style="font-family: 'Geist', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; color: #6c3ec1; letter-spacing: 0.01em;">
+                  Patchwork Labs
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 32px; color: #2a2050; font-size: 15px; line-height: 1.6;">
+                <%= yield %>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 20px 32px 28px 32px; border-top: 1px solid #ebe3f9;">
+                <p style="margin: 0; color: #8a83a8; font-size: 12px; font-style: italic; line-height: 1.5;">
+                  Please note: This email is sent from an automated system. We do not actively monitor replies to this address.
+                  If you need assistance, please visit our support resources.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
   </body>
 </html>

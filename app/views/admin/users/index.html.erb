@@ -1,6 +1,6 @@
 <div class="container mx-auto px-4 py-8" data-controller="search">
   <div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold text-near-black">Users</h1>
+    <h1 class="font-display text-2xl font-bold text-ink">Users</h1>
   </div>
 
   <div class="mb-6">
@@ -11,50 +11,50 @@
         <%= form.text_field :search,
             value: params[:search],
             placeholder: "Search by name, email, or PWL ID...",
-            class: "block w-full rounded-md border-lavender-purple shadow-sm focus:border-deep-purple focus:ring-deep-purple sm:text-sm bg-clean-white",
+            class: "block w-full rounded-md border-violet shadow-sm focus:border-grape focus:ring-grape sm:text-sm bg-paper",
             data: { search_target: "input", action: "input->search#search" } %>
       </div>
       <% if params[:search].present? %>
         <div>
-          <%= link_to "Clear", admin_users_path, class: "inline-flex justify-center rounded-md border border-lavender-purple bg-clean-white py-2 px-4 text-sm font-medium text-deep-purple shadow-sm hover:bg-lavender-purple/10 focus:outline-none focus:ring-2 focus:ring-deep-purple focus:ring-offset-2 transition-colors" %>
+          <%= link_to "Clear", admin_users_path, class: "inline-flex justify-center rounded-md border border-violet bg-paper py-2 px-4 text-sm font-medium text-grape shadow-sm hover:bg-grape-soft focus:outline-none focus:ring-2 focus:ring-grape focus:ring-offset-2 transition-colors" %>
         </div>
       <% end %>
     <% end %>
   </div>
 
   <%= turbo_frame_tag "users_table" do %>
-    <div class="bg-clean-white shadow-lg shadow-brand-500/10 overflow-hidden rounded-lg border border-lavender-purple/20">
-      <table class="min-w-full divide-y divide-lavender-purple/30">
-      <thead class="bg-lavender-purple/20">
+    <div class="bg-paper shadow-lg shadow-grape/10 overflow-hidden rounded-lg border border-violet/20">
+      <table class="min-w-full divide-y divide-violet/30">
+      <thead class="bg-grape-soft">
         <tr>
-          <th class="px-4 py-3 text-left text-xs font-medium text-deep-purple uppercase tracking-wider">PWL ID</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-deep-purple uppercase tracking-wider">Name</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-deep-purple uppercase tracking-wider">Email</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-deep-purple uppercase tracking-wider">Role</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-deep-purple uppercase tracking-wider">Actions</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">PWL ID</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Name</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Email</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Role</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Actions</th>
         </tr>
       </thead>
-      <tbody class="bg-clean-white divide-y divide-lavender-purple/20">
+      <tbody class="bg-paper divide-y divide-violet/20">
         <% @users.each do |user| %>
-          <tr class="hover:bg-lavender-purple/10 transition-colors">
-            <td class="px-4 py-4 whitespace-nowrap text-sm text-near-black font-medium">
+          <tr class="hover:bg-grape-soft/50 transition-colors">
+            <td class="px-4 py-4 whitespace-nowrap text-sm text-ink font-medium">
               <%= user.p_id %>
             </td>
-            <td class="px-4 py-4 whitespace-nowrap text-sm text-near-black">
+            <td class="px-4 py-4 whitespace-nowrap text-sm text-ink">
               <%= user.full_name %>
             </td>
-            <td class="px-4 py-4 whitespace-nowrap text-sm text-dark-grayish-blue">
+            <td class="px-4 py-4 whitespace-nowrap text-sm text-ink-soft">
               <%= user.email %>
             </td>
-            <td class="px-4 py-4 whitespace-nowrap text-sm text-dark-grayish-blue">
-              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= user.admin? ? 'bg-brand-500/20 text-brand-700' : 'bg-brand-100/40 text-brand-600' %>">
+            <td class="px-4 py-4 whitespace-nowrap text-sm text-ink-soft">
+              <span class="inline-flex items-center px-2.5 py-0.5 text-xs leading-5 font-semibold rounded-full <%= user.admin? ? 'bg-grape-soft text-grape' : 'bg-grape-soft/40 text-ink-soft' %>">
                 <%= user.role.titleize %>
               </span>
             </td>
             <td class="px-4 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex items-center">
               <% if user.is_impersonatable?(current_user) && !impersonating? %>
                 <%= button_to 'Impersonate', impersonate_admin_user_path(user), method: :post,
-                    class: 'text-brand-600 hover:text-brand-800 transition-colors',
+                    class: 'text-grape hover:text-ink transition-colors',
                     form: { class: 'inline-block', data: { turbo: false } },
                     local: true,
                     data: { turbo_confirm: "Are you sure you want to impersonate #{user.full_name}?" } %>
@@ -63,7 +63,7 @@
 
            <% if user.is_viewable?(current_user) %>
             <%= button_to 'View', admin_user_path(user), method: :get,
-                class: 'text-deep-purple hover:text-brand-700 transition-colors',
+                class: 'text-grape hover:text-ink transition-colors',
                 form: { class: 'inline-block', data: { turbo: false } },
                 local: true %>
            <% end %>

@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html class="h-full">
   <head>
-    <title>Login | <%= content_for?(:title) ? yield(:title) : "Patchwork IDP" %></title>
+    <title>Login | <%= content_for?(:title) ? yield(:title) : "Weave" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
@@ -15,18 +15,9 @@
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
-
-    <style nonce="<%= content_security_policy_nonce %>">
-    body {
-      background-image: url('<%= asset_path("frame.png") %>');
-      background-size: cover;
-      background-position: center;
-      background-attachment: fixed;
-    }
-    </style>
   </head>
 
-  <body class="h-full">
+  <body class="h-full bg-quilt text-ink font-sans">
     <!-- Flash messages positioned completely outside main layout -->
     <div id="flash" class="fixed top-0 left-0 w-full z-50 pointer-events-none">
       <%= render 'shared/flash' %>
