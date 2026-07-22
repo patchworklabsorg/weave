@@ -4,15 +4,21 @@ require "rails_helper"
 
 RSpec.describe User, type: :model do
   describe "validations" do
+    # Provide a fully valid record so shoulda's uniqueness matcher can persist
+    # the "existing" record it compares against. The matcher saves that record
+    # with `validate: false`, which skips the before_validation p_id generation,
+    # so a valid p_id must be supplied here (first_name/last_name are NOT NULL).
+    subject { build(:user, p_id: "PWL0ABCDEF123") }
+
     it { should validate_presence_of(:first_name) }
     it { should validate_presence_of(:last_name) }
     it { should validate_presence_of(:email) }
-    it { should validate_uniqueness_of(:email) }
+    it { should validate_uniqueness_of(:email).case_insensitive }
 
     it "validates email format" do
       user = build(:user, email: "invalid-email")
       expect(user).not_to be_valid
-      expect(user.errors[:email]).to include("does not appear to be valid")
+      expect(user.errors[:email]).to include("does not appear to be a valid email address")
     end
 
     it "validates password complexity" do

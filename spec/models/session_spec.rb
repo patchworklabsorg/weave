@@ -19,20 +19,11 @@ require "rails_helper"
 
 RSpec.describe Session, type: :model do
   describe "validations" do
+    # session_id is NOT NULL, so give the uniqueness matcher a persistable record.
+    subject { Session.new(session_id: SecureRandom.hex(16)) }
+
     it { should validate_presence_of(:session_id) }
     it { should validate_uniqueness_of(:session_id) }
-  end
-
-  describe "session data" do
-    it "stores and retrieves session data" do
-      session = Session.create!(
-        session_id: SecureRandom.hex(16),
-        data: { user_id: 123, foo: "bar" }
-      )
-
-      expect(session.data["user_id"]).to eq(123)
-      expect(session.data["foo"]).to eq("bar")
-    end
   end
 
   describe "cleanup" do

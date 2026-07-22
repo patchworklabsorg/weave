@@ -27,7 +27,8 @@ RSpec.feature "User birthday management", type: :feature do
   scenario "User sees formatted birthday date" do
     user.update!(birthday: Date.parse("1990-01-15"))
     visit profile_path
-    expect(page).to have_content("January 15, 1990")
+    # The profile page shows the month and day only (no year).
+    expect(page).to have_content("January 15")
   end
 
   scenario "User does not see birthday section when no birthday is set" do

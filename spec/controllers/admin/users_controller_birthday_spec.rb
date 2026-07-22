@@ -27,17 +27,17 @@ RSpec.describe Admin::UsersController, type: :controller do
 
   before do
     # Mock admin authentication
-    allow(controller).to receive_messages(current_user: admin_user, authenticate_user!: true, require_admin: true)
+    allow(controller).to receive_messages(current_user: admin_user, authenticate_user!: true, require_admin: true, track_user_session: true)
   end
 
   describe "GET #show" do
     it "returns success status" do
-      get :show, params: { id: regular_user.id }
+      get :show, params: { id: regular_user.to_param }
       expect(response).to have_http_status(:success)
     end
 
     it "assigns the correct user" do
-      get :show, params: { id: regular_user.id }
+      get :show, params: { id: regular_user.to_param }
       expect(assigns(:user)).to eq(regular_user)
     end
   end
@@ -46,7 +46,7 @@ RSpec.describe Admin::UsersController, type: :controller do
     context "when updating birthday as admin" do
       let(:birthday_params) do
         {
-          id: regular_user.id,
+          id: regular_user.to_param,
           user: {
             first_name: regular_user.first_name,
             last_name: regular_user.last_name,
@@ -99,13 +99,15 @@ RSpec.describe Admin::UsersController, type: :controller do
         end
 
         it "returns found status" do
-          birthday_params[:id] = user_without_birthday.id
+          birthday_params[:id] = user_without_birthday.to_param
+          birthday_params[:user][:email] = user_without_birthday.email
           patch :update, params: birthday_params
           expect(response).to have_http_status(:found)
         end
 
         it "sets the birthday" do
-          birthday_params[:id] = user_without_birthday.id
+          birthday_params[:id] = user_without_birthday.to_param
+          birthday_params[:user][:email] = user_without_birthday.email
           patch :update, params: birthday_params
           expect(user_without_birthday.reload.birthday).to eq(Date.parse("1995-05-20"))
         end

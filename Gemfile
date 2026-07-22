@@ -169,6 +169,9 @@ group :test do
   # System Testing
   gem "capybara"
   gem "selenium-webdriver"
+
+  # Enables `assigns` and `assert_template` in controller specs
+  gem "rails-controller-testing"
 end
 
 gem "stackprof"
