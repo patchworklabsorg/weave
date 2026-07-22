@@ -4,5 +4,5 @@ Contact: mailto:team@patchworklabs.org
 Contact: mailto:security@patchworklabs.org
 Expires: 2027-07-01T00:00:00.000Z
 Preferred-Languages: en
-Canonical: https://idp.patchworklabs.org/.well-known/security.txt
+Canonical: https://weave.patchworklabs.org/.well-known/security.txt
 Canonical: https://patchworklabs.org/.well-known/security.txt

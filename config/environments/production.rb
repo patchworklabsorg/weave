@@ -63,7 +63,7 @@ Rails.application.configure do
   # config.action_mailer.raise_delivery_errors = false
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "idp.patchworklabs.org" }
+  config.action_mailer.default_url_options = { host: "weave.patchworklabs.org" }
 
   # Default from and reply-to addresses
   config.action_mailer.default_options = {
@@ -93,7 +93,7 @@ Rails.application.configure do
   # endpoints. Restrict to our own hosts (guarded to production/staging).
   if Rails.env.production? || Rails.env.staging?
     config.hosts = [
-      "idp.patchworklabs.org",
+      "weave.patchworklabs.org",
       "patchworklabs.org",
       # Anchored so it matches ONLY *.patchworklabs.org, not
       # foo.patchworklabs.org.attacker.com (unanchored would).
