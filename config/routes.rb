@@ -254,6 +254,8 @@ Rails.application.routes.draw do
 
   # Well-known routes for standard compliance
   get ".well-known/*path", to: "well_known#show", format: false
+  # Legacy location -> canonical RFC 9116 location
+  get "/security.txt", to: redirect("/.well-known/security.txt", status: 301)
 
   # User registration
   get "/signup", to: "users#new", as: :signup
@@ -275,8 +277,9 @@ Rails.application.routes.draw do
   get "/profile", to: "users#show", as: :profile
   get "/profile/edit", to: "users#edit", as: :edit_profile
   get "/profile/sessions", to: "users#sessions", as: :profile_sessions
+  delete "/profile/sessions", to: "users#destroy_all_sessions", as: :destroy_all_sessions
+  delete "/profile/sessions/:id", to: "users#destroy_session", as: :session
   patch "/profile", to: "users#update", as: :update_profile
-  delete "/profile/photo", to: "users#destroy_profile_photo", as: :destroy_profile_photo
 
   # Email confirmation routes
   get "/email_confirmation", to: "email_confirmations#show", as: :email_confirmation
@@ -371,12 +374,6 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       get "health", to: "health#index"
-
-      post "auth/authenticate", to: "auth#authenticate"
-
-      # Service key protected endpoints
-      resources :users, only: [:show, :create]
-      get "users/by_email", to: "users#show"
     end
   end
 

@@ -18,4 +18,6 @@
 class Session < ApplicationRecord
   include EncodedIds::HashidIdentifiable
   set_public_id_prefix :ses
+
+  validates :session_id, presence: true, uniqueness: true
 end

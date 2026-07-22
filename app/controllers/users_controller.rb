@@ -6,7 +6,8 @@ class UsersController < ApplicationController
 
   layout "sessions", only: [:new]
   def new
-    redirect_to root_path if current_user
+    redirect_to(root_path) and return if current_user
+
     @user = User.new
   end
 
@@ -16,7 +17,7 @@ class UsersController < ApplicationController
 
       # Generate a random secure password for non-admin users
       # They will only use magic links to login
-      random_password = SecureRandom.urlsafe_base64(32)
+      random_password = User.generate_secure_password
       user_attrs[:password] = random_password
       user_attrs[:password_confirmation] = random_password
 
@@ -56,6 +57,35 @@ class UsersController < ApplicationController
     @user = current_user
   end
 
+  # Revoke a single session belonging to the current user.
+  def destroy_session
+    user_session = current_user.user_sessions.find_by(id: resolve_session_id(params[:id]))
+
+    if user_session.nil?
+      redirect_to profile_sessions_path, alert: "Session not found."
+      return
+    end
+
+    if user_session == current_user_session
+      redirect_to profile_sessions_path, alert: "You cannot revoke your current session from here. Use Sign out instead."
+      return
+    end
+
+    user_session.update!(signed_out_at: Time.current, expiration_at: Time.current)
+    redirect_to profile_sessions_path, notice: "Session revoked."
+  end
+
+  # Sign out of every session except the one making this request.
+  def destroy_all_sessions
+    current = current_user_session
+
+    current_user.user_sessions.not_expired.where.not(id: current&.id).find_each do |user_session|
+      user_session.update!(signed_out_at: Time.current, expiration_at: Time.current)
+    end
+
+    redirect_to profile_sessions_path, notice: "Signed out of all other sessions."
+  end
+
   def update
     @user = current_user
     begin
@@ -84,6 +114,13 @@ class UsersController < ApplicationController
 
   private
 
+  # Sessions are addressed by their encoded public id (or hashid) in URLs.
+  # Resolve that back to the primary key so we can scope to the current user.
+  def resolve_session_id(param)
+    User::Session.find(param.to_s).id
+  rescue ActiveRecord::RecordNotFound
+    nil
+  end
 
   def sanitized_user_params
     # Non-admins cannot set passwords - they use magic links only
@@ -99,14 +136,16 @@ class UsersController < ApplicationController
                                                     shipping_address_attributes: Address::PARAMS + [:id],
                                                     billing_address_attributes: Address::PARAMS + [:id])
 
-    # Simple sanitization: strip whitespace from string fields
+    # Simple sanitization: strip whitespace from string fields.
+    # Keys are symbolized so the symbol-keyed lookups below (e.g. :birthday,
+    # :email, :billing_same_as_shipping) resolve correctly.
     sanitized = {}
     permitted_params.each do |key, value|
       if value.is_a?(String)
-        sanitized[key] = value.strip
+        sanitized[key.to_sym] = value.strip
       else
         # Handle file uploads and other non-string parameters
-        sanitized[key] = value
+        sanitized[key.to_sym] = value
       end
     end
 
@@ -115,8 +154,10 @@ class UsersController < ApplicationController
       sanitized[:email] = sanitized[:email].downcase.strip
     end
 
-    # Prevent birthday changes if already set (only allow initial setting)
-    if @user&.birthday.present? && sanitized[:birthday].present?
+    # Prevent birthday changes if already set (only allow initial setting).
+    # Once a birthday exists, ignore any submitted birthday value, including an
+    # attempt to clear it.
+    if @user&.birthday.present? && sanitized.key?(:birthday)
       sanitized.delete(:birthday)
     end
 

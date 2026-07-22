@@ -45,6 +45,22 @@ class User < ApplicationRecord
     p_id
   end
 
+  # Generate a random password guaranteed to satisfy #password_complexity
+  # (at least one uppercase, lowercase, digit, and special character, length >= 8).
+  # Used for accounts that only ever authenticate via magic links (e.g. signups
+  # and users provisioned from Slack).
+  def self.generate_secure_password
+    specials = "!@#$%^&*()_+-=[]{}|;:,.<>?".chars
+    required = [
+      ("A".."Z").to_a.sample,
+      ("a".."z").to_a.sample,
+      SecureRandom.random_number(10).to_s,
+      specials.sample
+    ]
+    filler = SecureRandom.alphanumeric(20).chars
+    (required + filler).shuffle.join
+  end
+
   has_paper_trail
   has_secure_password
 
@@ -59,6 +75,21 @@ class User < ApplicationRecord
   # Manager/Reports relationships (only for staff/contractors)
   belongs_to :manager, class_name: "User", optional: true
   has_many :reports, class_name: "User", foreign_key: "manager_id", dependent: :nullify
+
+  # OAuth tokens/grants issued to this user as the resource owner.
+  # Destroyed with the user so hard-deletes don't raise foreign key violations.
+  has_many :oauth_access_grants, class_name: "Doorkeeper::AccessGrant",
+                                 foreign_key: :resource_owner_id, dependent: :destroy, inverse_of: false
+  has_many :oauth_access_tokens, class_name: "Doorkeeper::AccessToken",
+                                 foreign_key: :resource_owner_id, dependent: :destroy, inverse_of: false
+
+  # Records this user created. Nullify on delete so the records survive.
+  has_many :created_services, class_name: "Service",
+                              foreign_key: :created_by_id, dependent: :nullify, inverse_of: :created_by
+  has_many :created_service_keys, class_name: "Service::Key",
+                                  foreign_key: :created_by_id, dependent: :nullify, inverse_of: :created_by
+  has_many :created_service_webhooks, class_name: "Service::Webhook",
+                                      foreign_key: :created_by_id, dependent: :nullify, inverse_of: :created_by
 
   accepts_nested_attributes_for :shipping_address, :billing_address, allow_destroy: true
 
@@ -130,7 +161,7 @@ class User < ApplicationRecord
   end
 
   def initials
-    "#{first_name[0]}#{last_name[0]}"
+    "#{first_name&.[](0)}#{last_name&.[](0)}"
   end
 
   def is_impersonatable?(impersonator)

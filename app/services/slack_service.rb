@@ -375,8 +375,8 @@ class SlackService
     first_name = profile["first_name"].presence || profile["real_name"]&.split&.first || "NOTSET"
     last_name = profile["last_name"].presence || profile["real_name"]&.split&.drop(1)&.join(" ").presence || "NOTSET"
 
-    # Generate a secure random password
-    password = SecureRandom.alphanumeric(20) + "A1!" # Meets complexity requirements
+    # Generate a secure random password that satisfies the password policy
+    password = User.generate_secure_password
 
     # Extract all profile fields
     profile_attrs = extract_slack_profile_fields(member)

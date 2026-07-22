@@ -6,7 +6,7 @@ module Webhooks
 
     # Skip default protections - we verify via Slack signature instead
     skip_before_action :verify_authenticity_token
-    skip_before_action :authenticate_user!, if: :devise_configured?
+    skip_before_action :authenticate_user!
 
     def events
       event_data = JSON.parse(request.raw_post)
