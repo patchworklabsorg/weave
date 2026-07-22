@@ -61,25 +61,17 @@ class SlackService
     # Single-channel guests land in the code-of-conduct channel until they accept.
     channels ||= ultra_restricted ? [coc_channel].compact.presence || default_channels : default_channels
 
-    params = {
-      token: browser_token,
-      invites: [{ email: email, type: invite_type, mode: "manual" }].to_json,
-      source: "invite_modal",
-      campaign: "team_site_admin",
-      mode: "manual",
-      restricted: restricted.to_s,
-      ultra_restricted: ultra_restricted.to_s,
-      team_id: team_id,
-      channels: channels.join(",")
-    }
+    # Field shape mirrors a real Slack web-client inviteBulk request.
+    body = admin_api_post("users.admin.inviteBulk", {
+      "invites" => [{ email: email, mode: "manual", type: invite_type }].to_json,
+      "team_id" => team_id,
+      "restricted" => restricted.to_s,
+      "ultra_restricted" => ultra_restricted.to_s,
+      "campaign" => "composer",
+      "channels" => channels.join(","),
+      "_x_reason" => "submit-invite-to-workspace-invites"
+    })
 
-    response = Faraday.post("https://#{workspace_subdomain}.slack.com/api/users.admin.inviteBulk") do |req|
-      req.headers["Content-Type"] = "application/x-www-form-urlencoded"
-      req.headers["Cookie"] = "d=#{slack_cookie};"
-      req.body = URI.encode_www_form(params)
-    end
-
-    body = JSON.parse(response.body.presence || "{}")
     # inviteBulk returns { ok:, invites: [{ email:, ok:, error: }] } — a per-invite
     # failure can sit under a top-level ok:true, so inspect the individual result.
     invite = (body["invites"] || []).first || {}
@@ -102,19 +94,12 @@ class SlackService
   # undocumented `users.admin.setRegular` endpoint (same xoxc/xoxd auth as invite).
   # Used once a guest has accepted the code of conduct. Returns { ok:, error:, raw: }.
   def promote_to_member(slack_user_id)
-    raise ConfigurationError, "Slack browser token (SLACK_BROWSER_TOKEN / xoxc) not configured" if browser_token.blank?
-    raise ConfigurationError, "Slack cookie (SLACK_COOKIE / xoxd) not configured" if slack_cookie.blank?
-    raise ConfigurationError, "Slack team_id not configured" if team_id.blank?
-    raise ConfigurationError, "Slack workspace subdomain (SLACK_WORKSPACE_SUBDOMAIN) not configured" if workspace_subdomain.blank?
+    body = admin_api_post("users.admin.setRegular", {
+      "user" => slack_user_id,
+      "team_id" => team_id,
+      "_x_reason" => "member-set-regular"
+    })
 
-    params = { token: browser_token, user: slack_user_id, team_id: team_id }
-    response = Faraday.post("https://#{workspace_subdomain}.slack.com/api/users.admin.setRegular") do |req|
-      req.headers["Content-Type"] = "application/x-www-form-urlencoded"
-      req.headers["Cookie"] = "d=#{slack_cookie};"
-      req.body = URI.encode_www_form(params)
-    end
-
-    body = JSON.parse(response.body.presence || "{}")
     Rails.logger.error "Slack promote failed for #{slack_user_id}: #{body["error"].inspect}" unless body["ok"]
     { ok: !!body["ok"], error: body["error"], raw: body }
   rescue Faraday::Error => e
@@ -409,6 +394,47 @@ class SlackService
   # Channel single-channel guests are invited into (the code-of-conduct channel).
   def coc_channel
     @coc_channel ||= ENV["SLACK_COC_CHANNEL"] || Rails.application.credentials.dig(:slack, :coc_channel)
+  end
+
+  # POST to an undocumented workspace-admin endpoint (users.admin.*) the way the
+  # real Slack web client does: multipart/form-data body carrying the xoxc token,
+  # authenticated with the xoxd `d` cookie. Returns parsed JSON. May raise
+  # Faraday::Error (handled by callers) or ConfigurationError (missing creds).
+  def admin_api_post(api_method, fields)
+    raise ConfigurationError, "Slack browser token (SLACK_BROWSER_TOKEN / xoxc) not configured" if browser_token.blank?
+    raise ConfigurationError, "Slack cookie (SLACK_COOKIE / xoxd) not configured" if slack_cookie.blank?
+    raise ConfigurationError, "Slack team_id not configured" if team_id.blank?
+    raise ConfigurationError, "Slack workspace subdomain (SLACK_WORKSPACE_SUBDOMAIN) not configured" if workspace_subdomain.blank?
+
+    all_fields = {
+      "token" => browser_token,
+      "_x_mode" => "online",
+      "_x_sonic" => "true",
+      "_x_app_name" => "client"
+    }.merge(fields)
+
+    boundary = "----WeaveFormBoundary#{SecureRandom.hex(10)}"
+    body = all_fields.map do |name, value|
+      "--#{boundary}\r\nContent-Disposition: form-data; name=\"#{name}\"\r\n\r\n#{value}\r\n"
+    end.join + "--#{boundary}--\r\n"
+
+    response = Faraday.post("https://#{workspace_subdomain}.slack.com/api/#{api_method}") do |req|
+      req.headers["Content-Type"] = "multipart/form-data; boundary=#{boundary}"
+      req.headers["Cookie"] = "d=#{cookie_for_header};"
+      req.body = body
+    end
+
+    JSON.parse(response.body.presence || "{}")
+  end
+
+  # The Slack `d` cookie is transmitted URL-encoded by the browser. DevTools often
+  # shows the decoded value (raw +/ from its base64), so re-encode when a decoded
+  # value was stored; leave an already-encoded value (containing %) untouched.
+  def cookie_for_header
+    c = slack_cookie.to_s
+    return c if c.blank? || c.include?("%")
+
+    c.start_with?("xoxd-") ? "xoxd-#{CGI.escape(c.delete_prefix('xoxd-'))}" : CGI.escape(c)
   end
 
   # Update Slack custom profile field with PWL ID

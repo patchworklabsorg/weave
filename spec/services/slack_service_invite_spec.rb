@@ -34,8 +34,9 @@ RSpec.describe SlackService do
       result = service.invite_to_workspace(email: "a@b.co", guest: :single_channel)
 
       expect(@url).to eq("https://patchworklabs.slack.com/api/users.admin.inviteBulk")
-      expect(@body).to include("ultra_restricted=true")
-      expect(@body).to include(CGI.escape("C_COC"))
+      expect(@body).to include('name="ultra_restricted"')
+      expect(@body).to include('"type":"ultra_restricted"')
+      expect(@body).to include("C_COC")
       expect(result[:ok]).to be true
       expect(result[:already_member]).to be false
     end
@@ -69,7 +70,7 @@ RSpec.describe SlackService do
       stub_faraday("ok" => true)
       result = service.promote_to_member("U123")
       expect(@url).to eq("https://patchworklabs.slack.com/api/users.admin.setRegular")
-      expect(@body).to include("user=U123")
+      expect(@body).to include("U123")
       expect(result[:ok]).to be true
     end
 
