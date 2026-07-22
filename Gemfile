@@ -84,6 +84,7 @@ gem "rqrcode" # QR code generation
 gem "premailer-rails"                    # CSS to inline styles for emails
 gem "email_reply_parser"                 # Parse email replies
 gem "slack-ruby-client"                  # Slack API integration
+gem "resend"                             # Transactional email delivery (production)
 
 ###############################################################################
 # BROWSER & SECURITY
