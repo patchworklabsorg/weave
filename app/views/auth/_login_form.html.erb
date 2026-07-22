@@ -1,6 +1,7 @@
 <div id="login_form" class="absolute inset-0 flex items-center justify-center p-6">
 <%= form_with(model: user, url: "/login", data: { turbo: true, controller: "login-form", action: "submit->login-form#submitForm" }, local: true, id: "login_form_element") do |f| %>
-  <div class="patch patch-tilt-l w-full max-w-md">
+  <div class="patch patch-bound patch-tilt-l w-full max-w-md">
+    <div class="quilt-binding"></div>
     <!-- Card Header -->
     <div class="p-9 pb-5 text-center">
       <h1 class="font-display text-3xl font-bold text-ink">Weave</h1>

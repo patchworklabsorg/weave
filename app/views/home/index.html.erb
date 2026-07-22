@@ -14,10 +14,12 @@
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
   </head>
 
-  <body class="h-full bg-quilt text-ink font-sans">
+  <body class="h-full quilt-bg text-ink font-sans">
     <main class="min-h-full flex items-center justify-center p-6">
-      <div class="patch patch-tilt-r w-full max-w-2xl text-center p-10 sm:p-14">
-        <p class="font-display text-grape text-sm font-semibold tracking-wide mb-3">Weave · Patchwork Labs</p>
+      <div class="patch patch-bound patch-tilt-r w-full max-w-2xl text-center">
+        <div class="quilt-binding"></div>
+        <div class="p-10 sm:p-14">
+        <p class="font-display text-grape text-sm font-semibold tracking-wide mb-3"><span class="rosette"></span> Weave · Patchwork Labs</p>
         <h1 class="font-display text-4xl sm:text-5xl font-bold text-ink text-balance leading-tight">You've found the front door.</h1>
 
         <p class="text-ink-soft text-lg leading-relaxed max-w-prose mx-auto mt-5">
@@ -44,6 +46,7 @@
             <%= link_to "Sign in", login_path, class: "btn-stitch" %>
           </div>
         <% end %>
+        </div>
       </div>
     </main>
   </body>
