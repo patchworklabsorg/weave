@@ -3,6 +3,7 @@
 # == Schema Information
 #
 # Table name: addresses
+# Database name: primary
 #
 #  id                          :bigint           not null, primary key
 #  address_type                :enum             default("shipping"), not null
@@ -22,6 +23,7 @@
 #  nickname                    :string
 #  postal_code                 :string
 #  residential                 :boolean          default(FALSE), not null
+#  shipping_notes              :text
 #  state                       :string
 #  supports_weekend_deliveries :boolean          default(FALSE), not null
 #  type                        :string           default("Address"), not null

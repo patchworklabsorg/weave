@@ -3,6 +3,7 @@
 # == Schema Information
 #
 # Table name: ahoy_messages
+# Database name: primary
 #
 #  id            :bigint           not null, primary key
 #  campaign      :string

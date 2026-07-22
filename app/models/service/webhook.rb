@@ -1,5 +1,34 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: service_webhooks
+# Database name: primary
+#
+#  id                :bigint           not null, primary key
+#  event_type        :string           not null
+#  failure_count     :integer          default(0)
+#  last_triggered_at :datetime
+#  secret_token      :string
+#  status            :string           default("active"), not null
+#  url               :string           not null
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  created_by_id     :bigint           not null
+#  service_id        :bigint           not null
+#
+# Indexes
+#
+#  index_service_webhooks_on_created_by_id              (created_by_id)
+#  index_service_webhooks_on_service_id                 (service_id)
+#  index_service_webhooks_on_service_id_and_event_type  (service_id,event_type)
+#  index_service_webhooks_on_status                     (status)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (created_by_id => users.id)
+#  fk_rails_...  (service_id => services.id)
+#
 class Service::Webhook < ApplicationRecord
   include EncodedIds::HashidIdentifiable
   set_public_id_prefix :swh

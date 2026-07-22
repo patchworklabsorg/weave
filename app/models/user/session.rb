@@ -3,6 +3,7 @@
 # == Schema Information
 #
 # Table name: user_sessions
+# Database name: primary
 #
 #  id                       :bigint           not null, primary key
 #  device_info              :string

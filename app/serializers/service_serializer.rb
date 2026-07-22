@@ -1,5 +1,28 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: services
+# Database name: primary
+#
+#  id            :bigint           not null, primary key
+#  description   :text
+#  name          :string           not null
+#  status        :string           default("active"), not null
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#  created_by_id :bigint           not null
+#
+# Indexes
+#
+#  index_services_on_created_by_id  (created_by_id)
+#  index_services_on_name           (name) UNIQUE
+#  index_services_on_status         (status)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (created_by_id => users.id)
+#
 class ServiceSerializer
   def initialize(service, options = {})
     @service = service
