@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_22_002236) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_22_003447) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -486,6 +486,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_002236) do
     t.integer "session_duration_seconds", default: 2592000, null: false
     t.date "slack_birthday"
     t.string "slack_city"
+    t.datetime "slack_coc_accepted_at"
     t.string "slack_cost_center"
     t.string "slack_country"
     t.string "slack_department"
@@ -493,6 +494,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_002236) do
     t.string "slack_division"
     t.string "slack_github"
     t.string "slack_id"
+    t.datetime "slack_invited_at"
     t.datetime "slack_joined_at"
     t.string "slack_linkedin"
     t.string "slack_manager_id"

@@ -7,6 +7,7 @@ module Webhooks
     # Skip default protections - we verify via Slack signature instead
     skip_before_action :verify_authenticity_token
     skip_before_action :authenticate_user!
+    before_action :verify_slack_signature, only: [:interactions]
 
     def events
       event_data = JSON.parse(request.raw_post)
@@ -51,6 +52,31 @@ module Webhooks
       Rails.logger.error e.backtrace.join("\n")
       # Still return 200 to prevent Slack from retrying
       render json: { status: 'ok' }, status: :ok
+    end
+
+    # Slack interactivity (Block Kit button clicks). Handles the "I accept the
+    # Code of Conduct" button, which promotes a single-channel guest to a full
+    # member. Slack posts the interaction as a form-encoded `payload` field.
+    def interactions
+      payload = JSON.parse(params[:payload].to_s.presence || "{}")
+      action = (payload["actions"] || []).first || {}
+
+      if action["action_id"] == "accept_coc"
+        slack_user_id = action["value"].presence || payload.dig("user", "id")
+        SlackCodeOfConductAcceptedJob.perform_later(slack_user_id) if slack_user_id.present?
+
+        # Replace the original message so the button can't be used twice.
+        render json: {
+          replace_original: true,
+          text: ":white_check_mark: Thanks for accepting the Code of Conduct — you now have full access to the Patchwork Labs Slack. Welcome! :tada:"
+        }
+        return
+      end
+
+      head :ok
+    rescue JSON::ParserError => e
+      Rails.logger.error "[Slack Interactions] Invalid payload: #{e.message}"
+      head :bad_request
     end
 
     private

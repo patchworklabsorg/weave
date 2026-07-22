@@ -32,6 +32,133 @@ class SlackService
     raise ApiError, "Slack API error: #{e.message}"
   end
 
+  # Invite an email address to the Slack workspace.
+  #
+  # Slack has NO official invite API for non-Enterprise (nonprofit/standard)
+  # workspaces, so this hits the undocumented `users.admin.inviteBulk` endpoint on
+  # the workspace subdomain, authenticated with a browser session token (xoxc) and
+  # the matching `d` cookie (xoxd) captured from a logged-in admin's browser. This
+  # is unsupported and fragile: the browser token/cookie expire (roughly on the
+  # admin's Slack logout) and Slack can change the endpoint at any time. Failures
+  # surface via the returned result rather than raising, except for missing config.
+  # (Approach mirrors hackclub/arcadius, which runs this in production.)
+  #
+  # Returns { ok:, already_member:, error:, raw: } — `ok` true means the invite was
+  # sent OR the person is already in / invited to the workspace.
+  INVITE_OK_ERRORS = %w[already_in_team already_invited already_in_team_invited_user sent_recently].freeze
+
+  # guest: :single_channel (ultra_restricted, default — one channel until they
+  #        accept the code of conduct), :multi_channel (restricted), or :member.
+  def invite_to_workspace(email:, real_name: nil, channels: nil, guest: :single_channel)
+    raise ConfigurationError, "Slack browser token (SLACK_BROWSER_TOKEN / xoxc) not configured" if browser_token.blank?
+    raise ConfigurationError, "Slack cookie (SLACK_COOKIE / xoxd) not configured" if slack_cookie.blank?
+    raise ConfigurationError, "Slack team_id not configured" if team_id.blank?
+    raise ConfigurationError, "Slack workspace subdomain (SLACK_WORKSPACE_SUBDOMAIN) not configured" if workspace_subdomain.blank?
+
+    restricted = guest == :multi_channel
+    ultra_restricted = guest == :single_channel
+    invite_type = ultra_restricted ? "ultra_restricted" : (restricted ? "restricted" : "regular")
+    # Single-channel guests land in the code-of-conduct channel until they accept.
+    channels ||= ultra_restricted ? [coc_channel].compact.presence || default_channels : default_channels
+
+    params = {
+      token: browser_token,
+      invites: [{ email: email, type: invite_type, mode: "manual" }].to_json,
+      source: "invite_modal",
+      campaign: "team_site_admin",
+      mode: "manual",
+      restricted: restricted.to_s,
+      ultra_restricted: ultra_restricted.to_s,
+      team_id: team_id,
+      channels: channels.join(",")
+    }
+
+    response = Faraday.post("https://#{workspace_subdomain}.slack.com/api/users.admin.inviteBulk") do |req|
+      req.headers["Content-Type"] = "application/x-www-form-urlencoded"
+      req.headers["Cookie"] = "d=#{slack_cookie};"
+      req.body = URI.encode_www_form(params)
+    end
+
+    body = JSON.parse(response.body.presence || "{}")
+    # inviteBulk returns { ok:, invites: [{ email:, ok:, error: }] } — a per-invite
+    # failure can sit under a top-level ok:true, so inspect the individual result.
+    invite = (body["invites"] || []).first || {}
+    error = invite["error"] || body["error"]
+
+    if body["ok"] && invite["ok"] != false && error.nil?
+      { ok: true, already_member: false, error: nil, raw: body }
+    elsif INVITE_OK_ERRORS.include?(error)
+      { ok: true, already_member: true, error: error, raw: body }
+    else
+      Rails.logger.error "Slack invite failed for #{email}: #{error.inspect}"
+      { ok: false, already_member: false, error: error || "unknown_error", raw: body }
+    end
+  rescue Faraday::Error => e
+    Rails.logger.error "Slack invite request error for #{email}: #{e.message}"
+    { ok: false, already_member: false, error: "request_failed", raw: nil }
+  end
+
+  # Promote a single/multi-channel guest to a full workspace member, via the
+  # undocumented `users.admin.setRegular` endpoint (same xoxc/xoxd auth as invite).
+  # Used once a guest has accepted the code of conduct. Returns { ok:, error:, raw: }.
+  def promote_to_member(slack_user_id)
+    raise ConfigurationError, "Slack browser token (SLACK_BROWSER_TOKEN / xoxc) not configured" if browser_token.blank?
+    raise ConfigurationError, "Slack cookie (SLACK_COOKIE / xoxd) not configured" if slack_cookie.blank?
+    raise ConfigurationError, "Slack team_id not configured" if team_id.blank?
+    raise ConfigurationError, "Slack workspace subdomain (SLACK_WORKSPACE_SUBDOMAIN) not configured" if workspace_subdomain.blank?
+
+    params = { token: browser_token, user: slack_user_id, team_id: team_id }
+    response = Faraday.post("https://#{workspace_subdomain}.slack.com/api/users.admin.setRegular") do |req|
+      req.headers["Content-Type"] = "application/x-www-form-urlencoded"
+      req.headers["Cookie"] = "d=#{slack_cookie};"
+      req.body = URI.encode_www_form(params)
+    end
+
+    body = JSON.parse(response.body.presence || "{}")
+    Rails.logger.error "Slack promote failed for #{slack_user_id}: #{body["error"].inspect}" unless body["ok"]
+    { ok: !!body["ok"], error: body["error"], raw: body }
+  rescue Faraday::Error => e
+    Rails.logger.error "Slack promote request error for #{slack_user_id}: #{e.message}"
+    { ok: false, error: "request_failed", raw: nil }
+  end
+
+  # DM a newly-joined guest the code of conduct with an "I accept" button. Uses
+  # the bot token (needs chat:write + im:write). The button's action_id is
+  # "accept_coc" and its value is the Slack user id, handled by the interactions
+  # webhook. Returns the Slack API response.
+  def post_code_of_conduct(slack_user_id, coc_url: nil)
+    raise ConfigurationError, "Slack client not configured" unless @client
+
+    coc_url ||= self.class.code_of_conduct_url
+    intro = "Welcome to Patchwork Labs! :wave: Before you get full access to the community, " \
+            "please read our Code of Conduct and accept it below."
+    coc_line = coc_url.present? ? "Read it here: #{coc_url}" : "Please review our Code of Conduct."
+
+    @client.chat_postMessage(
+      channel: slack_user_id,
+      text: "Please review and accept the Patchwork Labs Code of Conduct to get full access.",
+      blocks: [
+        { type: "section", text: { type: "mrkdwn", text: "*#{intro}*\n\n#{coc_line}" } },
+        {
+          type: "actions",
+          elements: [
+            {
+              type: "button",
+              style: "primary",
+              text: { type: "plain_text", text: "I accept the Code of Conduct", emoji: true },
+              action_id: "accept_coc",
+              value: slack_user_id
+            }
+          ]
+        }
+      ]
+    )
+  end
+
+  def self.code_of_conduct_url
+    ENV["SLACK_COC_URL"] || Rails.application.credentials.dig(:slack, :coc_url)
+  end
+
   # Get user info by email with full profile including custom fields
   def find_user_by_email(email, include_profile: false)
     raise ConfigurationError, "Slack client not configured" unless configured?
@@ -262,6 +389,26 @@ class SlackService
   def default_channels
     channels = ENV["SLACK_DEFAULT_CHANNELS"] || Rails.application.credentials.dig(:slack, :default_channels)
     channels&.split(",")&.map(&:strip) || []
+  end
+
+  # Browser session credentials for the undocumented invite/promote endpoints,
+  # captured from a logged-in workspace admin's Slack session.
+  def browser_token
+    @browser_token ||= ENV["SLACK_BROWSER_TOKEN"] || Rails.application.credentials.dig(:slack, :browser_token)
+  end
+
+  def slack_cookie
+    @slack_cookie ||= ENV["SLACK_COOKIE"] || Rails.application.credentials.dig(:slack, :cookie)
+  end
+
+  # Workspace subdomain, e.g. "patchworklabs" for patchworklabs.slack.com.
+  def workspace_subdomain
+    @workspace_subdomain ||= ENV["SLACK_WORKSPACE_SUBDOMAIN"] || Rails.application.credentials.dig(:slack, :workspace_subdomain)
+  end
+
+  # Channel single-channel guests are invited into (the code-of-conduct channel).
+  def coc_channel
+    @coc_channel ||= ENV["SLACK_COC_CHANNEL"] || Rails.application.credentials.dig(:slack, :coc_channel)
   end
 
   # Update Slack custom profile field with PWL ID

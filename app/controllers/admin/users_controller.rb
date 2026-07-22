@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Admin::UsersController < Admin::BaseController
-  before_action :set_user, only: [:show, :edit, :update, :destroy, :impersonate, :regen_pid]
+  before_action :set_user, only: [:show, :edit, :update, :destroy, :impersonate, :regen_pid, :invite_to_slack]
   before_action :ensure_can_impersonate, only: [:impersonate]
   before_action :ensure_not_already_impersonating, only: [:impersonate]
   before_action :require_superadmin, only: [:regen_pid]
@@ -107,6 +107,13 @@ class Admin::UsersController < Admin::BaseController
   rescue => e
     Rails.logger.error "Failed to regenerate p_id for user #{@user.email}: #{e.message}"
     redirect_to admin_user_path(@user), alert: "Failed to regenerate p_id: #{e.message}"
+  end
+
+  def invite_to_slack
+    resend = @user.slack_invited_at.present?
+    InviteToSlackJob.perform_later(@user.id, resend: resend)
+    verb = resend ? "Re-invited" : "Invited"
+    redirect_to admin_user_path(@user), notice: "#{verb} #{@user.email} to Slack (queued)."
   end
 
   private

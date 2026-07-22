@@ -31,6 +31,10 @@ class SlackWebhookService
         Rails.logger.info "[SlackWebhookService] Created new user #{user.id} from Slack member #{slack_id}"
       end
 
+      # New joiners come in as single-channel guests; DM them the code of conduct
+      # so they can accept it and be promoted to full member.
+      send_code_of_conduct(user)
+
       user
     rescue ActiveRecord::RecordInvalid => e
       Rails.logger.error "[SlackWebhookService] Validation error creating/updating user: #{e.message}"
@@ -95,6 +99,17 @@ class SlackWebhookService
     end
 
     private
+
+    # DM the code of conduct to a freshly-joined guest (idempotent-ish: skips if
+    # they've already accepted). Never lets a Slack failure break webhook handling.
+    def send_code_of_conduct(user)
+      return unless user&.slack_id.present?
+      return if user.slack_coc_accepted_at.present?
+
+      SlackService.new.post_code_of_conduct(user.slack_id)
+    rescue => e
+      Rails.logger.error "[SlackWebhookService] Failed to post CoC to #{user&.slack_id}: #{e.message}"
+    end
 
     # Create new IDP user from Slack member data
     # Reuses pattern from SlackService

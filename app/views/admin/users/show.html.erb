@@ -222,6 +222,25 @@
             <dd class="text-sm text-ink font-mono"><%= @user.slack_id %></dd>
           </div>
         <% end %>
+        <div>
+          <dt class="text-sm font-medium text-ink-faint">Slack membership</dt>
+          <dd class="text-sm text-ink">
+            <% if @user.slack_coc_accepted_at.present? %>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-soft text-teal">Full member</span>
+              <span class="text-ink-faint text-xs">accepted CoC <%= @user.slack_coc_accepted_at.strftime("%b %-d, %Y") %></span>
+            <% elsif @user.slack_invited_at.present? %>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-soft text-sky">Guest · CoC pending</span>
+              <span class="text-ink-faint text-xs">invited <%= @user.slack_invited_at.strftime("%b %-d, %Y") %></span>
+            <% else %>
+              <span class="text-ink-faint">Not invited yet</span>
+            <% end %>
+            <div class="mt-2">
+              <%= button_to(@user.slack_invited_at.present? ? "Re-invite to Slack" : "Invite to Slack",
+                    invite_to_slack_admin_user_path(@user), method: :post,
+                    class: "btn-stitch-ghost text-sm", form_class: "inline-block") %>
+            </div>
+          </dd>
+        </div>
       </dl>
     </div>
   </div>

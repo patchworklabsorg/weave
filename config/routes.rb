@@ -320,6 +320,7 @@ Rails.application.routes.draw do
         member do
           post :impersonate
           patch :regen_pid
+          post :invite_to_slack
         end
       end
 
@@ -380,6 +381,7 @@ Rails.application.routes.draw do
   # Webhook endpoints (external services, no CSRF/auth)
   namespace :webhooks do
     post "slack/events", to: "slack#events"
+    post "slack/interactions", to: "slack#interactions"
   end
 
   #  # Admin routes

@@ -21,7 +21,9 @@ class EmailConfirmationsController < ApplicationController
       @user.verify_email
       # Send welcome email, sync to Slack, and notify ops now that email is confirmed
       WelcomeEmailJob.perform_later(@user)
-      SyncUserToSlackJob.perform_later(@user.id)
+      # Invite to Slack (as a single-channel guest pending code-of-conduct
+      # acceptance); if they're already in the workspace this just syncs their ID.
+      InviteToSlackJob.perform_later(@user.id)
       NotifyOpsOnNewUserJob.perform_later(@user)
       flash[:notice] = "Your email has been successfully confirmed! You can now log in."
     end
