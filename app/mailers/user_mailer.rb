@@ -9,4 +9,5 @@ class UserMailer < ApplicationMailer
       subject: env_subject("Welcome to Patchwork Labs")
     )
   end
+
 end

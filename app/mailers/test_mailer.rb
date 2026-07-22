@@ -10,4 +10,5 @@ class TestMailer < ApplicationMailer
       subject: env_subject("Test Email - SMTP Configuration")
     )
   end
+
 end

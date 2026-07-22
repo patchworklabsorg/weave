@@ -25,4 +25,5 @@ class NotifyOpsOnSecurityIncidentJob < ApplicationJob
     "IP: #{ip_address}\n" \
     "Investigate immediately!"
   end
+
 end

@@ -14,4 +14,5 @@ class AdminMailer < ApplicationMailer
       from: "idp@patchworklabs.org"
     )
   end
+
 end

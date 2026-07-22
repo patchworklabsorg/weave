@@ -47,4 +47,5 @@ class InviteToSlackJob < ApplicationJob
       Rails.logger.error "Slack invite failed for #{user.email}: #{result[:error]}"
     end
   end
+
 end

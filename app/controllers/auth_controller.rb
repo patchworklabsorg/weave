@@ -57,7 +57,7 @@ class AuthController < ApplicationController
 
     # Password login flow (from /login/pw) - ADMIN ONLY
     if user_password.present?
-      if user && user.authenticate(user_password)
+      if user&.authenticate(user_password)
         # Only allow password login for admin users
         if user.admin?
           complete_login(user)

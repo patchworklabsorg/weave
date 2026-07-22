@@ -48,5 +48,7 @@ class ServiceKeySerializer
     def render_collection(keys, options = {})
       keys.map { |key| new(key, options).as_json }
     end
+
   end
+
 end

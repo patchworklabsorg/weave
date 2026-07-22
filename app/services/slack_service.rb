@@ -14,7 +14,7 @@ class SlackService
   # Only updates users who are already in Slack - does not invite new users
   def sync_user_to_slack(email:, p_id:)
     raise ConfigurationError, "Slack client not configured" unless configured?
-    return unless p_id.present?
+    return if p_id.blank?
 
     # Find user in Slack
     slack_user = find_user_by_email(email)
@@ -57,20 +57,24 @@ class SlackService
 
     restricted = guest == :multi_channel
     ultra_restricted = guest == :single_channel
-    invite_type = ultra_restricted ? "ultra_restricted" : (restricted ? "restricted" : "regular")
+    invite_type = if ultra_restricted
+                    "ultra_restricted"
+                  else
+                    (restricted ? "restricted" : "regular")
+                  end
     # Single-channel guests land in the code-of-conduct channel until they accept.
     channels ||= ultra_restricted ? [coc_channel].compact.presence || default_channels : default_channels
 
     # Field shape mirrors a real Slack web-client inviteBulk request.
     body = admin_api_post("users.admin.inviteBulk", {
-      "invites" => [{ email: email, mode: "manual", type: invite_type }].to_json,
-      "team_id" => team_id,
-      "restricted" => restricted.to_s,
-      "ultra_restricted" => ultra_restricted.to_s,
-      "campaign" => "composer",
-      "channels" => channels.join(","),
-      "_x_reason" => "submit-invite-to-workspace-invites"
-    })
+                            "invites"          => [{ email: email, mode: "manual", type: invite_type }].to_json,
+                            "team_id"          => team_id,
+                            "restricted"       => restricted.to_s,
+                            "ultra_restricted" => ultra_restricted.to_s,
+                            "campaign"         => "composer",
+                            "channels"         => channels.join(","),
+                            "_x_reason"        => "submit-invite-to-workspace-invites"
+                          })
 
     # inviteBulk returns { ok:, invites: [{ email:, ok:, error: }] } — a per-invite
     # failure can sit under a top-level ok:true, so inspect the individual result.
@@ -95,10 +99,10 @@ class SlackService
   # Used once a guest has accepted the code of conduct. Returns { ok:, error:, raw: }.
   def promote_to_member(slack_user_id)
     body = admin_api_post("users.admin.setRegular", {
-      "user" => slack_user_id,
-      "team_id" => team_id,
-      "_x_reason" => "member-set-regular"
-    })
+                            "user"      => slack_user_id,
+                            "team_id"   => team_id,
+                            "_x_reason" => "member-set-regular"
+                          })
 
     Rails.logger.error "Slack promote failed for #{slack_user_id}: #{body["error"].inspect}" unless body["ok"]
     { ok: !!body["ok"], error: body["error"], raw: body }
@@ -189,21 +193,21 @@ class SlackService
 
       # Don't pass cursor parameter if it's nil (first request)
       response = if cursor.present?
-        @client.users_list(limit: limit, cursor: cursor)
-      else
-        @client.users_list(limit: limit)
-      end
+                   @client.users_list(limit: limit, cursor: cursor)
+                 else
+                   @client.users_list(limit: limit)
+                 end
 
       break unless response["ok"]
 
       # Only include full members (not bots, deleted, guests, or deactivated)
       page_members = response["members"].reject do |m|
-        m["id"] == "USLACKBOT" ||   # Slackbot (special system account)
-        m["is_bot"] ||
-        m["deleted"] ||
-        m["is_restricted"] ||      # Guest users
-        m["is_ultra_restricted"] || # Single-channel guests
-        m["profile"]["deactivated"]  # Deactivated accounts
+        m["id"] == "USLACKBOT" || # Slackbot (special system account)
+          m["is_bot"] ||
+          m["deleted"] ||
+          m["is_restricted"] || # Guest users
+          m["is_ultra_restricted"] || # Single-channel guests
+          m["profile"]["deactivated"] # Deactivated accounts
       end
       Rails.logger.info "  Found #{page_members.size} active members on page #{page_count}"
       members.concat(page_members)
@@ -348,13 +352,13 @@ class SlackService
   private
 
   def build_client
-    return nil unless token.present?
+    return nil if token.blank?
 
     Slack::Web::Client.new(token: token)
   end
 
   def build_user_client
-    return nil unless user_token.present?
+    return nil if user_token.blank?
 
     Slack::Web::Client.new(token: user_token)
   end
@@ -407,9 +411,9 @@ class SlackService
     raise ConfigurationError, "Slack workspace subdomain (SLACK_WORKSPACE_SUBDOMAIN) not configured" if workspace_subdomain.blank?
 
     all_fields = {
-      "token" => browser_token,
-      "_x_mode" => "online",
-      "_x_sonic" => "true",
+      "token"       => browser_token,
+      "_x_mode"     => "online",
+      "_x_sonic"    => "true",
       "_x_app_name" => "client"
     }.merge(fields)
 
@@ -464,7 +468,7 @@ class SlackService
   # Update API-editable Slack profile fields from IDP
   # Only pushes fields that are API-editable (not user-editable)
   def update_slack_api_fields(slack_user_id, user)
-    return false unless slack_user_id.present?
+    return false if slack_user_id.blank?
     return false unless @user_client
 
     # Build fields hash for API-editable fields only
@@ -578,4 +582,5 @@ class SlackService
     Rails.logger.error "Failed to create user from Slack member #{email}: #{e.message}"
     raise
   end
+
 end

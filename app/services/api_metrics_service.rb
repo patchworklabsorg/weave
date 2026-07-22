@@ -10,11 +10,13 @@ class ApiMetricsService
 
       # Record response codes
       increment_counter("api.responses.#{response_category(usage_record.response_code)}",
-                       tags: tags_for_usage(usage_record))
+                        tags: tags_for_usage(usage_record))
 
       # Record duration
-      record_histogram("api.request.duration", usage_record.duration_ms,
-                      tags: tags_for_usage(usage_record)) if usage_record.duration_ms
+      if usage_record.duration_ms
+        record_histogram("api.request.duration", usage_record.duration_ms,
+                         tags: tags_for_usage(usage_record))
+      end
 
     rescue => e
       Rails.logger.error("Failed to record API request metrics: #{e.message}")
@@ -91,5 +93,7 @@ class ApiMetricsService
       else "unknown"
       end
     end
+
   end
+
 end

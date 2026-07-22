@@ -21,4 +21,5 @@ class Session < ApplicationRecord
   set_public_id_prefix :ses
 
   validates :session_id, presence: true, uniqueness: true
+
 end

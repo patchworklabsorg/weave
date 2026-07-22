@@ -80,10 +80,10 @@ RSpec.describe User, type: :model do
     # so a valid p_id must be supplied here (first_name/last_name are NOT NULL).
     subject { build(:user, p_id: "PWL0ABCDEF123") }
 
-    it { should validate_presence_of(:first_name) }
-    it { should validate_presence_of(:last_name) }
-    it { should validate_presence_of(:email) }
-    it { should validate_uniqueness_of(:email).case_insensitive }
+    it { is_expected.to validate_presence_of(:first_name) }
+    it { is_expected.to validate_presence_of(:last_name) }
+    it { is_expected.to validate_presence_of(:email) }
+    it { is_expected.to validate_uniqueness_of(:email).case_insensitive }
 
     it "validates email format" do
       user = build(:user, email: "invalid-email")
@@ -98,11 +98,11 @@ RSpec.describe User, type: :model do
   end
 
   describe "associations" do
-    it { should have_many(:visits).class_name("Ahoy::Visit") }
-    it { should have_many(:user_sessions).class_name("User::Session") }
-    it { should have_many(:addresses) }
-    it { should have_one(:shipping_address) }
-    it { should have_one(:billing_address) }
+    it { is_expected.to have_many(:visits).class_name("Ahoy::Visit") }
+    it { is_expected.to have_many(:user_sessions).class_name("User::Session") }
+    it { is_expected.to have_many(:addresses) }
+    it { is_expected.to have_one(:shipping_address) }
+    it { is_expected.to have_one(:billing_address) }
   end
 
   describe "callbacks" do
@@ -127,7 +127,7 @@ RSpec.describe User, type: :model do
     end
 
     it "handles nil names safely" do
-      user = User.new(first_name: nil, last_name: nil)
+      user = described_class.new(first_name: nil, last_name: nil)
       expect(user.initials).to eq("")
     end
   end

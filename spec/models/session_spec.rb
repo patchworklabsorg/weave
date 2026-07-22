@@ -21,26 +21,26 @@ require "rails_helper"
 RSpec.describe Session, type: :model do
   describe "validations" do
     # session_id is NOT NULL, so give the uniqueness matcher a persistable record.
-    subject { Session.new(session_id: SecureRandom.hex(16)) }
+    subject { described_class.new(session_id: SecureRandom.hex(16)) }
 
-    it { should validate_presence_of(:session_id) }
-    it { should validate_uniqueness_of(:session_id) }
+    it { is_expected.to validate_presence_of(:session_id) }
+    it { is_expected.to validate_uniqueness_of(:session_id) }
   end
 
   describe "cleanup" do
     it "can find old sessions" do
-      old_session = Session.create!(
+      old_session = described_class.create!(
         session_id: SecureRandom.hex(16),
         data: {},
         updated_at: 2.days.ago
       )
 
-      recent_session = Session.create!(
+      recent_session = described_class.create!(
         session_id: SecureRandom.hex(16),
         data: {}
       )
 
-      old_sessions = Session.where("updated_at < ?", 1.day.ago)
+      old_sessions = described_class.where("updated_at < ?", 1.day.ago)
       expect(old_sessions).to include(old_session)
       expect(old_sessions).not_to include(recent_session)
     end

@@ -121,4 +121,5 @@ class Service::Key < ApplicationRecord
   def generate_hash_key
     self.hash_key ||= SecureRandom.hex(32)
   end
+
 end

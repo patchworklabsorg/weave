@@ -65,4 +65,5 @@ class Service::Key::Usage < ApplicationRecord
   def slow?(threshold_ms = 1000)
     duration_ms && duration_ms > threshold_ms
   end
+
 end

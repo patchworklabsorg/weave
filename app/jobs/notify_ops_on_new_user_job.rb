@@ -10,4 +10,5 @@ class NotifyOpsOnNewUserJob < ApplicationJob
     # TODO: Implement ops notification (Slack webhook, email, etc.)
     # SlackService.notify_channel('#ops', "New user signed up: #{user.email}")
   end
+
 end

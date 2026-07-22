@@ -9,4 +9,5 @@ class WelcomeEmailJob < ApplicationJob
     Rails.logger.info "Sending welcome email to #{user.email}"
     UserMailer.welcome_email(user).deliver_now
   end
+
 end

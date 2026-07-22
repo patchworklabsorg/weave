@@ -43,7 +43,7 @@ require "rails_helper"
 
 RSpec.describe Address, type: :model do
   it "requires city, state, and country" do
-    address = Address.new
+    address = described_class.new
 
     expect(address).not_to be_valid
     expect(address.errors[:city]).to be_present
@@ -52,6 +52,6 @@ RSpec.describe Address, type: :model do
   end
 
   it "defines the address_type enum values" do
-    expect(Address.address_types.keys).to include("shipping", "billing")
+    expect(described_class.address_types.keys).to include("shipping", "billing")
   end
 end

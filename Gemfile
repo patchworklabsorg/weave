@@ -31,7 +31,7 @@ gem "jsbundling-rails", "~> 1.0"
 ###############################################################################
 # SECURITY & AUTHENTICATION
 ###############################################################################
-gem "bcrypt", "~> 3.1.7"                 # Secure password hashing
+gem "bcrypt", "~> 3.1.7" # Secure password hashing
 # gem "webauthn", "~> 3.4"                 # WebAuthn support - TODO: Implement if needed
 gem "doorkeeper"                         # OAuth 2.0 provider
 gem "rack-attack"                        # Rate limiting
@@ -75,7 +75,7 @@ gem "safely_block"                       # Error handling
 # FILE & IMAGE PROCESSING
 ###############################################################################
 gem "image_processing", "~> 1.2" # Active Storage image transformations
-gem "active_storage_validations"         # File validations
+gem "active_storage_validations" # File validations
 gem "rqrcode" # QR code generation
 
 ###############################################################################

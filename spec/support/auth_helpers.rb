@@ -5,10 +5,7 @@ module ControllerAuthHelpers
   # For controller specs: stub the authentication chain so the given user is the
   # current user without touching the session/session-tracking machinery.
   def sign_in(user)
-    allow(controller).to receive(:current_user).and_return(user)
-    allow(controller).to receive(:authenticate_user!).and_return(true)
-    allow(controller).to receive(:track_user_session).and_return(true)
-    allow(controller).to receive(:current_user_session).and_return(nil)
+    allow(controller).to receive_messages(current_user: user, authenticate_user!: true, track_user_session: true, current_user_session: nil)
   end
 end
 

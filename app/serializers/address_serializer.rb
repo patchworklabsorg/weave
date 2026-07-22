@@ -71,5 +71,7 @@ class AddressSerializer
     def render_collection(addresses)
       addresses.map { |address| new(address).as_json }
     end
+
   end
+
 end

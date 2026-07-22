@@ -2,8 +2,8 @@
 
 # == Route Map
 #
+# Routes for application:
 #                                    Prefix Verb   URI Pattern                                                                                       Controller#Action
-#                                                  /assets                                                                                           Propshaft::Server
 #                native_oauth_authorization GET    /oauth/authorize/native(.:format)                                                                 doorkeeper/authorizations#show
 #                       oauth_authorization GET    /oauth/authorize(.:format)                                                                        doorkeeper/authorizations#new
 #                                           DELETE /oauth/authorize(.:format)                                                                        doorkeeper/authorizations#destroy
@@ -23,12 +23,16 @@
 #              oauth_authorized_application DELETE /oauth/authorized_applications/:id(.:format)                                                      doorkeeper/authorized_applications#destroy
 #                          oauth_token_info GET    /oauth/token/info(.:format)                                                                       doorkeeper/token_info#show
 #                            oauth_userinfo GET    /oauth/userinfo(.:format)                                                                         oauth/userinfo#show
+#                      oauth_oauth_metadata GET    /oauth/.well-known/oauth-authorization-server(.:format)                                           oauth/discovery#oauth_authorization_server
+#                oauth_openid_configuration GET    /oauth/.well-known/openid-configuration(.:format)                                                 oauth/discovery#openid_configuration
 #                                      root GET    /                                                                                                 home#index
 #                                           GET    /.well-known/*path                                                                                well_known#show
+#                                           GET    /security.txt(.:format)                                                                           redirect(301, /.well-known/security.txt)
 #                                    signup GET    /signup(.:format)                                                                                 users#new
 #                                           POST   /signup(.:format)                                                                                 users#create
 #                         username_conflict GET    /signup/username-conflict(.:format)                                                               users#username_conflict
 #                                     login GET    /login(.:format)                                                                                  auth#new_session
+#                            password_login GET    /login/pw(.:format)                                                                               auth#password_login
 #                               oauth_login GET    /oauth/login(.:format)                                                                            auth#oauth_login
 #                                           POST   /login(.:format)                                                                                  auth#login
 #                           send_magic_link POST   /auth/magic_link(.:format)                                                                        auth#send_magic_link
@@ -39,23 +43,25 @@
 #                                   profile GET    /profile(.:format)                                                                                users#show
 #                              edit_profile GET    /profile/edit(.:format)                                                                           users#edit
 #                          profile_sessions GET    /profile/sessions(.:format)                                                                       users#sessions
+#                      destroy_all_sessions DELETE /profile/sessions(.:format)                                                                       users#destroy_all_sessions
+#                                   session DELETE /profile/sessions/:id(.:format)                                                                   users#destroy_session
 #                            update_profile PATCH  /profile(.:format)                                                                                users#update
-#                     destroy_profile_photo DELETE /profile/photo(.:format)                                                                          users#destroy_profile_photo
 #                        email_confirmation GET    /email_confirmation(.:format)                                                                     email_confirmations#show
 #                             confirm_email GET    /confirm_email/:token(.:format)                                                                   email_confirmations#confirm
 #                 resend_email_confirmation POST   /email_confirmation/resend(.:format)                                                              email_confirmations#resend
-#                        user_profile_photo GET    /user/:pd_id/pfp(.:format)                                                                        profile_photos#show
-#                               user_avatar GET    /user/:pd_id/avatar/:variant(.:format)                                                            profile_photos#avatar
-#                        user_avatar_square GET    /user/:pd_id/avatar/:variant/square(.:format)                                                     profile_photos#avatar_square
-#                        user_avatar_circle GET    /user/:pd_id/avatar/:variant/circle(.:format)                                                     profile_photos#avatar_circle
-#                             user_initials GET    /user/:pd_id/initials(/:variant)(.:format)                                                        profile_photos#initials {format: :svg}
-#                      user_initials_circle GET    /user/:pd_id/initials/:variant/circle(.:format)                                                   profile_photos#initials_circle {format: :svg}
+#                        user_profile_photo GET    /user/:p_id/pfp(.:format)                                                                         profile_photos#show
+#                               user_avatar GET    /user/:p_id/avatar/:variant(.:format)                                                             profile_photos#avatar
+#                        user_avatar_square GET    /user/:p_id/avatar/:variant/square(.:format)                                                      profile_photos#avatar_square
+#                        user_avatar_circle GET    /user/:p_id/avatar/:variant/circle(.:format)                                                      profile_photos#avatar_circle
+#                             user_initials GET    /user/:p_id/initials(/:variant)(.:format)                                                         profile_photos#initials {format: :svg}
+#                      user_initials_circle GET    /user/:p_id/initials/:variant/circle(.:format)                                                    profile_photos#initials_circle {format: :svg}
 #                        rails_health_check GET    /up(.:format)                                                                                     rails/health#show
 #                               ok_computer        /ok                                                                                               OkComputer::Engine
 #            stop_impersonating_admin_users DELETE /admin/users/stop_impersonating(.:format)                                                         admin/users#stop_impersonating
 #                                admin_root GET    /admin(.:format)                                                                                  admin/dashboard#index
 #                    impersonate_admin_user POST   /admin/users/:id/impersonate(.:format)                                                            admin/users#impersonate
 #                      regen_pid_admin_user PATCH  /admin/users/:id/regen_pid(.:format)                                                              admin/users#regen_pid
+#                invite_to_slack_admin_user POST   /admin/users/:id/invite_to_slack(.:format)                                                        admin/users#invite_to_slack
 #                               admin_users GET    /admin/users(.:format)                                                                            admin/users#index
 #                                           POST   /admin/users(.:format)                                                                            admin/users#create
 #                            new_admin_user GET    /admin/users/new(.:format)                                                                        admin/users#new
@@ -64,6 +70,12 @@
 #                                           PATCH  /admin/users/:id(.:format)                                                                        admin/users#update
 #                                           PUT    /admin/users/:id(.:format)                                                                        admin/users#update
 #                                           DELETE /admin/users/:id(.:format)                                                                        admin/users#destroy
+#                    activate_admin_service PATCH  /admin/services/:id/activate(.:format)                                                            admin/services#activate
+#                  deactivate_admin_service PATCH  /admin/services/:id/deactivate(.:format)                                                          admin/services#deactivate
+#                     suspend_admin_service PATCH  /admin/services/:id/suspend(.:format)                                                             admin/services#suspend
+#                  revoke_admin_service_key PATCH  /admin/services/:service_id/keys/:id/revoke(.:format)                                             admin/service_keys#revoke
+#               deprecate_admin_service_key PATCH  /admin/services/:service_id/keys/:id/deprecate(.:format)                                          admin/service_keys#deprecate
+#                activate_admin_service_key PATCH  /admin/services/:service_id/keys/:id/activate(.:format)                                           admin/service_keys#activate
 #                        admin_service_keys GET    /admin/services/:service_id/keys(.:format)                                                        admin/service_keys#index
 #                                           POST   /admin/services/:service_id/keys(.:format)                                                        admin/service_keys#create
 #                     new_admin_service_key GET    /admin/services/:service_id/keys/new(.:format)                                                    admin/service_keys#new
@@ -72,6 +84,9 @@
 #                                           PATCH  /admin/services/:service_id/keys/:id(.:format)                                                    admin/service_keys#update
 #                                           PUT    /admin/services/:service_id/keys/:id(.:format)                                                    admin/service_keys#update
 #                                           DELETE /admin/services/:service_id/keys/:id(.:format)                                                    admin/service_keys#destroy
+#            activate_admin_service_webhook PATCH  /admin/services/:service_id/webhooks/:id/activate(.:format)                                       admin/service_webhooks#activate
+#          deactivate_admin_service_webhook PATCH  /admin/services/:service_id/webhooks/:id/deactivate(.:format)                                     admin/service_webhooks#deactivate
+#                test_admin_service_webhook POST   /admin/services/:service_id/webhooks/:id/test(.:format)                                           admin/service_webhooks#test
 #                    admin_service_webhooks GET    /admin/services/:service_id/webhooks(.:format)                                                    admin/service_webhooks#index
 #                                           POST   /admin/services/:service_id/webhooks(.:format)                                                    admin/service_webhooks#create
 #                 new_admin_service_webhook GET    /admin/services/:service_id/webhooks/new(.:format)                                                admin/service_webhooks#new
@@ -105,10 +120,8 @@
 #                                           GET    /admin/*path(.:format)                                                                            redirect(301, /login)
 #                         letter_opener_web        /letter_opener                                                                                    LetterOpenerWeb::Engine
 #                             api_v1_health GET    /api/v1/health(.:format)                                                                          api/v1/health#index
-#                  api_v1_auth_authenticate POST   /api/v1/auth/authenticate(.:format)                                                               api/v1/auth#authenticate
-#                              api_v1_users POST   /api/v1/users(.:format)                                                                           api/v1/users#create
-#                               api_v1_user GET    /api/v1/users/:id(.:format)                                                                       api/v1/users#show
-#                     api_v1_users_by_email GET    /api/v1/users/by_email(.:format)                                                                  api/v1/users#show
+#                     webhooks_slack_events POST   /webhooks/slack/events(.:format)                                                                  webhooks/slack#events
+#               webhooks_slack_interactions POST   /webhooks/slack/interactions(.:format)                                                            webhooks/slack#interactions
 #          turbo_recede_historical_location GET    /recede_historical_location(.:format)                                                             turbo/native/navigation#recede
 #          turbo_resume_historical_location GET    /resume_historical_location(.:format)                                                             turbo/native/navigation#resume
 #         turbo_refresh_historical_location GET    /refresh_historical_location(.:format)                                                            turbo/native/navigation#refresh
@@ -138,11 +151,13 @@
 #                          actual_db_schema        /rails                                                                                            ActualDbSchema::Engine
 #
 # Routes for OkComputer::Engine:
+#            Prefix Verb        URI Pattern       Controller#Action
 #              root GET|OPTIONS /                 ok_computer/ok_computer#show {check: "default"}
 # okcomputer_checks GET|OPTIONS /all(.:format)    ok_computer/ok_computer#index
 #  okcomputer_check GET|OPTIONS /:check(.:format) ok_computer/ok_computer#show
 #
 # Routes for MissionControl::Jobs::Engine:
+#                      Prefix Verb   URI Pattern                                                    Controller#Action
 #     application_queue_pause DELETE /applications/:application_id/queues/:queue_id/pause(.:format) mission_control/jobs/queues/pauses#destroy
 #                             POST   /applications/:application_id/queues/:queue_id/pause(.:format) mission_control/jobs/queues/pauses#create
 #          application_queues GET    /applications/:application_id/queues(.:format)                 mission_control/jobs/queues#index
@@ -167,6 +182,7 @@
 #                        root GET    /                                                              mission_control/jobs/queues#index
 #
 # Routes for Audits1984::Engine:
+#            Prefix Verb  URI Pattern                                Controller#Action
 #    session_audits POST  /sessions/:session_id/audits(.:format)     audits1984/audits#create
 #     session_audit PATCH /sessions/:session_id/audits/:id(.:format) audits1984/audits#update
 #                   PUT   /sessions/:session_id/audits/:id(.:format) audits1984/audits#update
@@ -177,6 +193,7 @@
 #              root GET   /                                          audits1984/sessions#index
 #
 # Routes for Blazer::Engine:
+#            Prefix Verb   URI Pattern                       Controller#Action
 #       run_queries POST   /queries/run(.:format)            blazer/queries#run
 #    cancel_queries POST   /queries/cancel(.:format)         blazer/queries#cancel
 #     refresh_query POST   /queries/:id/refresh(.:format)    blazer/queries#refresh
@@ -210,6 +227,7 @@
 #              root GET    /                                 blazer/queries#home
 #
 # Routes for LetterOpenerWeb::Engine:
+#        Prefix Verb URI Pattern                      Controller#Action
 #       letters GET  /                                letter_opener_web/letters#index
 # clear_letters POST /clear(.:format)                 letter_opener_web/letters#clear
 #        letter GET  /:id(/:style)(.:format)          letter_opener_web/letters#show
@@ -217,6 +235,7 @@
 #               GET  /:id/attachments/:file(.:format) letter_opener_web/letters#attachment {file: /[^\/]+/}
 #
 # Routes for ActualDbSchema::Engine:
+#                          Prefix Verb URI Pattern                                Controller#Action
 #              rollback_migration POST /migrations/:id/rollback(.:format)         actual_db_schema/migrations#rollback
 #               migrate_migration POST /migrations/:id/migrate(.:format)          actual_db_schema/migrations#migrate
 #                      migrations GET  /migrations(.:format)                      actual_db_schema/migrations#index
@@ -238,10 +257,10 @@ Rails.application.routes.draw do
   # OAuth 2.0 endpoints
   namespace :oauth do
     get "userinfo", to: "userinfo#show"
-    
+
     # OAuth 2.0 Server Metadata (RFC 8414)
     get ".well-known/oauth-authorization-server", to: "discovery#oauth_authorization_server", as: :oauth_metadata
-    
+
     # OpenID Connect Discovery (optional)
     get ".well-known/openid-configuration", to: "discovery#openid_configuration", as: :openid_configuration
   end

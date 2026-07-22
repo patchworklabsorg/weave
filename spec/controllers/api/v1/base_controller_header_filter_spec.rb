@@ -8,11 +8,11 @@ RSpec.describe Api::V1::BaseController, type: :controller do
   describe "#filter_sensitive_headers" do
     it "redacts sensitive headers given as raw Rack env keys" do
       headers = {
-        "HTTP_AUTHORIZATION" => "Bearer super-secret-token",
-        "HTTP_X_API_KEY" => "sk_live_deadbeef",
-        "HTTP_COOKIE" => "session=abc123",
+        "HTTP_AUTHORIZATION"   => "Bearer super-secret-token",
+        "HTTP_X_API_KEY"       => "sk_live_deadbeef",
+        "HTTP_COOKIE"          => "session=abc123",
         "HTTP_X_FORWARDED_FOR" => "203.0.113.10",
-        "HTTP_ACCEPT" => "application/json"
+        "HTTP_ACCEPT"          => "application/json"
       }
 
       filtered = controller_instance.send(:filter_sensitive_headers, headers)
@@ -27,8 +27,8 @@ RSpec.describe Api::V1::BaseController, type: :controller do
     it "redacts sensitive headers given as normalized hyphenated names" do
       headers = {
         "authorization" => "Bearer secret",
-        "X-Api-Key" => "sk_live_x",
-        "Accept" => "application/json"
+        "X-Api-Key"     => "sk_live_x",
+        "Accept"        => "application/json"
       }
 
       filtered = controller_instance.send(:filter_sensitive_headers, headers)

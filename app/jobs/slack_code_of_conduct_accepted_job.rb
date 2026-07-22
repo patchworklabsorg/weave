@@ -23,4 +23,5 @@ class SlackCodeOfConductAcceptedJob < ApplicationJob
   rescue SlackService::ConfigurationError => e
     Rails.logger.error "Slack not configured for promotion: #{e.message}"
   end
+
 end

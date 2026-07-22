@@ -50,5 +50,7 @@ class SessionSerializer
     def render_collection(sessions)
       sessions.map { |session| new(session).as_json }
     end
+
   end
+
 end

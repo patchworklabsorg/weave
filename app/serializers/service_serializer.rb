@@ -71,5 +71,7 @@ class ServiceSerializer
     def render_collection(services, options = {})
       services.map { |service| new(service, options).as_json }
     end
+
   end
+
 end

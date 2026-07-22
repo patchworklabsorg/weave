@@ -19,7 +19,7 @@ module Api
           return
         end
 
-        key = Service::Key.find_by_api_key(api_key)
+        key = Service::Key.find_by(api_key: api_key)
 
         # Store the key for logging purposes
         @current_key_for_logging = key

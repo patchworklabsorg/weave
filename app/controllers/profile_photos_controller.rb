@@ -79,7 +79,7 @@ class ProfilePhotosController < ApplicationController
 
     <<~SVG
       <svg width="#{size}" height="#{size}" xmlns="http://www.w3.org/2000/svg">
-        #{circle ? %(<circle cx="#{size/2}" cy="#{size/2}" r="#{size/2}" fill="#{bg_color}"/>) : %(<rect width="#{size}" height="#{size}" fill="#{bg_color}"/>)}
+        #{circle ? %(<circle cx="#{size / 2}" cy="#{size / 2}" r="#{size / 2}" fill="#{bg_color}"/>) : %(<rect width="#{size}" height="#{size}" fill="#{bg_color}"/>)}
         <text
           x="50%"
           y="50%"
@@ -93,4 +93,5 @@ class ProfilePhotosController < ApplicationController
       </svg>
     SVG
   end
+
 end

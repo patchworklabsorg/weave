@@ -39,4 +39,5 @@ class SyncUserToSlackJob < ApplicationJob
     Rails.logger.error "User not found: #{e.message}"
     # Don't retry if user doesn't exist
   end
+
 end

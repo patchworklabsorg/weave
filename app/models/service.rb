@@ -65,4 +65,5 @@ class Service < ApplicationRecord
   def suspend!
     update!(status: "suspended")
   end
+
 end

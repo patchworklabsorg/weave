@@ -20,7 +20,7 @@ class MagicLinkService
 
   # Validate and consume a magic link token
   def validate_and_consume(token)
-    raise InvalidTokenError, "Invalid token" unless @user.magic_link_token.present?
+    raise InvalidTokenError, "Invalid token" if @user.magic_link_token.blank?
     raise InvalidTokenError, "Token mismatch" unless @user.magic_link_token_matches?(token)
     raise InvalidTokenError, "Token expired or already used" unless @user.magic_link_valid?
 
@@ -50,5 +50,7 @@ class MagicLinkService
       # TODO: Consider hashing tokens before storage for full protection
       User.find_by(magic_link_token: token)
     end
+
   end
+
 end

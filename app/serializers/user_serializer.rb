@@ -128,5 +128,7 @@ class UserSerializer
     def render_collection(users, options = {})
       users.map { |user| new(user, options).as_json }
     end
+
   end
+
 end

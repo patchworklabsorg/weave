@@ -38,8 +38,9 @@ module Interceptors
 
     def self.send_warning_email(count, date)
       AdminMailer.email_throttle_warning(count, date).deliver_later
-    rescue StandardError => e
+    rescue => e
       Rails.logger.error("Failed to send email throttle warning: #{e.message}")
     end
+
   end
 end

@@ -96,4 +96,5 @@ class Service::Webhook < ApplicationRecord
   def generate_secret_token
     self.secret_token ||= SecureRandom.hex(32)
   end
+
 end

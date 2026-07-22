@@ -8,8 +8,8 @@ RSpec.describe SlackWebhookService do
       user = create(:user, :verified, slack_id: "U123", email: "old@example.com")
       expect(user.email_verified?).to be true
 
-      SlackWebhookService.process_user_change(
-        "id" => "U123",
+      described_class.process_user_change(
+        "id"      => "U123",
         "profile" => { "email" => "new@example.com" }
       )
 
@@ -22,8 +22,8 @@ RSpec.describe SlackWebhookService do
     it "leaves confirmation intact when the email is unchanged" do
       user = create(:user, :verified, slack_id: "U777", email: "same@example.com")
 
-      SlackWebhookService.process_user_change(
-        "id" => "U777",
+      described_class.process_user_change(
+        "id"      => "U777",
         "profile" => { "email" => "same@example.com" }
       )
 
