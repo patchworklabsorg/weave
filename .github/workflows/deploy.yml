@@ -49,8 +49,8 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: |
-            ghcr.io/patchworklabsorg/idp:main
-            ghcr.io/patchworklabsorg/idp:${{ github.sha }}
+            ghcr.io/patchworklabsorg/weave:main
+            ghcr.io/patchworklabsorg/weave:${{ github.sha }}
           build-args: |
             GIT_SHA=${{ github.sha }}
           cache-from: type=gha
@@ -63,5 +63,5 @@ jobs:
           username: weave-deploy
           key: ${{ secrets.WEAVE_DEPLOY_SSH_KEY }}
           script: |
-            echo "ghcr.io/patchworklabsorg/idp:${{ github.sha }}" > /var/lib/weave/image-ref
+            echo "ghcr.io/patchworklabsorg/weave:${{ github.sha }}" > /var/lib/weave/image-ref
             sudo systemctl restart weave-web
