@@ -28,12 +28,14 @@
 #  session_duration_seconds :integer          default(2592000), not null
 #  slack_birthday           :date
 #  slack_city               :string
+#  slack_coc_accepted_at    :datetime
 #  slack_cost_center        :string
 #  slack_country            :string
 #  slack_department         :string
 #  slack_display_name       :string
 #  slack_division           :string
 #  slack_github             :string
+#  slack_invited_at         :datetime
 #  slack_joined_at          :datetime
 #  slack_linkedin           :string
 #  slack_organization       :string
