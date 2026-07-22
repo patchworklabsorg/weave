@@ -67,8 +67,8 @@ Rails.application.configure do
 
   # Default from and reply-to addresses
   config.action_mailer.default_options = {
-    from: "Weave <idp@patchworklabs.org>",
-    reply_to: "no-reply@patchworklabs.org"
+    from: "Weave <hi@weave.patchworklabs.org>",
+    reply_to: "hi@weave.patchworklabs.org"
   }
 
   # Transactional email via Resend (API key set in config/initializers/resend.rb).
