@@ -180,7 +180,10 @@ Doorkeeper.configure do
   # Require non-confidential clients to use PKCE when using an authorization code
   # to obtain an access_token (disabled by default)
   #
-  # force_pkce
+  # Enabled: our RFC 8414 discovery document advertises S256, so PKCE must be
+  # enforced. Requires the code_challenge / code_challenge_method columns on
+  # oauth_access_grants (see AddPkceToOauthAccessGrants migration).
+  force_pkce
 
   # Hash access and refresh tokens before persisting them.
   # This will disable the possibility to use +reuse_access_token+
@@ -189,7 +192,11 @@ Doorkeeper.configure do
   # Note: If you are already a user of doorkeeper and have existing tokens
   # in your installation, they will be invalid without adding 'fallback: :plain'.
   #
-  # hash_token_secrets
+  # Enabled: access/refresh token secrets are stored hashed (SHA256) so a
+  # database leak does not expose usable bearer tokens.
+  # NOTE: any tokens issued before this was enabled remain stored in plaintext
+  # and must be rotated (re-issued); they will not validate against the hash.
+  hash_token_secrets
   # By default, token secrets will be hashed using the
   # +Doorkeeper::Hashing::SHA256+ strategy.
   #
@@ -203,7 +210,10 @@ Doorkeeper.configure do
 
   # Hash application secrets before persisting them.
   #
-  # hash_application_secrets
+  # Enabled: OAuth application (client) secrets are stored hashed (SHA256).
+  # NOTE: existing plaintext application secrets must be rotated after enabling
+  # this, as they will no longer validate against the stored hash.
+  hash_application_secrets
   #
   # By default, applications will be hashed
   # with the +Doorkeeper::SecretStoring::SHA256+ strategy.

@@ -50,7 +50,9 @@ Rails.application.configure do
 
   # Replace the default in-process memory cache store with a durable alternative.
   # config.cache_store = :solid_cache_store
-  config.cache_store = :redis_cache_store, { url: ENV["REDIS_CACHE_URL"], ssl_params: { verify_mode: OpenSSL::SSL::VERIFY_NONE } }
+  # Verify the Redis server's TLS certificate to prevent MITM on the cache
+  # connection (VERIFY_NONE would silently accept any certificate).
+  config.cache_store = :redis_cache_store, { url: ENV["REDIS_CACHE_URL"], ssl_params: { verify_mode: OpenSSL::SSL::VERIFY_PEER } }
 
   # Replace the default in-process and non-durable queuing backend for Active Job.
   config.active_job.queue_adapter = :solid_queue
@@ -95,11 +97,19 @@ Rails.application.configure do
   config.active_record.attributes_for_inspect = [:id]
 
   # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  #
-  # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  # Without an allowlist the OAuth discovery controller reflects an
+  # attacker-controlled Host header into the advertised authorization/token
+  # endpoints. Restrict to our own hosts (guarded to production/staging).
+  if Rails.env.production? || Rails.env.staging?
+    config.hosts = [
+      "idp.patchworklabs.org",
+      "patchworklabs.org",
+      # Anchored so it matches ONLY *.patchworklabs.org, not
+      # foo.patchworklabs.org.attacker.com (unanchored would).
+      /\A([a-z0-9-]+\.)+patchworklabs\.org\z/i
+    ]
+
+    # Skip DNS rebinding protection for the default health check endpoint.
+    config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  end
 end

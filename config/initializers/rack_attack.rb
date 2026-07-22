@@ -6,8 +6,19 @@
 class Rack::Attack
   ### Configure Cache ###
 
-  # Use Rails cache for Rack::Attack throttle data
-  Rack::Attack.cache.store = ActiveSupport::Cache::MemoryStore.new
+  # Throttle counters must be shared across all app processes/servers, otherwise
+  # each worker keeps its own count and the effective limit is multiplied (and
+  # counters reset on every deploy). Use the shared Redis cache store in
+  # production/staging; fall back to an in-process MemoryStore in dev/test.
+  Rack::Attack.cache.store =
+    if (Rails.env.production? || Rails.env.staging?) && ENV["REDIS_CACHE_URL"].present?
+      ActiveSupport::Cache::RedisCacheStore.new(
+        url: ENV["REDIS_CACHE_URL"],
+        ssl_params: { verify_mode: OpenSSL::SSL::VERIFY_PEER }
+      )
+    else
+      ActiveSupport::Cache::MemoryStore.new
+    end
 
   ### Throttle (Rate Limiting) Rules ###
 
@@ -23,7 +34,7 @@ class Rack::Attack
   # Throttle magic link requests by email
   # Limit to 3 magic link requests per 5 minutes per email
   throttle("magic_links/email", limit: 3, period: 5.minutes) do |req|
-    if (req.path == "/login" || req.path == "/auth/send_magic_link") && req.post?
+    if (req.path == "/login" || req.path == "/auth/magic_link") && req.post?
       req.params.dig("user", "email")&.downcase&.presence
     end
   end

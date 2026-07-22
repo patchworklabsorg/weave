@@ -186,13 +186,23 @@ module Api
       end
 
       def filter_sensitive_headers(headers)
-        # Remove sensitive headers
+        # Remove sensitive headers.
+        #
+        # request.headers.to_h yields raw Rack env keys (e.g. "HTTP_AUTHORIZATION",
+        # "HTTP_X_API_KEY", "HTTP_COOKIE"), so a naive `key.downcase` comparison
+        # against "authorization" etc. never matches and the secrets are persisted
+        # verbatim. Normalize each key (strip leading HTTP_, downcase, "_" -> "-")
+        # before matching so sensitive headers are actually redacted.
         sensitive_headers = %w[
           authorization x-api-key cookie set-cookie
           x-csrf-token x-forwarded-for x-real-ip
         ]
 
-        headers.reject { |key, _| sensitive_headers.include?(key.downcase) }
+        headers.reject { |key, _| sensitive_headers.include?(normalize_header_name(key)) }
+      end
+
+      def normalize_header_name(key)
+        key.to_s.sub(/\AHTTP_/, "").tr("_", "-").downcase
       end
 
       def filter_sensitive_params(params)

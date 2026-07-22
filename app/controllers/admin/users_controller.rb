@@ -134,7 +134,7 @@ class Admin::UsersController < Admin::BaseController
   end
 
   def user_params
-    params.require(:user).permit(
+    attrs = params.require(:user).permit(
       :first_name, :last_name, :email, :role, :password, :password_confirmation, :birthday,
       # Staff/Contractor flags
       :is_staff, :is_contractor,
@@ -144,6 +144,59 @@ class Admin::UsersController < Admin::BaseController
       :slack_title, :slack_city, :slack_state, :slack_country,
       :slack_organization, :slack_division, :slack_department, :slack_cost_center
     )
+
+    # Privilege-sensitive fields (role, password) require the acting user to
+    # outrank the target. Without this, any admin could set anyone (including
+    # themselves) to owner or reset an owner's password.
+    target = @user || User.new
+
+    unless can_edit_privileged_fields?(target)
+      attrs.delete(:role)
+      attrs.delete(:password)
+      attrs.delete(:password_confirmation)
+    end
+
+    # Even when allowed to touch role, a non-owner can never assign a role that
+    # is greater-or-equal to their own.
+    if attrs.key?(:role) && !can_assign_role?(attrs[:role])
+      attrs.delete(:role)
+    end
+
+    attrs
+  end
+
+  # Whether current_user may edit the target's role/password at all: they must
+  # strictly outrank the target, and only an owner may modify an owner or
+  # superadmin.
+  def can_edit_privileged_fields?(target)
+    return false if target.nil?
+    return false if !current_user.owner? && (target.owner? || target.superadmin?)
+
+    role_rank(current_user) > role_rank(target)
+  end
+
+  # Whether current_user may assign the given role value. Owners may assign any
+  # role; everyone else may only assign roles strictly below their own.
+  def can_assign_role?(role_value)
+    return true if role_value.blank?
+
+    rank = normalized_role_rank(role_value)
+    return false if rank.nil?
+    return true if current_user.owner?
+
+    rank < role_rank(current_user)
+  end
+
+  def role_rank(user)
+    User.roles[user.role] || 0
+  end
+
+  def normalized_role_rank(role_value)
+    value = role_value.to_s
+    return User.roles[value] if User.roles.key?(value)
+    return value.to_i if value.match?(/\A\d+\z/)
+
+    nil
   end
 
 end

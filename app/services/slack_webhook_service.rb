@@ -57,9 +57,12 @@ class SlackWebhookService
       profile = slack_user_data['profile']
       updates = {}
 
-      # Update email if changed
+      # Update email if changed. A Slack-driven email change must NOT silently
+      # become a verified login identifier: clear the confirmation so the new
+      # address has to be re-confirmed before it can be used to log in.
       if profile['email'].present? && profile['email'].downcase != user.email
         updates[:email] = profile['email'].downcase
+        updates[:email_confirmed_at] = nil
       end
 
       # Update name if changed
@@ -110,7 +113,7 @@ class SlackWebhookService
         last_name: last_name,
         slack_id: member['id'],
         slack_joined_at: Time.current,
-        password: SecureRandom.hex(32) # Random password - user will reset via email
+        password: User.generate_secure_password # Random password - user logs in via magic link
       )
 
       # Skip email confirmation if using Devise confirmable
