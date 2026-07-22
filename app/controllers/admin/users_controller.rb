@@ -4,7 +4,7 @@ class Admin::UsersController < Admin::BaseController
   before_action :set_user, only: [:show, :edit, :update, :destroy, :impersonate, :regen_pid]
   before_action :ensure_can_impersonate, only: [:impersonate]
   before_action :ensure_not_already_impersonating, only: [:impersonate]
-  before_action :require_owner, only: [:regen_pid]
+  before_action :require_superadmin, only: [:regen_pid]
   skip_before_action :authenticate_user!, only: [:stop_impersonating]
   skip_before_action :require_admin, only: [:stop_impersonating]
 
@@ -112,7 +112,7 @@ class Admin::UsersController < Admin::BaseController
   private
 
   def ensure_can_impersonate
-    return if current_user.can_impersonate?
+    return if current_user.superadmin? && current_user.can_impersonate?
 
     redirect_to admin_users_path, alert: "You don't have permission to impersonate users"
   end
@@ -127,17 +127,17 @@ class Admin::UsersController < Admin::BaseController
     @user = User.find_by!(p_id: params[:id])
   end
 
-  def require_owner
-    return if current_user&.owner?
+  def require_superadmin
+    return if current_user&.superadmin?
 
-    redirect_to admin_users_path, alert: "Only owners can perform this action"
+    redirect_to admin_users_path, alert: "Only superadmins can perform this action"
   end
 
   def user_params
     attrs = params.require(:user).permit(
       :first_name, :last_name, :email, :role, :password, :password_confirmation, :birthday,
-      # Staff/Contractor flags
-      :is_staff, :is_contractor,
+      # Membership attribute flags (configure capabilities, not access)
+      :is_staff, :is_contractor, :is_board,
       # Manager relationship
       :manager_id,
       # Slack API-editable fields
@@ -170,6 +170,8 @@ class Admin::UsersController < Admin::BaseController
   # superadmin.
   def can_edit_privileged_fields?(target)
     return false if target.nil?
+    # Only superadmins (and owners) may grant roles or reset passwords at all.
+    return false unless current_user.superadmin?
     return false if !current_user.owner? && (target.owner? || target.superadmin?)
 
     role_rank(current_user) > role_rank(target)

@@ -18,7 +18,12 @@
       <div class="flex-1 min-w-0">
         <h1 class="font-display text-3xl font-bold text-ink leading-tight"><%= @user.full_name %></h1>
         <div class="flex flex-wrap items-center gap-2 mt-2">
-          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-grape-soft text-grape"><%= @user.role.humanize %></span>
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-grape-soft text-grape">
+            <%= @user.community_member? ? "Community member" : @user.role.humanize %>
+          </span>
+          <% if @user.is_board? %>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-soft text-teal">Board</span>
+          <% end %>
           <% if @user.is_staff? %>
             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-soft text-sky">Staff</span>
           <% end %>

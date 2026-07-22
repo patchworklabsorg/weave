@@ -72,6 +72,17 @@
         <div class="space-y-4">
           <div class="flex items-start">
             <div class="flex items-center h-5">
+              <%= form.check_box :is_board,
+                  class: "h-4 w-4 rounded border-2 border-neutral-300 text-grape focus:ring-grape" %>
+            </div>
+            <div class="ml-3 text-sm">
+              <%= form.label :is_board, "Board member", class: "font-medium text-ink" %>
+              <p class="text-ink-soft">Mark as a board member</p>
+            </div>
+          </div>
+
+          <div class="flex items-start">
+            <div class="flex items-center h-5">
               <%= form.check_box :is_staff,
                   class: "h-4 w-4 rounded border-2 border-neutral-300 text-grape focus:ring-grape" %>
             </div>

@@ -138,14 +138,17 @@
         <div>
           <dt class="text-sm font-medium text-ink-faint">Employment Type</dt>
           <dd class="text-sm">
+            <% if @user.is_board %>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-soft text-teal">Board</span>
+            <% end %>
             <% if @user.is_staff %>
               <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-soft text-sky">Staff</span>
             <% end %>
             <% if @user.is_contractor %>
               <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-violet-soft text-violet">Contractor</span>
             <% end %>
-            <% unless @user.is_staff || @user.is_contractor %>
-              <span class="text-ink-faint">Not set</span>
+            <% unless @user.is_board || @user.is_staff || @user.is_contractor %>
+              <span class="text-ink-faint">Community member</span>
             <% end %>
           </dd>
         </div>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_21_235823) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_22_002236) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -469,6 +469,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_21_235823) do
     t.string "email", null: false
     t.datetime "email_confirmed_at"
     t.string "first_name", null: false
+    t.boolean "is_board", default: false, null: false
     t.boolean "is_contractor", default: false, null: false
     t.boolean "is_staff", default: false, null: false
     t.string "last_name", null: false
