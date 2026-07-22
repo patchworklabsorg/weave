@@ -45,4 +45,5 @@ node_modules
 .idea/*
 config/credentials/postgres_password
 
-/config/credentials/development.key
+# Per-environment credential keys (never commit these — distribute via agenix)
+/config/credentials/*.key
