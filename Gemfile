@@ -15,7 +15,7 @@ gem "kamal", require: false              # Docker container deployment
 gem "thruster", require: false           # HTTP asset caching/compression and X-Sendfile acceleration
 gem "faraday"                            # Web requests
 gem "okcomputer" # Health checks
-gem "benchmark"                          # Removed from Ruby 4.0 default gems; okcomputer requires it in production
+gem "benchmark" # Removed from Ruby 4.0 default gems; okcomputer requires it in production
 
 ###############################################################################
 # FRONTEND & UI
