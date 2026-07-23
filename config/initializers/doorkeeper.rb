@@ -260,7 +260,7 @@ Doorkeeper.configure do
   #
   # OAuth scopes are for user authorization flows, not API access
   default_scopes  :profile
-  optional_scopes :email, :admin
+  optional_scopes :email, :phone, :admin
 
   # Allows to restrict only certain scopes for grant_type.
   # By default, all the scopes will be available for all the grant types.

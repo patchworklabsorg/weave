@@ -131,7 +131,7 @@ class UsersController < ApplicationController
                         []
                       end
 
-    permitted_params = params.require(:user).permit(:first_name, :last_name, :email, :birthday, :cropped_image_data, :billing_same_as_shipping,
+    permitted_params = params.require(:user).permit(:first_name, :last_name, :email, :phone_number, :birthday, :cropped_image_data, :billing_same_as_shipping,
                                                     *password_fields,
                                                     shipping_address_attributes: Address::PARAMS + [:id],
                                                     billing_address_attributes: Address::PARAMS + [:id])

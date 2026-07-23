@@ -95,6 +95,44 @@ RSpec.describe User, type: :model do
       user = build(:user, password: "weak", password_confirmation: "weak")
       expect(user).not_to be_valid
     end
+
+    it "allows a blank phone number" do
+      user = build(:user, phone_number: "")
+      expect(user).to be_valid
+    end
+
+    it "accepts a US phone number with area code" do
+      user = build(:user, phone_number: "(802) 555-0123")
+      expect(user).to be_valid
+    end
+
+    it "accepts an international phone number with country code" do
+      user = build(:user, phone_number: "+44 20 7946 0958")
+      expect(user).to be_valid
+    end
+
+    it "rejects a phone number without an area code" do
+      user = build(:user, phone_number: "555-0123")
+      expect(user).not_to be_valid
+      expect(user.errors[:phone_number]).to include("is not a valid phone number (include your area code)")
+    end
+
+    it "rejects a non-numeric phone number" do
+      user = build(:user, phone_number: "not a phone")
+      expect(user).not_to be_valid
+    end
+  end
+
+  describe "phone number normalization" do
+    it "normalizes US numbers to E.164 on save" do
+      user = create(:user, phone_number: "(802) 555-0123")
+      expect(user.reload.phone_number).to eq("+18025550123")
+    end
+
+    it "keeps international numbers in E.164" do
+      user = create(:user, phone_number: "+44 20 7946 0958")
+      expect(user.reload.phone_number).to eq("+442079460958")
+    end
   end
 
   describe "associations" do

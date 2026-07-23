@@ -31,6 +31,14 @@ module Oauth
         )
       end
 
+      if scopes.include?("phone")
+        response.merge!(
+          phone_number: user.phone_number,
+          # No phone verification flow exists yet, so this is always false.
+          phone_number_verified: false
+        )
+      end
+
       if scopes.include?("admin")
         response.merge!(
           admin: user.admin?,

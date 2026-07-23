@@ -60,6 +60,7 @@ RSpec.describe Oauth::DiscoveryController, type: :controller do
 
       expect(json["scopes_supported"]).to include("profile")
       expect(json["scopes_supported"]).to include("email")
+      expect(json["scopes_supported"]).to include("phone")
       expect(json["scopes_supported"]).to include("admin")
     end
 
@@ -106,6 +107,14 @@ RSpec.describe Oauth::DiscoveryController, type: :controller do
       expect(json["claims_supported"]).to include("name")
       expect(json["claims_supported"]).to include("email")
       expect(json["claims_supported"]).to include("email_verified")
+      expect(json["claims_supported"]).to include("phone_number")
+      expect(json["claims_supported"]).to include("phone_number_verified")
+    end
+
+    it "includes phone scope" do
+      json = JSON.parse(response.body)
+
+      expect(json["scopes_supported"]).to include("phone")
     end
 
     it "includes openid scope" do
