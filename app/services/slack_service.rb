@@ -542,6 +542,10 @@ class SlackService
   end
 
   def create_user_from_slack_member(member)
+    # Email is only present on the users.list payload; the users.profile.get
+    # refetch below omits it, so capture it before the profile is replaced.
+    email = member.dig("profile", "email")
+
     # Fetch full profile with custom fields if user token is available
     if @user_client
       begin
@@ -553,7 +557,6 @@ class SlackService
     end
 
     profile = member["profile"]
-    email = profile["email"]
 
     # Parse name from Slack profile
     first_name = profile["first_name"].presence || profile["real_name"]&.split&.first || "NOTSET"
