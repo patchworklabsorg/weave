@@ -163,6 +163,8 @@ class User < ApplicationRecord
   validate :password_complexity, if: lambda {
     new_record? || password.present?
   }
+  validate :validate_phone_number, if: -> { phone_number.present? }
+  before_save :parse_phone_number
   validates :p_id, presence: true, uniqueness: true, length: { is: 13 }, format: {
     # format is PWL{digit}{9 alphanumeric characters}
     with: /\APWL\d[a-fA-F0-9]{9}\z/,
@@ -429,6 +431,19 @@ class User < ApplicationRecord
   end
 
   private
+
+  def validate_phone_number
+    return if Phonelib.parse(phone_number).valid?
+
+    errors.add(:phone_number, "is not a valid phone number (include your area code)")
+  end
+
+  def parse_phone_number
+    return if phone_number.blank?
+
+    parsed = Phonelib.parse(phone_number)
+    self.phone_number = parsed.full_e164 if parsed.valid?
+  end
 
   def password_complexity
     return if password.blank?
