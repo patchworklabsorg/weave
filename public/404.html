@@ -1,114 +1,217 @@
 <!doctype html>
-
 <html lang="en">
-
   <head>
-
-    <title>The page you were looking for doesn’t exist (404 Not found)</title>
-
     <meta charset="utf-8">
-    <meta name="viewport" content="initial-scale=1, width=device-width">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-
+    <title>Page not found (404) · Weave</title>
+    <link rel="icon" href="/icon.png" type="image/png">
     <style>
+      @font-face {
+        font-family: "Geist";
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+        src: url("/fonts/geist-400-latin.woff2") format("woff2");
+      }
+
+      @font-face {
+        font-family: "Geist";
+        font-style: normal;
+        font-weight: 600;
+        font-display: swap;
+        src: url("/fonts/geist-600-latin.woff2") format("woff2");
+      }
+
+      @font-face {
+        font-family: "Shantell Sans";
+        font-style: normal;
+        font-weight: 600;
+        font-display: swap;
+        src: url("/fonts/shantell-sans-600-latin.woff2") format("woff2");
+      }
+
+      @font-face {
+        font-family: "Shantell Sans";
+        font-style: normal;
+        font-weight: 700;
+        font-display: swap;
+        src: url("/fonts/shantell-sans-700-latin.woff2") format("woff2");
+      }
 
       *, *::before, *::after {
         box-sizing: border-box;
-      }
-
-      * {
         margin: 0;
       }
 
-      html {
-        font-size: 16px;
+      :root {
+        --quilt: #f7f5fb;
+        --paper: #fefdff;
+        --ink: #2a2050;
+        --ink-soft: #5d5584;
+        --ink-faint: #8a83a8;
+        --grape: #6c3ec1;
+        --violet: #9b7fd4;
+        --orchid: #a44fc8;
+        --sky: #2f7cd6;
+        --teal: #2aa187;
+        --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        --font-display: "Shantell Sans", "Geist", ui-sans-serif, sans-serif;
       }
 
       body {
-        background: #FFF;
-        color: #261B23;
-        display: grid;
-        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Aptos, Roboto, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-        font-size: clamp(1rem, 2.5vw, 2rem);
-        -webkit-font-smoothing: antialiased;
-        font-style: normal;
-        font-weight: 400;
-        letter-spacing: -0.0025em;
-        line-height: 1.4;
+        font-family: var(--font-sans);
+        color: var(--ink);
         min-height: 100vh;
-        place-items: center;
-        text-rendering: optimizeLegibility;
-        -webkit-text-size-adjust: 100%;
-      }
-
-      a {
-        color: inherit;
-        font-weight: 700;
-        text-decoration: underline;
-        text-underline-offset: 0.0925em;
-      }
-
-      b, strong {
-        font-weight: 700;
-      }
-
-      i, em {
-        font-style: italic;
-      }
-
-      main {
         display: grid;
-        gap: 1em;
-        padding: 2em;
         place-items: center;
-        text-align: center;
+        padding: 24px;
+        background-color: var(--quilt);
+        background-image:
+          repeating-linear-gradient(45deg,  rgb(108 62 193 / 0.045) 0 1px, transparent 1px 34px),
+          repeating-linear-gradient(-45deg, rgb(108 62 193 / 0.045) 0 1px, transparent 1px 34px);
+        background-size: 48px 48px;
+        background-attachment: fixed;
+        -webkit-font-smoothing: antialiased;
       }
 
-      main header {
-        width: min(100%, 12em);
-      }
-
-      main header svg {
-        height: auto;
-        max-width: 100%;
+      .patch {
+        background-color: var(--paper);
+        border: 2px dashed var(--ink-soft);
+        border-radius: 0.75rem;
+        box-shadow: 4px 5px 0 rgb(42 32 80 / 0.12);
+        transform: rotate(1.1deg);
         width: 100%;
+        max-width: 34rem;
+        text-align: center;
+        overflow: hidden;
       }
 
-      main article {
-        width: min(100%, 30em);
+      .quilt-binding {
+        height: 10px;
+        margin: -1px -1px 0;
+        background-image: repeating-linear-gradient(
+          90deg,
+          var(--grape)  0 26px,
+          var(--violet) 26px 52px,
+          var(--sky)    52px 78px,
+          var(--teal)   78px 104px,
+          var(--orchid) 104px 130px
+        );
+        box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.25);
+        position: relative;
       }
 
-      main article p {
-        font-size: 75%;
+      .quilt-binding::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: repeating-linear-gradient(90deg, rgb(255 255 255 / 0.5) 0 4px, transparent 4px 10px);
+        opacity: 0.5;
+        mix-blend-mode: overlay;
       }
 
-      main article br {
-
-        display: none;
-
-        @media(min-width: 48em) {
-          display: inline;
-        }
-
+      .patch-body {
+        padding: 40px 32px 44px;
       }
 
+      .eyebrow {
+        font-family: var(--font-display);
+        font-weight: 600;
+        font-size: 14px;
+        letter-spacing: 0.025em;
+        color: var(--grape);
+        margin-bottom: 20px;
+      }
+
+      .rosette {
+        display: inline-block;
+        width: 1em;
+        height: 1em;
+        vertical-align: -0.15em;
+        background:
+          radial-gradient(circle at 50% 27%, var(--grape) 0 22%, transparent 23%),
+          radial-gradient(circle at 27% 63%, var(--violet) 0 22%, transparent 23%),
+          radial-gradient(circle at 73% 63%, var(--sky) 0 22%, transparent 23%),
+          radial-gradient(circle at 50% 50%, var(--teal) 0 20%, transparent 21%);
+      }
+
+      .code {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 56px;
+        line-height: 1;
+        color: var(--grape);
+        margin-bottom: 12px;
+      }
+
+      h1 {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 28px;
+        line-height: 1.25;
+        color: var(--ink);
+        margin-bottom: 14px;
+      }
+
+      .message {
+        font-size: 16px;
+        line-height: 1.65;
+        color: var(--ink-soft);
+        max-width: 42ch;
+        margin: 0 auto;
+      }
+
+      .btn-stitch {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 28px;
+        background-color: var(--grape);
+        color: #fff;
+        font-weight: 600;
+        font-size: 15px;
+        text-decoration: none;
+        border: 2px dashed rgb(255 255 255 / 0.55);
+        border-radius: 0.6rem;
+        padding: 0.65rem 1.25rem;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+      }
+
+      .btn-stitch:hover {
+        background-color: #5a31a6;
+        transform: translateY(-1px);
+        box-shadow: 3px 4px 0 rgb(42 32 80 / 0.18);
+      }
+
+      .btn-stitch:focus-visible {
+        outline: 3px solid var(--violet);
+        outline-offset: 2px;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .btn-stitch { transition: none; }
+        .btn-stitch:hover { transform: none; }
+      }
+
+      @media (max-width: 600px) {
+        .patch-body { padding: 32px 20px 36px; }
+        .code { font-size: 44px; }
+        h1 { font-size: 24px; }
+      }
     </style>
-
   </head>
 
   <body>
-
-    <!-- This file lives in public/404.html -->
-
-    <main>
-      <header>
-        <svg height="172" viewBox="0 0 480 172" width="480" xmlns="http://www.w3.org/2000/svg"><path d="m124.48 3.00509-45.6889 100.02991h26.2239v-28.1168h38.119v28.1168h21.628v35.145h-21.628v30.82h-37.308v-30.82h-72.1833v-31.901l50.2851-103.27391zm115.583 168.69891c-40.822 0-64.884-35.146-64.884-85.7015 0-50.5554 24.062-85.700907 64.884-85.700907 40.823 0 64.884 35.145507 64.884 85.700907 0 50.5555-24.061 85.7015-64.884 85.7015zm0-133.2831c-17.572 0-22.709 21.8984-22.709 47.5816 0 25.6835 5.137 47.5815 22.709 47.5815 17.303 0 22.71-21.898 22.71-47.5815 0-25.6832-5.407-47.5816-22.71-47.5816zm165.328-35.41581-45.689 100.02991h26.224v-28.1168h38.119v28.1168h21.628v35.145h-21.628v30.82h-37.308v-30.82h-72.184v-31.901l50.285-103.27391z" fill="#f0eff0"/><path d="m157.758 68.9967v34.0033h-7.199l-14.233-19.8814v19.8814h-8.584v-34.0033h8.307l13.125 18.7184v-18.7184zm28.454 21.5428c0 7.6978-5.15 13.0145-12.737 13.0145-7.532 0-12.738-5.3167-12.738-13.0145s5.206-13.0143 12.738-13.0143c7.587 0 12.737 5.3165 12.737 13.0143zm-8.528 0c0-3.4336-1.496-5.8703-4.209-5.8703-2.659 0-4.154 2.4367-4.154 5.8703s1.495 5.8149 4.154 5.8149c2.713 0 4.209-2.3813 4.209-5.8149zm13.184 3.8766v-9.5807h-3.655v-6.7564h3.655v-6.8671h8.584v6.8671h5.205v6.7564h-5.205v8.307c0 1.9383.941 2.769 2.658 2.769.941 0 1.994-.2216 2.769-.5538v7.3654c-.997.443-2.88.775-4.818.775-5.87 0-9.193-2.769-9.193-9.0819zm37.027 8.5839h-8.806v-34.0033h23.924v7.6978h-15.118v6.7564h13.9v7.5316h-13.9zm41.876-12.4605c0 7.6978-5.15 13.0145-12.737 13.0145-7.532 0-12.738-5.3167-12.738-13.0145s5.206-13.0143 12.738-13.0143c7.587 0 12.737 5.3165 12.737 13.0143zm-8.529 0c0-3.4336-1.495-5.8703-4.208-5.8703-2.659 0-4.154 2.4367-4.154 5.8703s1.495 5.8149 4.154 5.8149c2.713 0 4.208-2.3813 4.208-5.8149zm35.337-12.4605v24.921h-8.695v-2.16c-1.329 1.551-3.821 2.714-6.646 2.714-5.482 0-8.75-3.5999-8.75-9.1379v-16.3371h8.64v14.288c0 2.1045.997 3.5997 3.212 3.5997 1.606 0 3.101-1.0522 3.544-2.769v-15.1187zm4.076 24.921v-24.921h8.694v2.1598c1.385-1.5506 3.822-2.7136 6.701-2.7136 5.538 0 8.806 3.5997 8.806 9.1377v16.3371h-8.639v-14.2327c0-2.049-1.053-3.5443-3.268-3.5443-1.717 0-3.156.9969-3.6 2.7136v15.0634zm44.113 0v-1.994c-1.163 1.329-3.6 2.548-6.147 2.548-7.2 0-11.132-5.8151-11.132-13.0145s3.932-13.0143 11.132-13.0143c2.547 0 4.984 1.2184 6.147 2.5475v-13.0697h8.695v35.997zm0-9.1931v-6.5902c-.665-1.3291-2.16-2.326-3.821-2.326-2.991 0-4.763 2.4368-4.763 5.6488s1.772 5.5934 4.763 5.5934c1.717 0 3.156-.9415 3.821-2.326z" fill="#d30001"/></svg>
-      </header>
-      <article>
-        <p><strong>The page you were looking for doesn’t exist.</strong> You may have mistyped the address or the page may have moved. If you’re the application owner check the logs for more information.</p>
-      </article>
+    <main class="patch">
+      <div class="quilt-binding" aria-hidden="true"></div>
+      <div class="patch-body">
+        <p class="eyebrow"><span class="rosette" aria-hidden="true"></span> Weave · Patchwork Labs</p>
+        <p class="code">404</p>
+        <h1>This patch isn&rsquo;t in the quilt.</h1>
+        <p class="message">The page you&rsquo;re looking for doesn&rsquo;t exist or may have been moved.</p>
+        <a class="btn-stitch" href="/">Back to home</a>
+      </div>
     </main>
-
   </body>
-
 </html>
