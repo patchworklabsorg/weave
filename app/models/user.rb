@@ -191,7 +191,10 @@ class User < ApplicationRecord
   end
 
   def full_name
-    "#{first_name} #{last_name}"
+    # Display names capitalized (many Slack-imported names arrive lowercase).
+    # Only upcase the first letter of each word so intentional casing like
+    # "McDonald" or "O'Brien" is preserved.
+    "#{first_name} #{last_name}".strip.gsub(/\b\p{L}/, &:upcase)
   end
 
   def name
@@ -199,7 +202,7 @@ class User < ApplicationRecord
   end
 
   def initials
-    "#{first_name&.[](0)}#{last_name&.[](0)}"
+    "#{first_name&.[](0)}#{last_name&.[](0)}".upcase
   end
 
   def is_impersonatable?(impersonator)
