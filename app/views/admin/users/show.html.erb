@@ -39,9 +39,15 @@
       <h2 class="font-display text-lg font-bold text-ink mb-4">User Details</h2>
       <dl class="space-y-3">
         <div>
-          <dt class="text-sm font-medium text-ink-faint">Full Name</dt>
+          <dt class="text-sm font-medium text-ink-faint">Preferred Name</dt>
           <dd class="text-sm text-ink"><%= @user.full_name %></dd>
         </div>
+        <% if @user.legal_name? %>
+          <div>
+            <dt class="text-sm font-medium text-ink-faint">Legal Name</dt>
+            <dd class="text-sm text-ink"><%= @user.legal_full_name %></dd>
+          </div>
+        <% end %>
         <div>
           <dt class="text-sm font-medium text-ink-faint">Email</dt>
           <dd class="text-sm text-ink"><%= @user.email %></dd>
