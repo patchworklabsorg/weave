@@ -131,7 +131,7 @@ class UsersController < ApplicationController
                         []
                       end
 
-    permitted_params = params.require(:user).permit(:first_name, :last_name, :legal_first_name, :legal_last_name, :email, :phone_number, :birthday, :cropped_image_data, :billing_same_as_shipping,
+    permitted_params = params.require(:user).permit(:first_name, :last_name, :legal_first_name, :legal_last_name, :email, :pronouns, :phone_number, :birthday, :cropped_image_data, :billing_same_as_shipping,
                                                     *password_fields,
                                                     shipping_address_attributes: Address::PARAMS + [:id],
                                                     billing_address_attributes: Address::PARAMS + [:id])
@@ -165,7 +165,7 @@ class UsersController < ApplicationController
   end
 
   def user_params
-    params.require(:user).permit(:first_name, :last_name, :legal_first_name, :legal_last_name, :email, :password, :password_confirmation, :birthday,
+    params.require(:user).permit(:first_name, :last_name, :legal_first_name, :legal_last_name, :email, :pronouns, :password, :password_confirmation, :birthday,
                                  shipping_address_attributes: UserAddress::PARAMS + [:id],
                                  billing_address_attributes: UserAddress::PARAMS + [:id])
   end

@@ -79,6 +79,12 @@
             <dd class="text-sm text-ink font-medium text-right"><%= @user.phone_number.presence || @user.slack_phone %></dd>
           </div>
         <% end %>
+        <% if @user.pronouns.present? %>
+          <div class="flex justify-between gap-4 py-2.5">
+            <dt class="text-sm text-ink-faint">Pronouns</dt>
+            <dd class="text-sm text-ink font-medium text-right"><%= @user.pronouns %></dd>
+          </div>
+        <% end %>
         <% if @user.birthday.present? %>
           <div class="flex justify-between gap-4 py-2.5">
             <dt class="text-sm text-ink-faint">Birthday</dt>

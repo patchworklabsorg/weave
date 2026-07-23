@@ -52,6 +52,12 @@
           <dt class="text-sm font-medium text-ink-faint">Email</dt>
           <dd class="text-sm text-ink"><%= @user.email %></dd>
         </div>
+        <% if @user.pronouns.present? %>
+          <div>
+            <dt class="text-sm font-medium text-ink-faint">Pronouns</dt>
+            <dd class="text-sm text-ink"><%= @user.pronouns %></dd>
+          </div>
+        <% end %>
         <% if @user.birthday.present? %>
           <div>
             <dt class="text-sm font-medium text-ink-faint">Birthday</dt>
