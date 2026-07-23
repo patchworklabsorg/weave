@@ -10,8 +10,7 @@ class AdminMailer < ApplicationMailer
     @remaining = @limit - @count
 
     mail(
-      subject: "[IDP Alert] Approaching daily email limit (#{@remaining} remaining)",
-      from: "idp@patchworklabs.org"
+      subject: "[IDP Alert] Approaching daily email limit (#{@remaining} remaining)"
     )
   end
 

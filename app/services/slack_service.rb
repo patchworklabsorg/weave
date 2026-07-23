@@ -244,7 +244,14 @@ class SlackService
       if @user_client
         begin
           profile_response = @user_client.users_profile_get(user: member["id"])
-          member["profile"] = profile_response["profile"] if profile_response["ok"]
+          if profile_response["ok"]
+            fetched_profile = profile_response["profile"]
+            # users.profile.get omits the email field, so preserve the address
+            # we already resolved from users.list — otherwise the profile swap
+            # would blank it out and user creation fails validation.
+            fetched_profile["email"] = email if fetched_profile["email"].blank?
+            member["profile"] = fetched_profile
+          end
         rescue Slack::Web::Api::Errors::SlackError => e
           Rails.logger.warn "Could not fetch full profile for #{email}: #{e.message}"
         end
