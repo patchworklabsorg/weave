@@ -1,3 +1,14 @@
-<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="256" cy="256" r="256" fill="red"/>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Weave">
+  <!-- quilt binding -->
+  <rect x="0" y="0" width="512" height="512" rx="104" fill="#2a2050"/>
+  <!-- four patches -->
+  <rect x="56"  y="56"  width="180" height="180" rx="26" fill="#6c3ec1"/>
+  <rect x="276" y="56"  width="180" height="180" rx="26" fill="#4b006e"/>
+  <rect x="56"  y="276" width="180" height="180" rx="26" fill="#c7b7e2"/>
+  <rect x="276" y="276" width="180" height="180" rx="26" fill="#e6a94e"/>
+  <!-- stitched seams -->
+  <g stroke="#f7f5fb" stroke-width="9" stroke-linecap="round" stroke-dasharray="20 16" fill="none">
+    <line x1="256" y1="44" x2="256" y2="468"/>
+    <line x1="44"  y1="256" x2="468" y2="256"/>
+  </g>
 </svg>
