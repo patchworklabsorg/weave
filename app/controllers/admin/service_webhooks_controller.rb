@@ -72,4 +72,5 @@ class Admin::ServiceWebhooksController < Admin::BaseController
   def webhook_params
     params.require(:service_webhook).permit(:url, :event_type, :status)
   end
+
 end

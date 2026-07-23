@@ -5,12 +5,12 @@ class SlackWebhookService
     # Process team_join event - new user joined Slack
     def process_team_join(slack_user_data)
       # Skip bots and deleted users
-      return if slack_user_data['is_bot'] || slack_user_data['deleted']
+      return if slack_user_data["is_bot"] || slack_user_data["deleted"]
 
-      email = slack_user_data.dig('profile', 'email')
-      slack_id = slack_user_data['id']
+      email = slack_user_data.dig("profile", "email")
+      slack_id = slack_user_data["id"]
 
-      unless email.present?
+      if email.blank?
         Rails.logger.warn "[SlackWebhookService] No email for Slack user #{slack_id}"
         return
       end
@@ -31,6 +31,10 @@ class SlackWebhookService
         Rails.logger.info "[SlackWebhookService] Created new user #{user.id} from Slack member #{slack_id}"
       end
 
+      # New joiners come in as single-channel guests; DM them the code of conduct
+      # so they can accept it and be promoted to full member.
+      send_code_of_conduct(user)
+
       user
     rescue ActiveRecord::RecordInvalid => e
       Rails.logger.error "[SlackWebhookService] Validation error creating/updating user: #{e.message}"
@@ -43,9 +47,9 @@ class SlackWebhookService
     # Process user_change event - user profile updated in Slack
     def process_user_change(slack_user_data)
       # Skip bots and deleted users
-      return if slack_user_data['is_bot'] || slack_user_data['deleted']
+      return if slack_user_data["is_bot"] || slack_user_data["deleted"]
 
-      slack_id = slack_user_data['id']
+      slack_id = slack_user_data["id"]
       user = User.find_by(slack_id: slack_id)
 
       unless user
@@ -54,17 +58,20 @@ class SlackWebhookService
       end
 
       # Extract updated profile data
-      profile = slack_user_data['profile']
+      profile = slack_user_data["profile"]
       updates = {}
 
-      # Update email if changed
-      if profile['email'].present? && profile['email'].downcase != user.email
-        updates[:email] = profile['email'].downcase
+      # Update email if changed. A Slack-driven email change must NOT silently
+      # become a verified login identifier: clear the confirmation so the new
+      # address has to be re-confirmed before it can be used to log in.
+      if profile["email"].present? && profile["email"].downcase != user.email
+        updates[:email] = profile["email"].downcase
+        updates[:email_confirmed_at] = nil
       end
 
       # Update name if changed
-      first_name = profile['first_name'] || profile['real_name']&.split(' ')&.first
-      last_name = profile['last_name'] || profile['real_name']&.split(' ')&.drop(1)&.join(' ')
+      first_name = profile["first_name"] || profile["real_name"]&.split(" ")&.first
+      last_name = profile["last_name"] || profile["real_name"]&.split(" ")&.drop(1)&.join(" ")
 
       if first_name.present? && first_name != user.first_name
         updates[:first_name] = first_name
@@ -93,24 +100,35 @@ class SlackWebhookService
 
     private
 
+    # DM the code of conduct to a freshly-joined guest (idempotent-ish: skips if
+    # they've already accepted). Never lets a Slack failure break webhook handling.
+    def send_code_of_conduct(user)
+      return if user&.slack_id.blank?
+      return if user.slack_coc_accepted_at.present?
+
+      SlackService.new.post_code_of_conduct(user.slack_id)
+    rescue => e
+      Rails.logger.error "[SlackWebhookService] Failed to post CoC to #{user&.slack_id}: #{e.message}"
+    end
+
     # Create new IDP user from Slack member data
     # Reuses pattern from SlackService
     def create_user_from_slack_member(member)
-      profile = member['profile']
-      email = profile['email']&.downcase
+      profile = member["profile"]
+      email = profile["email"]&.downcase
 
       # Extract name components
-      first_name = profile['first_name'] || profile['real_name']&.split(' ')&.first || 'Unknown'
-      last_name = profile['last_name'] || profile['real_name']&.split(' ')&.drop(1)&.join(' ') || 'User'
+      first_name = profile["first_name"] || profile["real_name"]&.split(" ")&.first || "Unknown"
+      last_name = profile["last_name"] || profile["real_name"]&.split(" ")&.drop(1)&.join(" ") || "User"
 
       # Create user with Slack info
       user = User.new(
         email: email,
         first_name: first_name,
         last_name: last_name,
-        slack_id: member['id'],
+        slack_id: member["id"],
         slack_joined_at: Time.current,
-        password: SecureRandom.hex(32) # Random password - user will reset via email
+        password: User.generate_secure_password # Random password - user logs in via magic link
       )
 
       # Skip email confirmation if using Devise confirmable
@@ -121,5 +139,7 @@ class SlackWebhookService
       user.save!
       user
     end
+
   end
+
 end

@@ -20,4 +20,5 @@ class ConfirmationEmailJob < ApplicationJob
     # This would use Rails URL helpers in production
     "#{ENV.fetch('APP_URL', 'http://localhost:3000')}/email_confirmation/confirm?token=#{token}"
   end
+
 end

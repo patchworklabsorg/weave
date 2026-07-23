@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 class Admin::UsersController < Admin::BaseController
-  before_action :set_user, only: [:show, :edit, :update, :destroy, :impersonate, :regen_pid]
+  before_action :set_user, only: [:show, :edit, :update, :destroy, :impersonate, :regen_pid, :invite_to_slack]
   before_action :ensure_can_impersonate, only: [:impersonate]
   before_action :ensure_not_already_impersonating, only: [:impersonate]
-  before_action :require_owner, only: [:regen_pid]
+  before_action :require_superadmin, only: [:regen_pid]
   skip_before_action :authenticate_user!, only: [:stop_impersonating]
   skip_before_action :require_admin, only: [:stop_impersonating]
 
@@ -109,10 +109,17 @@ class Admin::UsersController < Admin::BaseController
     redirect_to admin_user_path(@user), alert: "Failed to regenerate p_id: #{e.message}"
   end
 
+  def invite_to_slack
+    resend = @user.slack_invited_at.present?
+    InviteToSlackJob.perform_later(@user.id, resend: resend)
+    verb = resend ? "Re-invited" : "Invited"
+    redirect_to admin_user_path(@user), notice: "#{verb} #{@user.email} to Slack (queued)."
+  end
+
   private
 
   def ensure_can_impersonate
-    return if current_user.can_impersonate?
+    return if current_user.superadmin? && current_user.can_impersonate?
 
     redirect_to admin_users_path, alert: "You don't have permission to impersonate users"
   end
@@ -127,23 +134,78 @@ class Admin::UsersController < Admin::BaseController
     @user = User.find_by!(p_id: params[:id])
   end
 
-  def require_owner
-    return if current_user&.owner?
+  def require_superadmin
+    return if current_user&.superadmin?
 
-    redirect_to admin_users_path, alert: "Only owners can perform this action"
+    redirect_to admin_users_path, alert: "Only superadmins can perform this action"
   end
 
   def user_params
-    params.require(:user).permit(
+    attrs = params.require(:user).permit(
       :first_name, :last_name, :email, :role, :password, :password_confirmation, :birthday,
-      # Staff/Contractor flags
-      :is_staff, :is_contractor,
+      # Membership attribute flags (configure capabilities, not access)
+      :is_staff, :is_contractor, :is_board,
       # Manager relationship
       :manager_id,
       # Slack API-editable fields
       :slack_title, :slack_city, :slack_state, :slack_country,
       :slack_organization, :slack_division, :slack_department, :slack_cost_center
     )
+
+    # Privilege-sensitive fields (role, password) require the acting user to
+    # outrank the target. Without this, any admin could set anyone (including
+    # themselves) to owner or reset an owner's password.
+    target = @user || User.new
+
+    unless can_edit_privileged_fields?(target)
+      attrs.delete(:role)
+      attrs.delete(:password)
+      attrs.delete(:password_confirmation)
+    end
+
+    # Even when allowed to touch role, a non-owner can never assign a role that
+    # is greater-or-equal to their own.
+    if attrs.key?(:role) && !can_assign_role?(attrs[:role])
+      attrs.delete(:role)
+    end
+
+    attrs
+  end
+
+  # Whether current_user may edit the target's role/password at all: they must
+  # strictly outrank the target, and only an owner may modify an owner or
+  # superadmin.
+  def can_edit_privileged_fields?(target)
+    return false if target.nil?
+    # Only superadmins (and owners) may grant roles or reset passwords at all.
+    return false unless current_user.superadmin?
+    return false if !current_user.owner? && (target.owner? || target.superadmin?)
+
+    role_rank(current_user) > role_rank(target)
+  end
+
+  # Whether current_user may assign the given role value. Owners may assign any
+  # role; everyone else may only assign roles strictly below their own.
+  def can_assign_role?(role_value)
+    return true if role_value.blank?
+
+    rank = normalized_role_rank(role_value)
+    return false if rank.nil?
+    return true if current_user.owner?
+
+    rank < role_rank(current_user)
+  end
+
+  def role_rank(user)
+    User.roles[user.role] || 0
+  end
+
+  def normalized_role_rank(role_value)
+    value = role_value.to_s
+    return User.roles[value] if User.roles.key?(value)
+    return value.to_i if value.match?(/\A\d+\z/)
+
+    nil
   end
 
 end

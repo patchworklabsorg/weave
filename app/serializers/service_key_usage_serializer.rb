@@ -31,5 +31,7 @@ class ServiceKeyUsageSerializer
     def render_collection(usages)
       usages.map { |usage| new(usage).as_json }
     end
+
   end
+
 end

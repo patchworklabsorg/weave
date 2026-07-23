@@ -50,7 +50,9 @@ Rails.application.configure do
 
   # Replace the default in-process memory cache store with a durable alternative.
   # config.cache_store = :solid_cache_store
-  config.cache_store = :redis_cache_store, { url: ENV["REDIS_CACHE_URL"], ssl_params: { verify_mode: OpenSSL::SSL::VERIFY_NONE } }
+  # Verify the Redis server's TLS certificate to prevent MITM on the cache
+  # connection (VERIFY_NONE would silently accept any certificate).
+  config.cache_store = :redis_cache_store, { url: ENV["REDIS_CACHE_URL"], ssl_params: { verify_mode: OpenSSL::SSL::VERIFY_PEER } }
 
   # Replace the default in-process and non-durable queuing backend for Active Job.
   config.active_job.queue_adapter = :solid_queue
@@ -61,25 +63,16 @@ Rails.application.configure do
   # config.action_mailer.raise_delivery_errors = false
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "idp.patchworklabs.org" }
+  config.action_mailer.default_url_options = { host: "weave.patchworklabs.org" }
 
   # Default from and reply-to addresses
   config.action_mailer.default_options = {
-    from: "Patchwork Labs IDP <idp@patchworklabs.org>",
-    reply_to: "no-reply@patchworklabs.org"
+    from: "Weave <hi@weave.patchworklabs.org>",
+    reply_to: "hi@weave.patchworklabs.org"
   }
 
-  config.action_mailer.delivery_method = :smtp
-
-  # Google Workspace SMTP configuration
-  config.action_mailer.smtp_settings = {
-    user_name: Rails.application.credentials.dig(:smtp, :user_name),
-    password: Rails.application.credentials.dig(:smtp, :password),
-    address: "smtp.gmail.com",
-    port: 587,
-    authentication: :plain,
-    enable_starttls_auto: true
-  }
+  # Transactional email via Resend (API key set in config/initializers/resend.rb).
+  config.action_mailer.delivery_method = :resend
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
   # the I18n.default_locale when a translation cannot be found).
@@ -95,11 +88,19 @@ Rails.application.configure do
   config.active_record.attributes_for_inspect = [:id]
 
   # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  #
-  # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  # Without an allowlist the OAuth discovery controller reflects an
+  # attacker-controlled Host header into the advertised authorization/token
+  # endpoints. Restrict to our own hosts (guarded to production/staging).
+  if Rails.env.production? || Rails.env.staging?
+    config.hosts = [
+      "weave.patchworklabs.org",
+      "patchworklabs.org",
+      # Anchored so it matches ONLY *.patchworklabs.org, not
+      # foo.patchworklabs.org.attacker.com (unanchored would).
+      /\A([a-z0-9-]+\.)+patchworklabs\.org\z/i
+    ]
+
+    # Skip DNS rebinding protection for the default health check endpoint.
+    config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  end
 end

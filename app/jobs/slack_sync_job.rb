@@ -39,4 +39,5 @@ class SlackSyncJob < ApplicationJob
     Rails.logger.info "Completed IDP -> Slack sync: #{result.inspect}"
     result
   end
+
 end

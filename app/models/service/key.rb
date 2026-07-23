@@ -1,5 +1,35 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: service_keys
+# Database name: primary
+#
+#  id             :bigint           not null, primary key
+#  api_key_digest :string           not null
+#  expires_at     :datetime
+#  hash_key       :string           not null
+#  last_used_at   :datetime
+#  name           :string           not null
+#  status         :string           default("active"), not null
+#  created_at     :datetime         not null
+#  updated_at     :datetime         not null
+#  created_by_id  :bigint           not null
+#  service_id     :bigint           not null
+#
+# Indexes
+#
+#  index_service_keys_on_api_key_digest         (api_key_digest) UNIQUE
+#  index_service_keys_on_created_by_id          (created_by_id)
+#  index_service_keys_on_service_id             (service_id)
+#  index_service_keys_on_service_id_and_status  (service_id,status)
+#  index_service_keys_on_status                 (status)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (created_by_id => users.id)
+#  fk_rails_...  (service_id => services.id)
+#
 class Service::Key < ApplicationRecord
   include EncodedIds::HashidIdentifiable
   set_public_id_prefix :skey
@@ -91,4 +121,5 @@ class Service::Key < ApplicationRecord
   def generate_hash_key
     self.hash_key ||= SecureRandom.hex(32)
   end
+
 end

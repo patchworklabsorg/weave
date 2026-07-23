@@ -40,5 +40,7 @@ class ServiceWebhookSerializer
     def render_collection(webhooks, options = {})
       webhooks.map { |webhook| new(webhook, options).as_json }
     end
+
   end
+
 end

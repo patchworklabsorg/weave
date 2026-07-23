@@ -1,23 +1,25 @@
 # frozen_string_literal: true
 
 class AuthController < ApplicationController
-  skip_before_action :authenticate_user!, only: [:login, :new_session, :password_login, :oauth_login, :send_magic_link, :magic_link_login]
+  skip_before_action :authenticate_user!, only: [:login, :new_session, :password_login, :oauth_login, :send_magic_link, :magic_link_login, :check_password_login]
 
   layout "sessions", only: [:new_session, :password_login, :oauth_login]
 
   def new_session
-    redirect_to root_path if current_user
+    redirect_to(root_path) and return if current_user
+
     @user = User.new
   end
 
   def password_login
-    redirect_to root_path if current_user
+    redirect_to(root_path) and return if current_user
+
     @user = User.new
     @is_password_login = true
   end
 
   def oauth_login
-    redirect_to root_path if current_user
+    redirect_to(root_path) and return if current_user
 
     # Check if this is a legitimate OAuth flow
     client_id = session[:oauth_client_id] || params[:client_id]
@@ -55,7 +57,7 @@ class AuthController < ApplicationController
 
     # Password login flow (from /login/pw) - ADMIN ONLY
     if user_password.present?
-      if user && user.authenticate(user_password)
+      if user&.authenticate(user_password)
         # Only allow password login for admin users
         if user.admin?
           complete_login(user)
@@ -150,6 +152,16 @@ class AuthController < ApplicationController
   end
 
 
+  # Called by the login form JS to decide whether to show the password field.
+  # Admins authenticate with a password; everyone else uses magic links.
+  def check_password_login
+    email = params[:email].to_s.strip.downcase
+    user = User.find_by(email: email) if email.present?
+    password_enabled = user&.admin? || false
+
+    render json: { password_login_enabled: password_enabled, password_required: password_enabled }
+  end
+
   def logout
     if session[:admin_id]
       original_admin = User.find(session[:admin_id])
@@ -178,7 +190,20 @@ class AuthController < ApplicationController
   private
 
   def complete_login(user)
+    # Rotate the session id before establishing the login (session fixation),
+    # preserving any in-progress OAuth context across the reset.
+    reset_session_preserving_oauth
     session[:user_id] = user.id
+
+    # Back the login with a user_sessions record so it can be validated (and
+    # revoked) on subsequent requests.
+    user.user_sessions.create!(
+      session_token: session.id.to_s,
+      expiration_at: user.session_duration_seconds.seconds.from_now,
+      ip: request.remote_ip,
+      device_info: request.user_agent,
+      last_seen_at: Time.zone.now
+    )
 
     respond_to do |format|
       format.html { redirect_to root_path, notice: "Logged in successfully" }

@@ -1,18 +1,94 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: users
+# Database name: primary
+#
+#  id                       :bigint           not null, primary key
+#  acknowledged_over_13_at  :datetime
+#  birthday                 :date
+#  confirmation_sent_at     :datetime
+#  confirmation_token       :string
+#  email                    :string           not null
+#  email_confirmed_at       :datetime
+#  first_name               :string           not null
+#  is_board                 :boolean          default(FALSE), not null
+#  is_contractor            :boolean          default(FALSE), not null
+#  is_staff                 :boolean          default(FALSE), not null
+#  last_name                :string           not null
+#  locked_at                :datetime
+#  magic_link_expires_at    :datetime
+#  magic_link_sent_at       :datetime
+#  magic_link_token         :string
+#  magic_link_used_at       :datetime
+#  password_digest          :string           not null
+#  phone_number             :string
+#  role                     :integer          default("user"), not null
+#  session_duration_seconds :integer          default(2592000), not null
+#  slack_birthday           :date
+#  slack_city               :string
+#  slack_coc_accepted_at    :datetime
+#  slack_cost_center        :string
+#  slack_country            :string
+#  slack_department         :string
+#  slack_display_name       :string
+#  slack_division           :string
+#  slack_github             :string
+#  slack_invited_at         :datetime
+#  slack_joined_at          :datetime
+#  slack_linkedin           :string
+#  slack_organization       :string
+#  slack_phone              :string
+#  slack_profile_image_url  :string
+#  slack_profile_synced_at  :datetime
+#  slack_pronouns           :string
+#  slack_role_description   :text
+#  slack_start_date         :date
+#  slack_state              :string
+#  slack_status_emoji       :string
+#  slack_status_text        :string
+#  slack_title              :string
+#  slack_website            :string
+#  status                   :enum             default("active"), not null
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#  manager_id               :bigint
+#  p_id                     :string           not null
+#  slack_id                 :string
+#  slack_manager_id         :string
+#
+# Indexes
+#
+#  index_users_on_confirmation_token  (confirmation_token) UNIQUE
+#  index_users_on_email               (email) UNIQUE
+#  index_users_on_magic_link_token    (magic_link_token) UNIQUE
+#  index_users_on_manager_id          (manager_id)
+#  index_users_on_p_id                (p_id) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (manager_id => users.id)
+#
 require "rails_helper"
 
 RSpec.describe User, type: :model do
   describe "validations" do
-    it { should validate_presence_of(:first_name) }
-    it { should validate_presence_of(:last_name) }
-    it { should validate_presence_of(:email) }
-    it { should validate_uniqueness_of(:email) }
+    # Provide a fully valid record so shoulda's uniqueness matcher can persist
+    # the "existing" record it compares against. The matcher saves that record
+    # with `validate: false`, which skips the before_validation p_id generation,
+    # so a valid p_id must be supplied here (first_name/last_name are NOT NULL).
+    subject { build(:user, p_id: "PWL0ABCDEF123") }
+
+    it { is_expected.to validate_presence_of(:first_name) }
+    it { is_expected.to validate_presence_of(:last_name) }
+    it { is_expected.to validate_presence_of(:email) }
+    it { is_expected.to validate_uniqueness_of(:email).case_insensitive }
 
     it "validates email format" do
       user = build(:user, email: "invalid-email")
       expect(user).not_to be_valid
-      expect(user.errors[:email]).to include("does not appear to be valid")
+      expect(user.errors[:email]).to include("does not appear to be a valid email address")
     end
 
     it "validates password complexity" do
@@ -22,11 +98,11 @@ RSpec.describe User, type: :model do
   end
 
   describe "associations" do
-    it { should have_many(:visits).class_name("Ahoy::Visit") }
-    it { should have_many(:user_sessions).class_name("User::Session") }
-    it { should have_many(:addresses) }
-    it { should have_one(:shipping_address) }
-    it { should have_one(:billing_address) }
+    it { is_expected.to have_many(:visits).class_name("Ahoy::Visit") }
+    it { is_expected.to have_many(:user_sessions).class_name("User::Session") }
+    it { is_expected.to have_many(:addresses) }
+    it { is_expected.to have_one(:shipping_address) }
+    it { is_expected.to have_one(:billing_address) }
   end
 
   describe "callbacks" do
@@ -51,7 +127,7 @@ RSpec.describe User, type: :model do
     end
 
     it "handles nil names safely" do
-      user = User.new(first_name: nil, last_name: nil)
+      user = described_class.new(first_name: nil, last_name: nil)
       expect(user.initials).to eq("")
     end
   end

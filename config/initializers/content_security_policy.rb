@@ -13,7 +13,7 @@ Rails.application.configure do
     policy.img_src     :self, :https, :data, :blob
     policy.object_src  :none
     policy.script_src  :self, :https
-    policy.style_src   :self, :https
+    policy.style_src   :self, :https, :unsafe_inline
     policy.connect_src :self, :https
     policy.frame_ancestors :none
     policy.base_uri :self
@@ -23,10 +23,13 @@ Rails.application.configure do
     # policy.report_uri "/csp-violation-report-endpoint"
   end
 
-  # Generate session nonces for permitted inline scripts and inline styles
-  # This allows Turbo/Stimulus and inline styles while maintaining CSP protection
-  config.content_security_policy_nonce_generator = ->(request) { request.session.id.to_s }
-  config.content_security_policy_nonce_directives = %w(script-src style-src)
+  # Generate a fresh random nonce per request for permitted inline scripts.
+  # (Do NOT use the session id here: a nonce must be unpredictable and unique
+  # per response, and the session id is neither.) Inline styles are permitted
+  # via :unsafe_inline above so third-party mounted engines (letter_opener,
+  # Flipper, Blazer, Mission Control) render correctly.
+  config.content_security_policy_nonce_generator = ->(_request) { SecureRandom.base64(16) }
+  config.content_security_policy_nonce_directives = %w(script-src)
 
   # Report violations without enforcing the policy (useful for testing)
   # Uncomment to test CSP without breaking functionality:

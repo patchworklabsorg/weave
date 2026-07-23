@@ -4,10 +4,10 @@ class WelcomeEmailJob < ApplicationJob
   queue_as :default
 
   def perform(user)
-    # Send welcome email after email confirmation
-    Rails.logger.info "Sending welcome email to #{user.email}"
+    return unless user
 
-    # TODO: Uncomment when mailer is set up
-    # UserMailer.welcome_email(user).deliver_now
+    Rails.logger.info "Sending welcome email to #{user.email}"
+    UserMailer.welcome_email(user).deliver_now
   end
+
 end

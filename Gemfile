@@ -7,7 +7,7 @@ ruby File.read(File.join(File.dirname(__FILE__), ".ruby-version")).strip
 ###############################################################################
 # CORE RAILS AND PRIMARY DEPENDENCIES
 ###############################################################################
-gem "rails", "~> 8.0.2"
+gem "rails", "~> 8.1"
 gem "pg", "~> 1.5", ">= 1.5.9"           # PostgreSQL database
 gem "puma", ">= 5.0"                     # Web server
 gem "bootsnap", require: false           # Reduces boot times through caching
@@ -31,7 +31,7 @@ gem "jsbundling-rails", "~> 1.0"
 ###############################################################################
 # SECURITY & AUTHENTICATION
 ###############################################################################
-gem "bcrypt", "~> 3.1.7"                 # Secure password hashing
+gem "bcrypt", "~> 3.1.7" # Secure password hashing
 # gem "webauthn", "~> 3.4"                 # WebAuthn support - TODO: Implement if needed
 gem "doorkeeper"                         # OAuth 2.0 provider
 gem "rack-attack"                        # Rate limiting
@@ -55,15 +55,15 @@ gem "mission_control-jobs"               # Job monitoring
 # DATABASE TOOLS
 ###############################################################################
 gem "pg_search"                          # Full-text search
-gem "acts_as_paranoid", "~> 0.11.0"      # Soft deletions
-gem "paper_trail", "~> 17.0.0"           # Track changes to models
+gem "acts_as_paranoid"                   # Soft deletions
+gem "paper_trail"                        # Track changes to models
 gem "strong_migrations", "~> 2.3"        # Safer database migrations
 
 ###############################################################################
 # URL & IDENTIFICATION
 ###############################################################################
 gem "encoded_ids", "~> 1.1"              # Stripe-style public IDs
-gem "friendly_id", "~> 5.5.1"            # URL slugs
+gem "friendly_id"                        # URL slugs
 
 ###############################################################################
 # STATE MACHINES & ERROR HANDLING
@@ -75,7 +75,7 @@ gem "safely_block"                       # Error handling
 # FILE & IMAGE PROCESSING
 ###############################################################################
 gem "image_processing", "~> 1.2" # Active Storage image transformations
-gem "active_storage_validations", "3.0.2" # File validations
+gem "active_storage_validations" # File validations
 gem "rqrcode" # QR code generation
 
 ###############################################################################
@@ -84,6 +84,7 @@ gem "rqrcode" # QR code generation
 gem "premailer-rails"                    # CSS to inline styles for emails
 gem "email_reply_parser"                 # Parse email replies
 gem "slack-ruby-client"                  # Slack API integration
+gem "resend"                             # Transactional email delivery (production)
 
 ###############################################################################
 # BROWSER & SECURITY
@@ -99,7 +100,7 @@ gem "ahoy_email"                         # Email analytics
 gem "blazer"                             # BI dashboard
 gem "audits1984"                         # Audit logging
 gem "console1984"                        # Console access auditing
-gem "irb", "~> 1.15.2"                   # IRB pinned for Console1984 compatibility
+gem "irb"                                # IRB (was pinned for Console1984 compatibility)
 
 ###############################################################################
 # FEATURE FLAGS & CONFIGURATION
@@ -126,6 +127,10 @@ gem "rspec-rails"
 group :development, :test do
   # Debugging
   gem "debug"
+
+  # Test data & matchers
+  gem "factory_bot_rails"
+  gem "shoulda-matchers"
 
   # Security & Code Quality
   gem "brakeman", require: false # Security analysis
@@ -165,6 +170,9 @@ group :test do
   # System Testing
   gem "capybara"
   gem "selenium-webdriver"
+
+  # Enables `assigns` and `assert_template` in controller specs
+  gem "rails-controller-testing"
 end
 
 gem "stackprof"

@@ -84,4 +84,5 @@ class UserAuthenticationService
     Rails.logger.error("Failed to geocode IP #{ip_address}: #{e.message}")
     nil
   end
+
 end

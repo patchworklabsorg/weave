@@ -4,21 +4,21 @@ class SlackWebhookEventJob < ApplicationJob
   queue_as :default
 
   def perform(event_data)
-    event_type = event_data.dig('event', 'type')
-    event_id = event_data['event_id']
+    event_type = event_data.dig("event", "type")
+    event_id = event_data["event_id"]
 
     Rails.logger.info "[SlackWebhookEventJob] Processing event #{event_id}: #{event_type}"
 
     case event_type
-    when 'team_join'
+    when "team_join"
       # New user joined Slack workspace
-      slack_user_data = event_data['event']['user']
+      slack_user_data = event_data["event"]["user"]
       SlackWebhookService.process_team_join(slack_user_data)
       Rails.logger.info "[SlackWebhookEventJob] Processed team_join for user #{slack_user_data['id']}"
 
-    when 'user_change'
+    when "user_change"
       # User profile updated in Slack
-      slack_user_data = event_data['event']['user']
+      slack_user_data = event_data["event"]["user"]
       SlackWebhookService.process_user_change(slack_user_data)
       Rails.logger.info "[SlackWebhookEventJob] Processed user_change for user #{slack_user_data['id']}"
 
@@ -34,4 +34,5 @@ class SlackWebhookEventJob < ApplicationJob
     Rails.logger.error e.backtrace.join("\n")
     raise # Re-raise to allow job retry mechanism
   end
+
 end

@@ -1,0 +1,13 @@
+{
+  "ignored_warnings": [
+    {
+      "fingerprint": "9c64429630a040601d9465780f986bdd9425ec00e120351fd154e9c193942e88",
+      "check_name": "PermitAttributes",
+      "message": "Potentially dangerous key allowed for mass assignment",
+      "file": "app/controllers/admin/users_controller.rb",
+      "line": 145,
+      "note": "Reviewed and accepted: :role and :password are stripped at runtime in user_params unless the actor is a superadmin who strictly outranks the target (can_edit_privileged_fields? / can_assign_role?). The static permit list flags them, but the runtime rank-gating is the real protection."
+    }
+  ],
+  "brakeman_version": "7.1.0"
+}

@@ -13,15 +13,15 @@ module SlackSignatureVerification
     # Get the signing secret from credentials or ENV
     signing_secret = slack_signing_secret
 
-    unless signing_secret.present?
+    if signing_secret.blank?
       Rails.logger.error "[Slack Webhook] Missing signing secret"
       render json: { error: "Configuration error" }, status: :internal_server_error
       return
     end
 
     # Get signature and timestamp from headers
-    slack_signature = request.headers['X-Slack-Signature']
-    slack_timestamp = request.headers['X-Slack-Request-Timestamp']
+    slack_signature = request.headers["X-Slack-Signature"]
+    slack_timestamp = request.headers["X-Slack-Request-Timestamp"]
 
     unless slack_signature.present? && slack_timestamp.present?
       Rails.logger.warn "[Slack Webhook] Missing signature headers"
@@ -40,7 +40,7 @@ module SlackSignatureVerification
     # Format: v0=HMAC-SHA256(signing_secret, "v0:timestamp:body")
     sig_basestring = "v0:#{slack_timestamp}:#{request.raw_post}"
     computed_signature = "v0=" + OpenSSL::HMAC.hexdigest(
-      OpenSSL::Digest.new('SHA256'),
+      OpenSSL::Digest.new("SHA256"),
       signing_secret,
       sig_basestring
     )
@@ -58,10 +58,6 @@ module SlackSignatureVerification
 
   def slack_signing_secret
     # Try Rails credentials first, then ENV
-    if Rails.application.credentials.dig(:slack, :signing_secret).present?
-      Rails.application.credentials.dig(:slack, :signing_secret)
-    else
-      ENV['SLACK_SIGNING_SECRET']
-    end
+    Rails.application.credentials.dig(:slack, :signing_secret).presence || ENV["SLACK_SIGNING_SECRET"]
   end
 end

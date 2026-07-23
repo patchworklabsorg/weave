@@ -1,54 +1,23 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <style>
-      /* Email-specific styles */
-      .btn {
-        display: inline-block;
-        padding: 12px 24px;
-        background-color: #007bff;
-        color: #ffffff;
-        text-decoration: none;
-        border-radius: 5px;
-        font-weight: bold;
-        margin: 20px 0;
-      }
-      .container {
-        max-width: 600px;
-        margin: 0 auto;
-        padding: 20px;
-        font-family: Arial, sans-serif;
-        line-height: 1.6;
-      }
-      .footer {
-        margin-top: 40px;
-        padding-top: 20px;
-        border-top: 1px solid #eee;
-        color: #666;
-        font-size: 14px;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <h2>Sign in to your account</h2>
-      
-      <p>Hi <%= @user.first_name %>,</p>
-      
-      <p>Click the button below to sign in to your account:</p>
-      
-      <p>
-        <a href="<%= @magic_link_url %>" class="btn">Sign In</a>
-      </p>
-      
-      <p>Or copy and paste this link into your browser:</p>
-      <p><%= @magic_link_url %></p>
-      
-      <div class="footer">
-        <p>This link will expire in 15 minutes for security reasons.</p>
-        <p>If you didn't request this login link, please ignore this email.</p>
-      </div>
-    </div>
-  </body>
-</html>
+<h2 style="margin: 0 0 16px 0; color: #2a2050; font-size: 20px; font-weight: 700;">Sign in to your account</h2>
+
+<p style="margin: 0 0 16px 0; color: #2a2050;">Hi <%= @user.first_name %>,</p>
+
+<p style="margin: 0 0 16px 0; color: #2a2050;">Click the button below to sign in to your account:</p>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 24px 0;">
+  <tr>
+    <td style="border-radius: 8px; background-color: #6c3ec1;">
+      <a href="<%= @magic_link_url %>" style="display: inline-block; padding: 12px 28px; background-color: #6c3ec1; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 15px; font-family: 'Geist', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+        Sign In
+      </a>
+    </td>
+  </tr>
+</table>
+
+<p style="margin: 0 0 8px 0; color: #2a2050;">Or copy and paste this link into your browser:</p>
+<p style="margin: 0 0 16px 0; word-break: break-all;"><a href="<%= @magic_link_url %>" style="color: #6c3ec1;"><%= @magic_link_url %></a></p>
+
+<div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #ebe3f9; color: #5d5584; font-size: 13px; line-height: 1.6;">
+  <p style="margin: 0 0 4px 0;">This link will expire in 15 minutes for security reasons.</p>
+  <p style="margin: 0;">If you didn't request this login link, please ignore this email.</p>
+</div>

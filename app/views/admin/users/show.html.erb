@@ -1,60 +1,58 @@
 <div class="container mx-auto px-4 py-8">
   <% if @user.birthday.present? && @user.birthday.month == Date.current.month && @user.birthday.day == Date.current.day %>
-    <div class="bg-gradient-to-r from-pink-500 to-violet-500 rounded-lg p-4 mb-6">
+    <div class="bg-gradient-to-r from-orchid to-grape rounded-lg p-4 mb-6">
       <div class="flex items-center">
         <div class="text-white">
           <div class="text-2xl">🎉</div>
         </div>
         <div class="ml-3">
-          <h3 class="text-lg font-medium text-white">Happy Birthday!</h3>
-          <p class="text-pink-100">It's <%= @user.first_name %>'s birthday today!</p>
+          <h3 class="font-display text-lg font-medium text-white">Happy Birthday!</h3>
+          <p class="text-white/80">It's <%= @user.first_name %>'s birthday today!</p>
         </div>
       </div>
     </div>
   <% end %>
-  
+
   <div class="flex justify-between items-center mb-6">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900"><%= @user.full_name %></h1>
-      <p class="text-gray-600">PWL ID: <%= @user.p_id %></p>
+      <h1 class="font-display text-2xl font-bold text-ink"><%= @user.full_name %></h1>
+      <p class="text-ink-soft">PWL ID: <%= @user.p_id %></p>
     </div>
     <div class="space-x-2">
-      <%= link_to 'Edit User', edit_admin_user_path(@user),
-          class: 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500' %>
+      <%= link_to 'Edit User', edit_admin_user_path(@user), class: 'btn-stitch-ghost' %>
       <% if @user.is_impersonatable?(current_user) && !impersonating? %>
         <%= button_to 'Impersonate', impersonate_admin_user_path(@user), method: :post,
-            class: 'inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500',
+            class: 'btn-stitch',
             form: { data: { turbo: false } },
             local: true,
             data: { turbo_confirm: "Are you sure you want to impersonate #{@user.full_name}?" } %>
       <% end %>
-      <%= link_to 'Back to Users', admin_users_path,
-          class: 'inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500' %>
+      <%= link_to 'Back to Users', admin_users_path, class: 'btn-stitch-ghost' %>
     </div>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- User Details -->
-    <div class="bg-white shadow rounded-lg p-6">
-      <h2 class="text-lg font-medium text-gray-900 mb-4">User Details</h2>
+    <div class="patch p-6">
+      <h2 class="font-display text-lg font-bold text-ink mb-4">User Details</h2>
       <dl class="space-y-3">
         <div>
-          <dt class="text-sm font-medium text-gray-500">Full Name</dt>
-          <dd class="text-sm text-gray-900"><%= @user.full_name %></dd>
+          <dt class="text-sm font-medium text-ink-faint">Full Name</dt>
+          <dd class="text-sm text-ink"><%= @user.full_name %></dd>
         </div>
         <div>
-          <dt class="text-sm font-medium text-gray-500">Email</dt>
-          <dd class="text-sm text-gray-900"><%= @user.email %></dd>
+          <dt class="text-sm font-medium text-ink-faint">Email</dt>
+          <dd class="text-sm text-ink"><%= @user.email %></dd>
         </div>
         <% if @user.birthday.present? %>
           <div>
-            <dt class="text-sm font-medium text-gray-500">Birthday</dt>
-            <dd class="text-sm text-gray-900"><%= @user.birthday.strftime("%B %d, %Y") %></dd>
+            <dt class="text-sm font-medium text-ink-faint">Birthday</dt>
+            <dd class="text-sm text-ink"><%= @user.birthday.strftime("%B %d, %Y") %></dd>
           </div>
         <% end %>
         <div>
-          <dt class="text-sm font-medium text-gray-500">P_ID</dt>
-          <dd class="text-sm text-gray-900 flex items-center justify-between">
+          <dt class="text-sm font-medium text-ink-faint">P_ID</dt>
+          <dd class="text-sm text-ink flex items-center justify-between">
             <span><%= @user.p_id %></span>
             <% if current_user.owner? %>
               <%= button_to 'Regenerate', regen_pid_admin_user_path(@user), method: :patch,
@@ -64,36 +62,36 @@
           </dd>
         </div>
         <div>
-          <dt class="text-sm font-medium text-gray-500">Access Level</dt>
+          <dt class="text-sm font-medium text-ink-faint">Access Level</dt>
           <dd class="text-sm">
-            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= @user.admin? ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800' %>">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= @user.admin? ? 'bg-orchid-soft text-orchid' : 'bg-teal-soft text-teal' %>">
               <%= @user.role.titleize %>
             </span>
           </dd>
         </div>
         <div>
-          <dt class="text-sm font-medium text-gray-500">Email Verified</dt>
+          <dt class="text-sm font-medium text-ink-faint">Email Verified</dt>
           <dd class="text-sm">
-            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= @user.email_verified? ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' %>">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= @user.email_verified? ? 'bg-teal-soft text-teal' : 'bg-orchid-soft text-orchid' %>">
               <%= @user.email_verified? ? 'Verified' : 'Unverified' %>
             </span>
           </dd>
         </div>
         <div>
-          <dt class="text-sm font-medium text-gray-500">Status</dt>
+          <dt class="text-sm font-medium text-ink-faint">Status</dt>
           <dd class="text-sm">
-            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= @user.status == 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' %>">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= @user.status == 'active' ? 'bg-teal-soft text-teal' : 'bg-grape-soft text-ink-soft' %>">
               <%= @user.status.titleize %>
             </span>
           </dd>
         </div>
         <div>
-          <dt class="text-sm font-medium text-gray-500">Created At</dt>
-          <dd class="text-sm text-gray-900"><%= @user.created_at.strftime("%B %d, %Y at %I:%M %p") %></dd>
+          <dt class="text-sm font-medium text-ink-faint">Created At</dt>
+          <dd class="text-sm text-ink"><%= @user.created_at.strftime("%B %d, %Y at %I:%M %p") %></dd>
         </div>
         <div>
-          <dt class="text-sm font-medium text-gray-500">Last Login</dt>
-          <dd class="text-sm text-gray-900">
+          <dt class="text-sm font-medium text-ink-faint">Last Login</dt>
+          <dd class="text-sm text-ink">
             <% if @user.last_login_at %>
               <%= @user.last_login_at.strftime("%B %d, %Y at %I:%M %p") %>
             <% else %>
@@ -102,8 +100,8 @@
           </dd>
         </div>
         <div>
-          <dt class="text-sm font-medium text-gray-500">Last Seen</dt>
-          <dd class="text-sm text-gray-900">
+          <dt class="text-sm font-medium text-ink-faint">Last Seen</dt>
+          <dd class="text-sm text-ink">
             <% if @user.last_seen_at %>
               <%= time_ago_in_words(@user.last_seen_at) %> ago
             <% else %>
@@ -115,56 +113,59 @@
     </div>
 
     <!-- Activity Summary -->
-    <div class="bg-white shadow rounded-lg p-6">
-      <h2 class="text-lg font-medium text-gray-900 mb-4">Activity Summary</h2>
+    <div class="patch p-6">
+      <h2 class="font-display text-lg font-bold text-ink mb-4">Activity Summary</h2>
       <dl class="space-y-3">
         <div>
-          <dt class="text-sm font-medium text-gray-500">Total Sessions</dt>
-          <dd class="text-sm text-gray-900"><%= @user.user_sessions.count %></dd>
+          <dt class="text-sm font-medium text-ink-faint">Total Sessions</dt>
+          <dd class="text-sm text-ink"><%= @user.user_sessions.count %></dd>
         </div>
         <div>
-          <dt class="text-sm font-medium text-gray-500">Active Sessions</dt>
-          <dd class="text-sm text-gray-900"><%= @user.user_sessions.not_expired.count %></dd>
+          <dt class="text-sm font-medium text-ink-faint">Active Sessions</dt>
+          <dd class="text-sm text-ink"><%= @user.user_sessions.not_expired.count %></dd>
         </div>
         <div>
-          <dt class="text-sm font-medium text-gray-500">Total Visits</dt>
-          <dd class="text-sm text-gray-900"><%= @user.visits.count %></dd>
+          <dt class="text-sm font-medium text-ink-faint">Total Visits</dt>
+          <dd class="text-sm text-ink"><%= @user.visits.count %></dd>
         </div>
       </dl>
     </div>
 
     <!-- Organization -->
-    <div class="bg-white shadow rounded-lg p-6">
-      <h2 class="text-lg font-medium text-gray-900 mb-4">Organization</h2>
+    <div class="patch p-6">
+      <h2 class="font-display text-lg font-bold text-ink mb-4">Organization</h2>
       <dl class="space-y-3">
         <div>
-          <dt class="text-sm font-medium text-gray-500">Employment Type</dt>
+          <dt class="text-sm font-medium text-ink-faint">Employment Type</dt>
           <dd class="text-sm">
+            <% if @user.is_board %>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-soft text-teal">Board</span>
+            <% end %>
             <% if @user.is_staff %>
-              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Staff</span>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-soft text-sky">Staff</span>
             <% end %>
             <% if @user.is_contractor %>
-              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">Contractor</span>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-violet-soft text-violet">Contractor</span>
             <% end %>
-            <% unless @user.is_staff || @user.is_contractor %>
-              <span class="text-gray-500">Not set</span>
+            <% unless @user.is_board || @user.is_staff || @user.is_contractor %>
+              <span class="text-ink-faint">Community member</span>
             <% end %>
           </dd>
         </div>
         <% if @user.manager.present? %>
           <div>
-            <dt class="text-sm font-medium text-gray-500">Manager</dt>
-            <dd class="text-sm text-gray-900">
-              <%= link_to @user.manager.full_name, admin_user_path(@user.manager), class: "text-indigo-600 hover:text-indigo-900" %>
+            <dt class="text-sm font-medium text-ink-faint">Manager</dt>
+            <dd class="text-sm text-ink">
+              <%= link_to @user.manager.full_name, admin_user_path(@user.manager), class: "text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2" %>
             </dd>
           </div>
         <% end %>
         <% if @user.reports.any? %>
           <div>
-            <dt class="text-sm font-medium text-gray-500">Direct Reports</dt>
-            <dd class="text-sm text-gray-900">
+            <dt class="text-sm font-medium text-ink-faint">Direct Reports</dt>
+            <dd class="text-sm text-ink">
               <% @user.reports.each do |report| %>
-                <%= link_to report.full_name, admin_user_path(report), class: "inline-block mr-2 text-indigo-600 hover:text-indigo-900" %>
+                <%= link_to report.full_name, admin_user_path(report), class: "inline-block mr-2 text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2" %>
               <% end %>
             </dd>
           </div>
@@ -173,54 +174,73 @@
     </div>
 
     <!-- Professional Information -->
-    <div class="bg-white shadow rounded-lg p-6">
-      <h2 class="text-lg font-medium text-gray-900 mb-4">Professional Information</h2>
-      <p class="text-xs text-gray-500 mb-3">Synced with Slack</p>
+    <div class="patch p-6">
+      <h2 class="font-display text-lg font-bold text-ink mb-4">Professional Information</h2>
+      <p class="text-xs text-ink-faint mb-3">Synced with Slack</p>
       <dl class="space-y-3">
         <% if @user.slack_title.present? %>
           <div>
-            <dt class="text-sm font-medium text-gray-500">Job Title</dt>
-            <dd class="text-sm text-gray-900"><%= @user.slack_title %></dd>
+            <dt class="text-sm font-medium text-ink-faint">Job Title</dt>
+            <dd class="text-sm text-ink"><%= @user.slack_title %></dd>
           </div>
         <% end %>
         <% if @user.slack_department.present? %>
           <div>
-            <dt class="text-sm font-medium text-gray-500">Department</dt>
-            <dd class="text-sm text-gray-900"><%= @user.slack_department %></dd>
+            <dt class="text-sm font-medium text-ink-faint">Department</dt>
+            <dd class="text-sm text-ink"><%= @user.slack_department %></dd>
           </div>
         <% end %>
         <% if @user.slack_division.present? %>
           <div>
-            <dt class="text-sm font-medium text-gray-500">Division</dt>
-            <dd class="text-sm text-gray-900"><%= @user.slack_division %></dd>
+            <dt class="text-sm font-medium text-ink-faint">Division</dt>
+            <dd class="text-sm text-ink"><%= @user.slack_division %></dd>
           </div>
         <% end %>
         <% if @user.slack_organization.present? %>
           <div>
-            <dt class="text-sm font-medium text-gray-500">Organization</dt>
-            <dd class="text-sm text-gray-900"><%= @user.slack_organization %></dd>
+            <dt class="text-sm font-medium text-ink-faint">Organization</dt>
+            <dd class="text-sm text-ink"><%= @user.slack_organization %></dd>
           </div>
         <% end %>
         <% if @user.slack_city.present? || @user.slack_state.present? || @user.slack_country.present? %>
           <div>
-            <dt class="text-sm font-medium text-gray-500">Location</dt>
-            <dd class="text-sm text-gray-900">
+            <dt class="text-sm font-medium text-ink-faint">Location</dt>
+            <dd class="text-sm text-ink">
               <%= [@user.slack_city, @user.slack_state, @user.slack_country].compact.join(", ") %>
             </dd>
           </div>
         <% end %>
         <% if @user.slack_cost_center.present? %>
           <div>
-            <dt class="text-sm font-medium text-gray-500">Cost Center</dt>
-            <dd class="text-sm text-gray-900"><%= @user.slack_cost_center %></dd>
+            <dt class="text-sm font-medium text-ink-faint">Cost Center</dt>
+            <dd class="text-sm text-ink"><%= @user.slack_cost_center %></dd>
           </div>
         <% end %>
         <% if @user.slack_id.present? %>
           <div>
-            <dt class="text-sm font-medium text-gray-500">Slack ID</dt>
-            <dd class="text-sm text-gray-900 font-mono"><%= @user.slack_id %></dd>
+            <dt class="text-sm font-medium text-ink-faint">Slack ID</dt>
+            <dd class="text-sm text-ink font-mono"><%= @user.slack_id %></dd>
           </div>
         <% end %>
+        <div>
+          <dt class="text-sm font-medium text-ink-faint">Slack membership</dt>
+          <dd class="text-sm text-ink">
+            <% if @user.slack_coc_accepted_at.present? %>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-soft text-teal">Full member</span>
+              <span class="text-ink-faint text-xs">accepted CoC <%= @user.slack_coc_accepted_at.strftime("%b %-d, %Y") %></span>
+            <% elsif @user.slack_invited_at.present? %>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-soft text-sky">Guest · CoC pending</span>
+              <span class="text-ink-faint text-xs">invited <%= @user.slack_invited_at.strftime("%b %-d, %Y") %></span>
+            <% else %>
+              <span class="text-ink-faint">Not invited yet</span>
+            <% end %>
+            <div class="mt-2">
+              <%= button_to(@user.slack_invited_at.present? ? "Re-invite to Slack" : "Invite to Slack",
+                    invite_to_slack_admin_user_path(@user), method: :post,
+                    class: "btn-stitch-ghost text-sm", form_class: "inline-block") %>
+            </div>
+          </dd>
+        </div>
       </dl>
     </div>
   </div>
@@ -228,16 +248,16 @@
   <!-- Session Locations Map -->
   <% session_map_data = @user.user_sessions.filter_map(&:map_data) %>
   <% if session_map_data.any? %>
-    <div class="mt-8 bg-white shadow rounded-lg">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-medium text-gray-900">Session Locations</h2>
-        <p class="text-sm text-gray-500">Geographic locations of this user's login sessions</p>
+    <div class="mt-8 patch">
+      <div class="px-6 py-4 border-b-2 border-dashed border-ink-soft/30">
+        <h2 class="font-display text-lg font-bold text-ink">Session Locations</h2>
+        <p class="text-sm text-ink-faint">Geographic locations of this user's login sessions</p>
       </div>
       <div class="px-6 py-4">
         <%= js_map session_map_data, height: "400px", zoom: 2 %>
         <div class="mt-4 flex space-x-6 text-sm">
           <div class="flex items-center">
-            <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+            <div class="w-3 h-3 bg-teal rounded-full mr-2"></div>
             <span>Active Sessions</span>
           </div>
           <div class="flex items-center">
@@ -245,7 +265,7 @@
             <span>Impersonated Sessions</span>
           </div>
           <div class="flex items-center">
-            <div class="w-3 h-3 bg-gray-500 rounded-full mr-2"></div>
+            <div class="w-3 h-3 bg-ink-faint rounded-full mr-2"></div>
             <span>Expired Sessions</span>
           </div>
         </div>
@@ -254,89 +274,89 @@
   <% end %>
 
   <!-- User Sessions -->
-  <div class="mt-8 bg-white shadow rounded-lg">
-    <div class="px-6 py-4 border-b border-gray-200">
-      <h2 class="text-lg font-medium text-gray-900">User Sessions</h2>
-      <p class="text-sm text-gray-500">Browser fingerprint and device information for this user's sessions</p>
+  <div class="mt-8 patch">
+    <div class="px-6 py-4 border-b-2 border-dashed border-ink-soft/30">
+      <h2 class="font-display text-lg font-bold text-ink">User Sessions</h2>
+      <p class="text-sm text-ink-faint">Browser fingerprint and device information for this user's sessions</p>
     </div>
     <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+      <table class="min-w-full divide-y divide-ink-soft/20">
+        <thead class="bg-grape-soft">
           <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">OS</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Seen</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fingerprint</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Status</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Device</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">OS</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Location</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Created</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Last Seen</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Fingerprint</th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
+        <tbody class="bg-paper divide-y divide-ink-soft/10">
           <% if @user.user_sessions.any? %>
             <% @user.user_sessions.order(created_at: :desc).each do |session| %>
-              <tr class="<%= 'bg-green-50' if !session.expired? && session.signed_out_at.nil? %>">
+              <tr class="<%= 'bg-teal-soft/40' if !session.expired? && session.signed_out_at.nil? %>">
                 <td class="px-4 py-4 whitespace-nowrap text-sm">
                   <% if session.expired? || session.signed_out_at %>
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-grape-soft text-ink-soft">
                       Expired
                     </span>
                   <% else %>
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-soft text-teal">
                       Active
                     </span>
                   <% end %>
                   <% if session.impersonated? %>
-                    <span class="px-2 ml-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
+                    <span class="inline-flex items-center ml-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
                       Impersonated
                     </span>
                   <% end %>
                 </td>
-                <td class="px-4 py-4 text-sm text-gray-900">
+                <td class="px-4 py-4 text-sm text-ink">
                   <%= session.device_info || 'Legacy Session' %>
                 </td>
-                <td class="px-4 py-4 text-sm text-gray-500">
+                <td class="px-4 py-4 text-sm text-ink-soft">
                   <%= session.os_info || 'Legacy Session' %>
                 </td>
-                <td class="px-4 py-4 text-sm text-gray-500">
+                <td class="px-4 py-4 text-sm text-ink-soft">
                   <div>
                     <div><%= session.ip || 'Unknown' %></div>
                     <% if session.latitude.present? && session.longitude.present? %>
-                      <div class="text-xs text-gray-400">
+                      <div class="text-xs text-ink-faint">
                         <%= session.location_name %>
                       </div>
                     <% end %>
                     <% if session.timezone.present? %>
-                      <div class="text-xs text-gray-400">
+                      <div class="text-xs text-ink-faint">
                         <%= session.timezone %>
                       </div>
                     <% end %>
                   </div>
                 </td>
-                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td class="px-4 py-4 whitespace-nowrap text-sm text-ink-soft">
                   <%= session.created_at.strftime("%m/%d/%Y %I:%M %p") %>
                 </td>
-                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td class="px-4 py-4 whitespace-nowrap text-sm text-ink-soft">
                   <% if session.last_seen_at %>
                     <%= time_ago_in_words(session.last_seen_at) %> ago
                   <% else %>
                     Never
                   <% end %>
                 </td>
-                <td class="px-4 py-4 text-sm font-mono text-gray-500">
+                <td class="px-4 py-4 text-sm font-mono text-ink-soft">
                   <% if session.fingerprint %>
                     <span class="truncate block w-24" title="<%= session.fingerprint %>">
                       <%= session.fingerprint %>
                     </span>
                   <% else %>
-                    <span class="text-gray-400">Legacy Session</span>
+                    <span class="text-ink-faint">Legacy Session</span>
                   <% end %>
                 </td>
               </tr>
             <% end %>
           <% else %>
             <tr>
-              <td colspan="7" class="px-4 py-8 text-center text-sm text-gray-500">
+              <td colspan="7" class="px-4 py-8 text-center text-sm text-ink-faint">
                 No sessions found for this user.
               </td>
             </tr>

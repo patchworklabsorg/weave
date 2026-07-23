@@ -3,6 +3,7 @@
 # == Schema Information
 #
 # Table name: sessions
+# Database name: primary
 #
 #  id         :bigint           not null, primary key
 #  data       :text
@@ -18,4 +19,7 @@
 class Session < ApplicationRecord
   include EncodedIds::HashidIdentifiable
   set_public_id_prefix :ses
+
+  validates :session_id, presence: true, uniqueness: true
+
 end

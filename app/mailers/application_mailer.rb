@@ -4,7 +4,7 @@ class ApplicationMailer < ActionMailer::Base
   include Rails.application.routes.url_helpers
   has_history
   utm_params
-  default from: "Patchwork Labs IDP <idp@patchworklabs.org>", reply_to: "no-reply@patchworklabs.org"
+  default from: "Weave <hi@weave.patchworklabs.org>", reply_to: "hi@weave.patchworklabs.org"
   layout "mailer"
 
   def env_subject(base_subject)

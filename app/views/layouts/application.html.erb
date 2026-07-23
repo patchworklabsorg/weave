@@ -5,10 +5,10 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#2F2F2F" />
-    <meta name="msapplication-TileColor" content="#2F2F2F" />
-    <meta name="apple-mobile-web-app-title" content="Patchwork IDP" />
-    <meta name="application-name" content="Patchwork IDP" />
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#2a2050" />
+    <meta name="msapplication-TileColor" content="#2a2050" />
+    <meta name="apple-mobile-web-app-title" content="Weave" />
+    <meta name="application-name" content="Weave" />
     <meta name="author" content="Patchwork Labs Inc" />
     <meta name="copyright" content="Patchwork Labs Inc" />
     <%# <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
@@ -18,15 +18,15 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="manifest" href="/site.webmanifest" /> %>
     <%# <meta name="msapplication-TileImage" content="/mstile-144x144.png" /> %>
-    <meta name="theme-color" content="#2F2F2F" />
+    <meta name="theme-color" content="#2a2050" />
     <meta name="viewport" content="width=device-width,initial-scale=1">
 
-    <title><%= content_for(:title) || "Patchwork IDP" %></title>
+    <title><%= content_for(:title) || "Weave" %></title>
     <title>
-      <%= yield(:title).concat(" ~") if content_for?(:title) %> Patchwork IDP
+      <%= yield(:title).concat(" ~") if content_for?(:title) %> Weave
     </title>
 
-    <link rel="canonical" href="https://idp.patchworklabs.org/" />
+    <link rel="canonical" href="https://weave.patchworklabs.org/" />
 
     <%= yield :head %>
 
@@ -49,14 +49,6 @@
     <script src="https://unpkg.com/mapkick@0.2.6/dist/mapkick.bundle.js"></script>
 
     <style nonce="<%= content_security_policy_nonce %>">
-      body {
-        background-image: url('<%= asset_path("frame.png") %>');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-      }
-
-
       #staging-warning {
         text-align: center;
         position: fixed;
@@ -72,7 +64,7 @@
     <%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
   </head>
 
-  <body>
+  <body class="quilt-bg text-ink font-sans min-h-screen">
 
     <% if Rails.env.staging? %>
       <%# add big warning to top of page %>
@@ -104,7 +96,7 @@
 
   </body>
 
-  <script>
+  <script nonce="<%= content_security_policy_nonce %>">
     console.log(`%c
      .-----.
     (-------|
@@ -112,7 +104,7 @@
     (-------|
      '-----'
 
-    Patchwork Labs IDP
+    Weave
 
     🌱 Want to contribute? Start here:
     → GitHub: https://github.com/patchworklabsorg/idp
@@ -120,7 +112,7 @@
     🗝 Found a security issue?
     Please report it by email: security@patchworklabs.org️
 
-    `, 'color: #2F2F2F; font-weight: bold;');
+    `, 'color: #6c3ec1; font-weight: bold;');
   </script>
 
 </html>

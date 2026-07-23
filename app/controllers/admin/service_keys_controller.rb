@@ -78,4 +78,5 @@ class Admin::ServiceKeysController < Admin::BaseController
   def key_params
     params.require(:service_key).permit(:name, :expires_at)
   end
+
 end

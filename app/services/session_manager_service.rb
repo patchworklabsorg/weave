@@ -64,4 +64,5 @@ class SessionManagerService
   def self.active_sessions(user)
     user.user_sessions.where("expires_at > ?", Time.current).order(last_seen_at: :desc)
   end
+
 end

@@ -3,6 +3,7 @@
 # == Schema Information
 #
 # Table name: addresses
+# Database name: primary
 #
 #  id                          :bigint           not null, primary key
 #  address_type                :enum             default("shipping"), not null
@@ -22,6 +23,7 @@
 #  nickname                    :string
 #  postal_code                 :string
 #  residential                 :boolean          default(FALSE), not null
+#  shipping_notes              :text
 #  state                       :string
 #  supports_weekend_deliveries :boolean          default(FALSE), not null
 #  type                        :string           default("Address"), not null
@@ -40,5 +42,16 @@
 require "rails_helper"
 
 RSpec.describe Address, type: :model do
-  pending "add some examples to (or delete) #{__FILE__}"
+  it "requires city, state, and country" do
+    address = described_class.new
+
+    expect(address).not_to be_valid
+    expect(address.errors[:city]).to be_present
+    expect(address.errors[:state]).to be_present
+    expect(address.errors[:country]).to be_present
+  end
+
+  it "defines the address_type enum values" do
+    expect(described_class.address_types.keys).to include("shipping", "billing")
+  end
 end
