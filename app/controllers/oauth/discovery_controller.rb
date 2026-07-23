@@ -32,6 +32,7 @@ module Oauth
         scopes_supported: [
           "profile",
           "email",
+          "phone",
           "admin"
         ],
 
@@ -86,6 +87,7 @@ module Oauth
           "openid",
           "profile",
           "email",
+          "phone",
           "admin"
         ],
 
@@ -117,6 +119,8 @@ module Oauth
           "preferred_username",
           "email",
           "email_verified",
+          "phone_number",
+          "phone_number_verified",
           "admin"
         ],
 
