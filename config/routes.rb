@@ -254,6 +254,24 @@ require_relative "../lib/admin_constraint"
 Rails.application.routes.draw do
   use_doorkeeper
 
+  # OpenID Connect. Mounts, at the spec-mandated locations:
+  #   GET /.well-known/openid-configuration       OIDC Discovery
+  #   GET /.well-known/oauth-authorization-server
+  #   GET /.well-known/webfinger
+  #   GET /oauth/discovery/keys                   JWKS (public keys only)
+  #
+  # These documents are generated from config/initializers/doorkeeper.rb and
+  # config/initializers/doorkeeper_openid_connect.rb, so they cannot drift from
+  # what the server actually supports.
+  #
+  # The gem's own /oauth/userinfo is skipped: it hard-requires the `openid`
+  # scope, and Weave has served userinfo to any valid token since before OIDC
+  # existed here. Ours (below) renders the same claims from the same DSL without
+  # breaking those clients.
+  use_doorkeeper_openid_connect do
+    skip_controllers :userinfo
+  end
+
   # OAuth 2.0 endpoints
   namespace :oauth do
     get "userinfo", to: "userinfo#show"
@@ -261,8 +279,14 @@ Rails.application.routes.draw do
     # OAuth 2.0 Server Metadata (RFC 8414)
     get ".well-known/oauth-authorization-server", to: "discovery#oauth_authorization_server", as: :oauth_metadata
 
-    # OpenID Connect Discovery (optional)
-    get ".well-known/openid-configuration", to: "discovery#openid_configuration", as: :openid_configuration
+    # Legacy OIDC discovery location. The canonical path is
+    # /.well-known/openid-configuration (issuer-relative, per OIDC Discovery 1.0
+    # §4) and is mounted above, but Weave advertised this one first so it stays
+    # as an alias. Deliberately the gem's controller, not a hand-written twin.
+    # Leading "/" escapes the :oauth controller namespace.
+    get ".well-known/openid-configuration",
+        to: "/doorkeeper/openid_connect/discovery#provider",
+        as: :openid_configuration
   end
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
