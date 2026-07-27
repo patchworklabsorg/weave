@@ -19,6 +19,9 @@ en:
               not_match_configured: "doesn't match configured on the server."
 
   doorkeeper:
+    scopes:
+      admin: 'Perform administrative actions on your behalf'
+
     applications:
       confirmations:
         destroy: 'Are you sure?'

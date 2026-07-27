@@ -1,0 +1,15 @@
+<% content_for :title, t(".title") %>
+
+<div class="absolute inset-0 flex items-center justify-center p-6">
+  <div class="patch patch-tilt-l w-full max-w-md">
+    <div class="p-9 pb-5 text-center">
+      <p class="text-sm font-medium text-ink-faint uppercase tracking-wide">Weave &middot; Patchwork Labs</p>
+      <h1 class="font-display text-3xl font-bold text-ink mt-2"><%= t(".title") %></h1>
+      <p class="text-ink-soft mt-3">Copy this code back into the application to finish signing in.</p>
+    </div>
+
+    <div class="px-9 pb-9">
+      <code id="authorization_code" class="block w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink text-center text-lg break-all select-all"><%= params[:code] %></code>
+    </div>
+  </div>
+</div>

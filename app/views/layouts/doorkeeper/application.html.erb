@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html class="h-full">
+  <head>
+    <title><%= content_for?(:title) ? yield(:title) : "Authorize" %> | Weave</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="h-full quilt-bg text-ink font-sans">
+    <div id="flash" class="fixed top-0 left-0 w-full z-50 pointer-events-none">
+      <%= render "shared/flash" %>
+    </div>
+
+    <main class="h-full relative">
+      <%= yield %>
+    </main>
+  </body>
+</html>

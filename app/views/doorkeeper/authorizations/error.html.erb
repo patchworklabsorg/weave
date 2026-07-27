@@ -1,0 +1,22 @@
+<% content_for :title, t("doorkeeper.authorizations.error.title") %>
+
+<div class="absolute inset-0 flex items-center justify-center p-6">
+  <div class="patch patch-tilt-l w-full max-w-md">
+    <div class="p-9 pb-5 text-center">
+      <p class="text-sm font-medium text-ink-faint uppercase tracking-wide">Weave &middot; Patchwork Labs</p>
+      <h1 class="font-display text-3xl font-bold text-ink mt-2"><%= t("doorkeeper.authorizations.error.title") %></h1>
+    </div>
+
+    <div class="px-9 pb-9 space-y-6">
+      <div class="patch border-2 border-red-400 bg-red-50 p-5">
+        <p class="text-sm text-ink">
+          <%= (local_assigns[:error_response] ? error_response : @pre_auth.error_response).body[:error_description] %>
+        </p>
+      </div>
+
+      <p class="text-xs text-ink-faint text-center">
+        Something went wrong with this authorization request. Contact the application's developer or try again from the app that sent you here.
+      </p>
+    </div>
+  </div>
+</div>
