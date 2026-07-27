@@ -16,7 +16,7 @@ RSpec.describe MagicLinkMailer, type: :mailer do
     end
 
     it "sends from the configured sender" do
-      expect(mail.from).to eq(["idp@patchworklabs.org"])
+      expect(mail.from).to eq(["hi@weave.patchworklabs.org"])
     end
 
     it "greets the user by first name in the body" do
