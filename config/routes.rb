@@ -4,10 +4,10 @@
 #
 # Routes for application:
 #                                    Prefix Verb   URI Pattern                                                                                       Controller#Action
-#                native_oauth_authorization GET    /oauth/authorize/native(.:format)                                                                 doorkeeper/authorizations#show
-#                       oauth_authorization GET    /oauth/authorize(.:format)                                                                        doorkeeper/authorizations#new
-#                                           DELETE /oauth/authorize(.:format)                                                                        doorkeeper/authorizations#destroy
-#                                           POST   /oauth/authorize(.:format)                                                                        doorkeeper/authorizations#create
+#                native_oauth_authorization GET    /oauth/authorize/native(.:format)                                                                 oauth/authorizations#show
+#                       oauth_authorization GET    /oauth/authorize(.:format)                                                                        oauth/authorizations#new
+#                                           DELETE /oauth/authorize(.:format)                                                                        oauth/authorizations#destroy
+#                                           POST   /oauth/authorize(.:format)                                                                        oauth/authorizations#create
 #                               oauth_token POST   /oauth/token(.:format)                                                                            doorkeeper/tokens#create
 #                              oauth_revoke POST   /oauth/revoke(.:format)                                                                           doorkeeper/tokens#revoke
 #                          oauth_introspect POST   /oauth/introspect(.:format)                                                                       doorkeeper/tokens#introspect
