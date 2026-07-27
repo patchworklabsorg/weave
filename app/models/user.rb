@@ -326,6 +326,17 @@ class User < ApplicationRecord
     self.magic_link_used_at = Time.current
     self.magic_link_token = nil
     self.magic_link_expires_at = nil
+
+    # Clicking a link that was only ever delivered to this address demonstrates
+    # exactly what the confirmation email asks for, so don't ask for it a second
+    # time. Accounts created by import have no confirmation behind them, and
+    # without this every one of them has to collect a second email before they
+    # can use the account at all.
+    if email_confirmed_at.nil?
+      self.email_confirmed_at = Time.current
+      self.confirmation_token = nil
+    end
+
     save!
   end
 
@@ -386,6 +397,12 @@ class User < ApplicationRecord
   def board? = is_board
   def staff? = is_staff
   def community_member? = user?
+
+  # In the Slack workspace already — a slack_id is only ever set by syncing
+  # against a real workspace member (invite acceptance, team-join webhook, or
+  # profile sync), so its presence means they joined, whether or not Weave
+  # sent the invite.
+  def slack_member? = slack_id.present?
 
   # Human-facing membership label for profile/admin display.
   def membership_label

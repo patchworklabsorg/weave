@@ -97,4 +97,17 @@ class UserTest < ActiveSupport::TestCase
     assert user.valid?
   end
 
+  test "slack_member? is true when a slack_id is set, even without an invite" do
+    user = User.new(slack_id: "U09E8DF4QBA")
+
+    assert user.slack_member?
+    assert_nil user.slack_invited_at
+  end
+
+  test "slack_member? is false without a slack_id" do
+    user = User.new(slack_invited_at: Time.current)
+
+    assert_not user.slack_member?
+  end
+
 end
