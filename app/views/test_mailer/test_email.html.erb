@@ -13,11 +13,11 @@
   </tr>
   <tr>
     <td style="padding: 0.5em; font-weight: bold; color: #2a2050;">From:</td>
-    <td style="padding: 0.5em; color: #2a2050;">idp@patchworklabs.org</td>
+    <td style="padding: 0.5em; color: #2a2050;"><%= Array(message.from).join(", ") %></td>
   </tr>
   <tr>
     <td style="padding: 0.5em; font-weight: bold; color: #2a2050;">Reply-to:</td>
-    <td style="padding: 0.5em; color: #2a2050;">no-reply@patchworklabs.org</td>
+    <td style="padding: 0.5em; color: #2a2050;"><%= Array(message.reply_to).join(", ") %></td>
   </tr>
 </table>
 

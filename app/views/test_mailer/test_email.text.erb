@@ -5,7 +5,7 @@ This is a test email to verify the SMTP configuration is working correctly.
 
 Environment:  <%= @environment %>
 Sent at:      <%= @timestamp.strftime("%Y-%m-%d %H:%M:%S %Z") %>
-From:         idp@patchworklabs.org
-Reply-to:     no-reply@patchworklabs.org
+From:         <%= Array(message.from).join(", ") %>
+Reply-to:     <%= Array(message.reply_to).join(", ") %>
 
 ✅ If you're reading this, your SMTP configuration is working correctly!
