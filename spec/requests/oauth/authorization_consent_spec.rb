@@ -166,10 +166,11 @@ RSpec.describe "OAuth authorization consent screen", type: :request do
       forms = Nokogiri::HTML(response.body).css("form[action='#{oauth_authorization_path}']")
       expect(forms.size).to eq(2)
 
-      forms.each do |form|
-        expect(form["data-turbo"]).to eq("false"),
-          "expected the #{form.at_css("input[name='_method']")&.[]("value") || "post"} form to set data-turbo=false"
+      turbo = forms.to_h do |form|
+        [form.at_css("input[name='_method']")&.[]("value") || "post", form["data-turbo"]]
       end
+
+      expect(turbo).to eq("post" => "false", "delete" => "false")
     end
   end
 
