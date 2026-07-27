@@ -257,7 +257,14 @@
 require_relative "../lib/admin_constraint"
 
 Rails.application.routes.draw do
-  use_doorkeeper
+  # The authorization endpoint is ours only so that the consent screen can relax
+  # `form-action` to the client's registered redirect URI; everything else about
+  # it is Doorkeeper's, inherited unchanged, including the views under
+  # app/views/doorkeeper/authorizations/ (still found via the parent's view
+  # prefixes). See app/controllers/oauth/authorizations_controller.rb.
+  use_doorkeeper do
+    controllers authorizations: "oauth/authorizations"
+  end
 
   # OpenID Connect. Mounts, at the spec-mandated locations:
   #   GET /.well-known/openid-configuration       OIDC Discovery

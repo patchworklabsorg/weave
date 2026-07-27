@@ -90,6 +90,67 @@ RSpec.describe "OAuth authorization consent screen", type: :request do
     end
   end
 
+  # Regression coverage for a silent, browser-side breakage: the global CSP sets
+  # `form-action 'self'`, and Chrome and Safari apply form-action to every hop of
+  # a form submission's redirect chain. With only 'self' allowed, granting consent
+  # POSTs fine and Doorkeeper answers 302 to the client, but the browser refuses
+  # the cross-origin hop without a word — the Authorize button appears dead and
+  # the server log shows a POST and a redirect that both look perfectly healthy.
+  describe "form-action on the consent screen" do
+    def form_action(response)
+      directives = response.headers["Content-Security-Policy"].to_s.split(";").map(&:strip)
+      directives.find { |directive| directive.start_with?("form-action ") }
+    end
+
+    it "allows the consent form to reach the client's registered redirect origin" do
+      get oauth_authorization_path, params: authorization_params
+
+      expect(response).to have_http_status(:ok)
+      expect(form_action(response)).to eq("form-action 'self' https://client.example.com")
+    end
+
+    it "allows every origin the application registered, and each only once" do
+      application.update!(
+        redirect_uri: [
+          "https://client.example.com/callback",
+          "https://client.example.com/other",
+          "https://second.example.com:8443/callback"
+        ].join("\n")
+      )
+
+      get oauth_authorization_path, params: authorization_params(redirect_uri: "https://client.example.com/callback")
+
+      expect(form_action(response)).to eq(
+        "form-action 'self' https://client.example.com https://second.example.com:8443"
+      )
+    end
+
+    it "keeps redirect URIs that are not http(s) out of the header" do
+      application.update!(
+        redirect_uri: ["urn:ietf:wg:oauth:2.0:oob", "https://client.example.com/callback"].join("\n")
+      )
+
+      get oauth_authorization_path, params: authorization_params
+
+      expect(form_action(response)).to eq("form-action 'self' https://client.example.com")
+      expect(form_action(response)).not_to include("urn:")
+    end
+
+    # The allowance comes from the application's registered URIs, not from the
+    # parameter, so asking to be redirected elsewhere cannot widen the policy.
+    it "does not allow an origin the request merely asked for" do
+      get oauth_authorization_path, params: authorization_params(redirect_uri: "https://evil.example.com/callback")
+
+      expect(form_action(response)).not_to include("evil.example.com")
+    end
+
+    it "leaves form-action alone everywhere else" do
+      get root_path
+
+      expect(form_action(response)).to eq("form-action 'self'")
+    end
+  end
+
   describe "POST /oauth/authorize with the consent form's fields" do
     it "issues a code whose id_token carries the nonce from the form" do
       post oauth_authorization_path, params: authorization_params
