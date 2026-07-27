@@ -11,71 +11,54 @@
 
 # Resolves the RSA private key used to sign id_tokens.
 #
-# The key is NEVER committed. Follows the same precedence as the other secret
-# bearing initializers in this repo (see resend.rb / encoded_ids.rb):
-# environment variable first, then encrypted credentials.
+# Encrypted credentials are the only source. The key is NEVER committed and has
+# no environment variable override: an id_token signed by an unexpected key is
+# indistinguishable to a client from an id_token signed by an attacker's key, so
+# there should be exactly one place it can come from.
 #
-# In development and test we fall back to a locally generated key so the app
-# and the suite boot without production credentials, mirroring the throwaway
-# test key in lockbox.rb. Those fallbacks are unreachable in any other
-# environment: production raises instead, loudly, on first use.
+# Add one per environment with:
+#
+#   openssl genrsa 2048
+#   bin/rails credentials:edit --environment production
+#
+#   openid_connect:
+#     signing_key: |
+#       -----BEGIN PRIVATE KEY-----
+#       ...
+#
+# Test is the sole exception, mirroring the throwaway key in lockbox.rb: CI has
+# no credential keys at all, so the suite generates an ephemeral one in memory.
 module OidcSigningKey
-  # Development keeps its key on disk under tmp/ (gitignored) so that restarts
-  # and multiple Puma workers agree on one key — otherwise the JWKS endpoint
-  # would advertise a public key that does not match the signing worker.
-  DEVELOPMENT_KEY_PATH = Rails.root.join("tmp/oidc_signing_key.pem")
-
-  # RSA modulus size for locally generated development/test keys. Production
-  # keys are generated out of band (see the OIDC section of the README).
+  # RSA modulus size for the generated test key. Real keys are generated out of
+  # band by whoever adds them to credentials.
   KEY_SIZE = 2048
 
   MISSING_KEY_MESSAGE = <<~MSG.squish
-    No OIDC signing key configured. Set the OIDC_SIGNING_KEY environment
-    variable to a PEM-encoded RSA private key, or store one in encrypted
-    credentials under openid_connect.signing_key.
+    No OIDC signing key configured. Add a PEM-encoded RSA private key to
+    encrypted credentials under openid_connect.signing_key — see
+    config/initializers/doorkeeper_openid_connect.rb for the exact steps.
   MSG
 
   class << self
-    # Memoized so we pay the PEM parse (and, locally, the keygen) once per
+    # Memoized so we pay the PEM parse (and, in test, the keygen) once per
     # process rather than on every id_token we sign.
     def fetch!
-      @fetch ||= configured_key || local_key || raise(MISSING_KEY_MESSAGE)
+      @fetch ||= configured_key || test_key || raise(MISSING_KEY_MESSAGE)
     end
 
     private
 
     def configured_key
-      ENV["OIDC_SIGNING_KEY"].presence ||
-        Rails.application.credentials.dig(:openid_connect, :signing_key).presence
+      Rails.application.credentials.dig(:openid_connect, :signing_key).presence
     end
 
-    def local_key
-      return unless Rails.env.local?
+    # Generated per process and never written to disk, so no key material of any
+    # kind exists in the repository or on a CI runner. The suite runs in a
+    # single process, so JWKS and the signing path agree on one key.
+    def test_key
+      return unless Rails.env.test?
 
-      Rails.env.test? ? generate_key : development_key
-    end
-
-    # Test runs in a single process and gets a fresh ephemeral key, so no key
-    # material is ever written to disk by the suite.
-    def generate_key
       OpenSSL::PKey::RSA.generate(KEY_SIZE).to_pem
-    end
-
-    def development_key
-      return DEVELOPMENT_KEY_PATH.read if DEVELOPMENT_KEY_PATH.exist?
-
-      pem = generate_key
-      DEVELOPMENT_KEY_PATH.dirname.mkpath
-      # Write via a unique temp file + atomic rename so two workers racing on
-      # first boot cannot observe a half-written PEM.
-      tmp = DEVELOPMENT_KEY_PATH.sub_ext(".#{Process.pid}.tmp")
-      tmp.write(pem)
-      tmp.chmod(0o600)
-      tmp.rename(DEVELOPMENT_KEY_PATH.to_s)
-      pem
-    rescue Errno::ENOENT
-      # Lost the rename race against another worker; use whatever landed.
-      DEVELOPMENT_KEY_PATH.read
     end
 
   end
@@ -97,8 +80,9 @@ Doorkeeper::OpenidConnect.configure do
       end
   end
 
-  # Callable so a missing production key raises on first use rather than
-  # aborting boot (which would break asset precompilation during deploys).
+  # Callable so a missing key raises on first use rather than aborting boot,
+  # which would break `zeitwerk:check`, asset precompilation and anything else
+  # that only needs the app to load.
   signing_key -> { OidcSigningKey.fetch! }
 
   signing_algorithm :rs256
