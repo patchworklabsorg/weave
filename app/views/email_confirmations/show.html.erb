@@ -1,0 +1,37 @@
+<%# The landing page for anyone signed in but not yet confirmed.
+    ApplicationController#authenticate_user! sends every such request here, so
+    without this template the app answers 406 to *every* page — including this
+    one — and an unconfirmed account is locked out with nothing to act on. %>
+<div class="absolute inset-0 flex items-center justify-center p-6">
+  <div class="patch patch-bound patch-tilt-l w-full max-w-md">
+    <div class="quilt-binding"></div>
+
+    <div class="p-9 pb-5 text-center">
+      <h1 class="font-display text-3xl font-bold text-ink">Confirm your email</h1>
+      <p class="text-ink-soft mt-2">One more step before you can use Weave.</p>
+    </div>
+
+    <div class="px-9 pb-9 space-y-6">
+      <div class="patch border-2 border-grape bg-grape-soft/40 p-4">
+        <p class="text-sm text-ink text-center">
+          We sent a confirmation link to
+          <strong class="break-all"><%= @user.email %></strong>.
+          Open it and you'll be signed in and ready to go.
+        </p>
+      </div>
+
+      <p class="text-sm text-ink-faint text-center">
+        Can't find it? Check your spam folder before asking for another.
+      </p>
+
+      <%= render "resend_section", user: @user %>
+
+      <div class="text-center">
+        <%= button_to "Sign out",
+              logout_path,
+              method: :delete,
+              class: "text-sm text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2" %>
+      </div>
+    </div>
+  </div>
+</div>

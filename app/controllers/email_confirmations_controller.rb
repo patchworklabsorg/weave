@@ -4,6 +4,8 @@ class EmailConfirmationsController < ApplicationController
   skip_before_action :authenticate_user!, only: [:show, :confirm, :resend]
   before_action :authenticate_user_without_email_verification!, only: [:show, :resend]
 
+  layout "sessions", only: [:show]
+
   def show
     # Show the confirmation required page
     @user = current_user

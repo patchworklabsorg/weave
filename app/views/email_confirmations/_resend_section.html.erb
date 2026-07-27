@@ -1,0 +1,14 @@
+<%# Replaced in place by EmailConfirmationsController#resend's turbo_stream
+    branch, so the id has to live on the outermost element here. %>
+<div id="resend_section" class="space-y-3">
+  <% if user.confirmation_period_valid? %>
+    <p class="text-sm text-ink-faint text-center">
+      We sent one just now. You can ask for another in a few minutes.
+    </p>
+  <% else %>
+    <%= button_to "Resend confirmation email",
+          resend_email_confirmation_path,
+          method: :post,
+          class: "btn-stitch w-full" %>
+  <% end %>
+</div>
