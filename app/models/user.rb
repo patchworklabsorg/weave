@@ -165,9 +165,15 @@ class User < ApplicationRecord
   }
   validate :validate_phone_number, if: -> { phone_number.present? }
   before_save :parse_phone_number
+  # PWL{digit}{9 uppercase hex characters}, e.g. PWL5A1B2C3D4.
+  #
+  # Uppercase only, matching what `generate_p_id` has emitted since the column
+  # existed. p_id is the OIDC `sub`: relying parties compare it byte for byte to
+  # decide who someone is, so one identity must not have two spellings. The
+  # previous /[a-fA-F0-9]/ admitted a lowercase variant that nothing produced
+  # and no consumer would have matched.
   validates :p_id, presence: true, uniqueness: true, length: { is: 13 }, format: {
-    # format is PWL{digit}{9 alphanumeric characters}
-    with: /\APWL\d[a-fA-F0-9]{9}\z/,
+    with: /\APWL\d[A-F0-9]{9}\z/,
     message: "PWL ID failed format validation"
   }
 

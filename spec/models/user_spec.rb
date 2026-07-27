@@ -383,6 +383,41 @@ RSpec.describe User, type: :model do
       user2 = create(:user)
       expect(user1.p_id).not_to eq(user2.p_id)
     end
+
+    # Generation and validation have to agree. On a persisted record the
+    # `on: :create` callback no longer fires, so this validates the value that
+    # was actually stored.
+    it "generates a p_id that satisfies its own validation" do
+      expect(create(:user)).to be_valid
+    end
+  end
+
+  # p_id is the OIDC `sub`. A relying party allowlisting on it compares the
+  # string exactly, so a lowercase variant of a real p_id must not be storable —
+  # it would be a second spelling of one identity that no consumer matches.
+  describe "p_id format" do
+    it "accepts the uppercase hex form generate_p_id produces" do
+      expect(build(:user, p_id: "PWL0ABCDEF123")).to be_valid
+    end
+
+    it "rejects lowercase hex" do
+      user = build(:user, p_id: "PWL0abcdef123")
+
+      expect(user).not_to be_valid
+      expect(user.errors[:p_id]).to include("PWL ID failed format validation")
+    end
+
+    it "rejects mixed case" do
+      expect(build(:user, p_id: "PWL0AbCdEf123")).not_to be_valid
+    end
+
+    it "rejects a non-hex character in the hex run" do
+      expect(build(:user, p_id: "PWL0ABCDEFG12")).not_to be_valid
+    end
+
+    it "rejects a non-digit immediately after the prefix" do
+      expect(build(:user, p_id: "PWLA0BCDEF123")).not_to be_valid
+    end
   end
 
   describe "#regen_pid" do
