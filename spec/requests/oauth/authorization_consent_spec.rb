@@ -151,6 +151,28 @@ RSpec.describe "OAuth authorization consent screen", type: :request do
     end
   end
 
+  # Regression coverage for the second silent browser-side breakage on this
+  # screen, and a close cousin of the form-action one above. Turbo submits forms
+  # with fetch(), and both consent forms answer with a redirect to the client's
+  # redirect_uri — cross-origin by definition. fetch() follows that hop as a CORS
+  # request, so the client's callback is asked for OPTIONS rather than GET. A
+  # preflight carries no cookies, so a callback that keeps its sign-in state in
+  # one sees an empty jar and rejects a request the user made correctly. Both
+  # forms have to submit as real navigations.
+  describe "turbo on the consent screen" do
+    it "opts both consent forms out of Turbo so they submit as navigations" do
+      get oauth_authorization_path, params: authorization_params
+
+      forms = Nokogiri::HTML(response.body).css("form[action='#{oauth_authorization_path}']")
+      expect(forms.size).to eq(2)
+
+      forms.each do |form|
+        expect(form["data-turbo"]).to eq("false"),
+          "expected the #{form.at_css("input[name='_method']")&.[]("value") || "post"} form to set data-turbo=false"
+      end
+    end
+  end
+
   describe "POST /oauth/authorize with the consent form's fields" do
     it "issues a code whose id_token carries the nonce from the form" do
       post oauth_authorization_path, params: authorization_params

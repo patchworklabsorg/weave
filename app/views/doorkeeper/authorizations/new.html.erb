@@ -29,12 +29,19 @@
         </div>
       <% end %>
 
+      <%# turbo: false on both forms. Either one answers with a redirect to the
+          client's redirect_uri, which is cross-origin by definition, and Turbo
+          submits forms as fetch() — so it follows that redirect as a CORS
+          request rather than a navigation. The client then sees an OPTIONS
+          preflight, which carries no cookies, instead of the GET its callback
+          needs, and every sign-in dies there. These have to be real browser
+          form submissions. %>
       <div class="space-y-3">
-        <%= form_tag oauth_authorization_path, method: :post do %>
+        <%= form_tag oauth_authorization_path, method: :post, data: { turbo: false } do %>
           <%= render "pre_auth_fields" %>
           <%= submit_tag t("doorkeeper.authorizations.buttons.authorize"), class: "btn-stitch w-full" %>
         <% end %>
-        <%= form_tag oauth_authorization_path, method: :delete do %>
+        <%= form_tag oauth_authorization_path, method: :delete, data: { turbo: false } do %>
           <%= render "pre_auth_fields" %>
           <%= submit_tag t("doorkeeper.authorizations.buttons.deny"), class: "btn-stitch-ghost w-full" %>
         <% end %>
