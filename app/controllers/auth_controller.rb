@@ -205,10 +205,26 @@ class AuthController < ApplicationController
       last_seen_at: Time.zone.now
     )
 
+    destination = post_login_destination
+
     respond_to do |format|
-      format.html { redirect_to root_path, notice: "Logged in successfully" }
+      format.html { redirect_to destination, notice: "Logged in successfully" }
       format.json { render json: { user: UserSerializer.render(user) }, status: :ok }
     end
+  end
+
+  # Resume an authorize request that sent the user here to sign in, rather than
+  # dropping them on the dashboard. This matters most for magic links: signing in
+  # means leaving for an email client and coming back on a fresh request, so
+  # without this the client that started the flow waits for a callback that never
+  # arrives.
+  #
+  # The value comes out of the session and goes straight into redirect_to, so
+  # only a local /oauth/authorize path is honoured — anything else is discarded
+  # rather than turned into an open redirect.
+  def post_login_destination
+    return_to = session.delete(:oauth_return_to).to_s
+    return_to.start_with?("/oauth/authorize") ? return_to : root_path
   end
 
 

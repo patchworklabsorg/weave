@@ -1,1 +1,5 @@
-<%= render "oauth_login_form", user: @user, oauth_client_name: @oauth_client_name %>
+<%# The same screen as /login. Password sign-in is admin-only (see
+    AuthController#login), so the old dedicated OAuth form — which asked every
+    visitor for a password and marked the field required — could not be
+    completed by the people it was shown to. %>
+<%= render "magic_link_form", user: @user, oauth_client_name: @oauth_client_name %>

@@ -6,6 +6,21 @@
     <div class="p-9 pb-5 text-center">
       <h1 class="font-display text-3xl font-bold text-ink">Weave</h1>
       <p class="text-ink-soft mt-2">Sign in with a magic link.</p>
+
+      <%# Only set when an OAuth client sent them here, which is why this reads
+          from local_assigns — /login renders the same partial with no client. %>
+      <% if local_assigns[:oauth_client_name].present? %>
+        <div class="mt-4 patch border-2 border-grape bg-grape-soft/40 p-4">
+          <p class="text-sm text-ink text-center">
+            The website you are trying to log in to
+            (<strong><%= oauth_client_name %></strong>) is using the Weave
+            authentication system. In this system you create a central account
+            that is used to log into Patchwork services. Once you are logged
+            into this account, you will automatically be logged in to the
+            associated Patchwork services.
+          </p>
+        </div>
+      <% end %>
     </div>
 
     <!-- Card Content -->

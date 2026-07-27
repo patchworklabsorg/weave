@@ -90,7 +90,10 @@ class ApplicationController < ActionController::Base
   # Rotate the session id to defeat session fixation, carrying forward the small
   # set of pre-login keys an in-progress OAuth flow depends on.
   def reset_session_preserving_oauth
-    preserved = { oauth_client_id: session[:oauth_client_id] }.compact
+    preserved = {
+      oauth_client_id: session[:oauth_client_id],
+      oauth_return_to: session[:oauth_return_to]
+    }.compact
     reset_session
     preserved.each { |key, value| session[key] = value }
   end

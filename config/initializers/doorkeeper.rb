@@ -12,8 +12,14 @@ Doorkeeper.configure do
     if current_user&.email_verified?
       current_user
     else
-      # Store the client_id in session for the OAuth login page
+      # Store the client_id in session for the OAuth login page, and remember
+      # the authorize request itself so signing in can resume it. Almost
+      # everyone signs in with a magic link, which means leaving for an email
+      # client and coming back on a fresh request — without this the return
+      # lands on the dashboard, the authorize request is gone, and the client
+      # waits for a callback that will never arrive.
       session[:oauth_client_id] = params[:client_id] if params[:client_id]
+      session[:oauth_return_to] = request.fullpath
       redirect_to "/oauth/login?client_id=#{params[:client_id]}"
     end
   end
