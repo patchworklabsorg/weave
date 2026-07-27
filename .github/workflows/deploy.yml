@@ -1,6 +1,9 @@
 name: Deploy
 
-# Build the image, push to ghcr.io, and restart the weave-web service on alastor.
+# Fallback deploy path: build the image, push to ghcr.io, and restart the
+# weave-web service on alastor. The primary deploy path is `bin/deploy-local`,
+# which does the same thing natively on Apple Silicon — this workflow is
+# manual-only (workflow_dispatch) for when a local build isn't an option.
 # The NixOS module (infra: modules/weave) runs the container; this workflow just
 # writes the new image ref and restarts the systemd service, which re-pulls and
 # runs `bin/rails db:prepare` on start.
@@ -11,8 +14,6 @@ name: Deploy
 # (GITHUB_TOKEN is used automatically to push to ghcr.io.)
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -21,16 +22,17 @@ concurrency:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    # alastor is aarch64, so this builds linux/arm64. Native arm64 runners are
+    # available to us on the Team plan; building here rather than emulating arm64
+    # under QEMU on an x86 runner is the difference between a few minutes and the
+    # better part of half an hour whenever the layer cache misses.
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up QEMU (arm64 emulation)
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
@@ -51,8 +53,6 @@ jobs:
           tags: |
             ghcr.io/patchworklabsorg/weave:main
             ghcr.io/patchworklabsorg/weave:${{ github.sha }}
-          build-args: |
-            GIT_SHA=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

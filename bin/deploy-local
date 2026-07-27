@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Build the weave image natively on Apple Silicon (linux/arm64, no QEMU),
+# push it to ghcr.io, and roll it out on alastor — the same steps as
+# .github/workflows/deploy.yml, minus the ~15 min of emulated build time.
+#
+# Usage: bin/deploy-local [--build-only]
+#
+# Requirements:
+#   - Docker Desktop running
+#   - `gh` authenticated with write:packages (used for the ghcr push)
+#   - SSH access to alastor with sudo (your own account; the weave-deploy key
+#     lives only in GitHub's secrets, so it is not available here)
+set -euo pipefail
+
+IMAGE=ghcr.io/patchworklabsorg/weave
+ALASTOR_SSH=${ALASTOR_SSH:-alastor}
+
+cd "$(dirname "$0")/.."
+
+if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+  echo "!! working tree has uncommitted changes — the image tag would lie about its contents." >&2
+  echo "   Commit (and ideally push) first, or Ctrl-C now." >&2
+  read -rp "   Continue anyway? [y/N] " reply
+  [[ "$reply" == [yY]* ]] || exit 1
+fi
+
+SHA=$(git rev-parse HEAD)
+
+# Only move the :main tag when this commit really is on origin/main. Pointing
+# :main at an unpushed local commit makes the registry disagree with the repo,
+# and the next CI build would silently undo it anyway.
+TAGS=(-t "$IMAGE:$SHA")
+if git merge-base --is-ancestor "$SHA" origin/main 2>/dev/null; then
+  TAGS+=(-t "$IMAGE:main")
+else
+  echo ":: note: HEAD ($SHA) is not on origin/main — tagging the SHA only, not :main." >&2
+fi
+
+echo ":: logging in to ghcr.io"
+gh auth token | docker login ghcr.io -u "$(gh api user -q .login)" --password-stdin
+
+echo ":: building + pushing (linux/arm64, native)"
+docker buildx build \
+  --platform linux/arm64 \
+  --push \
+  "${TAGS[@]}" \
+  .
+
+if [[ "${1:-}" == "--build-only" ]]; then
+  echo ":: build pushed; skipping rollout (--build-only)"
+  exit 0
+fi
+
+# image-ref is owned by weave-deploy, so writing it as yourself needs sudo.
+# weave-worker restarts too, via partOf= in the NixOS module.
+echo ":: rolling out on alastor (writes image-ref, restarts weave-web)"
+ssh -T "$ALASTOR_SSH" \
+  "echo '$IMAGE:$SHA' | sudo tee /var/lib/weave/image-ref >/dev/null && sudo systemctl restart weave-web"
+
+echo ":: deployed $SHA"
