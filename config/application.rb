@@ -3,6 +3,7 @@
 require_relative "boot"
 
 require "rails/all"
+require_relative "../lib/credentials_paths"
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
@@ -17,7 +18,14 @@ module Weave
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.
-    config.autoload_lib(ignore: %w[assets tasks])
+    # credentials_paths.rb is required by hand above, before Zeitwerk exists.
+    config.autoload_lib(ignore: %w[assets tasks credentials_paths.rb])
+
+    # Keep the credentials file and the key that opens it in lockstep; Rails
+    # resolves them independently and will otherwise pair a per-environment
+    # file with config/master.key. See lib/credentials_paths.rb.
+    config.credentials.content_path, config.credentials.key_path =
+      CredentialsPaths.resolve(root: Rails.root, env: Rails.env)
 
     config.mission_control.jobs.base_controller_class = "Admin::BaseController"
     config.mission_control.jobs.http_basic_auth_enabled = false
