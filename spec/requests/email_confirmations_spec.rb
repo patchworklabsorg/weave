@@ -21,6 +21,14 @@ RSpec.describe "Email confirmations", type: :request do
       magic_link_used_at: nil
     )
     get magic_link_login_path(token: token)
+
+    # Following a magic link confirms the address, which is the whole point of
+    # it — but this file is about what a session that is *not* confirmed sees,
+    # so put the account back in that state after establishing the session.
+    # reload first: the request confirmed the account through a different
+    # instance, so without it the assignment below looks like a no-op and never
+    # reaches the database.
+    user.reload.update!(email_confirmed_at: nil)
   end
 
   describe "GET /email_confirmation" do

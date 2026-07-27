@@ -107,6 +107,22 @@ RSpec.describe "OAuth login screen", type: :request do
       expect(response.body).to include(application.name)
     end
 
+    # The account most people arrive with was created by import and has no
+    # confirmation behind it. Following the magic link confirms the address, so
+    # the authorize request goes through instead of stalling behind a second
+    # email the client would never wait for.
+    it "carries an unconfirmed account through to consent" do
+      unconfirmed = create(:user, :unverified)
+
+      get oauth_authorization_path, params: authorization_params
+      sign_in_with_magic_link(unconfirmed)
+      follow_redirect!
+
+      expect(unconfirmed.reload).to be_email_verified
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Authorization required")
+    end
+
     # The stored path is handed straight to redirect_to, so anything that is not
     # a local authorize request is dropped rather than followed.
     it "lands on the dashboard when no authorize request is pending" do

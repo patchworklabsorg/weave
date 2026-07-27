@@ -340,6 +340,46 @@ RSpec.describe User, type: :model do
         user.update(magic_link_token: nil)
         expect(user.consume_magic_link_token!).to be false
       end
+
+      # A magic link only ever reaches the address on the account, so following
+      # one proves the same thing the confirmation email is asking for. Imported
+      # accounts have no confirmation behind them, and requiring a second email
+      # on top of the one they just used kept them out of the app entirely.
+      it "confirms the email address it was delivered to" do
+        user.update!(email_confirmed_at: nil, confirmation_token: "pending")
+        user.update(
+          magic_link_token: "token",
+          magic_link_expires_at: 10.minutes.from_now,
+          magic_link_used_at: nil
+        )
+
+        user.consume_magic_link_token!
+
+        expect(user.reload).to be_email_verified
+        expect(user.confirmation_token).to be_nil
+      end
+
+      it "leaves an existing confirmation timestamp alone" do
+        confirmed_at = 3.days.ago
+        user.update!(email_confirmed_at: confirmed_at)
+        user.update(
+          magic_link_token: "token",
+          magic_link_expires_at: 10.minutes.from_now,
+          magic_link_used_at: nil
+        )
+
+        user.consume_magic_link_token!
+
+        expect(user.reload.email_confirmed_at).to be_within(1.second).of(confirmed_at)
+      end
+
+      it "does not confirm anything when the token is invalid" do
+        user.update!(email_confirmed_at: nil)
+        user.update(magic_link_token: nil)
+
+        expect(user.consume_magic_link_token!).to be false
+        expect(user.reload).not_to be_email_verified
+      end
     end
   end
 
