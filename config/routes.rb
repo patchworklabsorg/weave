@@ -22,9 +22,14 @@
 #             oauth_authorized_applications GET    /oauth/authorized_applications(.:format)                                                          doorkeeper/authorized_applications#index
 #              oauth_authorized_application DELETE /oauth/authorized_applications/:id(.:format)                                                      doorkeeper/authorized_applications#destroy
 #                          oauth_token_info GET    /oauth/token/info(.:format)                                                                       doorkeeper/token_info#show
+#                                 webfinger GET    /.well-known/webfinger(.:format)                                                                  oauth/webfinger#show
+#                      oauth_discovery_keys GET    /oauth/discovery/keys(.:format)                                                                   doorkeeper/openid_connect/discovery#keys
+#                  oauth_discovery_provider GET    /.well-known/openid-configuration(.:format)                                                       doorkeeper/openid_connect/discovery#provider
+#                                           GET    /.well-known/oauth-authorization-server(.:format)                                                 doorkeeper/openid_connect/discovery#provider
+#                 oauth_discovery_webfinger GET    /.well-known/webfinger(.:format)                                                                  doorkeeper/openid_connect/discovery#webfinger
 #                            oauth_userinfo GET    /oauth/userinfo(.:format)                                                                         oauth/userinfo#show
 #                      oauth_oauth_metadata GET    /oauth/.well-known/oauth-authorization-server(.:format)                                           oauth/discovery#oauth_authorization_server
-#                oauth_openid_configuration GET    /oauth/.well-known/openid-configuration(.:format)                                                 oauth/discovery#openid_configuration
+#                oauth_openid_configuration GET    /oauth/.well-known/openid-configuration(.:format)                                                 doorkeeper/openid_connect/discovery#provider
 #                                      root GET    /                                                                                                 home#index
 #                                           GET    /.well-known/*path                                                                                well_known#show
 #                                           GET    /security.txt(.:format)                                                                           redirect(301, /.well-known/security.txt)
@@ -254,6 +259,31 @@ require_relative "../lib/admin_constraint"
 Rails.application.routes.draw do
   use_doorkeeper
 
+  # OpenID Connect. Mounts, at the spec-mandated locations:
+  #   GET /.well-known/openid-configuration       OIDC Discovery
+  #   GET /.well-known/oauth-authorization-server
+  #   GET /.well-known/webfinger
+  #   GET /oauth/discovery/keys                   JWKS (public keys only)
+  #
+  # These documents are generated from config/initializers/doorkeeper.rb and
+  # config/initializers/doorkeeper_openid_connect.rb, so they cannot drift from
+  # what the server actually supports.
+  #
+  # The gem's own /oauth/userinfo is skipped: it hard-requires the `openid`
+  # scope, and Weave has served userinfo to `profile` tokens since before OIDC
+  # existed here. Ours (below) renders the same claims from the same DSL without
+  # breaking those clients.
+  #
+  # WebFinger is likewise ours, and must be declared BEFORE the mount because
+  # the first matching route wins and `skip_controllers` works per controller,
+  # not per action — there is no way to drop discovery#webfinger while keeping
+  # discovery#provider. See app/controllers/oauth/webfinger_controller.rb.
+  get ".well-known/webfinger", to: "oauth/webfinger#show", as: :webfinger
+
+  use_doorkeeper_openid_connect do
+    skip_controllers :userinfo
+  end
+
   # OAuth 2.0 endpoints
   namespace :oauth do
     get "userinfo", to: "userinfo#show"
@@ -261,8 +291,14 @@ Rails.application.routes.draw do
     # OAuth 2.0 Server Metadata (RFC 8414)
     get ".well-known/oauth-authorization-server", to: "discovery#oauth_authorization_server", as: :oauth_metadata
 
-    # OpenID Connect Discovery (optional)
-    get ".well-known/openid-configuration", to: "discovery#openid_configuration", as: :openid_configuration
+    # Legacy OIDC discovery location. The canonical path is
+    # /.well-known/openid-configuration (issuer-relative, per OIDC Discovery 1.0
+    # §4) and is mounted above, but Weave advertised this one first so it stays
+    # as an alias. Deliberately the gem's controller, not a hand-written twin.
+    # Leading "/" escapes the :oauth controller namespace.
+    get ".well-known/openid-configuration",
+        to: "/doorkeeper/openid_connect/discovery#provider",
+        as: :openid_configuration
   end
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html

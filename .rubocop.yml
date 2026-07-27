@@ -13,6 +13,10 @@ AllCops:
     - "db/**/*"
     - "lib/tasks/**/*"
     - "vendor/**/*"
+    # Gitignored scratch space. The actual_db_schema gem copies migrations into
+    # tmp/migrated on boot, so without this, adding any migration makes rubocop
+    # fail locally on a file that is not source and is not committed.
+    - "tmp/**/*"
 
 # The "offical" rubocop style guide is indeed quite strict. So intead, we use
 # the Relaxed Ruby Style guide. https://relaxed.ruby.style/

@@ -259,8 +259,19 @@ Doorkeeper.configure do
   # https://doorkeeper.gitbook.io/guides/ruby-on-rails/scopes
   #
   # OAuth scopes are for user authorization flows, not API access
+  #
+  # `openid` is what turns an authorization request into an OpenID Connect
+  # request: doorkeeper-openid_connect only adds an `id_token` to the token
+  # response when the granted scopes include it. It has to be registered here or
+  # requesting it fails with invalid_scope, which is exactly the bug our
+  # discovery document used to advertise its way into. It is optional (not
+  # default) so plain OAuth clients keep getting plain OAuth tokens.
+  #
+  # Every scope listed here is published in `scopes_supported` on both discovery
+  # documents, and each of the non-openid scopes maps to a claim block in
+  # config/initializers/doorkeeper_openid_connect.rb.
   default_scopes  :profile
-  optional_scopes :email, :phone, :admin
+  optional_scopes :openid, :email, :phone, :admin
 
   # Allows to restrict only certain scopes for grant_type.
   # By default, all the scopes will be available for all the grant types.

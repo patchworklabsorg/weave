@@ -176,6 +176,10 @@ GEM
     disposable_mail (0.1.7)
     doorkeeper (5.8.2)
       railties (>= 5)
+    doorkeeper-openid_connect (1.10.5)
+      doorkeeper (>= 5.5, < 6.0)
+      jwt (>= 2.5)
+      ostruct (>= 0.5)
     dotenv (3.1.8)
     dotenv-rails (3.1.8)
       dotenv (= 3.1.8)
@@ -279,6 +283,8 @@ GEM
     json-schema (5.2.2)
       addressable (~> 2.8)
       bigdecimal (~> 3.1)
+    jwt (3.2.0)
+      base64
     kamal (2.8.1)
       activesupport (>= 7.0)
       base64 (~> 0.2)
@@ -739,6 +745,7 @@ DEPENDENCIES
   debug
   disposable_mail
   doorkeeper
+  doorkeeper-openid_connect
   dotenv-rails
   email_reply_parser
   encoded_ids (~> 1.1)
