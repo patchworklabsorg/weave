@@ -38,8 +38,10 @@
 #  fk_rails_...  (impersonated_by_id => users.id)
 #  fk_rails_...  (user_id => users.id)
 #
-one: {}
-# column: value
-#
-two: {}
-# column: value
+one:
+  user: one
+  expiration_at: <%= 30.days.from_now %>
+
+two:
+  user: two
+  expiration_at: <%= 30.days.from_now %>

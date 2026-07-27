@@ -74,8 +74,16 @@
 #
 #  fk_rails_...  (manager_id => users.id)
 #
-one: {}
-# column: value
-#
-two: {}
-# column: value
+one:
+  email: one@example.com
+  first_name: One
+  last_name: Fixture
+  p_id: PWL1A1B2C3D40
+  password_digest: <%= BCrypt::Password.create("Password123!") %>
+
+two:
+  email: two@example.com
+  first_name: Two
+  last_name: Fixture
+  p_id: PWL2A1B2C3D40
+  password_digest: <%= BCrypt::Password.create("Password123!") %>
