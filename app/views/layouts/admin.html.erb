@@ -22,6 +22,7 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
+    <%= render "shared/theme" %>
     <%# Brand fonts (Geist + Shantell Sans) are self-hosted and declared via
         @font-face in the compiled Tailwind stylesheet below — no external link. %>
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
@@ -44,13 +45,27 @@
         --glass-text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
         --glass-text-shadow-strong: 0 1px 2px rgba(255, 255, 255, 0.7);
       }
+      /* Dark set appears twice — manual override, then system
+         preference. Keep them identical. */
+      [data-theme="dark"] {
+        --glass-80: rgba(31, 25, 56, 0.85);
+        --glass-50: rgba(31, 25, 56, 0.6);
+        --glass-40: rgba(31, 25, 56, 0.5);
+        --glass-30: rgba(31, 25, 56, 0.35);
+        --glass-tint: rgba(169, 136, 233, 0.08);
+        --glass-lav: rgba(108, 62, 193, 0.25);
+        --glass-border: rgba(108, 62, 193, 0.5);
+        --glass-border-soft: rgba(108, 62, 193, 0.35);
+        --glass-text-shadow: none;
+        --glass-text-shadow-strong: none;
+      }
       @media (prefers-color-scheme: dark) {
-        :root {
-          --glass-80: rgba(33, 26, 61, 0.85);
-          --glass-50: rgba(33, 26, 61, 0.6);
-          --glass-40: rgba(33, 26, 61, 0.5);
-          --glass-30: rgba(33, 26, 61, 0.35);
-          --glass-tint: rgba(155, 127, 212, 0.08);
+        :root:not([data-theme="light"]) {
+          --glass-80: rgba(31, 25, 56, 0.85);
+          --glass-50: rgba(31, 25, 56, 0.6);
+          --glass-40: rgba(31, 25, 56, 0.5);
+          --glass-30: rgba(31, 25, 56, 0.35);
+          --glass-tint: rgba(169, 136, 233, 0.08);
           --glass-lav: rgba(108, 62, 193, 0.25);
           --glass-border: rgba(108, 62, 193, 0.5);
           --glass-border-soft: rgba(108, 62, 193, 0.35);
@@ -236,9 +251,11 @@
         font-weight: 600;
       }
 
+      [data-theme="dark"] .admin-content .text-red-600 { color: #f87171 !important; }
+      [data-theme="dark"] .admin-content .text-orange-600 { color: #fb923c !important; }
       @media (prefers-color-scheme: dark) {
-        .admin-content .text-red-600 { color: #f87171 !important; }
-        .admin-content .text-orange-600 { color: #fb923c !important; }
+        :root:not([data-theme="light"]) .admin-content .text-red-600 { color: #f87171 !important; }
+        :root:not([data-theme="light"]) .admin-content .text-orange-600 { color: #fb923c !important; }
       }
 
       /* Improved button styling for glass effect */
@@ -416,5 +433,6 @@
     </div>
 
     <%= render 'shared/flash' %>
+    <%= render "shared/theme_toggle" %>
   </body>
 </html>

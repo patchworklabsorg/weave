@@ -1,0 +1,20 @@
+<%# Applies the saved (or system) theme before first paint, and handles
+    clicks on [data-theme-toggle] buttons via delegation so it keeps
+    working across Turbo visits. Include in <head>, before stylesheets. %>
+<script nonce="<%= content_security_policy_nonce %>">
+  (() => {
+    const root = document.documentElement;
+    const media = matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      root.dataset.theme = localStorage.getItem("theme") || (media.matches ? "dark" : "light");
+    };
+    apply();
+    media.addEventListener("change", apply);
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest("[data-theme-toggle]")) return;
+      const next = root.dataset.theme === "dark" ? "light" : "dark";
+      localStorage.setItem("theme", next);
+      root.dataset.theme = next;
+    });
+  })();
+</script>

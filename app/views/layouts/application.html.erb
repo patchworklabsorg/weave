@@ -38,6 +38,7 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
+    <%= render "shared/theme" %>
     <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
@@ -91,6 +92,8 @@
 
     <!-- Display flash messages -->
     <%= render 'shared/flash' %>
+
+    <%= render "shared/theme_toggle" %>
 
   </body>
 

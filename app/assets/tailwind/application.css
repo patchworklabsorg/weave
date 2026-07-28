@@ -69,13 +69,15 @@
 /* ─────────────────────────────────────────────────────────────
    Dark mode — "the quilt at night".
    The whole app styles itself through the tokens above, so dark
-   mode is a re-mapping of those tokens: deep ink-purple grounds,
-   pale lavender ink, patches brightened just enough to read.
-   Follows the OS preference; no toggle (yet).
+   mode is a re-mapping of those tokens. Values and mechanism are
+   shared with patchworklabs.org's globals.css (keep in sync):
+   an explicit [data-theme] wins, otherwise the OS preference
+   applies. The toggle (shared/_theme_toggle) sets data-theme on
+   <html> and persists it in localStorage.
    ───────────────────────────────────────────────────────────── */
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
   /* Motif plumbing — colors the stitch components need that
      aren't Tailwind tokens. Light values here, dark below. */
@@ -83,67 +85,139 @@
   --shadow-stitch-strong: rgb(42 32 80 / 0.18);
   --lattice-line: rgb(108 62 193 / 0.045);   /* quilt-bg grid */
   --weave-line: rgb(108 62 193 / 0.05);      /* weave-bg grid */
+  --btn-stitch-ink: #fff;                    /* text on grape buttons */
+  --btn-stitch-seam: rgb(255 255 255 / 0.55);
+}
+
+/* The dark token set exists twice below — once for the manual
+   override, once for the system preference. Keep them identical. */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Grounds & ink (shared with patchworklabs.org) */
+  --color-quilt: #16112a;
+  --color-paper: #1f1938;
+  --color-ink: #e9e4f7;
+  --color-ink-soft: #a79ecb;
+  --color-ink-faint: #7d74a1;
+
+  /* Patches (shared with patchworklabs.org) */
+  --color-grape: #a988e9;
+  --color-grape-soft: #322557;
+  --color-violet: #b8a1e4;
+  --color-violet-soft: #2c2349;
+  --color-orchid: #cd8ce6;
+  --color-orchid-soft: #3a214c;
+  --color-sky: #74a9eb;
+  --color-sky-soft: #1d2c49;
+  --color-teal: #4fc4a9;
+  --color-teal-soft: #163a32;
+
+  /* Legacy tokens follow their quilt partners */
+  --color-deep-purple: #a988e9;
+  --color-lavender-purple: #c7b7e2;
+  --color-light-purple: #b8a1e4;
+  --color-clean-white: #1f1938;
+  --color-dark-grayish-blue: #a79ecb;
+  --color-near-black: #e9e4f7;
+
+  /* Brand scale — inverted: low numbers are surfaces, high are text */
+  --color-brand-50:  #241d43;
+  --color-brand-100: #322557;
+  --color-brand-200: #453371;
+  --color-brand-300: #5f4795;
+  --color-brand-400: #8a68c9;
+  --color-brand-500: #a988e9;
+  --color-brand-600: #9271d6;
+  --color-brand-700: #bfa5f0;
+  --color-brand-800: #d4c3f6;
+  --color-brand-900: #e9ddfb;
+
+  /* Neutral scale — inverted the same way */
+  --color-neutral-50:  #1f1938;
+  --color-neutral-100: #16112a;
+  --color-neutral-200: #292250;
+  --color-neutral-300: #383063;
+  --color-neutral-400: #524878;
+  --color-neutral-500: #7d74a1;
+  --color-neutral-600: #a79ecb;
+  --color-neutral-700: #cbc3e3;
+  --color-neutral-800: #e9e4f7;
+  --color-neutral-900: #f7f5fb;
+
+  /* Motif plumbing — grape is brighter in the dark, so buttons
+     stitch with dark ink instead of white */
+  --shadow-stitch: rgb(0 0 0 / 0.4);
+  --shadow-stitch-strong: rgb(0 0 0 / 0.5);
+  --lattice-line: rgb(169 136 233 / 0.05);
+  --weave-line: rgb(169 136 233 / 0.06);
+  --btn-stitch-ink: #16112a;
+  --btn-stitch-seam: rgb(22 17 42 / 0.5);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    /* Grounds & ink — flipped */
-    --color-quilt: #16112a;       /* page background — midnight quilt */
-    --color-paper: #211a3d;       /* card surface */
-    --color-ink: #ece8f8;         /* primary text — pale lavender */
-    --color-ink-soft: #b6aed4;
-    --color-ink-faint: #8d85ac;
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
 
-    /* Patches — brightened so they hold contrast on dark grounds,
-       softs become dark tints so pill/badge text stays readable */
-    --color-grape: #8b5fdb;       /* still ~4.5:1 with white button text */
-    --color-grape-soft: #322659;
-    --color-violet: #ab93de;
-    --color-violet-soft: #2c2450;
-    --color-orchid: #c078de;
-    --color-orchid-soft: #3c2653;
-    --color-sky: #5f9fe6;
-    --color-sky-soft: #1c2c4c;
-    --color-teal: #3cb89e;
-    --color-teal-soft: #14372f;
+    /* Grounds & ink (shared with patchworklabs.org) */
+    --color-quilt: #16112a;
+    --color-paper: #1f1938;
+    --color-ink: #e9e4f7;
+    --color-ink-soft: #a79ecb;
+    --color-ink-faint: #7d74a1;
+
+    /* Patches (shared with patchworklabs.org) */
+    --color-grape: #a988e9;
+    --color-grape-soft: #322557;
+    --color-violet: #b8a1e4;
+    --color-violet-soft: #2c2349;
+    --color-orchid: #cd8ce6;
+    --color-orchid-soft: #3a214c;
+    --color-sky: #74a9eb;
+    --color-sky-soft: #1d2c49;
+    --color-teal: #4fc4a9;
+    --color-teal-soft: #163a32;
 
     /* Legacy tokens follow their quilt partners */
-    --color-deep-purple: #8b5fdb;
+    --color-deep-purple: #a988e9;
     --color-lavender-purple: #c7b7e2;
-    --color-light-purple: #ab93de;
-    --color-clean-white: #211a3d;      /* → paper */
-    --color-dark-grayish-blue: #b6aed4;/* → ink-soft */
-    --color-near-black: #ece8f8;       /* → ink */
+    --color-light-purple: #b8a1e4;
+    --color-clean-white: #1f1938;
+    --color-dark-grayish-blue: #a79ecb;
+    --color-near-black: #e9e4f7;
 
     /* Brand scale — inverted: low numbers are surfaces, high are text */
-    --color-brand-50:  #262046;
-    --color-brand-100: #322659;
-    --color-brand-200: #43336f;
-    --color-brand-300: #5c4694;
-    --color-brand-400: #9b7fd4;
-    --color-brand-500: #8b5fdb;
-    --color-brand-600: #7a4cc9;   /* btn hover — dips darker, keeps white text */
-    --color-brand-700: #b294ec;
-    --color-brand-800: #cbb6f2;
-    --color-brand-900: #e4d9f9;
+    --color-brand-50:  #241d43;
+    --color-brand-100: #322557;
+    --color-brand-200: #453371;
+    --color-brand-300: #5f4795;
+    --color-brand-400: #8a68c9;
+    --color-brand-500: #a988e9;
+    --color-brand-600: #9271d6;
+    --color-brand-700: #bfa5f0;
+    --color-brand-800: #d4c3f6;
+    --color-brand-900: #e9ddfb;
 
     /* Neutral scale — inverted the same way */
-    --color-neutral-50:  #211a3d; /* paper */
-    --color-neutral-100: #16112a; /* quilt */
-    --color-neutral-200: #2a2250;
-    --color-neutral-300: #3a3166; /* borders */
-    --color-neutral-400: #554a80;
-    --color-neutral-500: #8d85ac; /* ink-faint */
-    --color-neutral-600: #b6aed4; /* ink-soft */
-    --color-neutral-700: #d3cde8;
-    --color-neutral-800: #ece8f8; /* ink */
+    --color-neutral-50:  #1f1938;
+    --color-neutral-100: #16112a;
+    --color-neutral-200: #292250;
+    --color-neutral-300: #383063;
+    --color-neutral-400: #524878;
+    --color-neutral-500: #7d74a1;
+    --color-neutral-600: #a79ecb;
+    --color-neutral-700: #cbc3e3;
+    --color-neutral-800: #e9e4f7;
     --color-neutral-900: #f7f5fb;
 
-    /* Motif plumbing */
-    --shadow-stitch: rgb(0 0 0 / 0.45);
-    --shadow-stitch-strong: rgb(0 0 0 / 0.55);
-    --lattice-line: rgb(155 127 212 / 0.055);
-    --weave-line: rgb(155 127 212 / 0.06);
+    /* Motif plumbing — grape is brighter in the dark, so buttons
+       stitch with dark ink instead of white */
+    --shadow-stitch: rgb(0 0 0 / 0.4);
+    --shadow-stitch-strong: rgb(0 0 0 / 0.5);
+    --lattice-line: rgb(169 136 233 / 0.05);
+    --weave-line: rgb(169 136 233 / 0.06);
+    --btn-stitch-ink: #16112a;
+    --btn-stitch-seam: rgb(22 17 42 / 0.5);
   }
 }
 
@@ -176,9 +250,9 @@
   justify-content: center;
   gap: 0.4rem;
   background-color: var(--color-grape);
-  color: #fff;
+  color: var(--btn-stitch-ink);
   font-weight: 600;
-  border: 2px dashed rgb(255 255 255 / 0.55);
+  border: 2px dashed var(--btn-stitch-seam);
   border-radius: 0.6rem;
   padding: 0.65rem 1.25rem;
   cursor: pointer;
@@ -208,6 +282,39 @@
 @media (prefers-reduced-motion: reduce) {
   .btn-stitch, .btn-stitch-ghost { transition: none; }
   .btn-stitch:hover, .btn-stitch-ghost:hover { transform: none; }
+}
+
+/* ── Theme toggle ──
+   A little stitched patch pinned to the corner. Rendered by
+   shared/_theme_toggle; the head script in shared/_theme sets
+   data-theme on <html> before first paint, so the icons can key
+   off it directly. */
+.theme-toggle {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 40;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background-color: var(--color-paper);
+  color: var(--color-ink-soft);
+  border: 2px dashed var(--color-ink-soft);
+  box-shadow: 2px 3px 0 var(--shadow-stitch);
+  cursor: pointer;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+.theme-toggle:hover { color: var(--color-grape); transform: translateY(-1px); }
+.theme-toggle:focus-visible { outline: 3px solid var(--color-violet); outline-offset: 2px; }
+.theme-toggle .tt-sun { display: none; }
+[data-theme="dark"] .theme-toggle .tt-sun { display: block; }
+[data-theme="dark"] .theme-toggle .tt-moon { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle { transition: none; }
+  .theme-toggle:hover { transform: none; }
 }
 
 /* ── Quilted ground ──
