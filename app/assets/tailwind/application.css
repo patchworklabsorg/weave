@@ -67,6 +67,87 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
+   Dark mode — "the quilt at night".
+   The whole app styles itself through the tokens above, so dark
+   mode is a re-mapping of those tokens: deep ink-purple grounds,
+   pale lavender ink, patches brightened just enough to read.
+   Follows the OS preference; no toggle (yet).
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  color-scheme: light dark;
+
+  /* Motif plumbing — colors the stitch components need that
+     aren't Tailwind tokens. Light values here, dark below. */
+  --shadow-stitch: rgb(42 32 80 / 0.12);     /* patch drop shadow */
+  --shadow-stitch-strong: rgb(42 32 80 / 0.18);
+  --lattice-line: rgb(108 62 193 / 0.045);   /* quilt-bg grid */
+  --weave-line: rgb(108 62 193 / 0.05);      /* weave-bg grid */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Grounds & ink — flipped */
+    --color-quilt: #16112a;       /* page background — midnight quilt */
+    --color-paper: #211a3d;       /* card surface */
+    --color-ink: #ece8f8;         /* primary text — pale lavender */
+    --color-ink-soft: #b6aed4;
+    --color-ink-faint: #8d85ac;
+
+    /* Patches — brightened so they hold contrast on dark grounds,
+       softs become dark tints so pill/badge text stays readable */
+    --color-grape: #8b5fdb;       /* still ~4.5:1 with white button text */
+    --color-grape-soft: #322659;
+    --color-violet: #ab93de;
+    --color-violet-soft: #2c2450;
+    --color-orchid: #c078de;
+    --color-orchid-soft: #3c2653;
+    --color-sky: #5f9fe6;
+    --color-sky-soft: #1c2c4c;
+    --color-teal: #3cb89e;
+    --color-teal-soft: #14372f;
+
+    /* Legacy tokens follow their quilt partners */
+    --color-deep-purple: #8b5fdb;
+    --color-lavender-purple: #c7b7e2;
+    --color-light-purple: #ab93de;
+    --color-clean-white: #211a3d;      /* → paper */
+    --color-dark-grayish-blue: #b6aed4;/* → ink-soft */
+    --color-near-black: #ece8f8;       /* → ink */
+
+    /* Brand scale — inverted: low numbers are surfaces, high are text */
+    --color-brand-50:  #262046;
+    --color-brand-100: #322659;
+    --color-brand-200: #43336f;
+    --color-brand-300: #5c4694;
+    --color-brand-400: #9b7fd4;
+    --color-brand-500: #8b5fdb;
+    --color-brand-600: #7a4cc9;   /* btn hover — dips darker, keeps white text */
+    --color-brand-700: #b294ec;
+    --color-brand-800: #cbb6f2;
+    --color-brand-900: #e4d9f9;
+
+    /* Neutral scale — inverted the same way */
+    --color-neutral-50:  #211a3d; /* paper */
+    --color-neutral-100: #16112a; /* quilt */
+    --color-neutral-200: #2a2250;
+    --color-neutral-300: #3a3166; /* borders */
+    --color-neutral-400: #554a80;
+    --color-neutral-500: #8d85ac; /* ink-faint */
+    --color-neutral-600: #b6aed4; /* ink-soft */
+    --color-neutral-700: #d3cde8;
+    --color-neutral-800: #ece8f8; /* ink */
+    --color-neutral-900: #f7f5fb;
+
+    /* Motif plumbing */
+    --shadow-stitch: rgb(0 0 0 / 0.45);
+    --shadow-stitch-strong: rgb(0 0 0 / 0.55);
+    --lattice-line: rgb(155 127 212 / 0.055);
+    --weave-line: rgb(155 127 212 / 0.06);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
    Stitch motifs — the visual signature of the Patchwork brand.
    ───────────────────────────────────────────────────────────── */
 
@@ -82,7 +163,7 @@
   background-color: var(--color-paper);
   border: 2px dashed var(--color-ink-soft);
   border-radius: 0.75rem;
-  box-shadow: 4px 5px 0 rgb(42 32 80 / 0.12);
+  box-shadow: 4px 5px 0 var(--shadow-stitch);
 }
 
 .patch-tilt-l { transform: rotate(-1.2deg); }
@@ -103,7 +184,7 @@
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
-.btn-stitch:hover { background-color: #5a31a6; transform: translateY(-1px); box-shadow: 3px 4px 0 rgb(42 32 80 / 0.18); }
+.btn-stitch:hover { background-color: var(--color-brand-600); transform: translateY(-1px); box-shadow: 3px 4px 0 var(--shadow-stitch-strong); }
 .btn-stitch:focus-visible { outline: 3px solid var(--color-violet); outline-offset: 2px; }
 
 /* Secondary — outline only, ink seam on paper. */
@@ -136,8 +217,8 @@
 .quilt-bg {
   background-color: var(--color-quilt);
   background-image:
-    repeating-linear-gradient(45deg,  rgb(108 62 193 / 0.045) 0 1px, transparent 1px 34px),
-    repeating-linear-gradient(-45deg, rgb(108 62 193 / 0.045) 0 1px, transparent 1px 34px);
+    repeating-linear-gradient(45deg,  var(--lattice-line) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(-45deg, var(--lattice-line) 0 1px, transparent 1px 34px);
   background-size: 48px 48px;
   background-attachment: fixed;
 }
@@ -147,8 +228,8 @@
 .weave-bg {
   background-color: var(--color-quilt);
   background-image:
-    linear-gradient(90deg, rgb(108 62 193 / 0.05) 50%, transparent 50%),
-    linear-gradient(rgb(108 62 193 / 0.05) 50%, transparent 50%);
+    linear-gradient(90deg, var(--weave-line) 50%, transparent 50%),
+    linear-gradient(var(--weave-line) 50%, transparent 50%);
   background-size: 16px 16px;
   background-position: 0 0, 8px 8px;
 }
