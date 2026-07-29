@@ -24,16 +24,6 @@ RSpec.describe "OAuth authorization consent screen", type: :request do
     Base64.urlsafe_encode64(OpenSSL::Digest::SHA256.digest(code_verifier), padding: false)
   end
 
-  def login(user)
-    token = SecureRandom.urlsafe_base64(32)
-    user.update!(
-      magic_link_token: token,
-      magic_link_expires_at: 15.minutes.from_now,
-      magic_link_used_at: nil
-    )
-    get magic_link_login_path(token: token)
-  end
-
   def authorization_params(**overrides)
     {
       client_id: application.uid,
@@ -46,7 +36,7 @@ RSpec.describe "OAuth authorization consent screen", type: :request do
     }.merge(overrides)
   end
 
-  before { login(user) }
+  before { sign_in_via_magic_link(user) }
 
   describe "GET /oauth/authorize" do
     it "renders the styled consent screen with the client name and scope descriptions" do

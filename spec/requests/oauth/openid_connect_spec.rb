@@ -31,18 +31,6 @@ RSpec.describe "OpenID Connect", type: :request do
     Base64.urlsafe_encode64(OpenSSL::Digest::SHA256.digest(code_verifier), padding: false)
   end
 
-  # Log in through the real magic-link flow so `resource_owner_authenticator`
-  # finds session[:user_id] and a live user_sessions row exists for auth_time.
-  def login(user)
-    token = SecureRandom.urlsafe_base64(32)
-    user.update!(
-      magic_link_token: token,
-      magic_link_expires_at: 15.minutes.from_now,
-      magic_link_used_at: nil
-    )
-    get magic_link_login_path(token: token)
-  end
-
   def authorize!(scope:, **extra)
     post oauth_authorization_path, params: {
       client_id: application.uid,
@@ -72,7 +60,7 @@ RSpec.describe "OpenID Connect", type: :request do
 
   # Full happy path: returns the parsed token response.
   def obtain_tokens(scope:, **extra)
-    login(user)
+    sign_in_via_magic_link(user)
     exchange!(authorize!(scope: scope, **extra))
   end
 
@@ -105,7 +93,7 @@ RSpec.describe "OpenID Connect", type: :request do
 
     # force_pkce is on, so a code cannot be redeemed by whoever intercepts it.
     it "rejects the exchange when the PKCE verifier is missing" do
-      login(user)
+      sign_in_via_magic_link(user)
       body = exchange!(authorize!(scope: "openid profile"), code_verifier: nil)
 
       expect(body).not_to include("id_token")
@@ -114,7 +102,7 @@ RSpec.describe "OpenID Connect", type: :request do
     end
 
     it "rejects the exchange when the PKCE verifier is wrong" do
-      login(user)
+      sign_in_via_magic_link(user)
       body = exchange!(authorize!(scope: "openid profile"), code_verifier: SecureRandom.urlsafe_base64(64))
 
       expect(body).not_to include("id_token")

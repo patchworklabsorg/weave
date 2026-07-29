@@ -3,15 +3,14 @@
 require "rails_helper"
 
 RSpec.describe AuthController, type: :controller do
-  describe "GET #magic_link_login (login session handling)" do
-    let(:user) { create(:user, :verified, :with_magic_link) }
+  describe "POST #confirm_magic_link (login session handling)" do
+    let(:user) { create(:user, :verified) }
+    let(:link) { User::MagicLink.issue!(user) }
 
     it "rotates the session id on login and drops pre-login keys (fixation)" do
-      token = user.magic_link_token
-
-      get :magic_link_login,
-          params: { token: token },
-          session: { pre_login: "attacker-fixed-value", oauth_client_id: "client-123" }
+      post :confirm_magic_link,
+           params: { token: link.token },
+           session: { pre_login: "attacker-fixed-value", oauth_client_id: "client-123" }
 
       expect(session[:user_id]).to eq(user.id)
       # reset_session cleared the attacker-planted key...
@@ -22,7 +21,7 @@ RSpec.describe AuthController, type: :controller do
 
     it "backs the login with a user_sessions record" do
       expect {
-        get :magic_link_login, params: { token: user.magic_link_token }
+        post :confirm_magic_link, params: { token: link.token }
       }.to change { user.user_sessions.count }.by(1)
     end
   end

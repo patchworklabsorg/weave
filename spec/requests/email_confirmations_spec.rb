@@ -14,13 +14,7 @@ RSpec.describe "Email confirmations", type: :request do
   let(:user) { create(:user, :unverified) }
 
   def login(user)
-    token = SecureRandom.urlsafe_base64(32)
-    user.update!(
-      magic_link_token: token,
-      magic_link_expires_at: 15.minutes.from_now,
-      magic_link_used_at: nil
-    )
-    get magic_link_login_path(token: token)
+    sign_in_via_magic_link(user)
 
     # Following a magic link confirms the address, which is the whole point of
     # it — but this file is about what a session that is *not* confirmed sees,

@@ -17,13 +17,12 @@
 #  is_contractor            :boolean          default(FALSE), not null
 #  is_staff                 :boolean          default(FALSE), not null
 #  last_name                :string           not null
+#  legal_first_name         :string
+#  legal_last_name          :string
 #  locked_at                :datetime
-#  magic_link_expires_at    :datetime
-#  magic_link_sent_at       :datetime
-#  magic_link_token         :string
-#  magic_link_used_at       :datetime
 #  password_digest          :string           not null
 #  phone_number             :string
+#  pronouns                 :string
 #  role                     :integer          default("user"), not null
 #  session_duration_seconds :integer          default(2592000), not null
 #  slack_birthday           :date
@@ -62,7 +61,6 @@
 #
 #  index_users_on_confirmation_token  (confirmation_token) UNIQUE
 #  index_users_on_email               (email) UNIQUE
-#  index_users_on_magic_link_token    (magic_link_token) UNIQUE
 #  index_users_on_manager_id          (manager_id)
 #  index_users_on_p_id                (p_id) UNIQUE
 #

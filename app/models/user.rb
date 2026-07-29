@@ -17,13 +17,12 @@
 #  is_contractor            :boolean          default(FALSE), not null
 #  is_staff                 :boolean          default(FALSE), not null
 #  last_name                :string           not null
+#  legal_first_name         :string
+#  legal_last_name          :string
 #  locked_at                :datetime
-#  magic_link_expires_at    :datetime
-#  magic_link_sent_at       :datetime
-#  magic_link_token         :string
-#  magic_link_used_at       :datetime
 #  password_digest          :string           not null
 #  phone_number             :string
+#  pronouns                 :string
 #  role                     :integer          default("user"), not null
 #  session_duration_seconds :integer          default(2592000), not null
 #  slack_birthday           :date
@@ -62,7 +61,6 @@
 #
 #  index_users_on_confirmation_token  (confirmation_token) UNIQUE
 #  index_users_on_email               (email) UNIQUE
-#  index_users_on_magic_link_token    (magic_link_token) UNIQUE
 #  index_users_on_manager_id          (manager_id)
 #  index_users_on_p_id                (p_id) UNIQUE
 #
@@ -104,6 +102,7 @@ class User < ApplicationRecord
 
   has_many :visits, class_name: "Ahoy::Visit", dependent: :destroy
   has_many :user_sessions, class_name: "User::Session", dependent: :destroy
+  has_many :magic_links, class_name: "User::MagicLink", dependent: :destroy
 
   # Address associations
   has_many :addresses, as: :addressable, dependent: :destroy, class_name: "UserAddress", inverse_of: :addressable
@@ -286,58 +285,26 @@ class User < ApplicationRecord
     update!(locked_at: nil)
   end
 
-  def send_magic_link
-    # Generate magic link token and set expiration
-    self.magic_link_token = SecureRandom.urlsafe_base64(32)
-    self.magic_link_expires_at = 15.minutes.from_now
-    self.magic_link_sent_at = Time.current
-    self.magic_link_used_at = nil # Clear any previous usage
-
-    if save
-      MagicLinkJob.perform_later(self)
-      true
-    else
-      Rails.logger.error "Failed to save magic link for user #{email}: #{errors.full_messages.join(', ')}"
-      false
-    end
+  # Issues a fresh link and mails it. Existing unused links stay valid — see
+  # User::MagicLink for why.
+  def send_magic_link(requested_ip: nil)
+    link = User::MagicLink.issue!(self, requested_ip: requested_ip)
+    MagicLinkJob.perform_later(self, link.token)
+    true
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.error "Failed to issue magic link for user #{email}: #{e.record.errors.full_messages.join(', ')}"
+    false
   end
 
-  def magic_link_valid?
-    magic_link_token.present? &&
-      magic_link_expires_at.present? &&
-      magic_link_expires_at > Time.current &&
-      magic_link_used_at.nil?
-  end
+  # Clicking a link that was only ever delivered to this address demonstrates
+  # exactly what the confirmation email asks for, so don't ask for it a second
+  # time. Accounts created by import have no confirmation behind them, and
+  # without this every one of them has to collect a second email before they
+  # can use the account at all.
+  def confirm_email_from_magic_link!
+    return if email_verified?
 
-  # Securely verify if the provided token matches this user's magic link token
-  # Uses constant-time comparison to prevent timing attacks
-  def magic_link_token_matches?(provided_token)
-    return false if magic_link_token.blank? || provided_token.blank?
-
-    ActiveSupport::SecurityUtils.secure_compare(
-      magic_link_token,
-      provided_token
-    )
-  end
-
-  def consume_magic_link_token!
-    return false unless magic_link_valid?
-
-    self.magic_link_used_at = Time.current
-    self.magic_link_token = nil
-    self.magic_link_expires_at = nil
-
-    # Clicking a link that was only ever delivered to this address demonstrates
-    # exactly what the confirmation email asks for, so don't ask for it a second
-    # time. Accounts created by import have no confirmation behind them, and
-    # without this every one of them has to collect a second email before they
-    # can use the account at all.
-    if email_confirmed_at.nil?
-      self.email_confirmed_at = Time.current
-      self.confirmation_token = nil
-    end
-
-    save!
+    verify_email
   end
 
   def regen_pid

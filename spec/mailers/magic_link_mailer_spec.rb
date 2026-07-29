@@ -4,8 +4,8 @@ require "rails_helper"
 
 RSpec.describe MagicLinkMailer, type: :mailer do
   describe "login_link" do
-    let(:user) { create(:user, first_name: "John", email: "john@example.com", magic_link_token: "test-token") }
-    let(:mail) { described_class.login_link(user) }
+    let(:user) { create(:user, first_name: "John", email: "john@example.com") }
+    let(:mail) { described_class.login_link(user, "test-token") }
 
     it "has correct subject" do
       expect(mail.subject).to eq("Your login link")

@@ -330,7 +330,10 @@ Rails.application.routes.draw do
   get "/oauth/login", to: "auth#oauth_login", as: :oauth_login
   post "/login", to: "auth#login"
   post "/auth/magic_link", to: "auth#send_magic_link", as: :send_magic_link
+  # GET only shows the confirmation screen; the POST is what actually signs in,
+  # so link-scanning bots can't consume a link on the recipient's behalf.
   get "/auth/magic_link/:token", to: "auth#magic_link_login", as: :magic_link_login
+  post "/auth/magic_link/:token", to: "auth#confirm_magic_link", as: :confirm_magic_link
   post "/auth/check_password_login", to: "auth#check_password_login", as: :check_password_login
   delete "/logout", to: "auth#logout", as: :logout
   get "/auth/me", to: "auth#me", as: :me

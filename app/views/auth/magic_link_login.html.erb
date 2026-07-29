@@ -1,0 +1,34 @@
+<div class="absolute inset-0 flex items-center justify-center p-6">
+  <div class="patch patch-bound patch-tilt-l w-full max-w-md">
+    <div class="quilt-binding"></div>
+
+    <div class="p-9 pb-5 text-center">
+      <h1 class="font-display text-3xl font-bold text-ink">Weave</h1>
+      <p class="text-ink-soft mt-2">Confirm your sign in.</p>
+    </div>
+
+    <div class="px-9 pb-9 space-y-6">
+      <p class="text-sm text-ink text-center">
+        You're about to sign in as
+        <strong class="break-all"><%= @magic_link_user.email %></strong>.
+      </p>
+
+      <%= form_with(url: confirm_magic_link_path(token: @token), method: :post, data: { controller: "fingerprint" }) do %>
+        <%= hidden_field_tag :fingerprint, "", data: { fingerprint_target: "fingerprint" } %>
+        <%= hidden_field_tag :timezone, "", data: { fingerprint_target: "timezone" } %>
+        <%= submit_tag "Sign in", class: "btn-stitch w-full" %>
+      <% end %>
+
+      <p class="text-sm text-ink-faint text-center">
+        This link can only be used once. If you didn't request it, close this page
+        and nothing will happen.
+      </p>
+
+      <div class="text-center">
+        <p class="text-sm text-ink-soft">
+          Not you? <%= link_to "Sign in with a different account", login_path, class: "text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2" %>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

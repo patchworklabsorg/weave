@@ -51,19 +51,6 @@ RSpec.describe "OAuth login screen", type: :request do
     [oauth_authorization_path, authorization_params.transform_keys(&:to_s)]
   end
 
-  def sign_in_with_magic_link(user)
-    token = SecureRandom.urlsafe_base64(32)
-    # reload first: a previous sign-in consumed the token through a different
-    # instance, so without it magic_link_used_at looks unchanged here and never
-    # makes it into the UPDATE.
-    user.reload.update!(
-      magic_link_token: token,
-      magic_link_expires_at: 15.minutes.from_now,
-      magic_link_used_at: nil
-    )
-    get magic_link_login_path(token: token)
-  end
-
   describe "GET /oauth/login" do
     before { get oauth_authorization_path, params: authorization_params }
 
@@ -92,14 +79,14 @@ RSpec.describe "OAuth login screen", type: :request do
       get oauth_authorization_path, params: authorization_params
       follow_redirect!
 
-      sign_in_with_magic_link(user)
+      sign_in_via_magic_link(user)
 
       expect(redirect_target(response)).to eq(authorization_target)
     end
 
     it "shows consent once the resumed request is followed" do
       get oauth_authorization_path, params: authorization_params
-      sign_in_with_magic_link(user)
+      sign_in_via_magic_link(user)
       follow_redirect!
 
       expect(response).to have_http_status(:ok)
@@ -115,7 +102,7 @@ RSpec.describe "OAuth login screen", type: :request do
       unconfirmed = create(:user, :unverified)
 
       get oauth_authorization_path, params: authorization_params
-      sign_in_with_magic_link(unconfirmed)
+      sign_in_via_magic_link(unconfirmed)
       follow_redirect!
 
       expect(unconfirmed.reload).to be_email_verified
@@ -126,17 +113,17 @@ RSpec.describe "OAuth login screen", type: :request do
     # The stored path is handed straight to redirect_to, so anything that is not
     # a local authorize request is dropped rather than followed.
     it "lands on the dashboard when no authorize request is pending" do
-      sign_in_with_magic_link(user)
+      sign_in_via_magic_link(user)
 
       expect(response).to redirect_to(root_path)
     end
 
     it "does not resume the same authorize request twice" do
       get oauth_authorization_path, params: authorization_params
-      sign_in_with_magic_link(user)
+      sign_in_via_magic_link(user)
       expect(redirect_target(response)).to eq(authorization_target)
 
-      sign_in_with_magic_link(user)
+      sign_in_via_magic_link(user)
 
       expect(response).to redirect_to(root_path)
     end

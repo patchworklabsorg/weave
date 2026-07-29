@@ -1,9 +1,19 @@
 # frozen_string_literal: true
 
 class AuthController < ApplicationController
-  skip_before_action :authenticate_user!, only: [:login, :new_session, :password_login, :oauth_login, :send_magic_link, :magic_link_login, :check_password_login]
+  skip_before_action :authenticate_user!, only: [:login, :new_session, :password_login, :oauth_login, :send_magic_link, :magic_link_login, :confirm_magic_link, :check_password_login]
 
-  layout "sessions", only: [:new_session, :password_login, :oauth_login]
+  layout "sessions", only: [:new_session, :password_login, :oauth_login, :magic_link_login]
+
+  # Why a link was refused, phrased so the reader knows which of these it is.
+  # The old flow collapsed all of them into "Invalid or expired magic link",
+  # which sent people looking for an expiry problem they didn't have.
+  MAGIC_LINK_ERRORS = {
+    missing: "That sign-in link is incomplete. Request a new one below.",
+    unknown: "We don't recognize that sign-in link. It may have been copied incompletely — request a new one below.",
+    used: "That sign-in link has already been used. Request a new one below.",
+    expired: "That sign-in link has expired. Request a new one below."
+  }.freeze
 
   def new_session
     redirect_to(root_path) and return if current_user
@@ -81,7 +91,7 @@ class AuthController < ApplicationController
     end
 
     # Send magic link to existing user
-    if user.send_magic_link
+    if user.send_magic_link(requested_ip: request.remote_ip)
       respond_to do |format|
         format.html { redirect_to login_path, notice: "Magic link sent! Check your email to continue." }
         format.json { render json: { message: "Magic link sent to your email" }, status: :ok }
@@ -111,7 +121,7 @@ class AuthController < ApplicationController
       return
     end
 
-    if user.send_magic_link
+    if user.send_magic_link(requested_ip: request.remote_ip)
       respond_to do |format|
         format.html { redirect_to login_path, notice: "Magic link sent! Check your email to continue." }
         format.json { render json: { message: "Magic link sent to your email" }, status: :ok }
@@ -121,34 +131,50 @@ class AuthController < ApplicationController
     end
   end
 
+  # Deliberately does not sign anyone in. Anything that follows links in an
+  # inbox — Outlook Safe Links, Proofpoint, Slack unfurls, browser prefetch —
+  # issues a GET here, and when this action consumed the token those fetches
+  # burned the link before its owner ever clicked. Signing in requires the POST
+  # below, which only a human pressing the button produces.
   def magic_link_login
-    token = params[:token]
+    @token = params[:token]
+    link = find_magic_link(@token)
+    return if link.nil?
 
-    if token.blank?
-      redirect_to login_path, alert: "Invalid magic link"
+    # Re-opening a link you already used in this browser (back button, second
+    # click) shouldn't read as an error — you're signed in, which is what you
+    # wanted.
+    if current_user == link.user
+      redirect_to root_path
       return
     end
 
-    user = User.find_by(magic_link_token: token)
-
-    if user.nil?
-      Rails.logger.info "Magic link login failed: No user found (token hash: #{Digest::SHA256.hexdigest(token)[0..8]})"
-      redirect_to login_path, alert: "Invalid or expired magic link"
+    if (reason = link.rejection_reason)
+      reject_magic_link(reason, link.user)
       return
     end
 
-    Rails.logger.info "Magic link validation for user #{user.email}: token_present=#{user.magic_link_token.present?}, expires_at=#{user.magic_link_expires_at}, current_time=#{Time.current}, used_at=#{user.magic_link_used_at}"
+    @magic_link_user = link.user
+  end
 
-    if !user.magic_link_valid?
-      redirect_to login_path, alert: "Invalid or expired magic link"
+  def confirm_magic_link
+    link = find_magic_link(params[:token])
+    return if link.nil?
+
+    if (reason = link.rejection_reason)
+      reject_magic_link(reason, link.user)
       return
     end
 
-    if user.consume_magic_link_token!
-      complete_login(user)
-    else
-      redirect_to login_path, alert: "Failed to process magic link"
+    # consume! is the atomic claim — a false return means something else got
+    # there first in the gap between the check above and here.
+    unless link.consume!
+      reject_magic_link(:used, link.user)
+      return
     end
+
+    link.user.confirm_email_from_magic_link!
+    complete_login(link.user)
   end
 
 
@@ -189,6 +215,31 @@ class AuthController < ApplicationController
 
   private
 
+  # Returns the link, or nil after having already redirected. Callers bail on nil.
+  def find_magic_link(token)
+    if token.blank?
+      redirect_to login_path, alert: MAGIC_LINK_ERRORS[:missing]
+      return nil
+    end
+
+    link = User::MagicLink.for_token(token)
+
+    if link.nil?
+      # Logged without the token so the line is safe to keep, but with enough to
+      # correlate repeats from one mangled email.
+      Rails.logger.info "Magic link rejected: unknown token (digest prefix: #{User::MagicLink.digest_for(token)[0, 8]})"
+      redirect_to login_path, alert: MAGIC_LINK_ERRORS[:unknown]
+      return nil
+    end
+
+    link
+  end
+
+  def reject_magic_link(reason, user)
+    Rails.logger.info "Magic link rejected for #{user.email}: #{reason}"
+    redirect_to login_path, alert: MAGIC_LINK_ERRORS.fetch(reason)
+  end
+
   def complete_login(user)
     # Rotate the session id before establishing the login (session fixation),
     # preserving any in-progress OAuth context across the reset.
@@ -201,8 +252,8 @@ class AuthController < ApplicationController
       session_token: session.id.to_s,
       expiration_at: user.session_duration_seconds.seconds.from_now,
       ip: request.remote_ip,
-      device_info: request.user_agent,
-      last_seen_at: Time.zone.now
+      last_seen_at: Time.zone.now,
+      **session_device_attributes
     )
 
     destination = post_login_destination
@@ -211,6 +262,20 @@ class AuthController < ApplicationController
       format.html { redirect_to destination, notice: "Logged in successfully" }
       format.json { render json: { user: UserSerializer.render(user) }, status: :ok }
     end
+  end
+
+  # Device metadata for a new session: browser/OS parsed from the user agent,
+  # fingerprint and timezone from hidden fields the login forms fill in via JS
+  # (blank when JS didn't run — the session is still created without them).
+  def session_device_attributes
+    browser = Browser.new(request.user_agent)
+
+    {
+      device_info: browser.known? ? "#{browser.name} #{browser.version}" : request.user_agent,
+      os_info: browser.platform.unknown? ? nil : "#{browser.platform.name} #{browser.platform.version}",
+      fingerprint: params[:fingerprint].to_s.first(255).presence,
+      timezone: params[:timezone].to_s.first(64).presence
+    }
   end
 
   # Resume an authorize request that sent the user here to sign in, rather than

@@ -17,13 +17,12 @@
 #  is_contractor            :boolean          default(FALSE), not null
 #  is_staff                 :boolean          default(FALSE), not null
 #  last_name                :string           not null
+#  legal_first_name         :string
+#  legal_last_name          :string
 #  locked_at                :datetime
-#  magic_link_expires_at    :datetime
-#  magic_link_sent_at       :datetime
-#  magic_link_token         :string
-#  magic_link_used_at       :datetime
 #  password_digest          :string           not null
 #  phone_number             :string
+#  pronouns                 :string
 #  role                     :integer          default("user"), not null
 #  session_duration_seconds :integer          default(2592000), not null
 #  slack_birthday           :date
@@ -62,7 +61,6 @@
 #
 #  index_users_on_confirmation_token  (confirmation_token) UNIQUE
 #  index_users_on_email               (email) UNIQUE
-#  index_users_on_magic_link_token    (magic_link_token) UNIQUE
 #  index_users_on_manager_id          (manager_id)
 #  index_users_on_p_id                (p_id) UNIQUE
 #
@@ -244,15 +242,14 @@ RSpec.describe User, type: :model do
     let(:user) { create(:user) }
 
     describe "#send_magic_link" do
-      it "generates a magic link token" do
-        user.send_magic_link
-        expect(user.magic_link_token).to be_present
+      it "issues a magic link for the user" do
+        expect { user.send_magic_link }.to change { user.magic_links.count }.by(1)
       end
 
-      it "sets magic_link_expires_at to 15 minutes from now" do
+      it "expires the link 15 minutes out" do
         travel_to Time.current do
           user.send_magic_link
-          expect(user.magic_link_expires_at).to be_within(1.second).of(15.minutes.from_now)
+          expect(user.magic_links.last.expires_at).to be_within(1.second).of(15.minutes.from_now)
         end
       end
 
@@ -261,99 +258,37 @@ RSpec.describe User, type: :model do
           user.send_magic_link
         }.to have_enqueued_job(MagicLinkJob)
       end
-    end
 
-    describe "#magic_link_valid?" do
-      it "returns false when token is nil" do
-        user.update(magic_link_token: nil)
-        expect(user.magic_link_valid?).to be false
+      it "records the IP that asked for it" do
+        user.send_magic_link(requested_ip: "203.0.113.7")
+
+        expect(user.magic_links.last.requested_ip).to eq("203.0.113.7")
       end
 
-      it "returns false when expired" do
-        user.update(
-          magic_link_token: "token",
-          magic_link_expires_at: 1.hour.ago,
-          magic_link_used_at: nil
-        )
-        expect(user.magic_link_valid?).to be false
-      end
+      # The single-column scheme this replaced meant a second request killed the
+      # first link, so anyone who double-submitted the form — or asked again
+      # because the first mail was slow — hit "invalid or expired" on a link that
+      # was minutes old.
+      it "leaves an earlier unused link working" do
+        user.send_magic_link
+        first = user.magic_links.last
 
-      it "returns false when already used" do
-        user.update(
-          magic_link_token: "token",
-          magic_link_expires_at: 10.minutes.from_now,
-          magic_link_used_at: Time.current
-        )
-        expect(user.magic_link_valid?).to be false
-      end
+        user.send_magic_link
 
-      it "returns true when token is valid and not expired or used" do
-        user.update(
-          magic_link_token: "token",
-          magic_link_expires_at: 10.minutes.from_now,
-          magic_link_used_at: nil
-        )
-        expect(user.magic_link_valid?).to be true
+        expect(first.reload).to be_live
+        expect(user.magic_links.live.count).to eq(2)
       end
     end
 
-    describe "#magic_link_token_matches?" do
-      it "returns false when token is blank" do
-        user.update(magic_link_token: "secret")
-        expect(user.magic_link_token_matches?(nil)).to be false
-      end
-
-      it "returns false when provided token doesn't match" do
-        user.update(magic_link_token: "secret")
-        expect(user.magic_link_token_matches?("wrong")).to be false
-      end
-
-      it "returns true when tokens match" do
-        user.update(magic_link_token: "secret")
-        expect(user.magic_link_token_matches?("secret")).to be true
-      end
-
-      it "uses constant-time comparison" do
-        user.update(magic_link_token: "secret")
-        # This tests that we're using secure_compare
-        expect(ActiveSupport::SecurityUtils).to receive(:secure_compare).and_call_original
-        user.magic_link_token_matches?("secret")
-      end
-    end
-
-    describe "#consume_magic_link_token!" do
-      it "marks token as used and clears it" do
-        user.update(
-          magic_link_token: "token",
-          magic_link_expires_at: 10.minutes.from_now,
-          magic_link_used_at: nil
-        )
-
-        user.consume_magic_link_token!
-
-        expect(user.magic_link_used_at).to be_present
-        expect(user.magic_link_token).to be_nil
-        expect(user.magic_link_expires_at).to be_nil
-      end
-
-      it "returns false if token is invalid" do
-        user.update(magic_link_token: nil)
-        expect(user.consume_magic_link_token!).to be false
-      end
-
-      # A magic link only ever reaches the address on the account, so following
-      # one proves the same thing the confirmation email is asking for. Imported
-      # accounts have no confirmation behind them, and requiring a second email
-      # on top of the one they just used kept them out of the app entirely.
+    # A magic link only ever reaches the address on the account, so following
+    # one proves the same thing the confirmation email is asking for. Imported
+    # accounts have no confirmation behind them, and requiring a second email
+    # on top of the one they just used kept them out of the app entirely.
+    describe "#confirm_email_from_magic_link!" do
       it "confirms the email address it was delivered to" do
         user.update!(email_confirmed_at: nil, confirmation_token: "pending")
-        user.update(
-          magic_link_token: "token",
-          magic_link_expires_at: 10.minutes.from_now,
-          magic_link_used_at: nil
-        )
 
-        user.consume_magic_link_token!
+        user.confirm_email_from_magic_link!
 
         expect(user.reload).to be_email_verified
         expect(user.confirmation_token).to be_nil
@@ -362,23 +297,10 @@ RSpec.describe User, type: :model do
       it "leaves an existing confirmation timestamp alone" do
         confirmed_at = 3.days.ago
         user.update!(email_confirmed_at: confirmed_at)
-        user.update(
-          magic_link_token: "token",
-          magic_link_expires_at: 10.minutes.from_now,
-          magic_link_used_at: nil
-        )
 
-        user.consume_magic_link_token!
+        user.confirm_email_from_magic_link!
 
         expect(user.reload.email_confirmed_at).to be_within(1.second).of(confirmed_at)
-      end
-
-      it "does not confirm anything when the token is invalid" do
-        user.update!(email_confirmed_at: nil)
-        user.update(magic_link_token: nil)
-
-        expect(user.consume_magic_link_token!).to be false
-        expect(user.reload).not_to be_email_verified
       end
     end
   end

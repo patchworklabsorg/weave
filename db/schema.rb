@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_27_015245) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_29_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -253,6 +253,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_27_015245) do
     t.index ["username"], name: "index_console1984_users_on_username"
   end
 
+  create_table "email_addresses", force: :cascade do |t|
+    t.datetime "confirmation_sent_at"
+    t.string "confirmation_token"
+    t.datetime "confirmed_at"
+    t.datetime "created_at", null: false
+    t.string "email", null: false
+    t.boolean "is_primary", default: false, null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["confirmation_token"], name: "index_email_addresses_on_confirmation_token", unique: true
+    t.index ["email"], name: "index_email_addresses_on_email", unique: true
+    t.index ["user_id"], name: "index_email_addresses_on_user_id"
+    t.index ["user_id"], name: "index_email_addresses_one_primary_per_user", unique: true, where: "is_primary"
+  end
+
   create_table "flipper_features", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "key", null: false
@@ -439,6 +454,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_27_015245) do
     t.index ["updated_at"], name: "index_sessions_on_updated_at"
   end
 
+  create_table "user_magic_links", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.string "requested_ip"
+    t.string "token_digest", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "used_at"
+    t.bigint "user_id", null: false
+    t.index ["expires_at"], name: "index_user_magic_links_on_expires_at"
+    t.index ["token_digest"], name: "index_user_magic_links_on_token_digest", unique: true
+    t.index ["user_id"], name: "index_user_magic_links_on_user_id"
+  end
+
   create_table "user_seen_at_histories", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -479,15 +507,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_27_015245) do
     t.boolean "is_contractor", default: false, null: false
     t.boolean "is_staff", default: false, null: false
     t.string "last_name", null: false
+    t.string "legal_first_name"
+    t.string "legal_last_name"
     t.datetime "locked_at"
-    t.datetime "magic_link_expires_at"
-    t.datetime "magic_link_sent_at"
-    t.string "magic_link_token"
-    t.datetime "magic_link_used_at"
     t.bigint "manager_id"
     t.string "p_id", null: false
     t.string "password_digest", null: false
     t.string "phone_number"
+    t.string "pronouns"
     t.integer "role", default: 0, null: false
     t.integer "session_duration_seconds", default: 2592000, null: false
     t.date "slack_birthday"
@@ -520,7 +547,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_27_015245) do
     t.datetime "updated_at", null: false
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
-    t.index ["magic_link_token"], name: "index_users_on_magic_link_token", unique: true
     t.index ["manager_id"], name: "index_users_on_manager_id"
     t.index ["p_id"], name: "index_users_on_p_id", unique: true
   end
@@ -537,6 +563,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_27_015245) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "email_addresses", "users"
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_grants", "users", column: "resource_owner_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
@@ -548,6 +575,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_27_015245) do
   add_foreign_key "service_webhooks", "services"
   add_foreign_key "service_webhooks", "users", column: "created_by_id"
   add_foreign_key "services", "users", column: "created_by_id"
+  add_foreign_key "user_magic_links", "users"
   add_foreign_key "user_sessions", "users"
   add_foreign_key "user_sessions", "users", column: "impersonated_by_id"
   add_foreign_key "users", "users", column: "manager_id"
