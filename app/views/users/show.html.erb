@@ -43,6 +43,7 @@
         <% if @user.admin? %>
           <%= link_to "Admin panel", admin_root_path, class: "btn-stitch text-sm" %>
         <% end %>
+        <%= link_to "Sessions", profile_sessions_path, class: "btn-stitch-ghost text-sm" %>
         <%= button_to "Sign out", logout_path, method: :delete, class: "btn-stitch-ghost text-sm", form_class: "inline-block" %>
       </div>
     </div>

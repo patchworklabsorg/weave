@@ -1,5 +1,7 @@
 <div id="login_form" class="absolute inset-0 flex items-center justify-center p-6">
-<%= form_with(model: user, url: "/login", data: { turbo: true, controller: "login-form", action: "submit->login-form#submitForm" }, local: true, id: "login_form_element") do |f| %>
+<%= form_with(model: user, url: "/login", data: { turbo: true, controller: "login-form fingerprint", action: "submit->login-form#submitForm" }, local: true, id: "login_form_element") do |f| %>
+  <%= hidden_field_tag :fingerprint, "", data: { fingerprint_target: "fingerprint" } %>
+  <%= hidden_field_tag :timezone, "", data: { fingerprint_target: "timezone" } %>
   <div class="patch patch-bound patch-tilt-l w-full max-w-md">
     <div class="quilt-binding"></div>
     <!-- Card Header -->
