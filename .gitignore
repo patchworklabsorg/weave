@@ -47,3 +47,8 @@ config/credentials/postgres_password
 
 # Per-environment credential keys (never commit these — distribute via agenix)
 /config/credentials/*.key
+
+# Agent worktrees and local tooling scratch output
+/.claude/worktrees/
+/.worktrees/
+/.playwright-mcp/
