@@ -1,0 +1,11 @@
+Confirm your email address
+
+Hi <%= @user.first_name %>,
+
+You added <%= @email_address.email %> to your Patchwork Labs account.
+Confirm it to finish linking it to your account:
+
+<%= @confirmation_url %>
+
+If you didn't add this email address, you can safely ignore this message and
+it will never be linked to an account.

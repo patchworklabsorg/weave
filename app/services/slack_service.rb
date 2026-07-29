@@ -257,8 +257,9 @@ class SlackService
         end
       end
 
-      # Check if user already exists
-      user = User.find_by(email: email)
+      # Check if user already exists (their Slack email may be a confirmed
+      # secondary address rather than their Weave primary)
+      user = User.find_for_any_email(email)
 
       if user
         # Update Slack ID and profile fields

@@ -16,7 +16,7 @@ class SlackWebhookService
       end
 
       # Check if user already exists in IDP
-      user = User.find_by(email: email.downcase)
+      user = User.find_for_any_email(email)
 
       if user
         # Update existing user with Slack info
@@ -63,10 +63,12 @@ class SlackWebhookService
 
       # Update email if changed. A Slack-driven email change must NOT silently
       # become a verified login identifier: clear the confirmation so the new
-      # address has to be re-confirmed before it can be used to log in.
+      # address has to be re-confirmed before it can be used to log in — unless
+      # the user has already confirmed that address in Weave.
       if profile["email"].present? && profile["email"].downcase != user.email
-        updates[:email] = profile["email"].downcase
-        updates[:email_confirmed_at] = nil
+        new_email = profile["email"].downcase
+        updates[:email] = new_email
+        updates[:email_confirmed_at] = user.email_addresses.confirmed.find_by(email: new_email)&.confirmed_at
       end
 
       # Update name if changed

@@ -63,7 +63,7 @@ class AuthController < ApplicationController
       return
     end
 
-    user = User.find_by(email: email.downcase)
+    user = User.find_for_any_email(email)
 
     # Password login flow (from /login/pw) - ADMIN ONLY
     if user_password.present?
@@ -110,7 +110,7 @@ class AuthController < ApplicationController
       return
     end
 
-    user = User.find_by(email: email&.downcase)
+    user = User.find_for_any_email(email)
 
     if user.nil?
       # Don't reveal whether the email exists or not for security
@@ -182,7 +182,7 @@ class AuthController < ApplicationController
   # Admins authenticate with a password; everyone else uses magic links.
   def check_password_login
     email = params[:email].to_s.strip.downcase
-    user = User.find_by(email: email) if email.present?
+    user = User.find_for_any_email(email) if email.present?
     password_enabled = user&.admin? || false
 
     render json: { password_login_enabled: password_enabled, password_required: password_enabled }

@@ -351,6 +351,17 @@ Rails.application.routes.draw do
   get "/confirm_email/:token", to: "email_confirmations#confirm", as: :confirm_email
   post "/email_confirmation/resend", to: "email_confirmations#resend", as: :resend_email_confirmation
 
+  # Additional email addresses (multi-email support, one primary per user)
+  scope "/profile" do
+    resources :email_addresses, path: "emails", only: [:create, :destroy] do
+      member do
+        patch :make_primary
+        post :resend_confirmation
+      end
+    end
+  end
+  get "/emails/confirm/:token", to: "email_addresses#confirm", as: :confirm_email_address
+
   # Profile photo routes (public, no auth required)
   get "/user/:p_id/pfp", to: "profile_photos#show", as: :user_profile_photo
   get "/user/:p_id/avatar/:variant", to: "profile_photos#avatar", as: :user_avatar

@@ -104,6 +104,12 @@ class User < ApplicationRecord
   has_many :user_sessions, class_name: "User::Session", dependent: :destroy
   has_many :magic_links, class_name: "User::MagicLink", dependent: :destroy
 
+  # All email addresses belonging to this user. users.email stays the canonical
+  # primary address and is mirrored into this table (is_primary flag).
+  # delete_all so hard-deleting a user isn't blocked by the primary-address
+  # destroy guard on EmailAddress.
+  has_many :email_addresses, dependent: :delete_all
+
   # Address associations
   has_many :addresses, as: :addressable, dependent: :destroy, class_name: "UserAddress", inverse_of: :addressable
   has_one :shipping_address, -> { where(address_type: "Shipping") }, as: :addressable, class_name: "UserAddress", dependent: :destroy, inverse_of: :addressable
@@ -132,6 +138,8 @@ class User < ApplicationRecord
 
   before_save :set_address_types
   after_create :send_confirmation_email
+  after_create :create_primary_email_address
+  after_update :sync_primary_email_address, if: -> { saved_change_to_email? || saved_change_to_email_confirmed_at? }
 
   enum :role, {
     user: 0,
@@ -156,6 +164,7 @@ class User < ApplicationRecord
   validates_email_format_of :email
   validates :email, undisposable: { message: "Sorry, but we do not accept disposable email providers." }
   normalizes :email, with: ->(email) { email.strip.downcase }
+  validate :email_not_claimed_by_another_user
   validates :password, presence: true, length: { minimum: 8 }, if: lambda {
     new_record? || password.present?
   }
@@ -316,6 +325,20 @@ class User < ApplicationRecord
     p_id
   end
 
+  # Look a user up by any email that can identify them: the primary
+  # (users.email) or any confirmed additional address. Unconfirmed additional
+  # addresses never resolve — they aren't proven to belong to the user yet.
+  def self.find_for_any_email(value)
+    normalized = value.to_s.strip.downcase
+    return nil if normalized.blank?
+
+    find_by(email: normalized) || EmailAddress.confirmed.find_by(email: normalized)&.user
+  end
+
+  def primary_email_address
+    email_addresses.find_by(is_primary: true)
+  end
+
   def email_verified?
     email_confirmed_at.present?
   end
@@ -461,6 +484,37 @@ class User < ApplicationRecord
   def set_address_types
     shipping_address&.address_type = "Shipping" if shipping_address.present?
     billing_address&.address_type = "Billing" if billing_address.present?
+  end
+
+  def email_not_claimed_by_another_user
+    return if email.blank?
+
+    claimed = EmailAddress.where(email: email)
+    claimed = claimed.where.not(user_id: id) if id.present?
+    errors.add(:email, "has already been taken") if claimed.exists?
+  end
+
+  def create_primary_email_address
+    email_addresses.create!(email: email, is_primary: true, confirmed_at: email_confirmed_at)
+  end
+
+  # Mirror users.email (and its confirmation state) into email_addresses so the
+  # row matching the canonical address is always the confirmed/primary one.
+  # When the email changes, the old address is kept as a secondary.
+  def sync_primary_email_address
+    transaction do
+      address = email_addresses.find_or_initialize_by(email: email)
+      # Clear any other primary first so the partial unique index isn't violated.
+      email_addresses.where(is_primary: true).where.not(id: address.id).update_all(is_primary: false) # rubocop:disable Rails/SkipsModelValidations
+      address.is_primary = true
+      # Never downgrade an already-confirmed address (e.g. a Slack-driven email
+      # change resets email_confirmed_at, but the address may already be proven).
+      unless email_confirmed_at.nil? && address.confirmed_at.present?
+        address.confirmed_at = email_confirmed_at
+      end
+      address.confirmation_token = nil if address.confirmed_at.present?
+      address.save!
+    end
   end
 
 end
