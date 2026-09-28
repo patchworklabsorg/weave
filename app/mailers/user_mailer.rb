@@ -21,4 +21,17 @@ class UserMailer < ApplicationMailer
     )
   end
 
+  # Sent to the primary address when Slack adds a new address to the account,
+  # so the user finds out if someone else changed their Slack profile.
+  def slack_email_address_added(email_address)
+    @email_address = email_address
+    @user = email_address.user
+    @profile_url = edit_profile_url
+
+    mail(
+      to: @user.email,
+      subject: env_subject("A new email address was added to your account")
+    )
+  end
+
 end

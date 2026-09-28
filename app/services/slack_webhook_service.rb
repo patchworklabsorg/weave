@@ -99,7 +99,9 @@ class SlackWebhookService
     # Anyone who can edit a Slack profile (a Slack admin, for example) could
     # otherwise redirect the user's sign-in. A new Slack email is added as an
     # unconfirmed secondary address instead, and a confirmation email goes to
-    # it. After the user confirms it, they can make it primary themselves.
+    # it. After the user confirms it, they can make it primary themselves. A
+    # notice also goes to the primary address, so the user finds out if someone
+    # else changed their Slack profile.
     def add_slack_email_address(user, slack_email)
       email = slack_email.to_s.strip.downcase
       return if email.blank? || email == user.email
@@ -112,6 +114,7 @@ class SlackWebhookService
       end
 
       address.send_confirmation_email
+      UserMailer.slack_email_address_added(address).deliver_later
       Rails.logger.info "[SlackWebhookService] Added unconfirmed Slack email address #{address.id} for user #{user.id}"
     end
 

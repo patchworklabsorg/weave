@@ -26,6 +26,22 @@ RSpec.describe SlackWebhookService do
       expect(address).not_to be_primary
     end
 
+    it "tells the primary address that a new address was added" do
+      create(:user, :verified, slack_id: "U321", email: "old@example.com")
+
+      expect do
+        described_class.process_user_change("id" => "U321", "profile" => { "email" => "new@example.com" })
+      end.to have_enqueued_mail(UserMailer, :slack_email_address_added)
+    end
+
+    it "doesn't send the notice when the email is unchanged" do
+      create(:user, :verified, slack_id: "U322", email: "same@example.com")
+
+      expect do
+        described_class.process_user_change("id" => "U322", "profile" => { "email" => "same@example.com" })
+      end.not_to have_enqueued_mail(UserMailer, :slack_email_address_added)
+    end
+
     it "doesn't let the unconfirmed Slack email be used to request a magic link" do
       user = create(:user, :verified, slack_id: "U124", email: "old@example.com")
 
