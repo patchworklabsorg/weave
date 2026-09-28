@@ -33,12 +33,14 @@ class SessionAuthenticator
     # During impersonation the real, authenticating identity is the admin
     # (session[:admin_id]); their session record is the one that was created at
     # login and is what we must validate.
+    # When that admin no longer exists, the session is not valid.
     authenticating_user =
       if @session[:admin_id].present?
-        User.find_by(id: @session[:admin_id]) || user
+        User.find_by(id: @session[:admin_id])
       else
         user
       end
+    return nil if authenticating_user.nil?
 
     return nil unless authenticating_user.can_authenticate?
     return nil unless valid_session_record?(authenticating_user)

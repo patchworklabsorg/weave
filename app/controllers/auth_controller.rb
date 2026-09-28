@@ -201,7 +201,19 @@ class AuthController < ApplicationController
 
   def logout
     if session[:admin_id]
-      original_admin = User.find(session[:admin_id])
+      original_admin = User.find_by(id: session[:admin_id])
+
+      # The admin who started impersonating was deleted in the meantime, so
+      # there is no account to return to. Sign out completely.
+      if original_admin.nil?
+        reset_session
+        respond_to do |format|
+          format.html { redirect_to login_path, notice: "Logged out successfully" }
+          format.json { render json: { message: "Logged out successfully" } }
+        end
+        return
+      end
+
       session[:user_id] = session[:admin_id]
       session.delete(:admin_id)
       respond_to do |format|
