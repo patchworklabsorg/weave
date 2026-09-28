@@ -74,6 +74,12 @@ RSpec.describe "OAuth login screen", type: :request do
     end
   end
 
+  it "encodes the client_id so it can't add parameters to the login URL" do
+    get oauth_authorization_path, params: authorization_params(client_id: "x&return_to=https://evil.example")
+
+    expect(redirect_target(response)).to eq(["/oauth/login", { "client_id" => "x&return_to=https://evil.example" }])
+  end
+
   describe "returning from a magic link" do
     it "resumes the authorize request the visitor was sent here from" do
       get oauth_authorization_path, params: authorization_params

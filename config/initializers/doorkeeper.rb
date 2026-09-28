@@ -34,7 +34,7 @@ Doorkeeper.configure do
       # waits for a callback that will never arrive.
       session[:oauth_client_id] = params[:client_id] if params[:client_id]
       session[:oauth_return_to] = request.fullpath
-      redirect_to "/oauth/login?client_id=#{params[:client_id]}"
+      redirect_to "/oauth/login?#{{ client_id: params[:client_id] }.to_query}"
     end
   end
 
