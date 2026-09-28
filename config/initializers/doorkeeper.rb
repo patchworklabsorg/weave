@@ -6,12 +6,26 @@ Doorkeeper.configure do
   orm :active_record
 
   # This block will be called to check whether the resource owner is authenticated or not.
+  #
+  # It runs in Doorkeeper's controllers, which don't inherit from
+  # ApplicationController, so it has to ask SessionAuthenticator itself. That
+  # applies exactly the checks every other page gets: a live session record, and
+  # an account that is unlocked and active. `can_authenticate?` on the resource
+  # owner is on top of that, for an admin impersonating someone who has since
+  # been locked: tokens are never issued for an account that can't sign in.
   resource_owner_authenticator do
-    current_user = User.find_by(id: session[:user_id]) if session[:user_id]
+    current_user = SessionAuthenticator.new(session).user
 
-    if current_user&.email_verified?
+    if current_user&.email_verified? && current_user.can_authenticate?
       current_user
     else
+      # A cookie that still names a user who no longer authenticates (locked,
+      # suspended, signed out elsewhere, expired) is reset here, the same way
+      # ApplicationController does. Otherwise the sign-in page resets it on its
+      # first look and takes the OAuth context stored below with it, and the
+      # flow never resumes after signing in.
+      reset_session if session[:user_id].present? && current_user.nil?
+
       # Store the client_id in session for the OAuth login page, and remember
       # the authorize request itself so signing in can resume it. Almost
       # everyone signs in with a magic link, which means leaving for an email
@@ -30,7 +44,7 @@ Doorkeeper.configure do
   # every time somebody will try to access the admin web interface.
   #
   admin_authenticator do
-    current_user = User.find_by(id: session[:user_id]) if session[:user_id]
+    current_user = SessionAuthenticator.new(session).user
 
     if current_user&.email_verified? && current_user.admin?
       current_user
@@ -470,6 +484,22 @@ Doorkeeper.configure do
   # after_successful_strategy_response do |request, response|
   #   puts "AFTER HOOK FIRED! #{request}, #{response}"
   # end
+  #
+  # Refuse to hand out tokens (code exchange or refresh) for an account that can
+  # no longer sign in. Locking, suspending or deactivating already revokes the
+  # account's tokens and codes (User#revoke_oauth_access!), but only through
+  # model callbacks; this is the backstop for changes that bypassed them.
+  # Doorkeeper calls this after it has created the new token, so that token is
+  # revoked before the refusal (nobody has seen it: it's stored hashed).
+  before_successful_strategy_response do |request|
+    token = request.try(:access_token)
+    owner_id = token&.resource_owner_id
+    next if owner_id.nil? # client_credentials: no user involved
+    next if User.find_by(id: owner_id)&.can_authenticate?
+
+    token.revoke
+    raise Doorkeeper::Errors::InvalidGrantReuse
+  end
 
   # Hook into Authorization flow in order to implement Single Sign Out
   # or add any other functionality. Inside the block you have an access

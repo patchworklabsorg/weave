@@ -33,53 +33,13 @@ class ApplicationController < ActionController::Base
     @current_user = load_authenticated_user
   end
 
-  # Resolve and validate the currently authenticated user.
-  #
-  # A cookie carrying session[:user_id] is not sufficient on its own: the
-  # matching user_sessions record must still exist, be neither signed out nor
-  # expired, and the authenticating account must be unlocked and active. This
-  # is what makes User#lock!, single-session revocation and "sign out of all
-  # sessions" actually terminate access (and stops a stolen cookie from being
-  # valid forever). When any check fails we reset the session and treat the
-  # request as logged out.
+  # Resolve and validate the currently authenticated user (see
+  # SessionAuthenticator for what makes a session valid). When any check fails
+  # we reset the session and treat the request as logged out.
   def load_authenticated_user
     return nil if session[:user_id].blank?
 
-    user = User.find_by(id: session[:user_id])
-    return terminate_invalid_session! if user.nil?
-
-    # During impersonation the real, authenticating identity is the admin
-    # (session[:admin_id]); their session record is the one that was created at
-    # login and is what we must validate.
-    authenticating_user =
-      if session[:admin_id].present?
-        User.find_by(id: session[:admin_id]) || user
-      else
-        user
-      end
-
-    return terminate_invalid_session! unless account_authenticatable?(authenticating_user)
-    return terminate_invalid_session! unless valid_session_record?(authenticating_user)
-
-    user
-  end
-
-  # The account must be unlocked and in the active status to authenticate.
-  # (Note: User#active? is overloaded for "recently seen", so compare the
-  # status column directly here.)
-  def account_authenticatable?(user)
-    !user.locked? && user.status.to_s == "active"
-  end
-
-  # A live user_sessions row must back the cookie: present, not signed out and
-  # not past its expiration.
-  def valid_session_record?(user)
-    return false if session.id.blank?
-
-    record = user.user_sessions.find_by(session_token: session.id.to_s)
-    return false if record.nil?
-
-    record.signed_out_at.nil? && !record.expired?
+    SessionAuthenticator.new(session).user || terminate_invalid_session!
   end
 
   def terminate_invalid_session!
