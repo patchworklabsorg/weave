@@ -1,0 +1,94 @@
+name: Autofix
+
+# Fixes what can be fixed without a person on pull requests: model and route
+# annotations (annotaterb) and safe RuboCop corrections. When something changes,
+# it commits the fix to the PR branch and starts CI again for the new commit.
+#
+# A push made with GITHUB_TOKEN does not trigger other workflows, so this job
+# cannot loop, and it starts CI itself through workflow_dispatch.
+#
+# Pull requests from forks are skipped: GITHUB_TOKEN can't push to them.
+
+on:
+  pull_request:
+    branches:
+    - main
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: autofix-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  autofix:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      RAILS_ENV: test
+      PGUSER: postgres
+      PGPASSWORD: postgres
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Load database schema
+        run: bin/rails db:create db:schema:load
+
+      - name: Update annotations
+        run: |
+          bundle exec annotaterb models
+          bundle exec annotaterb routes
+
+      - name: Apply safe RuboCop corrections
+        # Offenses that can't be corrected safely are left for CI's lint job.
+        run: bin/rubocop -a || true
+
+      - name: Commit and push fixes
+        id: commit
+        run: |
+          if git diff --quiet; then
+            echo "Nothing to fix."
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git diff --stat
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore: autofix annotations and lint"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Start CI for the fixed commit
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ci.yml --repo "${{ github.repository }}" --ref "${{ github.event.pull_request.head.ref }}"

@@ -58,6 +58,28 @@ jobs:
 
   annotate_check:
     runs-on: ubuntu-latest
+
+    # annotaterb reads the columns from a real database. Without one it skips
+    # every model and reports them as unchanged.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      RAILS_ENV: test
+      PGUSER: postgres
+      PGPASSWORD: postgres
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -67,6 +89,9 @@ jobs:
         with:
           ruby-version: .ruby-version
           bundler-cache: true
+
+      - name: Load database schema
+        run: bin/rails db:create db:schema:load
 
       - name: Check if annotations are up to date
         run: |
