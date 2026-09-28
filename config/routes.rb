@@ -42,6 +42,7 @@
 #                                           POST   /login(.:format)                                                                                  auth#login
 #                           send_magic_link POST   /auth/magic_link(.:format)                                                                        auth#send_magic_link
 #                          magic_link_login GET    /auth/magic_link/:token(.:format)                                                                 auth#magic_link_login
+#                        confirm_magic_link POST   /auth/magic_link/:token(.:format)                                                                 auth#confirm_magic_link
 #                      check_password_login POST   /auth/check_password_login(.:format)                                                              auth#check_password_login
 #                                    logout DELETE /logout(.:format)                                                                                 auth#logout
 #                                        me GET    /auth/me(.:format)                                                                                auth#me
