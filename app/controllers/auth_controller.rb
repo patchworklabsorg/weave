@@ -22,7 +22,8 @@ class AuthController < ApplicationController
     missing: "That sign-in link is incomplete. Request a new one below.",
     unknown: "We don't recognize that sign-in link. It may have been copied incompletely — request a new one below.",
     used: "That sign-in link has already been used. Request a new one below.",
-    expired: "That sign-in link has expired. Request a new one below."
+    expired: "That sign-in link has expired. Request a new one below.",
+    inactive: "This account can't sign in right now. Contact an administrator for help."
   }.freeze
 
   def new_session

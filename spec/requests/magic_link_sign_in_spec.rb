@@ -133,6 +133,28 @@ RSpec.describe "Magic link sign-in", type: :request do
     end
   end
 
+  describe "for an account that can't sign in" do
+    {
+      "locked"      => ->(user) { user.lock! },
+      "suspended"   => ->(user) { user.suspend! },
+      "deactivated" => ->(user) { user.deactivate! }
+    }.each do |state, disable|
+      it "refuses the link for a #{state} account without spending it or creating a session" do
+        link = User::MagicLink.issue!(user)
+        disable.call(user)
+
+        get magic_link_login_path(token: link.token)
+        expect(response).to redirect_to(login_path)
+        expect(flash[:alert]).to eq(AuthController::MAGIC_LINK_ERRORS[:inactive])
+
+        expect { post confirm_magic_link_path(token: link.token) }.not_to change(User::Session, :count)
+        expect(response).to redirect_to(login_path)
+        expect(session[:user_id]).to be_nil
+        expect(link.reload).to be_live
+      end
+    end
+  end
+
   it "confirms an unconfirmed address on sign-in" do
     unconfirmed = create(:user, :unverified)
     link = User::MagicLink.issue!(unconfirmed)
