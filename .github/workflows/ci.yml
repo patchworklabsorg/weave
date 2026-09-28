@@ -93,7 +93,12 @@ jobs:
       - name: Load database schema
         run: bin/rails db:create db:schema:load
 
-      - name: Check if annotations are up to date
-        run: |
-          bundle exec annotaterb models --frozen --show-migration
-          bundle exec annotaterb routes --frozen
+      - name: Check if model annotations are up to date
+        run: bundle exec annotaterb models --frozen --show-migration
+
+      # Some routes (letter_opener, actual_db_schema) exist only in development,
+      # and the committed annotations include them.
+      - name: Check if route annotations are up to date
+        env:
+          RAILS_ENV: development
+        run: bundle exec annotaterb routes --frozen

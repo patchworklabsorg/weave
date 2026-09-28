@@ -62,10 +62,15 @@ jobs:
       - name: Load database schema
         run: bin/rails db:create db:schema:load
 
-      - name: Update annotations
-        run: |
-          bundle exec annotaterb models
-          bundle exec annotaterb routes
+      - name: Update model annotations
+        run: bundle exec annotaterb models
+
+      # Some routes (letter_opener, actual_db_schema) exist only in development,
+      # and the committed annotations include them.
+      - name: Update route annotations
+        env:
+          RAILS_ENV: development
+        run: bundle exec annotaterb routes
 
       - name: Apply safe RuboCop corrections
         # Offenses that can't be corrected safely are left for CI's lint job.
