@@ -2,19 +2,13 @@
 
 Weave is the identity provider and OAuth 2.0 server for Patchwork Labs. A flaw in Weave can give access to every app that signs in through it. Please report security problems privately.
 
-## Supported versions
-
-Only the `main` branch is supported. It is what runs in production. Fixes are not backported.
-
 ## Report a vulnerability
 
 Do not open a public issue or pull request for a security problem.
 
-1. Go to the [Security tab](https://github.com/patchworklabsorg/weave/security) of this repository.
-2. Click **Report a vulnerability**.
-3. Describe the problem, the affected code, and the steps to reproduce it.
+Email all security issues to jasper@patchworklabs.org. You can also use the **Report a vulnerability** button on the [Security tab](https://github.com/patchworklabsorg/weave/security) of this repository.
 
-A patch or a failing test is welcome. Attach it to the report, not to a public pull request.
+Describe the problem, the affected code, and the steps to reproduce it. A patch or a failing test is welcome. Attach it to the report, not to a public pull request.
 
 ## What to expect
 
