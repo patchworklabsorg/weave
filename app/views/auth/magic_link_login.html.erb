@@ -13,7 +13,14 @@
         <strong class="break-all"><%= @magic_link_user.email %></strong>.
       </p>
 
-      <%= form_with(url: confirm_magic_link_path(token: @token), method: :post, data: { controller: "fingerprint" }) do %>
+      <%# turbo: false, matching the OAuth authorize forms (see their comment): confirming
+          while an OAuth flow is in progress can redirect straight through to /oauth/authorize
+          and, when that authorization is already granted, on to the client's (cross-origin)
+          redirect_uri in the same response chain. Turbo follows redirects via fetch(), which
+          our CSP's connect-src (self https:) blocks for a plain-http cross-origin client like a
+          local Krater -- silently breaking sign-in for any returning user. A real browser form
+          submission navigates instead, which CSP does not restrict. %>
+      <%= form_with(url: confirm_magic_link_path(token: @token), method: :post, data: { controller: "fingerprint", turbo: false }) do %>
         <%= hidden_field_tag :fingerprint, "", data: { fingerprint_target: "fingerprint" } %>
         <%= hidden_field_tag :timezone, "", data: { fingerprint_target: "timezone" } %>
         <%= submit_tag "Sign in", class: "btn-stitch w-full" %>

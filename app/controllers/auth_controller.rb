@@ -1,6 +1,16 @@
 # frozen_string_literal: true
 
 class AuthController < ApplicationController
+  include OauthClientRedirectOrigins
+
+  # Signing in while an OAuth authorization is pending ends in a redirect chain
+  # (login → /oauth/authorize → the client's redirect_uri) when the user already
+  # granted consent. form-action applies to that whole chain, so the sign-in forms
+  # must allow the pending client's registered origins, and only those. See
+  # OauthClientRedirectOrigins.
+  content_security_policy do |policy|
+    policy.form_action(:self, *pending_oauth_client_origins)
+  end
   skip_before_action :authenticate_user!, only: [:login, :new_session, :password_login, :oauth_login, :send_magic_link, :magic_link_login, :confirm_magic_link, :check_password_login]
 
   layout "sessions", only: [:new_session, :password_login, :oauth_login, :magic_link_login]
@@ -214,6 +224,12 @@ class AuthController < ApplicationController
   end
 
   private
+
+  def pending_oauth_client_origins
+    return [] if session[:oauth_return_to].blank? || session[:oauth_client_id].blank?
+
+    redirect_origins_for(Doorkeeper::Application.find_by(uid: session[:oauth_client_id]))
+  end
 
   # Returns the link, or nil after having already redirected. Callers bail on nil.
   def find_magic_link(token)
