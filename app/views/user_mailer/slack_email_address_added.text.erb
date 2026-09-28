@@ -1,0 +1,15 @@
+A new email address was added
+
+Hi <%= @user.first_name %>,
+
+The email address on your Slack profile changed to <%= @email_address.email %>,
+so we added it to your Patchwork Labs account. It is not confirmed yet, and
+sign-in links still go to this address.
+
+To make it your main address, confirm it from the email we sent to it, then
+choose it on your profile:
+
+<%= @profile_url %>
+
+If you didn't change your Slack email, remove the address from your profile
+and contact an administrator.

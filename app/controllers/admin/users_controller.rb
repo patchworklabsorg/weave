@@ -2,11 +2,14 @@
 
 class Admin::UsersController < Admin::BaseController
   before_action :set_user, only: [:show, :edit, :update, :destroy, :impersonate, :regen_pid, :invite_to_slack]
+  before_action :ensure_can_view_user, only: [:show]
+  before_action :ensure_can_manage_user, only: [:edit, :update, :destroy, :regen_pid]
   before_action :ensure_can_impersonate, only: [:impersonate]
   before_action :ensure_not_already_impersonating, only: [:impersonate]
   before_action :require_superadmin, only: [:regen_pid]
   skip_before_action :authenticate_user!, only: [:stop_impersonating]
   skip_before_action :require_admin, only: [:stop_impersonating]
+  helper_method :admin_permissions_for
 
   def index
     @users = User.all
@@ -31,8 +34,17 @@ class Admin::UsersController < Admin::BaseController
 
   def create
     @user = User.new(user_params)
+    privileged_attributes_allowed = assign_privileged_attributes
 
-    if @user.save
+    # New users sign in by magic link. The model requires a password, so give
+    # them a random one unless a superadmin set one.
+    if @user.password.nil?
+      random_password = User.generate_secure_password
+      @user.password = random_password
+      @user.password_confirmation = random_password
+    end
+
+    if privileged_attributes_allowed && @user.save
       redirect_to admin_users_path, notice: "User was successfully created."
     else
       render :new, status: :unprocessable_entity
@@ -43,7 +55,9 @@ class Admin::UsersController < Admin::BaseController
   end
 
   def update
-    if @user.update(user_params)
+    @user.assign_attributes(user_params)
+
+    if assign_privileged_attributes && @user.save
       redirect_to admin_user_path(@user), notice: "User was successfully updated."
     else
       render :edit, status: :unprocessable_entity
@@ -140,9 +154,27 @@ class Admin::UsersController < Admin::BaseController
     redirect_to admin_users_path, alert: "Only superadmins can perform this action"
   end
 
+  def admin_permissions_for(user)
+    UserAdminPermissions.new(current_user, user)
+  end
+
+  def ensure_can_view_user
+    return if admin_permissions_for(@user).view?
+
+    redirect_to admin_users_path, alert: "You don't have permission to view this user"
+  end
+
+  def ensure_can_manage_user
+    return if admin_permissions_for(@user).manage?
+
+    redirect_to admin_users_path, alert: "You can only manage users below your own access level"
+  end
+
+  # Fields any admin who may manage the target can set. Role and password are
+  # deliberately absent: see assign_privileged_attributes.
   def user_params
-    attrs = params.require(:user).permit(
-      :first_name, :last_name, :email, :phone_number, :role, :password, :password_confirmation, :birthday,
+    params.require(:user).permit(
+      :first_name, :last_name, :email, :phone_number, :birthday,
       # Membership attribute flags (configure capabilities, not access)
       :is_staff, :is_contractor, :is_board,
       # Manager relationship
@@ -151,61 +183,37 @@ class Admin::UsersController < Admin::BaseController
       :slack_title, :slack_city, :slack_state, :slack_country,
       :slack_organization, :slack_division, :slack_department, :slack_cost_center
     )
+  end
 
-    # Privilege-sensitive fields (role, password) require the acting user to
-    # outrank the target. Without this, any admin could set anyone (including
-    # themselves) to owner or reset an owner's password.
-    target = @user || User.new
+  # Role and password are read outside the permit list because what may be
+  # assigned depends on who is acting on whom (UserAdminPermissions). A request
+  # asking for more than that is rejected as a whole rather than partly applied.
+  # Returns false, with errors on @user, when rejected.
+  def assign_privileged_attributes
+    submitted = params.require(:user)
+    permissions = admin_permissions_for(@user)
+    requested_role = submitted[:role]
 
-    unless can_edit_privileged_fields?(target)
-      attrs.delete(:role)
-      attrs.delete(:password)
-      attrs.delete(:password_confirmation)
+    if submitted.key?(:role) && requested_role.to_s != @user.role
+      return reject_privileged_change(:role, "is not one you can assign") unless permissions.assign_role?(requested_role)
+
+      @user.role = requested_role.to_s
     end
 
-    # Even when allowed to touch role, a non-owner can never assign a role that
-    # is greater-or-equal to their own.
-    if attrs.key?(:role) && !can_assign_role?(attrs[:role])
-      attrs.delete(:role)
+    if submitted[:password].present?
+      return reject_privileged_change(:password, "can only be set by a superadmin or owner who outranks this user") unless permissions.change_password?
+
+      @user.password = submitted[:password].to_s
+      @user.password_confirmation = submitted[:password_confirmation].to_s
     end
 
-    attrs
+    true
   end
 
-  # Whether current_user may edit the target's role/password at all: they must
-  # strictly outrank the target, and only an owner may modify an owner or
-  # superadmin.
-  def can_edit_privileged_fields?(target)
-    return false if target.nil?
-    # Only superadmins (and owners) may grant roles or reset passwords at all.
-    return false unless current_user.superadmin?
-    return false if !current_user.owner? && (target.owner? || target.superadmin?)
-
-    role_rank(current_user) > role_rank(target)
-  end
-
-  # Whether current_user may assign the given role value. Owners may assign any
-  # role; everyone else may only assign roles strictly below their own.
-  def can_assign_role?(role_value)
-    return true if role_value.blank?
-
-    rank = normalized_role_rank(role_value)
-    return false if rank.nil?
-    return true if current_user.owner?
-
-    rank < role_rank(current_user)
-  end
-
-  def role_rank(user)
-    User.roles[user.role] || 0
-  end
-
-  def normalized_role_rank(role_value)
-    value = role_value.to_s
-    return User.roles[value] if User.roles.key?(value)
-    return value.to_i if value.match?(/\A\d+\z/)
-
-    nil
+  def reject_privileged_change(attribute, message)
+    Rails.logger.warn "Admin #{current_user.id} was refused a #{attribute} change on user #{@user.id || 'new'}"
+    @user.errors.add(attribute, message)
+    false
   end
 
 end

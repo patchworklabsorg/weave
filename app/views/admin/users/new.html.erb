@@ -3,10 +3,10 @@
   <div class="max-w-2xl mx-auto">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h1 class="font-display text-2xl font-bold text-ink">Edit User</h1>
-        <p class="text-ink-soft">Update user information and settings</p>
+        <h1 class="font-display text-2xl font-bold text-ink">New User</h1>
+        <p class="text-ink-soft">The user signs in with a magic link sent to this email address.</p>
       </div>
-      <%= link_to 'Back to User', admin_user_path(@user),
+      <%= link_to 'Back to Users', admin_users_path,
           class: 'btn-stitch-ghost' %>
     </div>
 
@@ -29,17 +29,17 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <%= form.label :first_name, class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :first_name,
+            <%= form.text_field :first_name, required: true,
                 class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
           </div>
           <div>
             <%= form.label :last_name, class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :last_name,
+            <%= form.text_field :last_name, required: true,
                 class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
           </div>
           <div>
             <%= form.label :email, class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.email_field :email,
+            <%= form.email_field :email, required: true,
                 class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
           </div>
           <div>
@@ -47,12 +47,6 @@
             <%= form.telephone_field :phone_number,
                 placeholder: "(802) 555-0123",
                 class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
-          <div>
-            <%= form.label :birthday, class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.date_field :birthday,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-            <p class="mt-1 text-xs text-ink-faint">Leave blank to clear the birthday.</p>
           </div>
         </div>
       </div>
@@ -70,7 +64,7 @@
             <% else %>
               <p class="block text-sm font-medium text-ink mb-1">Access Level</p>
               <p class="text-sm text-ink"><%= @user.role.titleize %></p>
-              <p class="mt-1 text-xs text-ink-faint">Only a superadmin or owner who outranks this user can change their access level, and never their own.</p>
+              <p class="mt-1 text-xs text-ink-faint">Only a superadmin or owner can give a new user a higher access level.</p>
             <% end %>
           </div>
         </div>
@@ -124,76 +118,10 @@
         </div>
       </div>
 
-      <div class="patch p-6">
-        <h2 class="font-display text-lg font-bold text-ink mb-4">Professional Information</h2>
-        <p class="text-sm text-ink-faint mb-4">These fields sync with Slack (API-editable fields)</p>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <%= form.label :slack_title, "Job Title", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :slack_title,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
-          <div>
-            <%= form.label :slack_department, "Department", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :slack_department,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
-          <div>
-            <%= form.label :slack_division, "Division", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :slack_division,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
-          <div>
-            <%= form.label :slack_organization, "Organization", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :slack_organization,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
-          <div>
-            <%= form.label :slack_city, "City", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :slack_city,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
-          <div>
-            <%= form.label :slack_state, "State", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :slack_state,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
-          <div>
-            <%= form.label :slack_country, "Country", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :slack_country,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
-          <div>
-            <%= form.label :slack_cost_center, "Cost Center", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :slack_cost_center,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
-        </div>
-      </div>
-
-      <% if permissions.change_password? %>
-        <div class="patch p-6">
-          <h2 class="font-display text-lg font-bold text-ink mb-4">Change Password</h2>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <%= form.label :password, class: "block text-sm font-medium text-ink mb-1" %>
-              <%= form.password_field :password,
-                  class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-              <p class="mt-1 text-xs text-ink-faint">Leave blank to keep current password.</p>
-            </div>
-            <div>
-              <%= form.label :password_confirmation, class: "block text-sm font-medium text-ink mb-1" %>
-              <%= form.password_field :password_confirmation,
-                  class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-            </div>
-          </div>
-        </div>
-      <% end %>
-
       <div class="flex justify-end space-x-3">
-        <%= link_to 'Cancel', admin_user_path(@user),
+        <%= link_to 'Cancel', admin_users_path,
             class: 'btn-stitch-ghost' %>
-        <%= form.submit "Save Changes",
+        <%= form.submit "Create User",
             class: 'btn-stitch' %>
       </div>
     <% end %>

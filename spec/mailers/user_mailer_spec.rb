@@ -20,4 +20,23 @@ RSpec.describe UserMailer, type: :mailer do
       expect(body).to match(/Code of Conduct/i)
     end
   end
+
+  describe "#slack_email_address_added" do
+    subject(:mail) { described_class.slack_email_address_added(address) }
+
+    let(:saved_user) { create(:user, :verified, first_name: "Ada", email: "ada@example.com") }
+    let(:address) { saved_user.email_addresses.create!(email: "ada.new@example.com") }
+
+    it "goes to the primary address, not the new one" do
+      expect(mail.to).to eq(["ada@example.com"])
+      expect(mail.subject).to include("A new email address was added to your account")
+    end
+
+    it "names the new address and says what to do if the change was not expected" do
+      body = mail.body.encoded
+      expect(body).to include("ada.new@example.com")
+      expect(body).to include("Slack")
+      expect(body).to match(/didn't change/i)
+    end
+  end
 end

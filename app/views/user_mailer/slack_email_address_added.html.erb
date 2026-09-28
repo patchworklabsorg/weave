@@ -1,0 +1,21 @@
+<h2 style="margin: 0 0 16px 0; color: #2a2050; font-size: 20px; font-weight: 700;">A new email address was added 🧵</h2>
+
+<p style="margin: 0 0 16px 0; color: #2a2050;">Hi <%= @user.first_name %>,</p>
+
+<p style="margin: 0 0 16px 0; color: #2a2050;">The email address on your Slack profile changed to <strong><%= @email_address.email %></strong>, so we added it to your Patchwork Labs account. It is not confirmed yet, and sign-in links still go to this address.</p>
+
+<p style="margin: 0 0 16px 0; color: #2a2050;">To make it your main address, confirm it from the email we sent to it, then choose it on your profile:</p>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 8px 0 24px 0;">
+  <tr>
+    <td style="border-radius: 8px; background-color: #6c3ec1;">
+      <a href="<%= @profile_url %>" style="display: inline-block; padding: 12px 28px; background-color: #6c3ec1; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 15px; font-family: 'Geist', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+        Manage email addresses
+      </a>
+    </td>
+  </tr>
+</table>
+
+<div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #ebe3f9; color: #5d5584; font-size: 13px; line-height: 1.6;">
+  <p style="margin: 0;">If you didn't change your Slack email, remove the address from your profile and contact an administrator.</p>
+</div>

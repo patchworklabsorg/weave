@@ -172,6 +172,16 @@ POST /oauth/token
 - **Access Tokens**: Expire after 2 hours
 - **Refresh Tokens**: Can be used to obtain new access tokens without re-authorization
 
+## Accounts that can no longer sign in
+
+Locking, suspending or deactivating a user ends their access everywhere, not just in Weave:
+
+- `/oauth/authorize` treats them as signed out, the same as every other Weave page. A browser session also has to be live (not signed out or expired) to count.
+- All their access tokens (and with them, refresh tokens) and unredeemed authorization codes are revoked, for every client.
+- As a backstop for changes that skip model callbacks, `/oauth/token` refuses to issue tokens for them (`invalid_grant`) and `/oauth/userinfo` answers `401` with `WWW-Authenticate: Bearer error="invalid_token"`.
+
+Unlocking or reactivating the account doesn't bring old tokens back; the user signs in to each client again.
+
 ## Security Considerations
 
 1. **HTTPS Required**: OAuth endpoints enforce HTTPS in production

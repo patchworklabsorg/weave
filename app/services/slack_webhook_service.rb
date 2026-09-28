@@ -61,15 +61,6 @@ class SlackWebhookService
       profile = slack_user_data["profile"]
       updates = {}
 
-      # Update email if changed. A Slack-driven email change must NOT silently
-      # become a verified login identifier: clear the confirmation so the new
-      # address has to be re-confirmed before it can be used to log in — unless
-      # the user has already confirmed that address in Weave.
-      if profile["email"].present? && profile["email"].downcase != user.email
-        new_email = profile["email"].downcase
-        updates[:email] = new_email
-        updates[:email_confirmed_at] = user.email_addresses.confirmed.find_by(email: new_email)&.confirmed_at
-      end
 
       # Update name if changed
       first_name = profile["first_name"] || profile["real_name"]&.split(" ")&.first
@@ -91,6 +82,8 @@ class SlackWebhookService
         Rails.logger.debug "[SlackWebhookService] No changes for user #{user.id}"
       end
 
+      add_slack_email_address(user, profile["email"])
+
       user
     rescue ActiveRecord::RecordInvalid => e
       Rails.logger.error "[SlackWebhookService] Validation error updating user: #{e.message}"
@@ -101,6 +94,29 @@ class SlackWebhookService
     end
 
     private
+
+    # Slack never changes users.email, because magic links go to that address.
+    # Anyone who can edit a Slack profile (a Slack admin, for example) could
+    # otherwise redirect the user's sign-in. A new Slack email is added as an
+    # unconfirmed secondary address instead, and a confirmation email goes to
+    # it. After the user confirms it, they can make it primary themselves. A
+    # notice also goes to the primary address, so the user finds out if someone
+    # else changed their Slack profile.
+    def add_slack_email_address(user, slack_email)
+      email = slack_email.to_s.strip.downcase
+      return if email.blank? || email == user.email
+      return if user.email_addresses.exists?(email: email)
+
+      address = user.email_addresses.new(email: email)
+      unless address.save
+        Rails.logger.warn "[SlackWebhookService] Did not add Slack email for user #{user.id}: #{address.errors.full_messages.join(', ')}"
+        return
+      end
+
+      address.send_confirmation_email
+      UserMailer.slack_email_address_added(address).deliver_later
+      Rails.logger.info "[SlackWebhookService] Added unconfirmed Slack email address #{address.id} for user #{user.id}"
+    end
 
     # DM the code of conduct to a freshly-joined guest (idempotent-ish: skips if
     # they've already accepted). Never lets a Slack failure break webhook handling.

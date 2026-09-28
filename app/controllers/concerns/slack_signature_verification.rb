@@ -3,9 +3,10 @@
 module SlackSignatureVerification
   extend ActiveSupport::Concern
 
-  included do
-    before_action :verify_slack_signature, only: [:events]
-  end
+  # No `included` before_action here on purpose: including controllers declare
+  # which actions to verify. Rails keeps only the last before_action registered
+  # for a given method, so a default here was silently replaced (and events
+  # left unverified) the moment a controller added its own.
 
   private
 
@@ -30,7 +31,7 @@ module SlackSignatureVerification
     end
 
     # Prevent replay attacks - reject requests older than 5 minutes
-    if Time.current.to_i - slack_timestamp.to_i > 300
+    if (Time.current.to_i - slack_timestamp.to_i).abs > 300
       Rails.logger.warn "[Slack Webhook] Timestamp too old: #{slack_timestamp}"
       render json: { error: "Request too old" }, status: :unauthorized
       return

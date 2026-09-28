@@ -7,7 +7,10 @@ module Webhooks
     # Skip default protections - we verify via Slack signature instead
     skip_before_action :verify_authenticity_token
     skip_before_action :authenticate_user!
-    before_action :verify_slack_signature, only: [:interactions]
+    # Both endpoints are unauthenticated apart from Slack's signature, and events
+    # create users and change their email addresses (what magic links go to),
+    # so neither may skip it.
+    before_action :verify_slack_signature, only: %i[events interactions]
 
     def events
       event_data = JSON.parse(request.raw_post)

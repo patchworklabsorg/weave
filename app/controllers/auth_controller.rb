@@ -1,6 +1,16 @@
 # frozen_string_literal: true
 
 class AuthController < ApplicationController
+  include OauthClientRedirectOrigins
+
+  # Signing in while an OAuth authorization is pending ends in a redirect chain
+  # (login → /oauth/authorize → the client's redirect_uri) when the user already
+  # granted consent. form-action applies to that whole chain, so the sign-in forms
+  # must allow the pending client's registered origins, and only those. See
+  # OauthClientRedirectOrigins.
+  content_security_policy do |policy|
+    policy.form_action(:self, *pending_oauth_client_origins)
+  end
   skip_before_action :authenticate_user!, only: [:login, :new_session, :password_login, :oauth_login, :send_magic_link, :magic_link_login, :confirm_magic_link, :check_password_login]
 
   layout "sessions", only: [:new_session, :password_login, :oauth_login, :magic_link_login]
@@ -12,7 +22,8 @@ class AuthController < ApplicationController
     missing: "That sign-in link is incomplete. Request a new one below.",
     unknown: "We don't recognize that sign-in link. It may have been copied incompletely — request a new one below.",
     used: "That sign-in link has already been used. Request a new one below.",
-    expired: "That sign-in link has expired. Request a new one below."
+    expired: "That sign-in link has expired. Request a new one below.",
+    inactive: "This account can't sign in right now. Contact an administrator for help."
   }.freeze
 
   def new_session
@@ -190,7 +201,19 @@ class AuthController < ApplicationController
 
   def logout
     if session[:admin_id]
-      original_admin = User.find(session[:admin_id])
+      original_admin = User.find_by(id: session[:admin_id])
+
+      # The admin who started impersonating was deleted in the meantime, so
+      # there is no account to return to. Sign out completely.
+      if original_admin.nil?
+        reset_session
+        respond_to do |format|
+          format.html { redirect_to login_path, notice: "Logged out successfully" }
+          format.json { render json: { message: "Logged out successfully" } }
+        end
+        return
+      end
+
       session[:user_id] = session[:admin_id]
       session.delete(:admin_id)
       respond_to do |format|
@@ -214,6 +237,12 @@ class AuthController < ApplicationController
   end
 
   private
+
+  def pending_oauth_client_origins
+    return [] if session[:oauth_return_to].blank? || session[:oauth_client_id].blank?
+
+    redirect_origins_for(Doorkeeper::Application.find_by(uid: session[:oauth_client_id]))
+  end
 
   # Returns the link, or nil after having already redirected. Callers bail on nil.
   def find_magic_link(token)
