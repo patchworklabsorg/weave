@@ -21,6 +21,7 @@ en:
   doorkeeper:
     scopes:
       admin: 'Perform administrative actions on your behalf'
+      slack: 'See your Patchwork Labs Slack membership and Slack ID'
 
     applications:
       confirmations:

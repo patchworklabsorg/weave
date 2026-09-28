@@ -37,6 +37,7 @@
 #  slack_invited_at         :datetime
 #  slack_joined_at          :datetime
 #  slack_linkedin           :string
+#  slack_membership         :string           default("pending"), not null
 #  slack_organization       :string
 #  slack_phone              :string
 #  slack_profile_image_url  :string
@@ -148,6 +149,13 @@ class User < ApplicationRecord
     superadmin: 2,
     owner: 3
   }
+
+  # Full membership of the Patchwork Labs Slack: in the workspace as a regular
+  # member, not a guest. Everyone starts `pending` and becomes a `member` once
+  # Slack reports them as one (see .slack_membership_for), which for new
+  # signups means after they accept the code of conduct. OAuth clients read it
+  # as the `slack_member` claim.
+  enum :slack_membership, { pending: "pending", member: "member" }, prefix: :slack
 
   scope :last_seen_within, ->(ago) { joins(:user_sessions).where(user_sessions: { last_seen_at: ago.. }).distinct }
   scope :currently_online, -> { last_seen_within(15.minutes.ago) }
@@ -408,8 +416,41 @@ class User < ApplicationRecord
   # In the Slack workspace already — a slack_id is only ever set by syncing
   # against a real workspace member (invite acceptance, team-join webhook, or
   # profile sync), so its presence means they joined, whether or not Weave
-  # sent the invite.
-  def slack_member? = slack_id.present?
+  # sent the invite. They can still be a guest: see #slack_member?.
+  def in_slack_workspace? = slack_id.present?
+
+  # Where this person is in joining the Slack. Drives the /slack onboarding
+  # page. Each step is the next thing the person must do.
+  def slack_onboarding_step
+    return :member if slack_member?
+    return :awaiting_promotion if in_slack_workspace? && slack_coc_accepted_at.present?
+    return :accept_code_of_conduct if in_slack_workspace?
+    return :accept_invite if slack_invited_at.present?
+
+    :request_invite
+  end
+
+  # The membership a Slack user object (from users.info, users.lookupByEmail,
+  # users.list or a team_join/user_change event) entitles its owner to. Guests
+  # and deactivated accounts are not members.
+  def self.slack_membership_for(slack_user)
+    full = !slack_user["deleted"] && !slack_user["is_restricted"] && !slack_user["is_ultra_restricted"]
+    full ? "member" : "pending"
+  end
+
+  # Records the membership Slack reports for this person. Skips the write when
+  # nothing changed, and bumps updated_at so the OIDC updated_at claim moves.
+  def apply_slack_membership!(slack_user)
+    # A lookup by email can find a different Slack account from the one
+    # linked here (e.g. an old account under a former address). Only the
+    # linked account decides membership.
+    return if slack_id.present? && slack_user["id"].present? && slack_user["id"] != slack_id
+
+    membership = self.class.slack_membership_for(slack_user)
+    return if slack_membership == membership
+
+    update_columns(slack_membership: membership, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
 
   # Human-facing membership label for profile/admin display.
   def membership_label

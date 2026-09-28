@@ -16,7 +16,7 @@ RSpec.describe "OpenID Connect", type: :request do
     Doorkeeper::Application.create!(
       name: "Test Client",
       redirect_uri: redirect_uri,
-      scopes: "openid profile email phone admin",
+      scopes: "openid profile email phone admin slack",
       confidential: false
     )
   end
@@ -159,7 +159,14 @@ RSpec.describe "OpenID Connect", type: :request do
         "email"              => user.email,
         "email_verified"     => true
       )
-      expect(claims).not_to include("phone_number", "phone_number_verified", "admin")
+      expect(claims).not_to include("phone_number", "phone_number_verified", "admin", "slack_member", "slack_id")
+    end
+
+    it "carries the Slack membership claims when the slack scope is granted" do
+      user.update!(slack_id: "U0MEMBER", slack_membership: "member")
+      slack_claims = verify_id_token(obtain_tokens(scope: "openid slack")["id_token"]).first
+
+      expect(slack_claims).to include("slack_member" => true, "slack_id" => "U0MEMBER")
     end
 
     it "rejects a token whose signature does not match the JWKS" do
@@ -217,6 +224,25 @@ RSpec.describe "OpenID Connect", type: :request do
       expect(userinfo(scope: "openid admin")).to include("admin" => true)
     end
 
+    it "tells a user who hasn't finished joining Slack apart from a full member" do
+      user.update!(slack_id: "U0GUEST")
+
+      expect(userinfo(scope: "openid slack")).to include("slack_member" => false, "slack_id" => "U0GUEST")
+    end
+
+    it "reports full Slack members through the slack scope" do
+      user.update!(slack_id: "U0MEMBER", slack_membership: "member")
+
+      expect(userinfo(scope: "openid slack")).to include("slack_member" => true, "slack_id" => "U0MEMBER")
+    end
+
+    it "omits slack_id for a user who is not in Slack yet" do
+      body = userinfo(scope: "openid slack")
+
+      expect(body).to include("slack_member" => false)
+      expect(body).not_to have_key("slack_id")
+    end
+
     it "does not leak claims from scopes that were not granted" do
       body = userinfo(scope: "openid profile")
 
@@ -228,7 +254,7 @@ RSpec.describe "OpenID Connect", type: :request do
     it "does not leak email or phone into a profile-only response" do
       body = userinfo(scope: "openid profile")
 
-      expect(body).not_to include("email", "email_verified", "phone_number", "admin")
+      expect(body).not_to include("email", "email_verified", "phone_number", "admin", "slack_member", "slack_id")
     end
 
     # Weave served userinfo to any valid access token long before OIDC existed

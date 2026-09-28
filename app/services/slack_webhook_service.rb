@@ -22,7 +22,8 @@ class SlackWebhookService
         # Update existing user with Slack info
         user.update!(
           slack_id: slack_id,
-          slack_joined_at: Time.current
+          slack_joined_at: Time.current,
+          slack_membership: User.slack_membership_for(slack_user_data)
         )
         Rails.logger.info "[SlackWebhookService] Updated existing user #{user.id} with Slack ID #{slack_id}"
       else
@@ -46,8 +47,7 @@ class SlackWebhookService
 
     # Process user_change event - user profile updated in Slack
     def process_user_change(slack_user_data)
-      # Skip bots and deleted users
-      return if slack_user_data["is_bot"] || slack_user_data["deleted"]
+      return if slack_user_data["is_bot"]
 
       slack_id = slack_user_data["id"]
       user = User.find_by(slack_id: slack_id)
@@ -56,6 +56,13 @@ class SlackWebhookService
         Rails.logger.warn "[SlackWebhookService] No IDP user found for Slack ID #{slack_id}"
         return
       end
+
+      # Slack sends user_change when a guest is promoted to member, when a
+      # member is made a guest, and when an account is deactivated. Record the
+      # membership before the deactivated check below, so a deactivated account
+      # stops being a member.
+      user.apply_slack_membership!(slack_user_data)
+      return if slack_user_data["deleted"]
 
       # Extract updated profile data
       profile = slack_user_data["profile"]
@@ -146,6 +153,7 @@ class SlackWebhookService
         last_name: last_name,
         slack_id: member["id"],
         slack_joined_at: Time.current,
+        slack_membership: User.slack_membership_for(member),
         password: User.generate_secure_password # Random password - user logs in via magic link
       )
 

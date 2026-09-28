@@ -43,8 +43,9 @@
             <% end %>
           </div>
         <% else %>
-          <div class="mt-9">
+          <div class="mt-9 flex flex-wrap items-center justify-center gap-3">
             <%= link_to "Sign in", login_path, class: "btn-stitch" %>
+            <%= link_to "Join the Slack", slack_onboarding_path, class: "btn-stitch-ghost" %>
           </div>
         <% end %>
         </div>

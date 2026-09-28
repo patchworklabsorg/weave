@@ -165,5 +165,20 @@ Doorkeeper::OpenidConnect.configure do
     normal_claim :admin, scope: :admin, response: [:id_token, :user_info] do |user|
       user.admin?
     end
+
+    # Full membership of the Patchwork Labs Slack: in the workspace as a
+    # regular member (not a guest) with the code of conduct accepted. A user
+    # can sign in while this is false; each client decides what to allow.
+    normal_claim :slack_member, scope: :slack, response: [:id_token, :user_info] do |user|
+      user.slack_member?
+    end
+
+    # The member's Slack user ID (e.g. U0123ABCD). Omitted before they join,
+    # because the gem leaves out nil claims.
+    # Present for guests too, so check slack_member before inviting it to
+    # channels.
+    normal_claim :slack_id, scope: :slack, response: [:id_token, :user_info] do |user|
+      user.slack_id
+    end
   end
 end

@@ -41,6 +41,7 @@
 #  slack_invited_at         :datetime
 #  slack_joined_at          :datetime
 #  slack_linkedin           :string
+#  slack_membership         :string           default("pending"), not null
 #  slack_organization       :string
 #  slack_phone              :string
 #  slack_profile_image_url  :string

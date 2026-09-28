@@ -2,6 +2,16 @@
 
 <div class="max-w-5xl mx-auto px-4 py-10">
 
+  <% if @user.slack_pending? %>
+    <div class="patch border-2 border-grape bg-grape-soft/40 p-5 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
+      <div class="flex-1">
+        <p class="font-semibold text-ink">Finish joining the Patchwork Labs Slack</p>
+        <p class="text-sm text-ink-soft mt-1">You become a full member once you're in the Slack and have accepted the Code of Conduct.</p>
+      </div>
+      <%= link_to "Continue", slack_onboarding_path, class: "btn-stitch shrink-0 justify-center" %>
+    </div>
+  <% end %>
+
   <!-- Header -->
   <div class="patch patch-bound mb-6">
     <div class="quilt-binding"></div>
@@ -138,7 +148,7 @@
     <% else %>
       <div class="patch p-6">
         <h2 class="font-display text-lg font-bold text-ink mb-4">Community profile</h2>
-        <p class="text-sm text-ink-soft">Your Patchwork Labs Slack profile isn't linked yet. Once you join the Slack, your community details will show up here automatically.</p>
+        <p class="text-sm text-ink-soft">Your Patchwork Labs Slack profile isn't linked yet. Once you <%= link_to "join the Slack", slack_onboarding_path, class: "text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2" %>, your community details will show up here automatically.</p>
       </div>
     <% end %>
 

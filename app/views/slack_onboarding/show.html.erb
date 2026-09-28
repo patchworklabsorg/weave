@@ -1,0 +1,105 @@
+<%# The way into the Patchwork Labs Slack (slack.patchworklabs.org redirects here).
+    @step is the next thing this person must do; see User#slack_onboarding_step. %>
+<% content_for :title, "Join the Slack" %>
+<%
+  steps = [
+    [:sign_up, "Create your Weave account"],
+    [:request_invite, "Get your Slack invite"],
+    [:accept_invite, "Accept the invite from Slack"],
+    [:accept_code_of_conduct, "Accept the Code of Conduct"],
+    [:member, "You're a full member"]
+  ]
+  # awaiting_promotion is the Code of Conduct step, finishing up.
+  current_index = steps.index { |key, _| key == (@step == :awaiting_promotion ? :accept_code_of_conduct : @step) }
+  link_class = "text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2"
+%>
+
+<div class="min-h-full flex items-center justify-center px-4 py-12">
+  <div class="patch patch-bound patch-tilt-l w-full max-w-lg">
+    <div class="quilt-binding"></div>
+
+    <div class="p-9 pb-5 text-center">
+      <h1 class="font-display text-3xl font-bold text-ink">Join the Patchwork Labs Slack</h1>
+      <p class="text-ink-soft mt-2">The Slack is where the community lives. Here's how to get in.</p>
+    </div>
+
+    <div class="px-9 pb-9 space-y-6">
+      <ol class="space-y-3" aria-label="Steps to join the Slack">
+        <% steps.each_with_index do |(_key, label), index| %>
+          <% state = index < current_index ? :done : (index == current_index ? :current : :todo) %>
+          <%= tag.li class: "flex items-center gap-3", aria: { current: ("step" if state == :current) } do %>
+            <span class="h-7 w-7 shrink-0 rounded-full flex items-center justify-center text-sm font-bold
+                         <%= { done: 'bg-teal-soft text-teal', current: 'bg-grape text-white', todo: 'bg-neutral-200 text-ink-faint' }[state] %>">
+              <%= state == :done ? "✓" : index + 1 %>
+            </span>
+            <span class="<%= state == :todo ? 'text-ink-faint' : 'text-ink' %> <%= 'font-semibold' if state == :current %>">
+              <%= label %>
+            </span>
+          <% end %>
+        <% end %>
+      </ol>
+
+      <div class="patch border-2 border-grape bg-grape-soft/40 p-5 space-y-4 text-center">
+        <% case @step %>
+        <% when :sign_up %>
+          <p class="text-sm text-ink">
+            Membership starts with a Weave account. Sign up with your email and
+            we'll send your Slack invite as soon as you confirm it.
+          </p>
+          <%= link_to "Request an invite", signup_path, class: "btn-stitch w-full justify-center" %>
+          <p class="text-sm text-ink-soft">
+            Already have an account? <%= link_to "Sign in", login_path, class: link_class %>
+          </p>
+
+        <% when :request_invite %>
+          <p class="text-sm text-ink">
+            We'll invite <strong class="break-all"><%= current_user.email %></strong> to the Slack.
+          </p>
+          <%= button_to "Send my invite", slack_onboarding_path, class: "btn-stitch w-full justify-center" %>
+
+        <% when :accept_invite %>
+          <p class="text-sm text-ink">
+            Slack sent an invite to <strong class="break-all"><%= current_user.email %></strong>.
+            Open it and join the workspace. This page moves on once you're in.
+          </p>
+          <p class="text-sm text-ink-faint">Can't find it? Check your spam folder first.</p>
+          <%= button_to "Resend my invite", slack_onboarding_path, class: "btn-stitch-ghost w-full justify-center" %>
+
+        <% when :accept_code_of_conduct %>
+          <p class="text-sm text-ink">
+            You're in the Slack as a guest. To get full access, accept our Code of
+            Conduct. We sent it to you as a Slack DM, or you can accept it here.
+          </p>
+          <% if SlackService.code_of_conduct_url.present? %>
+            <p class="text-sm">
+              <%= link_to "Read the Code of Conduct", SlackService.code_of_conduct_url,
+                    target: "_blank", rel: "noopener noreferrer", class: link_class %>
+            </p>
+          <% end %>
+          <%= button_to "I accept the Code of Conduct", accept_code_of_conduct_slack_onboarding_path,
+                class: "btn-stitch w-full justify-center" %>
+
+        <% when :awaiting_promotion %>
+          <p class="text-sm text-ink">
+            You accepted the Code of Conduct. We're upgrading your Slack account to
+            full access. This usually takes a few seconds, so refresh the page soon.
+          </p>
+          <%= button_to "Try again", accept_code_of_conduct_slack_onboarding_path,
+                class: "btn-stitch-ghost w-full justify-center" %>
+
+        <% when :member %>
+          <p class="text-sm text-ink">You're a full member of the Patchwork Labs Slack. Welcome!</p>
+          <% if SlackService.workspace_url.present? %>
+            <%= link_to "Open Slack", SlackService.workspace_url, class: "btn-stitch w-full justify-center" %>
+          <% end %>
+        <% end %>
+      </div>
+
+      <% if current_user %>
+        <div class="text-center">
+          <%= link_to "Go to your account", profile_path, class: "text-sm #{link_class}" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

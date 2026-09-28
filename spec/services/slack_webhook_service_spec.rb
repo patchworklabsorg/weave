@@ -88,5 +88,65 @@ RSpec.describe SlackWebhookService do
       expect(user.email).to eq("mine@example.com")
       expect(user.first_name).to eq("New")
     end
+
+    it "makes a guest a member when Slack reports the promotion" do
+      user = create(:user, slack_id: "U500", email: "guest@example.com")
+
+      described_class.process_user_change("id" => "U500", "profile" => { "email" => "guest@example.com" })
+
+      expect(user.reload).to be_slack_member
+    end
+
+    it "keeps a guest pending while Slack still reports them as a guest" do
+      user = create(:user, slack_id: "U501", email: "guest@example.com")
+
+      described_class.process_user_change(
+        "id" => "U501", "is_ultra_restricted" => true, "profile" => { "email" => "guest@example.com" }
+      )
+
+      expect(user.reload).to be_slack_pending
+    end
+
+    it "ends the membership of a deactivated Slack account" do
+      user = create(:user, slack_id: "U502", slack_membership: "member")
+
+      described_class.process_user_change("id" => "U502", "deleted" => true, "profile" => {})
+
+      expect(user.reload).to be_slack_pending
+    end
+  end
+
+  describe ".process_team_join" do
+    before { allow(SlackService).to receive(:new).and_return(instance_double(SlackService, post_code_of_conduct: true)) }
+
+    it "links an invited signup who joins as a guest, and keeps them pending" do
+      user = create(:user, :verified, email: "new@example.com", slack_invited_at: 1.hour.ago)
+
+      described_class.process_team_join(
+        "id" => "U600", "is_restricted" => true, "is_ultra_restricted" => true, "profile" => { "email" => "new@example.com" }
+      )
+
+      user.reload
+      expect(user.slack_id).to eq("U600")
+      expect(user).to be_slack_pending
+      expect(user.slack_onboarding_step).to eq(:accept_code_of_conduct)
+    end
+
+    it "makes someone who joins as a regular member a member" do
+      user = create(:user, :verified, email: "full@example.com")
+
+      described_class.process_team_join("id" => "U601", "profile" => { "email" => "full@example.com" })
+
+      expect(user.reload).to be_slack_member
+    end
+
+    it "creates a pending account for a guest who joins without a Weave account" do
+      user = described_class.process_team_join(
+        "id" => "U602", "is_ultra_restricted" => true,
+        "profile" => { "email" => "walkin@example.com", "real_name" => "Walk In" }
+      )
+
+      expect(user).to be_slack_pending
+    end
   end
 end

@@ -55,6 +55,14 @@ class Rack::Attack
     end
   end
 
+  # Throttle Slack invite and code-of-conduct requests by IP. Each one calls
+  # Slack's admin API, which rate-limits the whole workspace.
+  throttle("slack_onboarding/ip", limit: 5, period: 10.minutes) do |req|
+    if req.path.start_with?("/slack") && req.post?
+      req.ip
+    end
+  end
+
   # Throttle API requests
   # Limit to 100 requests per minute per IP for API endpoints
   throttle("api/ip", limit: 100, period: 1.minute) do |req|
