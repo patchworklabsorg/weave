@@ -285,4 +285,51 @@ RSpec.describe "Admin user management permissions", type: :request do
       expect(response.body).not_to include('name="user[role]"')
     end
   end
+
+  describe "creating users" do
+    let(:new_user_params) { { first_name: "New", last_name: "Person", email: "new.person@example.com" } }
+
+    it "renders the new user form" do
+      sign_in_via_magic_link(admin)
+
+      get new_admin_user_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("New User")
+    end
+
+    it "creates a user who signs in by magic link, with no password needed" do
+      sign_in_via_magic_link(admin)
+
+      expect { post admin_users_path, params: { user: new_user_params } }.to change(User, :count).by(1)
+
+      created = User.find_by(email: "new.person@example.com")
+      expect(response).to redirect_to(admin_users_path)
+      expect(created).to be_user
+    end
+
+    it "re-renders the form when the user is invalid" do
+      sign_in_via_magic_link(admin)
+
+      post admin_users_path, params: { user: new_user_params.merge(first_name: "") }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("New User")
+    end
+
+    it "does not let a plain admin create an admin" do
+      sign_in_via_magic_link(admin)
+
+      expect { post admin_users_path, params: { user: new_user_params.merge(role: "admin") } }.not_to change(User, :count)
+      expect(response).to have_http_status(:unprocessable_content)
+    end
+
+    it "lets an owner create an admin" do
+      sign_in_via_magic_link(owner)
+
+      post admin_users_path, params: { user: new_user_params.merge(role: "admin") }
+
+      expect(User.find_by(email: "new.person@example.com")).to be_admin
+    end
+  end
 end

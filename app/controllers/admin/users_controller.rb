@@ -34,8 +34,17 @@ class Admin::UsersController < Admin::BaseController
 
   def create
     @user = User.new(user_params)
+    privileged_attributes_allowed = assign_privileged_attributes
 
-    if assign_privileged_attributes && @user.save
+    # New users sign in by magic link. The model requires a password, so give
+    # them a random one unless a superadmin set one.
+    if @user.password.nil?
+      random_password = User.generate_secure_password
+      @user.password = random_password
+      @user.password_confirmation = random_password
+    end
+
+    if privileged_attributes_allowed && @user.save
       redirect_to admin_users_path, notice: "User was successfully created."
     else
       render :new, status: :unprocessable_entity
