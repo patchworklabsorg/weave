@@ -22,32 +22,10 @@ module Oauth
   # asking to be sent somewhere new. Doorkeeper has already checked the parameter
   # against this same list before any consent screen renders.
   class AuthorizationsController < Doorkeeper::AuthorizationsController
+    include OauthClientRedirectOrigins
+
     content_security_policy do |policy|
-      policy.form_action(:self, *client_redirect_origins)
-    end
-
-    private
-
-    def client_redirect_origins
-      application = pre_auth.client&.application
-      return [] if application.blank?
-
-      application.redirect_uri.to_s.split.filter_map { |uri| origin_of(uri) }.uniq
-    end
-
-    # Only http(s) origins mean anything to form-action. Native clients register
-    # custom schemes and the out-of-band URN, which belong in no CSP — dropping
-    # them keeps a malformed or exotic entry from widening or breaking the header.
-    def origin_of(uri)
-      parsed = URI.parse(uri)
-      return nil unless parsed.is_a?(URI::HTTP) && parsed.host.present?
-
-      origin = "#{parsed.scheme}://#{parsed.host}"
-      return origin if parsed.port.nil? || parsed.port == parsed.default_port
-
-      "#{origin}:#{parsed.port}"
-    rescue URI::InvalidURIError
-      nil
+      policy.form_action(:self, *redirect_origins_for(pre_auth.client&.application))
     end
 
   end

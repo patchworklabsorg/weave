@@ -19,7 +19,9 @@
       <p class="text-ink-soft">PWL ID: <%= @user.p_id %></p>
     </div>
     <div class="space-x-2">
-      <%= link_to 'Edit User', edit_admin_user_path(@user), class: 'btn-stitch-ghost' %>
+      <% if admin_permissions_for(@user).manage? %>
+        <%= link_to 'Edit User', edit_admin_user_path(@user), class: 'btn-stitch-ghost' %>
+      <% end %>
       <% if @user.is_impersonatable?(current_user) && !impersonating? %>
         <%= button_to 'Impersonate', impersonate_admin_user_path(@user), method: :post,
             class: 'btn-stitch',
@@ -156,7 +158,7 @@
           <div>
             <dt class="text-sm font-medium text-ink-faint">Manager</dt>
             <dd class="text-sm text-ink">
-              <%= link_to @user.manager.full_name, admin_user_path(@user.manager), class: "text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2" %>
+              <%= link_to_if admin_permissions_for(@user.manager).view?, @user.manager.full_name, admin_user_path(@user.manager), class: "text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2" %>
             </dd>
           </div>
         <% end %>
@@ -165,7 +167,7 @@
             <dt class="text-sm font-medium text-ink-faint">Direct Reports</dt>
             <dd class="text-sm text-ink">
               <% @user.reports.each do |report| %>
-                <%= link_to report.full_name, admin_user_path(report), class: "inline-block mr-2 text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2" %>
+                <%= link_to_if admin_permissions_for(report).view?, report.full_name, admin_user_path(report), class: "inline-block mr-2 text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2" %>
               <% end %>
             </dd>
           </div>

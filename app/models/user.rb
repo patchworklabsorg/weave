@@ -140,6 +140,7 @@ class User < ApplicationRecord
   after_create :send_confirmation_email
   after_create :create_primary_email_address
   after_update :sync_primary_email_address, if: -> { saved_change_to_email? || saved_change_to_email_confirmed_at? }
+  after_update :revoke_oauth_access!, if: :lost_ability_to_authenticate?
 
   enum :role, {
     user: 0,
@@ -252,9 +253,11 @@ class User < ApplicationRecord
   end
 
 
+  # Whether this account may sign in at all: unlocked and in the active status.
+  # (User#active? is overloaded for "recently seen", so compare the status
+  # column directly.)
   def can_authenticate?
-    # Check if user can authenticate (not locked)
-    !locked?
+    !locked? && status.to_s == "active"
   end
 
   def can_impersonate?
@@ -292,6 +295,20 @@ class User < ApplicationRecord
 
   def unlock!
     update!(locked_at: nil)
+  end
+
+  # Revoke every OAuth access token (and with it, its refresh token) and every
+  # unredeemed authorization code issued to this user, across all clients.
+  #
+  # Runs automatically whenever an update leaves the account unable to sign in
+  # (locked, suspended, deactivated): ending the Weave sessions alone leaves
+  # other apps working off access tokens for up to two hours and, worse, off
+  # refresh tokens that never expire, so a locked account could keep minting
+  # new access indefinitely.
+  def revoke_oauth_access!
+    now = Time.current
+    oauth_access_tokens.where(revoked_at: nil).update_all(revoked_at: now) # rubocop:disable Rails/SkipsModelValidations
+    oauth_access_grants.where(revoked_at: nil).update_all(revoked_at: now) # rubocop:disable Rails/SkipsModelValidations
   end
 
   # Issues a fresh link and mails it. Existing unused links stay valid — see
@@ -415,6 +432,10 @@ class User < ApplicationRecord
   end
 
   private
+
+  def lost_ability_to_authenticate?
+    (saved_change_to_locked_at? || saved_change_to_status?) && !can_authenticate?
+  end
 
   def generate_confirmation_token
     self.confirmation_token = SecureRandom.urlsafe_base64(32)

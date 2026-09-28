@@ -63,7 +63,7 @@ RSpec.describe Admin::UsersController, type: :controller do
       expect(target.reload.role).to eq("admin")
     end
 
-    it "still applies non-privileged fields while stripping an illegal role" do
+    it "rejects the whole update, not just the role, when it asks for a role the actor can't assign" do
       stub_actor(admin)
 
       patch :update, params: {
@@ -71,8 +71,9 @@ RSpec.describe Admin::UsersController, type: :controller do
         user: { first_name: "Renamed", role: "owner" }
       }
 
+      expect(response).to have_http_status(:unprocessable_content)
       target.reload
-      expect(target.first_name).to eq("Renamed")
+      expect(target.first_name).not_to eq("Renamed")
       expect(target.role).to eq("user")
     end
   end

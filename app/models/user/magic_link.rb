@@ -110,6 +110,10 @@ class User
     def rejection_reason
       return :used if used?
       return :expired if expired?
+      # A locked, suspended or deactivated account can't sign in. Refusing the
+      # link here, before it is consumed, stops a session row being created
+      # that the next request would only throw away.
+      return :inactive unless user.can_authenticate?
 
       nil
     end
