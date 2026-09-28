@@ -42,6 +42,7 @@
 #                                           POST   /login(.:format)                                                                                  auth#login
 #                           send_magic_link POST   /auth/magic_link(.:format)                                                                        auth#send_magic_link
 #                          magic_link_login GET    /auth/magic_link/:token(.:format)                                                                 auth#magic_link_login
+#                        confirm_magic_link POST   /auth/magic_link/:token(.:format)                                                                 auth#confirm_magic_link
 #                      check_password_login POST   /auth/check_password_login(.:format)                                                              auth#check_password_login
 #                                    logout DELETE /logout(.:format)                                                                                 auth#logout
 #                                        me GET    /auth/me(.:format)                                                                                auth#me
@@ -54,6 +55,11 @@
 #                        email_confirmation GET    /email_confirmation(.:format)                                                                     email_confirmations#show
 #                             confirm_email GET    /confirm_email/:token(.:format)                                                                   email_confirmations#confirm
 #                 resend_email_confirmation POST   /email_confirmation/resend(.:format)                                                              email_confirmations#resend
+#                make_primary_email_address PATCH  /profile/emails/:id/make_primary(.:format)                                                        email_addresses#make_primary
+#         resend_confirmation_email_address POST   /profile/emails/:id/resend_confirmation(.:format)                                                 email_addresses#resend_confirmation
+#                           email_addresses POST   /profile/emails(.:format)                                                                         email_addresses#create
+#                             email_address DELETE /profile/emails/:id(.:format)                                                                     email_addresses#destroy
+#                     confirm_email_address GET    /emails/confirm/:token(.:format)                                                                  email_addresses#confirm
 #                        user_profile_photo GET    /user/:p_id/pfp(.:format)                                                                         profile_photos#show
 #                               user_avatar GET    /user/:p_id/avatar/:variant(.:format)                                                             profile_photos#avatar
 #                        user_avatar_square GET    /user/:p_id/avatar/:variant/square(.:format)                                                      profile_photos#avatar_square
