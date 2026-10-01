@@ -537,6 +537,12 @@ class User < ApplicationRecord
     update_columns(slack_pronouns: value) # rubocop:disable Rails/SkipsModelValidations
   end
 
+  # True after a save that changed a profile field Weave shares with Slack
+  # (see SlackService::PUSHED_ATTRIBUTES), for an account linked to Slack.
+  def slack_profile_fields_need_push?
+    slack_id.present? && saved_changes.keys.intersect?(SlackService::PUSHED_ATTRIBUTES)
+  end
+
   private
 
   def lost_ability_to_authenticate?

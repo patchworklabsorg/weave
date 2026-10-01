@@ -58,6 +58,9 @@ class Admin::UsersController < Admin::BaseController
     @user.assign_attributes(user_params)
 
     if assign_privileged_attributes && @user.save
+      # Pushed from here, not a model callback, so the Slack sync's own
+      # writes are not sent back to Slack.
+      PushSlackProfileFieldsJob.perform_later(@user.id) if @user.slack_profile_fields_need_push?
       redirect_to admin_user_path(@user), notice: "User was successfully updated."
     else
       render :edit, status: :unprocessable_entity

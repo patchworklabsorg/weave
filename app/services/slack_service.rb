@@ -5,6 +5,40 @@ class SlackService
   class ConfigurationError < SlackError; end
   class ApiError < SlackError; end
 
+  # Standard Slack profile keys, read from users.list and users.profile.get.
+  STANDARD_PROFILE_FIELDS = {
+    slack_display_name: "display_name",
+    slack_status_text: "status_text",
+    slack_status_emoji: "status_emoji",
+    slack_phone: "phone",
+    slack_title: "title"
+  }.freeze
+
+  # Custom profile field IDs from the Slack workspace configuration. Only
+  # users.profile.get returns custom fields, so they are read only from it.
+  PULL_ONLY_CUSTOM_FIELDS = {
+    slack_role_description: "Xf09E7DJ7Y1Y",
+    slack_website: "Xf07CK5ZT401",
+    slack_github: "Xf09JVCPFL4R",
+    slack_linkedin: "Xf09J13F51KR"
+  }.freeze
+
+  # Custom fields that Weave admins can edit too (see #push_profile_fields).
+  SHARED_CUSTOM_FIELDS = {
+    slack_city: "Xf078WGTT53R",
+    slack_state: "Xf079ZT2R5DW",
+    slack_country: "Xf079B0K3ASF",
+    slack_organization: "Xf079B0K367M",
+    slack_division: "Xf079PPEUW2D",
+    slack_department: "Xf07986PJQPP",
+    slack_cost_center: "Xf079B3V5734"
+  }.freeze
+
+  MANAGER_FIELD = "Xf07986PJV2R"
+
+  # Weave attributes that #push_profile_fields sends to Slack.
+  PUSHED_ATTRIBUTES = ["slack_title", "manager_id", *SHARED_CUSTOM_FIELDS.keys.map(&:to_s)].freeze
+
   def initialize
     @client = build_client
     @user_client = build_user_client
@@ -248,6 +282,7 @@ class SlackService
       next if email.blank?
 
       # Fetch full profile with custom fields if user token is available
+      full_profile = false
       if @user_client
         begin
           profile_response = @user_client.users_profile_get(user: member["id"])
@@ -258,6 +293,7 @@ class SlackService
             # would blank it out and user creation fails validation.
             fetched_profile["email"] = email if fetched_profile["email"].blank?
             member["profile"] = fetched_profile
+            full_profile = true
           end
         rescue Slack::Web::Api::Errors::SlackError => e
           Rails.logger.warn "Could not fetch full profile for #{email}: #{e.message}"
@@ -269,31 +305,21 @@ class SlackService
       user = User.find_for_any_email(email)
 
       if user
-        # Update Slack ID and profile fields
-        profile_attrs = extract_slack_profile_fields(member)
-
-        # Resolve manager relationship from Slack manager ID to IDP user ID
-        if profile_attrs[:slack_manager_id].present?
-          manager = User.find_by(slack_id: profile_attrs[:slack_manager_id])
-          profile_attrs[:manager_id] = manager&.id if manager&.is_manager_or_manageable?
-        end
+        # Slack is the source of truth for profile fields, so a field cleared
+        # in Slack is cleared here too. Every member is read on every run: a
+        # skipped member would keep old values, and those used to be pushed
+        # back over newer Slack edits.
+        profile_attrs = extract_slack_profile_fields(member, full_profile: full_profile)
+        profile_attrs.merge!(manager_attrs_from_slack(user, profile_attrs[:slack_manager_id], full_profile))
 
         # list_members returns full members only, so everyone here is one.
-        # A guest who was promoted in Slack (not through Weave) gets picked
-        # up here even if their profile was synced recently.
         just_linked = user.slack_id.blank?
-        if just_linked || !user.slack_member? || user.slack_profile_synced_at.nil? || user.slack_profile_synced_at < 1.hour.ago
-          user.update!(
-            slack_id: member["id"],
-            slack_joined_at: Time.zone.at(member["updated"].to_i),
-            slack_membership: "member",
-            **profile_attrs,
-            slack_profile_synced_at: Time.current
-          )
-          synced_count += 1
-        else
-          skipped_count += 1
-        end
+        user.assign_attributes(slack_id: member["id"], slack_membership: "member", **profile_attrs)
+        user.slack_joined_at ||= Time.zone.at(member["updated"].to_i)
+        changed = user.changed?
+        user.slack_profile_synced_at = Time.current
+        user.save!
+        changed ? synced_count += 1 : skipped_count += 1
         # On first link Weave's pronouns win if it has any (the push sends them).
         user.apply_slack_pronouns!(member.dig("profile", "pronouns"), just_linked: just_linked)
       else
@@ -334,21 +360,11 @@ class SlackService
         end
         user.apply_slack_membership!(slack_user)
 
-        # Sync API-editable fields and PWL ID to Slack
-        fields_updated = false
-
-        # Update PWL ID if present
+        # Only the PWL ID is pushed here. Profile fields go to Slack when an
+        # admin edits them (PushSlackProfileFieldsJob). Pushing them on every
+        # run would write old Weave values over newer Slack edits.
         if user.p_id.present?
           update_slack_profile_field(slack_id, user.p_id)
-          fields_updated = true
-        end
-
-        # Update other API-editable fields
-        if update_slack_api_fields(slack_id, user)
-          fields_updated = true
-        end
-
-        if fields_updated
           synced_count += 1
         else
           skipped_count += 1
@@ -393,6 +409,40 @@ class SlackService
     true
   rescue Slack::Web::Api::Errors::SlackError, Slack::Web::Api::Errors::TooManyRequestsError => e
     Rails.logger.error "Error updating Slack pronouns for #{slack_user_id}: #{e.message}"
+    raise
+  end
+
+  # Push the profile fields Weave admins can edit to Slack. Every field is
+  # sent, and a blank value clears it in Slack. A manager with no Slack
+  # account is left out, because Slack cannot show it.
+  # Uses user token (requires users.profile:write scope)
+  # Returns false when there is nothing to do (no Slack ID or no user token).
+  # Slack errors are raised, so PushSlackProfileFieldsJob can retry them.
+  def push_profile_fields(slack_user_id, user)
+    return false if slack_user_id.blank?
+
+    unless @user_client
+      Rails.logger.warn "Slack user token not configured, cannot update profile fields"
+      return false
+    end
+
+    fields = SHARED_CUSTOM_FIELDS.to_h { |attr, field_id| [field_id, { value: user.public_send(attr).to_s }] }
+    manager = user.manager
+    if manager.nil?
+      fields[MANAGER_FIELD] = { value: "" }
+    elsif manager.slack_id.present?
+      fields[MANAGER_FIELD] = { value: manager.slack_id }
+    end
+
+    @user_client.users_profile_set(
+      user: slack_user_id,
+      profile: { title: user.slack_title.to_s, fields: fields }.to_json
+    )
+
+    Rails.logger.info "Updated Slack profile fields for user #{slack_user_id}"
+    true
+  rescue Slack::Web::Api::Errors::SlackError, Slack::Web::Api::Errors::TooManyRequestsError => e
+    Rails.logger.error "Error updating Slack profile fields for #{slack_user_id}: #{e.message}"
     raise
   end
 
@@ -512,72 +562,45 @@ class SlackService
     Rails.logger.error "Error updating Slack profile field for #{slack_user_id}: #{e.message}"
   end
 
-  # Update API-editable Slack profile fields from IDP
-  # Only pushes fields that are API-editable (not user-editable)
-  def update_slack_api_fields(slack_user_id, user)
-    return false if slack_user_id.blank?
-    return false unless @user_client
+  # Map Slack profile values to Weave attributes. Blank values become nil, so
+  # a field cleared in Slack clears Weave too. Custom fields are only read
+  # when full_profile is true (users.profile.get succeeded): users.list leaves
+  # them out, and reading them from it would clear every one.
+  def extract_slack_profile_fields(member, full_profile: false)
+    profile = member["profile"]
+    attrs = {}
 
-    # Build fields hash for API-editable fields only
-    fields = {}
-
-    # Field IDs from Slack workspace configuration
-    fields["Xf0794EQ8TQE"] = { value: user.slack_title } if user.slack_title.present?
-    fields["Xf078WGTT53R"] = { value: user.slack_city } if user.slack_city.present?
-    fields["Xf079ZT2R5DW"] = { value: user.slack_state } if user.slack_state.present?
-    fields["Xf079B0K3ASF"] = { value: user.slack_country } if user.slack_country.present?
-    fields["Xf079B0K367M"] = { value: user.slack_organization } if user.slack_organization.present?
-    fields["Xf079PPEUW2D"] = { value: user.slack_division } if user.slack_division.present?
-    fields["Xf07986PJQPP"] = { value: user.slack_department } if user.slack_department.present?
-    fields["Xf079B3V5734"] = { value: user.slack_cost_center } if user.slack_cost_center.present?
-
-    # Convert IDP manager_id to Slack manager_id for push
-    if user.manager_id.present? && user.manager&.slack_id.present?
-      fields["Xf07986PJV2R"] = { value: user.manager.slack_id }
+    STANDARD_PROFILE_FIELDS.each do |attr, key|
+      attrs[attr] = profile[key].presence if profile.key?(key)
     end
 
-    return false if fields.empty?
+    image_url = profile["image_512"].presence || profile["image_192"].presence
+    attrs[:slack_profile_image_url] = image_url if image_url
 
-    @user_client.users_profile_set(
-      user: slack_user_id,
-      profile: { fields: fields }.to_json
-    )
+    if full_profile
+      # Slack sends an empty array, not a hash, when no custom field is set.
+      fields = profile["fields"].is_a?(Hash) ? profile["fields"] : {}
+      PULL_ONLY_CUSTOM_FIELDS.merge(SHARED_CUSTOM_FIELDS, slack_manager_id: MANAGER_FIELD).each do |attr, field_id|
+        attrs[attr] = fields.dig(field_id, "value").presence
+      end
+    end
 
-    Rails.logger.info "Updated API-editable fields for user #{slack_user_id}"
-    true
-  rescue Slack::Web::Api::Errors::SlackError => e
-    Rails.logger.error "Error updating API fields for #{slack_user_id}: #{e.message}"
-    false
+    attrs
   end
 
-  # Extract Slack profile fields from member object
-  def extract_slack_profile_fields(member)
-    profile = member["profile"]
-    fields = profile["fields"] || {}
-
-    {
-      # Pull-only fields (user editable in Slack)
-      slack_display_name: profile["display_name"],
-      slack_status_text: profile["status_text"],
-      slack_status_emoji: profile["status_emoji"],
-      slack_phone: profile["phone"],
-      slack_role_description: fields.dig("Xf09E7DJ7Y1Y", "value"),
-      slack_website: fields.dig("Xf07CK5ZT401", "value"),
-      slack_github: fields.dig("Xf09JVCPFL4R", "value"),
-      slack_linkedin: fields.dig("Xf09J13F51KR", "value"),
-      slack_profile_image_url: profile["image_512"] || profile["image_192"],
-
-      # Push & pull fields (API editable)
-      slack_title: profile["title"],
-      slack_city: fields.dig("Xf078WGTT53R", "value"),
-      slack_state: fields.dig("Xf079ZT2R5DW", "value"),
-      slack_country: fields.dig("Xf079B0K3ASF", "value"),
-      slack_organization: fields.dig("Xf079B0K367M", "value"),
-      slack_division: fields.dig("Xf079PPEUW2D", "value"),
-      slack_department: fields.dig("Xf07986PJQPP", "value"),
-      slack_cost_center: fields.dig("Xf079B3V5734", "value"),
-      slack_manager_id: fields.dig("Xf07986PJV2R", "value")
-    }.compact
+  # Resolve the Slack manager field to a Weave manager_id. An empty Slack
+  # field clears a manager that Slack can show (one with a Slack account). A
+  # manager without a Slack account exists only in Weave, so Slack cannot
+  # clear it.
+  def manager_attrs_from_slack(user, slack_manager_id, full_profile)
+    if slack_manager_id.present?
+      manager = User.find_by(slack_id: slack_manager_id)
+      manager&.is_manager_or_manageable? ? { manager_id: manager.id } : {}
+    elsif full_profile && user&.manager&.slack_id.present?
+      { manager_id: nil }
+    else
+      {}
+    end
   end
 
   def create_user_from_slack_member(member)
@@ -586,10 +609,14 @@ class SlackService
     email = member.dig("profile", "email")
 
     # Fetch full profile with custom fields if user token is available
+    full_profile = false
     if @user_client
       begin
         profile_response = @user_client.users_profile_get(user: member["id"])
-        member["profile"] = profile_response["profile"] if profile_response["ok"]
+        if profile_response["ok"]
+          member["profile"] = profile_response["profile"]
+          full_profile = true
+        end
       rescue Slack::Web::Api::Errors::SlackError => e
         Rails.logger.warn "Could not fetch full profile for #{member['id']}: #{e.message}"
       end
@@ -605,13 +632,8 @@ class SlackService
     password = User.generate_secure_password
 
     # Extract all profile fields
-    profile_attrs = extract_slack_profile_fields(member)
-
-    # Resolve manager relationship from Slack manager ID to IDP user ID
-    if profile_attrs[:slack_manager_id].present?
-      manager = User.find_by(slack_id: profile_attrs[:slack_manager_id])
-      profile_attrs[:manager_id] = manager&.id if manager&.is_manager_or_manageable?
-    end
+    profile_attrs = extract_slack_profile_fields(member, full_profile: full_profile)
+    profile_attrs.merge!(manager_attrs_from_slack(nil, profile_attrs[:slack_manager_id], full_profile))
 
     user = User.create!(
       email: email,
