@@ -46,7 +46,6 @@
 #  slack_phone              :string
 #  slack_profile_image_url  :string
 #  slack_profile_synced_at  :datetime
-#  slack_pronouns           :string
 #  slack_role_description   :text
 #  slack_start_date         :date
 #  slack_state              :string
