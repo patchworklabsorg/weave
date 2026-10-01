@@ -190,6 +190,8 @@ class User < ApplicationRecord
   validate :email_not_claimed_by_another_user
   normalizes :legal_first_name, :legal_last_name, with: ->(name) { name.strip.presence }
   validates :legal_first_name, :legal_last_name, length: { maximum: 100 }
+  normalizes :pronouns, with: ->(pronouns) { pronouns.strip.presence }
+  validates :pronouns, length: { maximum: PRONOUNS_MAX_LENGTH }
   validates :password, presence: true, length: { minimum: 8 }, if: lambda {
     new_record? || password.present?
   }
