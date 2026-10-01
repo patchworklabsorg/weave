@@ -8,6 +8,8 @@ module Interceptors
 
     def self.delivering_email(message)
       return unless Rails.env.production?
+      # Already cancelled (e.g. by MailAllowlistInterceptor): nothing to count.
+      return unless message.perform_deliveries
 
       redis = Redis.new(url: ENV["REDIS_CACHE_URL"], ssl_params: { verify_mode: OpenSSL::SSL::VERIFY_NONE })
       today = Date.current.to_s

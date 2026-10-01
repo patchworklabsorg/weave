@@ -47,6 +47,35 @@ RSpec.describe CredentialsPaths do
     end
   end
 
+  # WEAVE_ENV=staging runs with RAILS_ENV=production but has its own pair.
+  context "when a deployment is named" do
+    before { root.join("config/credentials/production.yml.enc").write("x") }
+
+    it "uses that deployment's pair instead of the environment's" do
+      content, key = described_class.resolve(root: root, env: "production", deployment: "staging")
+
+      expect(content).to eq(root.join("config/credentials/staging.yml.enc"))
+      expect(key).to eq(root.join("config/credentials/staging.key"))
+    end
+
+    # Falling back would point the staging key at a file it cannot open, and
+    # would make `credentials:edit` open the shared file instead of creating
+    # staging.yml.enc.
+    it "does not fall back before its file exists" do
+      root.join("config/credentials.yml.enc").write("x")
+
+      content, _key = described_class.resolve(root: root, env: "production", deployment: "staging")
+
+      expect(content).to eq(root.join("config/credentials/staging.yml.enc"))
+      expect(content.exist?).to be(false)
+    end
+  end
+
+  it "keeps per-environment resolution when no deployment is named" do
+    expect(described_class.resolve(root: root, env: "production", deployment: nil))
+      .to eq(resolve("production"))
+  end
+
   it "never mixes one environment's file with another's key" do
     root.join("config/credentials/production.yml.enc").write("x")
 

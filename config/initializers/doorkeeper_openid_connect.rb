@@ -69,12 +69,13 @@ Doorkeeper::OpenidConnect.configure do
   # id_token as `iss` and clients pin on it, so it must not be derived from the
   # (attacker-controllable) Host header.
   #
-  # Test uses the Rack::Test default host so the issuer and the request-derived
-  # endpoint URLs in the discovery document agree.
+  # Production follows APP_HOST (lib/weave.rb) so staging issues id_tokens for
+  # its own host. Test uses the Rack::Test default host so the issuer and the
+  # request-derived endpoint URLs in the discovery document agree.
   issuer do
     ENV["OIDC_ISSUER"].presence ||
       case Rails.env
-      when "production" then "https://weave.patchworklabs.org"
+      when "production" then Weave.url
       when "test"       then "http://www.example.com"
       else                   "http://localhost:3000"
       end

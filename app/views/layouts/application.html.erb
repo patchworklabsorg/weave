@@ -1,22 +1,22 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#2a2050" />
-    <meta name="msapplication-TileColor" content="#2a2050" />
-    <meta name="apple-mobile-web-app-title" content="Weave" />
-    <meta name="application-name" content="Weave" />
-    <meta name="author" content="Patchwork Labs Inc" />
-    <meta name="copyright" content="Patchwork Labs Inc" />
-    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-    <link rel="icon" href="/favicon.ico" sizes="any" />
-    <link rel="icon" href="/icon.png" type="image/png" />
-    <link rel="apple-touch-icon" href="/icon.png" />
-    <meta name="theme-color" content="#2a2050" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#16112a" media="(prefers-color-scheme: dark)" />
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#2a2050">
+    <meta name="msapplication-TileColor" content="#2a2050">
+    <meta name="apple-mobile-web-app-title" content="Weave">
+    <meta name="application-name" content="Weave">
+    <meta name="author" content="Patchwork Labs Inc">
+    <meta name="copyright" content="Patchwork Labs Inc">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="apple-touch-icon" href="/icon.png">
+    <meta name="theme-color" content="#2a2050" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#16112a" media="(prefers-color-scheme: dark)">
     <meta name="viewport" content="width=device-width,initial-scale=1">
 
     <title><%= content_for(:title) || "Weave" %></title>
@@ -24,7 +24,7 @@
       <%= yield(:title).concat(" ~") if content_for?(:title) %> Weave
     </title>
 
-    <link rel="canonical" href="https://weave.patchworklabs.org/" />
+    <link rel="canonical" href="<%= Weave.url %>/">
 
     <%= yield :head %>
 
@@ -47,33 +47,12 @@
     <script src="https://cdn.jsdelivr.net/npm/ua-parser-js@1.0.35/dist/ua-parser.min.js"></script>
     <script src="https://unpkg.com/mapkick@0.2.6/dist/mapkick.bundle.js"></script>
 
-    <style nonce="<%= content_security_policy_nonce %>">
-      #staging-warning {
-        text-align: center;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        padding: 1rem;
-        background-color: #cf3a36;
-        color: white;
-        z-index: 1000;
-      }
-    </style>
     <%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
   </head>
 
   <body class="quilt-bg text-ink font-sans min-h-screen">
 
-    <% if Rails.env.staging? %>
-      <%# add big warning to top of page %>
-      <div class="min-w-screen flex items-center justify-center">
-        <div id="staging-warning">
-          <button class="delete" onclick="(this.parentNode.remove())"></button>
-          This is the <b>STAGING</b> environment. Please <b>DO NOT USE for production</b>.
-        </div>
-      </div>
-    <% end %>
+    <%= render "shared/staging_badge" %>
 
     <% if impersonating? %>
       <div class="bg-orange-500 text-white text-center py-2 px-4 flex items-center justify-between">

@@ -62,10 +62,12 @@ Rails.application.configure do
   # Set this to true and configure the email server for immediate delivery to raise delivery errors.
   # config.action_mailer.raise_delivery_errors = false
 
-  # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "weave.patchworklabs.org" }
+  # Set host to be used by links generated in mailer templates. APP_HOST points
+  # staging's links at itself; see lib/weave.rb.
+  config.action_mailer.default_url_options = { host: Weave.host }
 
-  # Default from and reply-to addresses
+  # Default from and reply-to addresses. These stay on the production domain on
+  # every deployment because that is the domain verified with the mail provider.
   config.action_mailer.default_options = {
     from: "Weave <hi@weave.patchworklabs.org>",
     reply_to: "hi@weave.patchworklabs.org"
@@ -93,7 +95,7 @@ Rails.application.configure do
   # endpoints. Restrict to our own hosts (guarded to production/staging).
   if Rails.env.production? || Rails.env.staging?
     config.hosts = [
-      "weave.patchworklabs.org",
+      Weave.host,
       "patchworklabs.org",
       # Anchored so it matches ONLY *.patchworklabs.org, not
       # foo.patchworklabs.org.attacker.com (unanchored would).
@@ -103,4 +105,8 @@ Rails.application.configure do
     # Skip DNS rebinding protection for the default health check endpoint.
     config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
   end
+
+  # public/robots.txt already disallows everything; this also keeps staging out
+  # of search results if a crawler reaches it through a link.
+  config.action_dispatch.default_headers["X-Robots-Tag"] = "noindex, nofollow" if Weave.staging?
 end
