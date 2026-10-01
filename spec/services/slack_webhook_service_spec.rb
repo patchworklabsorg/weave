@@ -22,6 +22,28 @@ RSpec.describe SlackWebhookService do
       expect(user.reload.pronouns).to eq("they/them")
     end
 
+    it "does not revert a Weave edit whose push failed" do
+      user = create(:user, :verified, slack_id: "U503", email: "r@example.com")
+      user.apply_slack_pronouns!("he/him")
+      user.update!(pronouns: "they/them")
+
+      described_class.process_user_change("id" => "U503", "profile" => { "email" => "r@example.com", "pronouns" => "he/him" })
+
+      expect(user.reload.pronouns).to eq("they/them")
+    end
+
+    it "records pronouns and the Slack email for a user with an invalid legacy row" do
+      user = create(:user, :verified, slack_id: "U504", email: "s@example.com")
+      user.update_column(:pronouns, "a" * (User::PRONOUNS_MAX_LENGTH + 10)) # rubocop:disable Rails/SkipsModelValidations
+
+      expect do
+        described_class.process_user_change("id" => "U504", "profile" => { "email" => "s2@example.com", "pronouns" => "she/her" })
+      end.to have_enqueued_job(EmailAddressConfirmationJob)
+
+      expect(user.reload.pronouns).to eq("she/her")
+      expect(user.email_addresses.find_by(email: "s2@example.com")).to be_present
+    end
+
     # Magic links go to users.email. If Slack could change it, anyone who can
     # edit a Slack profile could redirect the user's sign-in.
     it "never changes the primary email, and adds the Slack email as an unconfirmed secondary" do
@@ -156,6 +178,24 @@ RSpec.describe SlackWebhookService do
       described_class.process_team_join("id" => "U601", "profile" => { "email" => "full@example.com" })
 
       expect(user.reload).to be_slack_member
+    end
+
+    it "keeps Weave's pronouns and pushes them when the join first links the account" do
+      user = create(:user, :verified, email: "pw@example.com", pronouns: "they/them")
+
+      expect do
+        described_class.process_team_join("id" => "U603", "profile" => { "email" => "pw@example.com", "pronouns" => "he/him" })
+      end.to have_enqueued_job(PushPronounsToSlackJob).with(user.id)
+
+      expect(user.reload.pronouns).to eq("they/them")
+    end
+
+    it "takes Slack's pronouns when the join first links an account without any" do
+      user = create(:user, :verified, email: "ps@example.com")
+
+      described_class.process_team_join("id" => "U604", "profile" => { "email" => "ps@example.com", "pronouns" => "he/him" })
+
+      expect(user.reload.pronouns).to eq("he/him")
     end
 
     it "creates a pending account for a guest who joins without a Weave account" do

@@ -25,6 +25,17 @@ RSpec.describe User, type: :model do
       user.update!(pronouns: "ze/zir")
       expect(user.pronouns).to eq("ze/zir")
     end
+
+    it "accepts up to #{User::PRONOUNS_MAX_LENGTH} characters" do
+      user.pronouns = "a" * User::PRONOUNS_MAX_LENGTH
+      expect(user).to be_valid
+    end
+
+    it "rejects longer values" do
+      user.pronouns = "a" * (User::PRONOUNS_MAX_LENGTH + 1)
+      expect(user).not_to be_valid
+      expect(user.errors[:pronouns]).to be_present
+    end
   end
 
   describe "syncing pronouns with Slack" do
@@ -56,6 +67,56 @@ RSpec.describe User, type: :model do
     describe "#apply_slack_pronouns!" do
       it "takes the value from Slack without pushing it back" do
         expect { user.apply_slack_pronouns!(" he/him ") }.not_to have_enqueued_job(PushPronounsToSlackJob)
+        expect(user.reload.pronouns).to eq("he/him")
+        expect(user.slack_pronouns).to eq("he/him")
+      end
+
+      it "keeps a Weave edit that has not reached Slack yet" do
+        user.apply_slack_pronouns!("he/him")
+        user.update!(pronouns: "they/them")
+
+        user.apply_slack_pronouns!("he/him")
+
+        expect(user.reload.pronouns).to eq("they/them")
+      end
+
+      it "takes a new Slack value even when a Weave edit is waiting" do
+        user.apply_slack_pronouns!("he/him")
+        user.update!(pronouns: "they/them")
+
+        user.apply_slack_pronouns!("she/her")
+
+        expect(user.reload.pronouns).to eq("she/her")
+      end
+
+      it "ignores a Slack value longer than the limit" do
+        user.update!(pronouns: "they/them")
+
+        user.apply_slack_pronouns!("a" * (User::PRONOUNS_MAX_LENGTH + 1))
+
+        expect(user.reload.pronouns).to eq("they/them")
+      end
+
+      it "records the value even when another attribute is invalid" do
+        user.update_column(:first_name, "") # rubocop:disable Rails/SkipsModelValidations
+
+        user.apply_slack_pronouns!("he/him")
+
+        expect(user.reload.pronouns).to eq("he/him")
+      end
+
+      it "keeps Weave's value when the account was just linked" do
+        user.update!(pronouns: "they/them")
+
+        user.apply_slack_pronouns!("he/him", just_linked: true)
+
+        expect(user.reload.pronouns).to eq("they/them")
+        expect(user.slack_pronouns).to eq("he/him")
+      end
+
+      it "takes Slack's value when the account was just linked and Weave has none" do
+        user.apply_slack_pronouns!("he/him", just_linked: true)
+
         expect(user.reload.pronouns).to eq("he/him")
       end
 

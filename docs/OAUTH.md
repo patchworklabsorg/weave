@@ -74,6 +74,10 @@ The OAuth provider supports the following scopes:
 - `admin`: Administrative privileges (restricted)
 - `slack`: Patchwork Labs Slack membership (`slack_member`, `slack_id`)
 
+The `profile` scope also includes `pronouns`, a non-standard claim (a free-text
+string such as `they/them`). It is in the ID token and the userinfo response.
+It is omitted when the user has not set pronouns.
+
 ### Slack membership claims
 
 Signing up for Weave does not make someone a full member of the Patchwork Labs

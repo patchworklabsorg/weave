@@ -19,13 +19,15 @@ class SlackWebhookService
       user = User.find_for_any_email(email)
 
       if user
+        just_linked = user.slack_id.blank?
         # Update existing user with Slack info
         user.update!(
           slack_id: slack_id,
           slack_joined_at: Time.current,
           slack_membership: User.slack_membership_for(slack_user_data)
         )
-        user.apply_slack_pronouns!(slack_user_data.dig("profile", "pronouns"))
+        # On first link Weave's pronouns win if it has any (the push sends them).
+        user.apply_slack_pronouns!(slack_user_data.dig("profile", "pronouns"), just_linked: just_linked)
         Rails.logger.info "[SlackWebhookService] Updated existing user #{user.id} with Slack ID #{slack_id}"
       else
         # Create new IDP user from Slack member
@@ -156,7 +158,8 @@ class SlackWebhookService
         slack_id: member["id"],
         slack_joined_at: Time.current,
         slack_membership: User.slack_membership_for(member),
-        pronouns: profile["pronouns"],
+        pronouns: User.pronouns_from_slack(profile["pronouns"]),
+        slack_pronouns: User.pronouns_from_slack(profile["pronouns"]),
         password: User.generate_secure_password # Random password - user logs in via magic link
       )
 

@@ -144,17 +144,17 @@ class User < ApplicationRecord
   after_update_commit :push_pronouns_to_slack, if: :pronouns_need_push?
 
   # Pronouns are one field, kept in sync with the Slack profile:
-  # - An edit in Weave is pushed to Slack right away (blank clears Slack too).
-  # - When an account is first linked to Slack, Weave's value is pushed.
-  # - A value set in Slack comes back through the user_change webhook and the
-  #   Slack sync (see #apply_slack_pronouns!). A blank Slack field never
-  #   clears Weave, so clearing is done in Weave.
-  # slack_pronouns is the old pull-only copy, kept until the column is dropped.
-  self.ignored_columns += ["slack_pronouns"]
-
-  # Set while applying values that came from Slack, so they aren't pushed
-  # straight back.
-  attr_accessor :syncing_from_slack
+  # - An edit in Weave is pushed to Slack (blank clears Slack too) by
+  #   PushPronounsToSlackJob, which retries until Slack accepts it.
+  # - When an account is first linked to Slack, Weave's value wins and is
+  #   pushed. If Weave has none, Slack's value is taken.
+  # - A value set in Slack comes back through the Slack webhooks and the Slack
+  #   sync (see #apply_slack_pronouns!). A blank Slack field never clears
+  #   Weave, so clearing is done in Weave.
+  # slack_pronouns holds the last value known to be in Slack. A pull only
+  # changes Weave when Slack differs from it, so an edit that has not reached
+  # Slack yet is not reverted by the old Slack value.
+  PRONOUNS_MAX_LENGTH = 50
 
   enum :role, {
     user: 0,
@@ -500,16 +500,38 @@ class User < ApplicationRecord
     "#{first_name[0, 3]}#{last_name}".downcase
   end
 
-  # Records the pronouns Slack reports for this person. A blank value is
-  # ignored, so a Slack profile with no pronouns never clears Weave's.
-  def apply_slack_pronouns!(value)
+  # Normalizes a pronouns value read from Slack. Blank and over-long values
+  # come back as nil, so they are never stored.
+  def self.pronouns_from_slack(value)
     value = value.to_s.strip.presence
-    return if value.nil? || value == pronouns
+    value if value && value.length <= PRONOUNS_MAX_LENGTH
+  end
 
-    self.syncing_from_slack = true
-    update!(pronouns: value)
-  ensure
-    self.syncing_from_slack = false
+  # Records the pronouns Slack reports for this person. A blank value is
+  # ignored, so a Slack profile with no pronouns never clears Weave's. A value
+  # that matches the last one seen in Slack is ignored too, so a Weave edit
+  # still waiting to be pushed is kept.
+  #
+  # Pass just_linked: true when the caller has just linked the account to
+  # Slack. Weave's value then wins (the push sends it), and Slack's is only
+  # taken when Weave has none.
+  #
+  # Writes with update_columns: the value is already in Slack, so it must not
+  # be pushed back, and an unrelated invalid attribute must not block it.
+  def apply_slack_pronouns!(value, just_linked: false)
+    value = self.class.pronouns_from_slack(value)
+    return if value.nil? || value == slack_pronouns
+
+    changes = { slack_pronouns: value }
+    unless value == pronouns || (just_linked && pronouns.present?)
+      changes.merge!(pronouns: value, updated_at: Time.current)
+    end
+    update_columns(changes) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # Called by PushPronounsToSlackJob once Slack has accepted a value.
+  def record_pronouns_pushed_to_slack!(value)
+    update_columns(slack_pronouns: value) # rubocop:disable Rails/SkipsModelValidations
   end
 
   private
@@ -521,7 +543,7 @@ class User < ApplicationRecord
   def pronouns_need_push?
     return false if slack_id.blank?
 
-    (saved_change_to_pronouns? && !syncing_from_slack) || (saved_change_to_slack_id? && pronouns.present?)
+    saved_change_to_pronouns? || (saved_change_to_slack_id? && pronouns.present?)
   end
 
   def push_pronouns_to_slack
