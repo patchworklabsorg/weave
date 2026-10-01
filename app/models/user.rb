@@ -200,17 +200,21 @@ class User < ApplicationRecord
   }
   validate :validate_phone_number, if: -> { phone_number.present? }
   before_save :parse_phone_number
-  # PWL{digit}{9 uppercase hex characters}, e.g. PWL5A1B2C3D4.
+  # PWL{digit}{9 uppercase hex characters}, e.g. PWL5A1B2C3D4. Staging uses
+  # SPWL instead (see Weave.p_id_prefix), and each deployment only accepts its
+  # own prefix.
   #
   # Uppercase only, matching what `generate_p_id` has emitted since the column
   # existed. p_id is the OIDC `sub`: relying parties compare it byte for byte to
   # decide who someone is, so one identity must not have two spellings. The
   # previous /[a-fA-F0-9]/ admitted a lowercase variant that nothing produced
   # and no consumer would have matched.
-  validates :p_id, presence: true, uniqueness: true, length: { is: 13 }, format: {
-    with: /\APWL\d[A-F0-9]{9}\z/,
+  validates :p_id, presence: true, uniqueness: true, format: {
+    with: ->(_user) { p_id_format },
     message: "PWL ID failed format validation"
   }
+
+  def self.p_id_format = /\A#{Weave.p_id_prefix}\d[A-F0-9]{9}\z/
 
   before_validation :generate_p_id, on: :create
 
@@ -616,12 +620,12 @@ class User < ApplicationRecord
   def generate_p_id(hex_length: 9)
     # Generates a global unique ID for the user.
     # Format: PWL{random digit}{hex_length random hex characters, all uppercase}
-    # Example: PWL5A1B2C3D4
+    # Example: PWL5A1B2C3D4 (SPWL5A1B2C3D4 on staging)
 
     numeric_first = SecureRandom.random_number(10).to_s
     bytes_needed = (hex_length / 2.0).ceil
     hex_chars = SecureRandom.hex(bytes_needed).upcase[0, hex_length]
-    self.p_id ||= "PWL#{numeric_first}#{hex_chars}"
+    self.p_id ||= "#{Weave.p_id_prefix}#{numeric_first}#{hex_chars}"
   end
 
   def set_address_types

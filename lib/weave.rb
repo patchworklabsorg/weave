@@ -36,6 +36,12 @@ module Weave
       "https://#{host(env)}"
     end
 
+    # Prefix of the Patchwork Labs ID (User#p_id, the OIDC `sub`). Staging IDs
+    # start with SPWL so a sandbox identity can never pass for a real one.
+    def p_id_prefix(env = ENV)
+      staging?(env) ? "SPWL" : "PWL"
+    end
+
     # MAIL_ALLOWLIST as downcased entries ("@domain" or an exact address), or
     # nil when the variable is unset, which means "deliver to anyone". A set but
     # empty list allows nobody, so a blanked value fails closed.

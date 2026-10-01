@@ -98,7 +98,7 @@ Doorkeeper::OpenidConnect.configure do
     User.find_by(id: access_token.resource_owner_id)
   end
 
-  # `sub` is the Patchwork Labs ID (format: PWL\d[0-9a-f]{9}). This matches the
+  # `sub` is the Patchwork Labs ID (format: PWL\d[0-9A-F]{9}, SPWL on staging). This matches the
   # `sub` the hand-rolled userinfo endpoint has always returned, and clients are
   # expected to allowlist on it, so it MUST NOT change to the primary key.
   subject { |user, _application| user.p_id }
