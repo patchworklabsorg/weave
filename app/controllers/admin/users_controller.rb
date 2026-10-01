@@ -174,7 +174,7 @@ class Admin::UsersController < Admin::BaseController
   # deliberately absent: see assign_privileged_attributes.
   def user_params
     params.require(:user).permit(
-      :first_name, :last_name, :legal_first_name, :legal_last_name, :email, :phone_number, :birthday,
+      :first_name, :last_name, :legal_first_name, :legal_last_name, :email, :pronouns, :phone_number, :birthday,
       # Membership attribute flags (configure capabilities, not access)
       :is_staff, :is_contractor, :is_board,
       # Manager relationship

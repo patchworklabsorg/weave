@@ -281,7 +281,8 @@ class SlackService
         # list_members returns full members only, so everyone here is one.
         # A guest who was promoted in Slack (not through Weave) gets picked
         # up here even if their profile was synced recently.
-        if user.slack_id.blank? || !user.slack_member? || user.slack_profile_synced_at.nil? || user.slack_profile_synced_at < 1.hour.ago
+        just_linked = user.slack_id.blank?
+        if just_linked || !user.slack_member? || user.slack_profile_synced_at.nil? || user.slack_profile_synced_at < 1.hour.ago
           user.update!(
             slack_id: member["id"],
             slack_joined_at: Time.zone.at(member["updated"].to_i),
@@ -293,6 +294,8 @@ class SlackService
         else
           skipped_count += 1
         end
+        # On first link Weave's pronouns win if it has any (the push sends them).
+        user.apply_slack_pronouns!(member.dig("profile", "pronouns"), just_linked: just_linked)
       else
         # Create new user from Slack member
         create_user_from_slack_member(member)
@@ -367,6 +370,30 @@ class SlackService
   # Check if Slack is properly configured
   def configured?
     token.present? && team_id.present?
+  end
+
+  # Set the standard Slack pronouns field. A blank value clears it.
+  # Uses user token (requires users.profile:write scope)
+  # Returns false when there is nothing to do (no Slack ID or no user token).
+  # Slack errors are raised, so PushPronounsToSlackJob can retry them.
+  def update_slack_pronouns(slack_user_id, pronouns)
+    return false if slack_user_id.blank?
+
+    unless @user_client
+      Rails.logger.warn "Slack user token not configured, cannot update pronouns"
+      return false
+    end
+
+    @user_client.users_profile_set(
+      user: slack_user_id,
+      profile: { pronouns: pronouns.to_s }.to_json
+    )
+
+    Rails.logger.info "Updated Slack pronouns for user #{slack_user_id}"
+    true
+  rescue Slack::Web::Api::Errors::SlackError, Slack::Web::Api::Errors::TooManyRequestsError => e
+    Rails.logger.error "Error updating Slack pronouns for #{slack_user_id}: #{e.message}"
+    raise
   end
 
   private
@@ -530,7 +557,6 @@ class SlackService
 
     {
       # Pull-only fields (user editable in Slack)
-      slack_pronouns: profile["pronouns"],
       slack_display_name: profile["display_name"],
       slack_status_text: profile["status_text"],
       slack_status_emoji: profile["status_emoji"],
@@ -596,6 +622,8 @@ class SlackService
       slack_id: member["id"],
       slack_joined_at: Time.zone.at(member["updated"].to_i),
       slack_membership: User.slack_membership_for(member),
+      pronouns: User.pronouns_from_slack(member.dig("profile", "pronouns")),
+      slack_pronouns: User.pronouns_from_slack(member.dig("profile", "pronouns")),
       **profile_attrs,
       slack_profile_synced_at: Time.current
     )

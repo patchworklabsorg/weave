@@ -169,6 +169,16 @@ RSpec.describe "OpenID Connect", type: :request do
       expect(slack_claims).to include("slack_member" => true, "slack_id" => "U0MEMBER")
     end
 
+    it "carries pronouns with the profile claims when they are set" do
+      user.update!(pronouns: "they/them")
+
+      expect(claims).to include("pronouns" => "they/them")
+    end
+
+    it "omits pronouns when they are not set" do
+      expect(claims).not_to have_key("pronouns")
+    end
+
     it "rejects a token whose signature does not match the JWKS" do
       id_token = obtain_tokens(scope: "openid profile")["id_token"]
       tampered = "#{id_token[0..-6]}AAAAA"
@@ -225,6 +235,16 @@ RSpec.describe "OpenID Connect", type: :request do
         "preferred_username" => user.username,
         "updated_at"         => user.updated_at.to_i
       )
+    end
+
+    it "returns pronouns with the profile claims when they are set" do
+      user.update!(pronouns: "they/them")
+
+      expect(userinfo(scope: "openid profile")).to include("pronouns" => "they/them")
+    end
+
+    it "omits pronouns when they are not set" do
+      expect(userinfo(scope: "openid profile")).not_to have_key("pronouns")
     end
 
     it "returns email claims for the email scope" do

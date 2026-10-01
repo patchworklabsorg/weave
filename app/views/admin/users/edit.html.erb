@@ -60,6 +60,13 @@
                 class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
           </div>
           <div>
+            <%= form.label :pronouns, class: "block text-sm font-medium text-ink mb-1" %>
+            <%= form.text_field :pronouns,
+                placeholder: "e.g. they/them",
+                maxlength: User::PRONOUNS_MAX_LENGTH,
+                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+          </div>
+          <div>
             <%= form.label :phone_number, class: "block text-sm font-medium text-ink mb-1" %>
             <%= form.telephone_field :phone_number,
                 placeholder: "(802) 555-0123",
