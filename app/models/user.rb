@@ -142,6 +142,20 @@ class User < ApplicationRecord
   after_create :create_primary_email_address
   after_update :sync_primary_email_address, if: -> { saved_change_to_email? || saved_change_to_email_confirmed_at? }
   after_update :revoke_oauth_access!, if: :lost_ability_to_authenticate?
+  after_update_commit :push_pronouns_to_slack, if: :pronouns_need_push?
+
+  # Pronouns are one field, kept in sync with the Slack profile:
+  # - An edit in Weave is pushed to Slack right away (blank clears Slack too).
+  # - When an account is first linked to Slack, Weave's value is pushed.
+  # - A value set in Slack comes back through the user_change webhook and the
+  #   Slack sync (see #apply_slack_pronouns!). A blank Slack field never
+  #   clears Weave, so clearing is done in Weave.
+  # slack_pronouns is the old pull-only copy, kept until the column is dropped.
+  self.ignored_columns += ["slack_pronouns"]
+
+  # Set while applying values that came from Slack, so they aren't pushed
+  # straight back.
+  attr_accessor :syncing_from_slack
 
   enum :role, {
     user: 0,
@@ -487,10 +501,32 @@ class User < ApplicationRecord
     "#{first_name[0, 3]}#{last_name}".downcase
   end
 
+  # Records the pronouns Slack reports for this person. A blank value is
+  # ignored, so a Slack profile with no pronouns never clears Weave's.
+  def apply_slack_pronouns!(value)
+    value = value.to_s.strip.presence
+    return if value.nil? || value == pronouns
+
+    self.syncing_from_slack = true
+    update!(pronouns: value)
+  ensure
+    self.syncing_from_slack = false
+  end
+
   private
 
   def lost_ability_to_authenticate?
     (saved_change_to_locked_at? || saved_change_to_status?) && !can_authenticate?
+  end
+
+  def pronouns_need_push?
+    return false if slack_id.blank?
+
+    (saved_change_to_pronouns? && !syncing_from_slack) || (saved_change_to_slack_id? && pronouns.present?)
+  end
+
+  def push_pronouns_to_slack
+    PushPronounsToSlackJob.perform_later(id)
   end
 
   def generate_confirmation_token

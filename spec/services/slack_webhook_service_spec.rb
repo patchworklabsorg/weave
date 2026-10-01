@@ -4,6 +4,24 @@ require "rails_helper"
 
 RSpec.describe SlackWebhookService do
   describe ".process_user_change" do
+    it "takes pronouns set in Slack without pushing them back" do
+      user = create(:user, :verified, slack_id: "U500", email: "p@example.com")
+
+      expect do
+        described_class.process_user_change("id" => "U500", "profile" => { "email" => "p@example.com", "pronouns" => "she/her" })
+      end.not_to have_enqueued_job(PushPronounsToSlackJob)
+
+      expect(user.reload.pronouns).to eq("she/her")
+    end
+
+    it "keeps Weave's pronouns when the Slack field is blank" do
+      user = create(:user, :verified, slack_id: "U501", email: "q@example.com", pronouns: "they/them")
+
+      described_class.process_user_change("id" => "U501", "profile" => { "email" => "q@example.com", "pronouns" => "" })
+
+      expect(user.reload.pronouns).to eq("they/them")
+    end
+
     # Magic links go to users.email. If Slack could change it, anyone who can
     # edit a Slack profile could redirect the user's sign-in.
     it "never changes the primary email, and adds the Slack email as an unconfirmed secondary" do

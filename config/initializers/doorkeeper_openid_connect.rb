@@ -140,6 +140,11 @@ Doorkeeper::OpenidConnect.configure do
       user.username
     end
 
+    # Not a standard OIDC claim. Omitted when unset.
+    normal_claim :pronouns, scope: :profile, response: [:id_token, :user_info] do |user|
+      user.pronouns
+    end
+
     normal_claim :updated_at, scope: :profile, response: [:id_token, :user_info] do |user|
       user.updated_at.to_i
     end

@@ -227,6 +227,12 @@ RSpec.describe "OpenID Connect", type: :request do
       )
     end
 
+    it "returns pronouns with the profile claims when they are set" do
+      user.update!(pronouns: "they/them")
+
+      expect(userinfo(scope: "openid profile")).to include("pronouns" => "they/them")
+    end
+
     it "returns email claims for the email scope" do
       expect(userinfo(scope: "openid email")).to include(
         "email"          => user.email,

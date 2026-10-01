@@ -113,12 +113,6 @@
               <dd class="text-sm text-ink font-medium text-right">@<%= @user.slack_display_name %></dd>
             </div>
           <% end %>
-          <% if @user.slack_pronouns.present? %>
-            <div class="flex justify-between gap-4 py-2.5">
-              <dt class="text-sm text-ink-faint">Pronouns</dt>
-              <dd class="text-sm text-ink font-medium text-right"><%= @user.slack_pronouns %></dd>
-            </div>
-          <% end %>
           <% dept = [@user.slack_department, @user.slack_division, @user.slack_organization].compact_blank.join(" · ") %>
           <% if dept.present? %>
             <div class="flex justify-between gap-4 py-2.5">

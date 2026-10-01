@@ -25,6 +25,7 @@ class SlackWebhookService
           slack_joined_at: Time.current,
           slack_membership: User.slack_membership_for(slack_user_data)
         )
+        user.apply_slack_pronouns!(slack_user_data.dig("profile", "pronouns"))
         Rails.logger.info "[SlackWebhookService] Updated existing user #{user.id} with Slack ID #{slack_id}"
       else
         # Create new IDP user from Slack member
@@ -89,6 +90,7 @@ class SlackWebhookService
         Rails.logger.debug "[SlackWebhookService] No changes for user #{user.id}"
       end
 
+      user.apply_slack_pronouns!(profile["pronouns"])
       add_slack_email_address(user, profile["email"])
 
       user
@@ -154,6 +156,7 @@ class SlackWebhookService
         slack_id: member["id"],
         slack_joined_at: Time.current,
         slack_membership: User.slack_membership_for(member),
+        pronouns: profile["pronouns"],
         password: User.generate_secure_password # Random password - user logs in via magic link
       )
 
