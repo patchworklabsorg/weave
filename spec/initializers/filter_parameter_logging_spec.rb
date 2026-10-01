@@ -2,8 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe ActiveSupport::ParameterFilter, "with the app filter list" do
-  let(:filter) { ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters) }
+RSpec.describe ActiveSupport::ParameterFilter do # rubocop:disable RSpec/SpecFilePathFormat
+  let(:filter) { described_class.new(Rails.application.config.filter_parameters) }
 
   it "filters the legal name from logs" do
     params = { user: { first_name: "John", legal_first_name: "Jonathan", legal_last_name: "Dorian" } }
