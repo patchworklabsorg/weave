@@ -157,6 +157,62 @@ RSpec.describe User, type: :model do
     end
   end
 
+  describe "#legal_name?" do
+    it "is false when no legal name is set" do
+      user = build(:user, legal_first_name: nil, legal_last_name: nil)
+      expect(user.legal_name?).to be(false)
+    end
+
+    it "is true when any legal name part is set" do
+      user = build(:user, legal_first_name: "Jonathan", legal_last_name: nil)
+      expect(user.legal_name?).to be(true)
+    end
+
+    it "is false when legal name fields are blank strings" do
+      user = build(:user, legal_first_name: "  ", legal_last_name: "")
+      expect(user.legal_name?).to be(false)
+    end
+  end
+
+  describe "#legal_full_name" do
+    it "falls back to the preferred full name when no legal name is set" do
+      user = build(:user, first_name: "John", last_name: "Doe")
+      expect(user.legal_full_name).to eq("John Doe")
+    end
+
+    it "returns the legal name when set" do
+      user = build(:user, first_name: "John", last_name: "Doe",
+                          legal_first_name: "Jonathan", legal_last_name: "Dorian")
+      expect(user.legal_full_name).to eq("Jonathan Dorian")
+    end
+
+    it "fills missing legal name parts from the preferred name" do
+      user = build(:user, first_name: "John", last_name: "Doe", legal_first_name: "Jonathan")
+      expect(user.legal_full_name).to eq("Jonathan Doe")
+    end
+  end
+
+  describe "legal name length" do
+    it "allows up to 100 characters" do
+      user = build(:user, legal_first_name: "a" * 100, legal_last_name: "b" * 100)
+      expect(user).to be_valid
+    end
+
+    it "rejects more than 100 characters" do
+      user = build(:user, legal_first_name: "a" * 101, legal_last_name: "b" * 101)
+      expect(user).not_to be_valid
+      expect(user.errors).to include(:legal_first_name, :legal_last_name)
+    end
+  end
+
+  describe "legal name normalization" do
+    it "strips whitespace and stores blank values as nil" do
+      user = create(:user, legal_first_name: " Jonathan ", legal_last_name: "   ")
+      expect(user.legal_first_name).to eq("Jonathan")
+      expect(user.legal_last_name).to be_nil
+    end
+  end
+
   describe "#initials" do
     it "returns first letter of first and last name" do
       user = build(:user, first_name: "John", last_name: "Doe")

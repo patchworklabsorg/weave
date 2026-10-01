@@ -174,6 +174,8 @@ class User < ApplicationRecord
   validates :email, undisposable: { message: "Sorry, but we do not accept disposable email providers." }
   normalizes :email, with: ->(email) { email.strip.downcase }
   validate :email_not_claimed_by_another_user
+  normalizes :legal_first_name, :legal_last_name, with: ->(name) { name.strip.presence }
+  validates :legal_first_name, :legal_last_name, length: { maximum: 100 }
   validates :password, presence: true, length: { minimum: 8 }, if: lambda {
     new_record? || password.present?
   }
@@ -224,6 +226,19 @@ class User < ApplicationRecord
 
   def name
     full_name
+  end
+
+  # Legal name is stored separately from the preferred name (first_name /
+  # last_name) and only used where a legal name is required (e.g. contracts,
+  # payroll). Falls back to the preferred name when unset.
+  def legal_name?
+    legal_first_name.present? || legal_last_name.present?
+  end
+
+  def legal_full_name
+    return full_name unless legal_name?
+
+    "#{legal_first_name.presence || first_name} #{legal_last_name.presence || last_name}"
   end
 
   def initials

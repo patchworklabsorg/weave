@@ -68,6 +68,23 @@ RSpec.describe "Admin user management permissions", type: :request do
         expect(member.reload).to have_attributes(first_name: "Renamed", email: "renamed@example.com", is_staff: true)
       end
 
+      it "can change a member's legal name" do
+        update_user(member, legal_first_name: "Jonathan", legal_last_name: "Dorian")
+
+        expect(member.reload).to have_attributes(legal_first_name: "Jonathan", legal_last_name: "Dorian")
+      end
+
+      it "can't change the legal name of a peer admin or someone above them" do
+        peer = create(:user, :admin, :verified)
+
+        [peer, superadmin, owner].each do |target|
+          update_user(target, legal_first_name: "Changed", legal_last_name: "Changed")
+
+          expect(response).to redirect_to(admin_users_path)
+          expect(target.reload).to have_attributes(legal_first_name: nil, legal_last_name: nil)
+        end
+      end
+
       it "can still edit their own details" do
         update_user(admin, first_name: "Myself")
 

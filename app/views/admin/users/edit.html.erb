@@ -28,14 +28,31 @@
         <h2 class="font-display text-lg font-bold text-ink mb-4">Basic Information</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <%= form.label :first_name, class: "block text-sm font-medium text-ink mb-1" %>
+            <%= form.label :first_name, "Preferred first name", class: "block text-sm font-medium text-ink mb-1" %>
             <%= form.text_field :first_name,
                 class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
           </div>
           <div>
-            <%= form.label :last_name, class: "block text-sm font-medium text-ink mb-1" %>
+            <%= form.label :last_name, "Preferred last name", class: "block text-sm font-medium text-ink mb-1" %>
             <%= form.text_field :last_name,
                 class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+          </div>
+          <div>
+            <%= form.label :legal_first_name, class: "block text-sm font-medium text-ink mb-1" %>
+            <%= form.text_field :legal_first_name,
+                maxlength: 100,
+                placeholder: "Same as preferred name",
+                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+          </div>
+          <div>
+            <%= form.label :legal_last_name, class: "block text-sm font-medium text-ink mb-1" %>
+            <%= form.text_field :legal_last_name,
+                maxlength: 100,
+                placeholder: "Same as preferred name",
+                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+          </div>
+          <div class="md:col-span-2 -mt-2">
+            <p class="text-xs text-ink-faint">Leave the legal name fields blank if they match the preferred name. The legal name is only used where it's legally required.</p>
           </div>
           <div>
             <%= form.label :email, class: "block text-sm font-medium text-ink mb-1" %>

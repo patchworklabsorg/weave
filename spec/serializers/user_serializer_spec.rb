@@ -69,70 +69,21 @@
 #
 #  fk_rails_...  (manager_id => users.id)
 #
-class UserSerializer
-  def initialize(user, options = {})
-    @user = user
-    @options = options
+require "rails_helper"
+
+RSpec.describe UserSerializer do
+  let(:user) do
+    create(:user, first_name: "John", last_name: "Doe", legal_first_name: "Jonathan", legal_last_name: "Dorian")
   end
 
-  def as_json
-    base_attributes.tap do |json|
-      json[:addresses] = address_attributes if @options[:include_addresses]
-      json[:sessions] = session_attributes if @options[:include_sessions]
-    end
+  it "uses the preferred name" do
+    expect(described_class.render(user)).to include(first_name: "John", last_name: "Doe", full_name: "John Doe")
   end
 
-  def to_json(*args)
-    as_json.to_json(*args)
+  it "leaves the legal name out" do
+    json = described_class.render(user, include_addresses: true)
+
+    expect(json.keys.map(&:to_s)).not_to include(a_string_matching(/legal/))
+    expect(json.to_json).not_to include("Jonathan", "Dorian")
   end
-
-  private
-
-  # The legal name is deliberately left out. It is only for places that need
-  # it by law, and exposing it here could deadname someone.
-  def base_attributes
-    {
-      id: @user.id,
-      p_id: @user.p_id,
-      email: @user.email,
-      first_name: @user.first_name,
-      last_name: @user.last_name,
-      phone_number: @user.phone_number,
-      full_name: @user.full_name,
-      initials: @user.initials,
-      username: @user.username,
-      role: @user.role,
-      status: @user.status,
-      email_verified: @user.email_verified?,
-      slack_id: @user.slack_id,
-      slack_member: @user.slack_member?,
-      created_at: @user.created_at,
-      updated_at: @user.updated_at
-    }
-  end
-
-  def address_attributes
-    {
-      shipping: @user.shipping_address ? AddressSerializer.new(@user.shipping_address).as_json : nil,
-      billing: @user.billing_address ? AddressSerializer.new(@user.billing_address).as_json : nil
-    }
-  end
-
-  def session_attributes
-    @user.user_sessions.recent.limit(5).map do |session|
-      SessionSerializer.new(session).as_json
-    end
-  end
-
-  class << self
-    def render(user, options = {})
-      new(user, options).as_json
-    end
-
-    def render_collection(users, options = {})
-      users.map { |user| new(user, options).as_json }
-    end
-
-  end
-
 end
