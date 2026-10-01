@@ -168,4 +168,6 @@ UI components use the defined color palette:
 ## Deployment
 Production deployment uses Kamal (Docker-based) with Thruster for HTTP acceleration. See `.kamal/` directory for configuration.
 
+Staging (`weave-staging.patchworklabs.org`) runs the production image with `RAILS_ENV=production` plus `WEAVE_ENV=staging` and `APP_HOST`. It deploys on every push to `main` (`.github/workflows/deploy-staging.yml`). Read the deployment and host through `Weave.staging?` / `Weave.host` / `Weave.url` (`lib/weave.rb`), never `Rails.env.staging?` or a hardcoded host. Details: `docs/STAGING.md`.
+
 Health check endpoint: `GET /up`

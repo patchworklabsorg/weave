@@ -18,18 +18,29 @@
 #
 # Resolving both halves together keeps the file and its key in lockstep: either
 # the per-environment pair or the shared pair, never one of each.
+#
+# A named deployment (WEAVE_ENV=staging, see lib/weave.rb) runs with
+# RAILS_ENV=production but reads its own pair. It never falls back: the shared
+# file is not encrypted with its key, and before staging.yml.enc exists this is
+# what makes `credentials:edit` create it instead of opening the shared file.
 module CredentialsPaths
   module_function
 
   # Returns [content_path, key_path] as Pathnames. Neither is guaranteed to
   # exist — an absent key is a valid state that Rails handles on its own.
-  def resolve(root:, env:)
+  def resolve(root:, env:, deployment: nil)
+    return pair(root, deployment) if deployment
+
     env_content = root.join("config/credentials/#{env}.yml.enc")
 
     if env_content.exist?
-      [env_content, root.join("config/credentials/#{env}.key")]
+      pair(root, env)
     else
       [root.join("config/credentials.yml.enc"), root.join("config/master.key")]
     end
+  end
+
+  def pair(root, name)
+    [root.join("config/credentials/#{name}.yml.enc"), root.join("config/credentials/#{name}.key")]
   end
 end

@@ -86,6 +86,9 @@ Production runs at **[weave.patchworklabs.org](https://weave.patchworklabs.org)*
    infra repo's `weave` module: `weave-web` (Rails), `weave-worker` (Solid Queue), Postgres,
    and Redis as containers, fronted by Traefik with automatic TLS.
 
+Staging runs at **weave-staging.patchworklabs.org** on the same host and deploys on every
+push to `main`. See [docs/STAGING.md](docs/STAGING.md).
+
 Health check: `GET /up`.
 
 ## Security
