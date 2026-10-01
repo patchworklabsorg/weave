@@ -22,6 +22,7 @@ class SyncUserToSlackJob < ApplicationJob
         )
         Rails.logger.info "User #{user.email} found in Slack, updated slack_id"
       end
+      user.apply_slack_membership!(slack_user)
 
       # Sync PWL ID to Slack profile if user has p_id
       if user.p_id.present?

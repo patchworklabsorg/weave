@@ -30,7 +30,11 @@
 #                            oauth_userinfo GET    /oauth/userinfo(.:format)                                                                         oauth/userinfo#show
 #                      oauth_oauth_metadata GET    /oauth/.well-known/oauth-authorization-server(.:format)                                           oauth/discovery#oauth_authorization_server
 #                oauth_openid_configuration GET    /oauth/.well-known/openid-configuration(.:format)                                                 doorkeeper/openid_connect/discovery#provider
+#                                           GET    /(*path)                                                                                          redirect(302)
 #                                      root GET    /                                                                                                 home#index
+#   accept_code_of_conduct_slack_onboarding POST   /slack/code-of-conduct(.:format)                                                                  slack_onboarding#accept_code_of_conduct
+#                          slack_onboarding GET    /slack(.:format)                                                                                  slack_onboarding#show
+#                                           POST   /slack(.:format)                                                                                  slack_onboarding#create
 #                                           GET    /.well-known/*path                                                                                well_known#show
 #                                           GET    /security.txt(.:format)                                                                           redirect(301, /.well-known/security.txt)
 #                                    signup GET    /signup(.:format)                                                                                 users#new
@@ -316,9 +320,25 @@ Rails.application.routes.draw do
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
+  # slack.patchworklabs.org is the public "join our Slack" address. It sends
+  # everyone to the onboarding page on the canonical host, where the session
+  # cookie lives. Declared before `root` because the first matching route wins.
+  constraints(host: /\Aslack\./i) do
+    get "(*path)", format: false, to: redirect(status: 302) { |_params, _request|
+      Rails.application.routes.url_helpers.slack_onboarding_url(**Rails.application.config.action_mailer.default_url_options)
+    }
+  end
+
   # Defines the root path route ("/")
   # root "articles#index"
   root "home#index"
+
+  # Joining the Patchwork Labs Slack: shows each person the next step
+  # (sign up, accept the invite, accept the code of conduct) and lets them
+  # request or resend the invite.
+  resource :slack_onboarding, path: "slack", only: [:show, :create], controller: "slack_onboarding" do
+    post :accept_code_of_conduct, path: "code-of-conduct"
+  end
 
   # Well-known routes for standard compliance
   get ".well-known/*path", to: "well_known#show", format: false

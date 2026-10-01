@@ -11,6 +11,7 @@ class InviteToSlackJob < ApplicationJob
   def perform(user_id, resend: false)
     user = User.find_by(id: user_id)
     return unless user
+    return if user.slack_member?
 
     service = SlackService.new
     unless service.configured?

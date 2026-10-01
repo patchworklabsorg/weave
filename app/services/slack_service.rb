@@ -144,6 +144,13 @@ class SlackService
     )
   end
 
+  # Where members open the workspace, e.g. https://patchworklabs.slack.com.
+  # nil when the subdomain is not configured.
+  def self.workspace_url
+    subdomain = ENV["SLACK_WORKSPACE_SUBDOMAIN"] || Rails.application.credentials.dig(:slack, :workspace_subdomain)
+    "https://#{subdomain}.slack.com" if subdomain.present?
+  end
+
   def self.code_of_conduct_url
     ENV["SLACK_COC_URL"] || Rails.application.credentials.dig(:slack, :coc_url)
   end
@@ -271,10 +278,14 @@ class SlackService
           profile_attrs[:manager_id] = manager&.id if manager&.is_manager_or_manageable?
         end
 
-        if user.slack_id.blank? || user.slack_profile_synced_at.nil? || user.slack_profile_synced_at < 1.hour.ago
+        # list_members returns full members only, so everyone here is one.
+        # A guest who was promoted in Slack (not through Weave) gets picked
+        # up here even if their profile was synced recently.
+        if user.slack_id.blank? || !user.slack_member? || user.slack_profile_synced_at.nil? || user.slack_profile_synced_at < 1.hour.ago
           user.update!(
             slack_id: member["id"],
             slack_joined_at: Time.zone.at(member["updated"].to_i),
+            slack_membership: "member",
             **profile_attrs,
             slack_profile_synced_at: Time.current
           )
@@ -318,6 +329,7 @@ class SlackService
             slack_joined_at: Time.zone.at(slack_user["updated"].to_i)
           )
         end
+        user.apply_slack_membership!(slack_user)
 
         # Sync API-editable fields and PWL ID to Slack
         fields_updated = false
@@ -583,6 +595,7 @@ class SlackService
       password_confirmation: password,
       slack_id: member["id"],
       slack_joined_at: Time.zone.at(member["updated"].to_i),
+      slack_membership: User.slack_membership_for(member),
       **profile_attrs,
       slack_profile_synced_at: Time.current
     )

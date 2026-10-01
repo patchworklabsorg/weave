@@ -37,6 +37,7 @@
 #  slack_invited_at         :datetime
 #  slack_joined_at          :datetime
 #  slack_linkedin           :string
+#  slack_membership         :string           default("pending"), not null
 #  slack_organization       :string
 #  slack_phone              :string
 #  slack_profile_image_url  :string
@@ -95,17 +96,22 @@ class UserTest < ActiveSupport::TestCase
     assert user.valid?
   end
 
-  test "slack_member? is true when a slack_id is set, even without an invite" do
+  test "in_slack_workspace? is true when a slack_id is set, even without an invite" do
     user = User.new(slack_id: "U09E8DF4QBA")
 
-    assert user.slack_member?
+    assert user.in_slack_workspace?
     assert_nil user.slack_invited_at
   end
 
-  test "slack_member? is false without a slack_id" do
+  test "in_slack_workspace? is false without a slack_id" do
     user = User.new(slack_invited_at: Time.current)
 
-    assert_not user.slack_member?
+    assert_not user.in_slack_workspace?
+  end
+
+  test "slack_member? needs full membership, not only a slack_id" do
+    assert_not User.new(slack_id: "U09E8DF4QBA").slack_member?
+    assert User.new(slack_id: "U09E8DF4QBA", slack_membership: "member").slack_member?
   end
 
 end

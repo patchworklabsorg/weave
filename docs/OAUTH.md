@@ -72,6 +72,33 @@ The OAuth provider supports the following scopes:
 - `profile` (default): Access to basic profile information (name, username)
 - `email`: Access to email address and verification status
 - `admin`: Administrative privileges (restricted)
+- `slack`: Patchwork Labs Slack membership (`slack_member`, `slack_id`)
+
+### Slack membership claims
+
+Signing up for Weave does not make someone a full member of the Patchwork Labs
+Slack. New users join Slack as single-channel guests and become full members
+only after they accept the Code of Conduct. Request the `slack` scope to tell
+the two apart:
+
+| Claim | Type | Meaning |
+|-------|------|---------|
+| `slack_member` | boolean | `true` when the user is a regular (non-guest) member of the Slack workspace. |
+| `slack_id` | string | The user's Slack user ID. Omitted until they join Slack. Guests have one too, so check `slack_member` before you invite it to a channel. |
+
+Users with `slack_member: false` can still sign in. Each client decides what to
+allow them to do. Send them to `https://slack.patchworklabs.org` to finish
+joining.
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending: sign up
+    pending --> pending: confirm email, Slack invite sent
+    pending --> pending: accept invite (single-channel guest)
+    pending --> member: accept Code of Conduct (promoted)
+    member --> pending: made a guest or deactivated in Slack
+    [*] --> member: imported from Slack as a full member
+```
 
 ## Using the OAuth Provider
 
