@@ -79,7 +79,7 @@ class ApiMetricsService
       # /api/v1/users/123 -> /api/v1/users/:id
       path.gsub(/\/\d+/, "/:id")
           .gsub(/\/[a-f0-9-]{36}/, "/:uuid")  # UUIDs
-          .gsub(/\/PWL[A-Z0-9]+/, "/:p_id")   # Custom p_id format
+          .gsub(/\/S?PWL[A-Z0-9]+/, "/:p_id") # Custom p_id format (SPWL on staging)
     end
 
     def response_category(code)

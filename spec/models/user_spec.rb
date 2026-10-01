@@ -437,6 +437,25 @@ RSpec.describe User, type: :model do
     it "rejects a non-digit immediately after the prefix" do
       expect(build(:user, p_id: "PWLA0BCDEF123")).not_to be_valid
     end
+
+    it "rejects a staging ID outside staging" do
+      expect(build(:user, p_id: "SPWL0ABCDEF123")).not_to be_valid
+    end
+
+    context "when on staging" do
+      before { allow(Weave).to receive(:p_id_prefix).and_return("SPWL") }
+
+      it "generates SPWL IDs that pass validation" do
+        user = create(:user)
+
+        expect(user.p_id).to match(/\ASPWL\d[A-F0-9]{9}\z/)
+        expect(user).to be_valid
+      end
+
+      it "rejects a production PWL ID" do
+        expect(build(:user, p_id: "PWL0ABCDEF123")).not_to be_valid
+      end
+    end
   end
 
   describe "#regen_pid" do

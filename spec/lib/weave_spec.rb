@@ -41,6 +41,16 @@ RSpec.describe Weave do
     end
   end
 
+  describe ".p_id_prefix" do
+    it "is SPWL on staging, so sandbox IDs can't pass for real ones" do
+      expect(described_class.p_id_prefix("WEAVE_ENV" => "staging")).to eq("SPWL")
+    end
+
+    it "is PWL everywhere else" do
+      expect(described_class.p_id_prefix({})).to eq("PWL")
+    end
+  end
+
   describe ".mail_allowlist" do
     it "is nil when MAIL_ALLOWLIST is unset" do
       expect(described_class.mail_allowlist({})).to be_nil
