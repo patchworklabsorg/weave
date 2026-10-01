@@ -88,6 +88,8 @@ class UserSerializer
 
   private
 
+  # The legal name is deliberately left out. It is only for places that need
+  # it by law, and exposing it here could deadname someone.
   def base_attributes
     {
       id: @user.id,
@@ -97,9 +99,6 @@ class UserSerializer
       last_name: @user.last_name,
       phone_number: @user.phone_number,
       full_name: @user.full_name,
-      legal_first_name: @user.legal_first_name,
-      legal_last_name: @user.legal_last_name,
-      legal_full_name: @user.legal_full_name,
       initials: @user.initials,
       username: @user.username,
       role: @user.role,

@@ -175,6 +175,7 @@ class User < ApplicationRecord
   normalizes :email, with: ->(email) { email.strip.downcase }
   validate :email_not_claimed_by_another_user
   normalizes :legal_first_name, :legal_last_name, with: ->(name) { name.strip.presence }
+  validates :legal_first_name, :legal_last_name, length: { maximum: 100 }
   validates :password, presence: true, length: { minimum: 8 }, if: lambda {
     new_record? || password.present?
   }

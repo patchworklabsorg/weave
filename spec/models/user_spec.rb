@@ -192,6 +192,19 @@ RSpec.describe User, type: :model do
     end
   end
 
+  describe "legal name length" do
+    it "allows up to 100 characters" do
+      user = build(:user, legal_first_name: "a" * 100, legal_last_name: "b" * 100)
+      expect(user).to be_valid
+    end
+
+    it "rejects more than 100 characters" do
+      user = build(:user, legal_first_name: "a" * 101, legal_last_name: "b" * 101)
+      expect(user).not_to be_valid
+      expect(user.errors).to include(:legal_first_name, :legal_last_name)
+    end
+  end
+
   describe "legal name normalization" do
     it "strips whitespace and stores blank values as nil" do
       user = create(:user, legal_first_name: " Jonathan ", legal_last_name: "   ")

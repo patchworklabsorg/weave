@@ -39,13 +39,15 @@
           <div>
             <%= form.label :legal_first_name, class: "block text-sm font-medium text-ink mb-1" %>
             <%= form.text_field :legal_first_name,
-                placeholder: @user.first_name,
+                maxlength: 100,
+                placeholder: "Same as preferred name",
                 class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
           </div>
           <div>
             <%= form.label :legal_last_name, class: "block text-sm font-medium text-ink mb-1" %>
             <%= form.text_field :legal_last_name,
-                placeholder: @user.last_name,
+                maxlength: 100,
+                placeholder: "Same as preferred name",
                 class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
           </div>
           <div class="md:col-span-2 -mt-2">

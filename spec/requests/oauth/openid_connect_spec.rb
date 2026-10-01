@@ -177,6 +177,29 @@ RSpec.describe "OpenID Connect", type: :request do
     end
   end
 
+  # Users can keep a separate legal name for places that need it by law. It
+  # must never reach a relying party, which would deadname them.
+  describe "a user with a separate legal name" do
+    before do
+      user.update!(first_name: "John", last_name: "Doe", legal_first_name: "Jonathan", legal_last_name: "Dorian")
+    end
+
+    it "gets the preferred name in the id_token and no legal name" do
+      claims = verify_id_token(obtain_tokens(scope: "openid profile")["id_token"]).first
+
+      expect(claims).to include("name" => "John Doe", "given_name" => "John", "family_name" => "Doe")
+      expect(claims.to_json).not_to include("Jonathan", "Dorian", "legal")
+    end
+
+    it "gets the preferred name from userinfo and no legal name" do
+      token = obtain_tokens(scope: "openid profile").fetch("access_token")
+      get oauth_userinfo_path, headers: { "Authorization" => "Bearer #{token}" }
+
+      expect(response.parsed_body).to include("name" => "John Doe", "given_name" => "John", "family_name" => "Doe")
+      expect(response.body).not_to include("Jonathan", "Dorian", "legal")
+    end
+  end
+
   describe "GET /oauth/userinfo" do
     def userinfo(scope:)
       token = obtain_tokens(scope: scope).fetch("access_token")

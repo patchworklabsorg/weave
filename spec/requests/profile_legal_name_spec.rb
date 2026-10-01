@@ -37,4 +37,17 @@ RSpec.describe "Profile legal name", type: :request do
     expect(user.legal_first_name).to be_nil
     expect(user.legal_last_name).to be_nil
   end
+
+  it "does not let a user change another user's legal name" do
+    other = create(:user, :verified, legal_first_name: "Alex", legal_last_name: "Rivera")
+    sign_in_via_magic_link(user)
+
+    patch update_profile_path, params: {
+      id: other.id,
+      user: { id: other.id, legal_first_name: "Changed", legal_last_name: "Changed" }
+    }
+
+    expect(other.reload).to have_attributes(legal_first_name: "Alex", legal_last_name: "Rivera")
+    expect(user.reload).to have_attributes(legal_first_name: "Changed", legal_last_name: "Changed")
+  end
 end
