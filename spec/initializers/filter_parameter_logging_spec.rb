@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "Parameter log filtering" do
+RSpec.describe ActiveSupport::ParameterFilter, "with the app filter list" do
   let(:filter) { ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters) }
 
   it "filters the legal name from logs" do
