@@ -1,8 +1,10 @@
-<%# Small fixed marker on every page of the staging deployment (WEAVE_ENV=staging).
-    Bottom-left, opposite the theme toggle, and ignores pointer events so it
-    never covers a control. %>
+<%# Marks every page of the staging deployment (WEAVE_ENV=staging) so it can
+    never be mistaken for production: a thick frame around the viewport and a
+    label tab at the top. Both ignore pointer events so they never cover a
+    control. %>
 <% if Weave.staging? %>
-  <div class="fixed bottom-4 left-4 z-40 pointer-events-none select-none rounded-full bg-teal-soft px-3 py-1 text-xs font-semibold uppercase tracking-wide text-teal ring-1 ring-teal/30" role="status">
+  <div class="fixed inset-0 z-[60] pointer-events-none border-[6px] border-amber-500" aria-hidden="true"></div>
+  <div class="fixed top-0 left-1/2 z-[60] -translate-x-1/2 pointer-events-none select-none rounded-b-lg bg-amber-500 px-4 pb-1 pt-0.5 text-xs font-bold uppercase tracking-widest text-black shadow" role="status">
     Staging
   </div>
 <% end %>
