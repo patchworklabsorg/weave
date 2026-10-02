@@ -51,5 +51,20 @@ module Weave
       env["MAIL_ALLOWLIST"].to_s.split(",").map { |entry| entry.strip.downcase }.reject(&:empty?)
     end
 
+    # Domain mail is sent from. It must be verified with the mail provider, and
+    # the provider's API key may be restricted to it, so staging sets its own.
+    def mail_domain(env = ENV)
+      value = env["MAIL_DOMAIN"].to_s.strip
+      value.empty? ? PRODUCTION_HOST : value
+    end
+
+    def mail_address(env = ENV)
+      "hi@#{mail_domain(env)}"
+    end
+
+    def mail_from(env = ENV)
+      "Weave <#{mail_address(env)}>"
+    end
+
   end
 end

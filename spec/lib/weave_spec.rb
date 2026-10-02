@@ -67,4 +67,23 @@ RSpec.describe Weave do
       expect(described_class.mail_allowlist("MAIL_ALLOWLIST" => "")).to eq([])
     end
   end
+
+  describe ".mail_domain, .mail_address and .mail_from" do
+    it "default to the production host" do
+      expect(described_class.mail_domain({})).to eq("weave.patchworklabs.org")
+      expect(described_class.mail_address({})).to eq("hi@weave.patchworklabs.org")
+      expect(described_class.mail_from({})).to eq("Weave <hi@weave.patchworklabs.org>")
+    end
+
+    it "follow MAIL_DOMAIN" do
+      env = { "MAIL_DOMAIN" => "staging.example.org" }
+
+      expect(described_class.mail_address(env)).to eq("hi@staging.example.org")
+      expect(described_class.mail_from(env)).to eq("Weave <hi@staging.example.org>")
+    end
+
+    it "ignore a blank MAIL_DOMAIN" do
+      expect(described_class.mail_domain("MAIL_DOMAIN" => " ")).to eq("weave.patchworklabs.org")
+    end
+  end
 end

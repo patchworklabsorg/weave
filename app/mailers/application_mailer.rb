@@ -4,7 +4,7 @@ class ApplicationMailer < ActionMailer::Base
   include Rails.application.routes.url_helpers
   has_history
   utm_params
-  default from: "Weave <hi@weave.patchworklabs.org>", reply_to: "hi@weave.patchworklabs.org"
+  default from: -> { Weave.mail_from }, reply_to: -> { Weave.mail_address }
   layout "mailer"
 
   def env_subject(base_subject)
