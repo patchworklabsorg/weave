@@ -183,7 +183,7 @@ RSpec.describe SlackService do
     end
 
     it "matches labels without regard to case" do
-      fields = [{ "id" => "Xf_ANY", "label" => "  pwl id " }]
+      fields = [{ "id" => "Xf_ANY", "label" => " PWL_IDP_ID " }]
       allow(user_client).to receive(:team_profile_get).and_return("ok" => true, "profile" => { "fields" => fields })
       pushed = nil
       allow(user_client).to receive(:users_profile_set) { |args| pushed = JSON.parse(args[:profile]) }

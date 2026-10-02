@@ -20,9 +20,9 @@ class SlackService
   # custom field values, so they are read only from it.
   PULL_ONLY_CUSTOM_FIELDS = {
     slack_role_description: "Role Description",
-    slack_website: "Website",
-    slack_github: "GitHub",
-    slack_linkedin: "LinkedIn"
+    slack_website: "Personal Website",
+    slack_github: "Github",
+    slack_linkedin: "Linkedin"
   }.freeze
 
   # Custom fields that Weave admins can edit too (see #push_profile_fields).
@@ -37,7 +37,7 @@ class SlackService
   }.freeze
 
   MANAGER_FIELD = "Manager"
-  PWL_ID_FIELD = "PWL ID"
+  PWL_ID_FIELD = "pwl_idp_id"
 
   # How long a workspace's label -> field ID map is cached.
   CUSTOM_FIELD_IDS_TTL = 1.hour
