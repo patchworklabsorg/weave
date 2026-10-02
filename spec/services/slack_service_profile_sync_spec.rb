@@ -9,8 +9,19 @@ RSpec.describe SlackService do
     described_class.allocate.tap { |service| service.instance_variable_set(:@user_client, user_client) }
   end
 
+  # This workspace's field IDs, as team.profile.get reports them. Real IDs
+  # differ per workspace; these only need to be stable within the spec.
+  def field_id(label) = "Xf_#{label.parameterize(separator: '_')}"
+
+  def team_profile(labels = [*described_class::PULL_ONLY_CUSTOM_FIELDS.values, *described_class::SHARED_CUSTOM_FIELDS.values,
+                             described_class::MANAGER_FIELD, described_class::PWL_ID_FIELD])
+    { "ok" => true, "profile" => { "fields" => labels.map { |label| { "id" => field_id(label), "label" => label } } } }
+  end
+
+  before { allow(user_client).to receive(:team_profile_get).and_return(team_profile) }
+
   def custom_fields(values)
-    values.to_h { |attr, value| [described_class::SHARED_CUSTOM_FIELDS.fetch(attr), { "value" => value }] }
+    values.to_h { |attr, value| [field_id(described_class::SHARED_CUSTOM_FIELDS.fetch(attr)), { "value" => value }] }
   end
 
   describe "#sync_slack_users_to_idp profile fields" do
@@ -131,20 +142,20 @@ RSpec.describe SlackService do
       profile = pushed_profile(user)
 
       expect(profile["title"]).to eq("Lead")
-      expect(profile.dig("fields", described_class::SHARED_CUSTOM_FIELDS[:slack_cost_center], "value")).to eq("")
-      expect(profile.dig("fields", described_class::MANAGER_FIELD, "value")).to eq("")
+      expect(profile.dig("fields", field_id(described_class::SHARED_CUSTOM_FIELDS[:slack_cost_center]), "value")).to eq("")
+      expect(profile.dig("fields", field_id(described_class::MANAGER_FIELD), "value")).to eq("")
     end
 
     it "sends the manager's Slack ID" do
       user = build(:user, manager: build(:user, slack_id: "U903"))
 
-      expect(pushed_profile(user).dig("fields", described_class::MANAGER_FIELD, "value")).to eq("U903")
+      expect(pushed_profile(user).dig("fields", field_id(described_class::MANAGER_FIELD), "value")).to eq("U903")
     end
 
     it "leaves out a manager who has no Slack account" do
       user = create(:user, manager: create(:user))
 
-      expect(pushed_profile(user)["fields"]).not_to have_key(described_class::MANAGER_FIELD)
+      expect(pushed_profile(user)["fields"]).not_to have_key(field_id(described_class::MANAGER_FIELD))
     end
 
     it "raises Slack errors so the job can retry" do
@@ -156,6 +167,72 @@ RSpec.describe SlackService do
 
     it "does nothing without a user token" do
       expect(service_with(nil).push_profile_fields("U802", build(:user))).to be false
+    end
+  end
+
+  # Field IDs differ per workspace, so they come from team.profile.get by label.
+  describe "custom field lookup by label" do
+    let(:member) { { "id" => "U800", "updated" => 1.year.ago.to_i, "profile" => { "email" => "sync@example.com" } } }
+
+    def sync
+      allow(user_client).to receive(:users_profile_get).with(user: "U800")
+                                                       .and_return("ok" => true, "profile" => { "fields" => custom_fields(slack_city: "Boston") })
+      service = service_with(user_client)
+      allow(service).to receive_messages(configured?: true, list_members: [member.deep_dup])
+      service.sync_slack_users_to_idp
+    end
+
+    it "matches labels without regard to case" do
+      fields = [{ "id" => "Xf_ANY", "label" => " PWL_IDP_ID " }]
+      allow(user_client).to receive(:team_profile_get).and_return("ok" => true, "profile" => { "fields" => fields })
+      pushed = nil
+      allow(user_client).to receive(:users_profile_set) { |args| pushed = JSON.parse(args[:profile]) }
+
+      service_with(user_client).send(:update_slack_profile_field, "U804", "PWL0ABCDEF123")
+
+      expect(pushed).to eq("fields" => { "Xf_ANY" => { "value" => "PWL0ABCDEF123" } })
+    end
+
+    it "keeps a Weave value when the workspace has no field for it" do
+      allow(user_client).to receive(:team_profile_get).and_return(team_profile([described_class::SHARED_CUSTOM_FIELDS[:slack_city]]))
+      user = create(:user, :verified, email: "sync@example.com", slack_id: "U800", slack_city: "Old", slack_cost_center: "CC-1")
+
+      sync
+
+      expect([user.reload.slack_city, user.slack_cost_center]).to eq(["Boston", "CC-1"])
+    end
+
+    it "keeps every custom field when the lookup fails" do
+      allow(user_client).to receive(:team_profile_get).and_raise(Slack::Web::Api::Errors::SlackError, "missing_scope")
+      user = create(:user, :verified, email: "sync@example.com", slack_id: "U800", slack_city: "Old", slack_cost_center: "CC-1")
+
+      sync
+
+      expect([user.reload.slack_city, user.slack_cost_center]).to eq(["Old", "CC-1"])
+    end
+
+    it "leaves out fields the workspace does not have when pushing" do
+      allow(user_client).to receive(:team_profile_get).and_return(team_profile([described_class::SHARED_CUSTOM_FIELDS[:slack_city]]))
+      pushed = nil
+      allow(user_client).to receive(:users_profile_set) { |args| pushed = JSON.parse(args[:profile]) }
+
+      service_with(user_client).push_profile_fields("U802", build(:user, slack_city: "Boston", slack_title: "Lead"))
+
+      expect(pushed).to eq("title" => "Lead", "fields" => { field_id("City") => { "value" => "Boston" } })
+    end
+
+    it "raises on push when the lookup fails, so the job retries" do
+      allow(user_client).to receive(:team_profile_get).and_raise(Slack::Web::Api::Errors::SlackError, "fatal_error")
+
+      expect { service_with(user_client).push_profile_fields("U802", build(:user)) }
+        .to raise_error(described_class::ApiError)
+    end
+
+    it "skips the PWL ID when the workspace has no PWL ID field" do
+      allow(user_client).to receive(:team_profile_get).and_return(team_profile(["City"]))
+      expect(user_client).not_to receive(:users_profile_set)
+
+      service_with(user_client).send(:update_slack_profile_field, "U804", "PWL0ABCDEF123")
     end
   end
 end

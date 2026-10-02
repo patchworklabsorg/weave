@@ -10,6 +10,9 @@ namespace :slack do
     cleared_count = 0
     error_count = 0
 
+    field_id = service.send(:custom_field_id, SlackService::PWL_ID_FIELD)
+    abort "Slack workspace has no \"#{SlackService::PWL_ID_FIELD}\" profile field" unless field_id
+
     User.where.not(slack_id: nil).find_each do |user|
       begin
         # Set the PWL ID field to empty string
@@ -19,7 +22,7 @@ namespace :slack do
             user: user.slack_id,
             profile: {
               fields: {
-                "Xf09J13S96F9" => { value: "" }
+                field_id => { value: "" }
               }
             }.to_json
           )
