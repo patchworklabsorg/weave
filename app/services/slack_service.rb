@@ -14,27 +14,33 @@ class SlackService
     slack_title: "title"
   }.freeze
 
-  # Custom profile field IDs from the Slack workspace configuration. Only
-  # users.profile.get returns custom fields, so they are read only from it.
+  # Custom profile fields, by their label in the Slack workspace. Field IDs
+  # differ between workspaces (production and the staging test workspace), so
+  # #custom_field_ids looks them up by label. Only users.profile.get returns
+  # custom field values, so they are read only from it.
   PULL_ONLY_CUSTOM_FIELDS = {
-    slack_role_description: "Xf09E7DJ7Y1Y",
-    slack_website: "Xf07CK5ZT401",
-    slack_github: "Xf09JVCPFL4R",
-    slack_linkedin: "Xf09J13F51KR"
+    slack_role_description: "Role Description",
+    slack_website: "Website",
+    slack_github: "GitHub",
+    slack_linkedin: "LinkedIn"
   }.freeze
 
   # Custom fields that Weave admins can edit too (see #push_profile_fields).
   SHARED_CUSTOM_FIELDS = {
-    slack_city: "Xf078WGTT53R",
-    slack_state: "Xf079ZT2R5DW",
-    slack_country: "Xf079B0K3ASF",
-    slack_organization: "Xf079B0K367M",
-    slack_division: "Xf079PPEUW2D",
-    slack_department: "Xf07986PJQPP",
-    slack_cost_center: "Xf079B3V5734"
+    slack_city: "City",
+    slack_state: "State",
+    slack_country: "Country",
+    slack_organization: "Organization",
+    slack_division: "Division",
+    slack_department: "Department",
+    slack_cost_center: "Cost Center"
   }.freeze
 
-  MANAGER_FIELD = "Xf07986PJV2R"
+  MANAGER_FIELD = "Manager"
+  PWL_ID_FIELD = "PWL ID"
+
+  # How long a workspace's label -> field ID map is cached.
+  CUSTOM_FIELD_IDS_TTL = 1.hour
 
   # Weave attributes that #push_profile_fields sends to Slack.
   PUSHED_ATTRIBUTES = ["slack_title", "manager_id", *SHARED_CUSTOM_FIELDS.keys.map(&:to_s)].freeze
@@ -426,12 +432,18 @@ class SlackService
       return false
     end
 
-    fields = SHARED_CUSTOM_FIELDS.to_h { |attr, field_id| [field_id, { value: user.public_send(attr).to_s }] }
+    # Without the field IDs, pushing would send only the title and report
+    # success. Raise instead, so PushSlackProfileFieldsJob retries.
+    raise ApiError, "Could not read the Slack profile fields" unless custom_field_ids
+
+    fields = custom_field_ids_for(SHARED_CUSTOM_FIELDS).to_h { |attr, field_id| [field_id, { value: user.public_send(attr).to_s }] }
     manager = user.manager
-    if manager.nil?
-      fields[MANAGER_FIELD] = { value: "" }
-    elsif manager.slack_id.present?
-      fields[MANAGER_FIELD] = { value: manager.slack_id }
+    if (manager_field_id = custom_field_id(MANAGER_FIELD))
+      if manager.nil?
+        fields[manager_field_id] = { value: "" }
+      elsif manager.slack_id.present?
+        fields[manager_field_id] = { value: manager.slack_id }
+      end
     end
 
     @user_client.users_profile_set(
@@ -548,18 +560,55 @@ class SlackService
       return
     end
 
+    field_id = custom_field_id(PWL_ID_FIELD)
+    unless field_id
+      Rails.logger.warn "Slack workspace has no \"#{PWL_ID_FIELD}\" profile field, cannot sync PWL ID"
+      return
+    end
+
     @user_client.users_profile_set(
       user: slack_user_id,
-      profile: {
-        fields: {
-          "Xf09J13S96F9" => { value: p_id }
-        }
-      }.to_json
+      profile: { fields: { field_id => { value: p_id } } }.to_json
     )
 
     Rails.logger.info "Updated Slack profile field for user #{slack_user_id} with PWL ID #{p_id}"
   rescue Slack::Web::Api::Errors::SlackError => e
     Rails.logger.error "Error updating Slack profile field for #{slack_user_id}: #{e.message}"
+  end
+
+  # Label -> field ID for this workspace's custom profile fields, from
+  # team.profile.get (user token, users.profile:read). Labels match without
+  # regard to case. Cached for CUSTOM_FIELD_IDS_TTL. nil when the lookup
+  # fails; a failure is not cached.
+  def custom_field_ids
+    @custom_field_ids ||= Rails.cache.fetch(["slack/custom_field_ids", team_id], expires_in: CUSTOM_FIELD_IDS_TTL, skip_nil: true) do
+      fetch_custom_field_ids
+    end
+  end
+
+  def fetch_custom_field_ids
+    return unless @user_client
+
+    response = @user_client.team_profile_get
+    ids = Array(response.dig("profile", "fields")).to_h { |field| [field["label"].to_s.strip.downcase, field["id"]] }
+
+    expected = [*PULL_ONLY_CUSTOM_FIELDS.values, *SHARED_CUSTOM_FIELDS.values, MANAGER_FIELD, PWL_ID_FIELD]
+    missing = expected.reject { |label| ids.key?(label.downcase) }
+    Rails.logger.warn "Slack workspace has no profile field for: #{missing.join(', ')}" if missing.any?
+
+    ids
+  rescue Slack::Web::Api::Errors::SlackError, Slack::Web::Api::Errors::TooManyRequestsError => e
+    Rails.logger.error "Error reading Slack profile fields: #{e.message}"
+    nil
+  end
+
+  def custom_field_id(label)
+    custom_field_ids&.[](label.downcase)
+  end
+
+  # attr => field ID for the labels in labels_by_attr that this workspace has.
+  def custom_field_ids_for(labels_by_attr)
+    labels_by_attr.filter_map { |attr, label| (field_id = custom_field_id(label)) && [attr, field_id] }.to_h
   end
 
   # Map Slack profile values to Weave attributes. Blank values become nil, so
@@ -577,10 +626,13 @@ class SlackService
     image_url = profile["image_512"].presence || profile["image_192"].presence
     attrs[:slack_profile_image_url] = image_url if image_url
 
-    if full_profile
+    # Only fields this workspace has are read. A missing field, or a failed
+    # lookup, leaves the Weave value alone instead of clearing it.
+    if full_profile && custom_field_ids
       # Slack sends an empty array, not a hash, when no custom field is set.
       fields = profile["fields"].is_a?(Hash) ? profile["fields"] : {}
-      PULL_ONLY_CUSTOM_FIELDS.merge(SHARED_CUSTOM_FIELDS, slack_manager_id: MANAGER_FIELD).each do |attr, field_id|
+      labels = PULL_ONLY_CUSTOM_FIELDS.merge(SHARED_CUSTOM_FIELDS, slack_manager_id: MANAGER_FIELD)
+      custom_field_ids_for(labels).each do |attr, field_id|
         attrs[attr] = fields.dig(field_id, "value").presence
       end
     end
