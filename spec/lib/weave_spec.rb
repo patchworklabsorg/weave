@@ -52,19 +52,52 @@ RSpec.describe Weave do
   end
 
   describe ".mail_allowlist" do
-    it "is nil when MAIL_ALLOWLIST is unset" do
-      expect(described_class.mail_allowlist({})).to be_nil
+    let(:staging) { { "WEAVE_ENV" => "staging" } }
+
+    it "is nil without the credential outside staging" do
+      expect(described_class.mail_allowlist(credentials: {}, env: {})).to be_nil
     end
 
-    it "splits, trims and downcases the entries" do
-      env = { "MAIL_ALLOWLIST" => " @PatchworkLabs.org, Ops@Example.com ,," }
-
-      expect(described_class.mail_allowlist(env)).to eq(["@patchworklabs.org", "ops@example.com"])
+    # A missing credential must not silently turn staging into "mail everyone".
+    it "is an empty list, allowing nobody, without the credential on staging" do
+      expect(described_class.mail_allowlist(credentials: {}, env: staging)).to eq([])
     end
 
-    # A blanked value must not silently turn into "mail everyone".
-    it "is an empty list, allowing nobody, when set but blank" do
-      expect(described_class.mail_allowlist("MAIL_ALLOWLIST" => "")).to eq([])
+    it "trims and downcases a list" do
+      credentials = { mail_allowlist: [" @PatchworkLabs.org", "Ops@Example.com ", ""] }
+
+      expect(described_class.mail_allowlist(credentials: credentials, env: staging))
+        .to eq(["@patchworklabs.org", "ops@example.com"])
+    end
+
+    it "accepts a comma-separated string" do
+      credentials = { mail_allowlist: "@patchworklabs.org, ops@example.com,," }
+
+      expect(described_class.mail_allowlist(credentials: credentials, env: {}))
+        .to eq(["@patchworklabs.org", "ops@example.com"])
+    end
+
+    it "is an empty list, allowing nobody, when the credential is empty" do
+      expect(described_class.mail_allowlist(credentials: { mail_allowlist: [] }, env: {})).to eq([])
+    end
+  end
+
+  describe ".mail_domain, .mail_address and .mail_from" do
+    it "default to the production host" do
+      expect(described_class.mail_domain({})).to eq("weave.patchworklabs.org")
+      expect(described_class.mail_address({})).to eq("hi@weave.patchworklabs.org")
+      expect(described_class.mail_from({})).to eq("Weave <hi@weave.patchworklabs.org>")
+    end
+
+    it "follow MAIL_DOMAIN" do
+      env = { "MAIL_DOMAIN" => "staging.example.org" }
+
+      expect(described_class.mail_address(env)).to eq("hi@staging.example.org")
+      expect(described_class.mail_from(env)).to eq("Weave <hi@staging.example.org>")
+    end
+
+    it "ignore a blank MAIL_DOMAIN" do
+      expect(described_class.mail_domain("MAIL_DOMAIN" => " ")).to eq("weave.patchworklabs.org")
     end
   end
 end

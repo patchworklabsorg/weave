@@ -42,13 +42,30 @@ module Weave
       staging?(env) ? "SPWL" : "PWL"
     end
 
-    # MAIL_ALLOWLIST as downcased entries ("@domain" or an exact address), or
-    # nil when the variable is unset, which means "deliver to anyone". A set but
-    # empty list allows nobody, so a blanked value fails closed.
-    def mail_allowlist(env = ENV)
-      return nil unless env.key?("MAIL_ALLOWLIST")
+    # Who may receive mail, from the `mail_allowlist` credential: a list (or a
+    # comma-separated string) of "@domain" entries and exact addresses, returned
+    # downcased. nil means "deliver to anyone". Staging fails closed: without the
+    # credential it allows nobody, so a missing entry never mails real people.
+    def mail_allowlist(credentials: Rails.application.credentials, env: ENV)
+      entries = credentials[:mail_allowlist]
+      return (staging?(env) ? [] : nil) if entries.nil?
 
-      env["MAIL_ALLOWLIST"].to_s.split(",").map { |entry| entry.strip.downcase }.reject(&:empty?)
+      Array(entries).flat_map { |entry| entry.to_s.split(",") }.map { |entry| entry.strip.downcase }.reject(&:empty?)
+    end
+
+    # Domain mail is sent from. It must be verified with the mail provider, and
+    # the provider's API key may be restricted to it, so staging sets its own.
+    def mail_domain(env = ENV)
+      value = env["MAIL_DOMAIN"].to_s.strip
+      value.empty? ? PRODUCTION_HOST : value
+    end
+
+    def mail_address(env = ENV)
+      "hi@#{mail_domain(env)}"
+    end
+
+    def mail_from(env = ENV)
+      "Weave <#{mail_address(env)}>"
     end
 
   end

@@ -11,12 +11,12 @@ production. Environment variables set the differences:
 | --- | --- | --- |
 | `WEAVE_ENV` | `staging` | Reads `config/credentials/staging.yml.enc`, shows the "Staging" badge, prefixes mail subjects with `[staging] `, sends `X-Robots-Tag: noindex`. |
 | `APP_HOST` | `weave-staging.patchworklabs.org` | Sets the OIDC issuer, mailer links, the canonical URL and the allowed `Host`. |
-| `MAIL_ALLOWLIST` | for example `@patchworklabs.org` | Comma-separated list. An entry that starts with `@` is a domain, any other entry is an exact address. Mail to other recipients is dropped and logged. Set but empty means nobody gets mail. |
+| `MAIL_DOMAIN` | the domain verified in Resend for staging | Sets the sender to `hi@<MAIL_DOMAIN>`. The staging Resend key is restricted to this domain. Unset means `weave.patchworklabs.org`. |
 | `RAILS_MASTER_KEY` | contents of `config/credentials/staging.key` | Opens the staging credentials. |
 
-When `WEAVE_ENV`, `APP_HOST` and `MAIL_ALLOWLIST` are unset, nothing changes. Code reads
+When `WEAVE_ENV`, `APP_HOST` and `MAIL_DOMAIN` are unset, nothing changes. Code reads
 them through `lib/weave.rb` (`Weave.staging?`, `Weave.host`, `Weave.url`,
-`Weave.mail_allowlist`). Do not read them from `ENV` directly.
+`Weave.mail_allowlist`, `Weave.mail_from`). Do not read them from `ENV` directly.
 
 ## Deploys
 
@@ -57,6 +57,8 @@ openid_connect:
   signing_key: |        # openssl genrsa 2048
 resend:
   api_key:
+mail_allowlist:         # who may receive mail; see "Mail allowlist" below
+  - "@patchworklabs.org"
 okcomputer:
   username:
   password:
@@ -71,4 +73,21 @@ slack:                  # the staging Slack test workspace and app
   coc_channel:
   coc_url:
   default_channels:
+```
+
+## Mail allowlist
+
+Staging sends through the same Resend account as production. The `mail_allowlist`
+credential names who may receive mail from staging:
+
+- An entry that starts with `@` is a domain. Any other entry is an exact address.
+- Mail to other recipients is dropped and logged.
+- An empty list means nobody gets mail.
+- On staging, a missing `mail_allowlist` also means nobody gets mail.
+- In production, a missing `mail_allowlist` means everyone gets mail.
+
+To change the list, edit the staging credentials and redeploy:
+
+```bash
+WEAVE_ENV=staging bin/rails credentials:edit
 ```

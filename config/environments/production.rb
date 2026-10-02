@@ -66,11 +66,11 @@ Rails.application.configure do
   # staging's links at itself; see lib/weave.rb.
   config.action_mailer.default_url_options = { host: Weave.host }
 
-  # Default from and reply-to addresses. These stay on the production domain on
-  # every deployment because that is the domain verified with the mail provider.
+  # Default from and reply-to addresses. MAIL_DOMAIN picks the sending domain,
+  # which must be verified with the mail provider; see lib/weave.rb.
   config.action_mailer.default_options = {
-    from: "Weave <hi@weave.patchworklabs.org>",
-    reply_to: "hi@weave.patchworklabs.org"
+    from: Weave.mail_from,
+    reply_to: Weave.mail_address
   }
 
   # Transactional email via Resend (API key set in config/initializers/resend.rb).

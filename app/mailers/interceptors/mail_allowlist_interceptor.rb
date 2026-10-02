@@ -2,11 +2,12 @@
 
 module Interceptors
   # Keeps a non-production deployment from mailing real people. Staging sends
-  # through the same provider as production, so MAIL_ALLOWLIST (see
-  # Weave.mail_allowlist) names who may receive mail: "@domain" entries match a
-  # whole domain, anything else an exact address. Recipients not on the list are
-  # removed from to/cc/bcc; when none remain the message is not delivered.
-  # Unset, it changes nothing.
+  # through the same provider as production, so the `mail_allowlist` credential
+  # (see Weave.mail_allowlist) names who may receive mail: "@domain" entries
+  # match a whole domain, anything else an exact address. Recipients not on the
+  # list are removed from to/cc/bcc; when none remain the message is not
+  # delivered. Without the credential it changes nothing, except on staging,
+  # where it delivers nothing.
   #
   # On staging it also prefixes subjects with "[staging] " so an allowed
   # recipient can tell the two deployments apart.
@@ -31,11 +32,11 @@ module Interceptors
         message.public_send(:"#{field}=", kept)
       end
 
-      Rails.logger.info("MAIL_ALLOWLIST dropped recipients: #{dropped.join(', ')}") if dropped.any?
+      Rails.logger.info("Mail allowlist dropped recipients: #{dropped.join(', ')}") if dropped.any?
       return if [message.to, message.cc, message.bcc].any?(&:present?)
 
       message.perform_deliveries = false
-      Rails.logger.info("MAIL_ALLOWLIST: no allowed recipients left, not delivering #{message.subject.inspect}")
+      Rails.logger.info("Mail allowlist: no allowed recipients left, not delivering #{message.subject.inspect}")
     end
 
     def self.allowed?(address, allowlist)
