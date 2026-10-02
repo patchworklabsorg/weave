@@ -19,7 +19,7 @@ RSpec.describe Interceptors::MailAllowlistInterceptor do
     mail
   end
 
-  context "when MAIL_ALLOWLIST is unset" do
+  context "when the mail allowlist is unset" do
     it "changes nothing" do
       mail = intercept(message(to: ["someone@example.com"], cc: ["other@example.org"]))
 
