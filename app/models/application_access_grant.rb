@@ -45,4 +45,7 @@ class ApplicationAccessGrant < ApplicationRecord
 
   scope :for_application, ->(application) { where(application_id: application.id) }
 
+  # Removing a grant can end access for the user, or for every group member.
+  after_destroy_commit -> { RevokeLostAppAccessJob.perform_later(application_id: application_id) }
+
 end
