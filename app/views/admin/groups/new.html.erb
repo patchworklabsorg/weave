@@ -1,0 +1,12 @@
+<% content_for :title, "New Group" %>
+
+<div class="mb-6 flex justify-between items-center">
+  <h2 class="font-display text-2xl font-bold text-ink">New Group</h2>
+  <%= link_to "Back to Groups", admin_groups_path, class: "btn-stitch-ghost" %>
+</div>
+
+<div class="max-w-2xl">
+  <div class="patch p-6">
+    <%= render "form", group: @group %>
+  </div>
+</div>

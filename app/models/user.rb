@@ -127,6 +127,15 @@ class User < ApplicationRecord
   has_many :oauth_access_tokens, class_name: "Doorkeeper::AccessToken",
                                  foreign_key: :resource_owner_id, dependent: :destroy, inverse_of: false
 
+  # Groups gate access to OAuth apps. Only unexpired memberships count.
+  has_many :group_memberships, class_name: "Group::Membership", dependent: :destroy
+  has_many :active_group_memberships, -> { active }, class_name: "Group::Membership", inverse_of: :user, dependent: nil
+  has_many :groups, through: :active_group_memberships
+  has_many :added_group_memberships, class_name: "Group::Membership",
+                                     foreign_key: :added_by_id, dependent: :nullify, inverse_of: :added_by
+  has_many :created_groups, class_name: "Group",
+                            foreign_key: :created_by_id, dependent: :nullify, inverse_of: :created_by
+
   # Records this user created. Nullify on delete so the records survive.
   has_many :created_services, class_name: "Service",
                               foreign_key: :created_by_id, dependent: :nullify, inverse_of: :created_by
