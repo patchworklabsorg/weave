@@ -22,6 +22,7 @@ en:
     scopes:
       admin: 'Perform administrative actions on your behalf'
       slack: 'See your Patchwork Labs Slack membership and Slack ID'
+      groups: 'See which of your Weave groups apply to this app'
 
     applications:
       confirmations:
