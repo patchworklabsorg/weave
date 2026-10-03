@@ -280,13 +280,12 @@ RSpec.describe "OpenID Connect", type: :request do
     end
 
     describe "the groups claim" do
-      let(:engineering) { create(:group, name: "Engineering", slug: "engineering") }
-      let(:design) { create(:group, name: "Design", slug: "design") }
-      let(:unlinked) { create(:group, name: "Payroll", slug: "payroll") }
-
       before do
-        [engineering, design, unlinked].each { |group| create(:group_membership, group: group, user: user) }
-        [engineering, design].each { |group| ApplicationAccessGrant.create!(application: application, grantee: group) }
+        %w[engineering design payroll].each do |slug|
+          group = create(:group, name: slug.titleize, slug: slug)
+          create(:group_membership, group: group, user: user)
+          ApplicationAccessGrant.create!(application: application, grantee: group) unless slug == "payroll"
+        end
       end
 
       it "lists only the user's groups that are linked to this app" do
@@ -300,7 +299,7 @@ RSpec.describe "OpenID Connect", type: :request do
       end
 
       it "leaves out a linked group whose membership has expired" do
-        Group::Membership.find_by!(group: design, user: user).update!(expires_at: 30.minutes.from_now)
+        Group::Membership.find_by!(group: Group.find_by!(slug: "design"), user: user).update!(expires_at: 30.minutes.from_now)
         token = obtain_tokens(scope: "openid groups").fetch("access_token")
 
         # Within the access token's 2-hour lifetime.
