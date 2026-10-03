@@ -24,7 +24,7 @@
 #
 # Foreign Keys
 #
-#  fk_rails_...  (created_by_id => users.id)
+#  fk_rails_...  (created_by_id => users.id) ON DELETE => nullify
 #
 FactoryBot.define do
   factory :group do

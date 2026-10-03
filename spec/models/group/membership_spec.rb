@@ -1,5 +1,32 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: group_memberships
+# Database name: primary
+#
+#  id          :bigint           not null, primary key
+#  expires_at  :datetime
+#  source      :string           default("manual"), not null
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#  added_by_id :bigint
+#  group_id    :bigint           not null
+#  user_id     :bigint           not null
+#
+# Indexes
+#
+#  index_group_memberships_on_added_by_id           (added_by_id)
+#  index_group_memberships_on_expires_at            (expires_at) WHERE (expires_at IS NOT NULL)
+#  index_group_memberships_on_group_id_and_user_id  (group_id,user_id) UNIQUE
+#  index_group_memberships_on_user_id               (user_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (added_by_id => users.id) ON DELETE => nullify
+#  fk_rails_...  (group_id => groups.id)
+#  fk_rails_...  (user_id => users.id)
+#
 require "rails_helper"
 
 RSpec.describe Group::Membership do

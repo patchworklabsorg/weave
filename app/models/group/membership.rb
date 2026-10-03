@@ -32,7 +32,7 @@
 #
 # Foreign Keys
 #
-#  fk_rails_...  (added_by_id => users.id)
+#  fk_rails_...  (added_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (group_id => groups.id)
 #  fk_rails_...  (user_id => users.id)
 #
