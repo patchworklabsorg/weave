@@ -136,6 +136,9 @@ class User < ApplicationRecord
   has_many :created_groups, class_name: "Group",
                             foreign_key: :created_by_id, dependent: :nullify, inverse_of: :created_by
 
+  # OAuth apps this user may use by a direct grant (see AppAccess).
+  has_many :application_access_grants, as: :grantee, dependent: :destroy
+
   # Records this user created. Nullify on delete so the records survive.
   has_many :created_services, class_name: "Service",
                               foreign_key: :created_by_id, dependent: :nullify, inverse_of: :created_by

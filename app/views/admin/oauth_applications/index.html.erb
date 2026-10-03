@@ -39,6 +39,9 @@
               <%= application.confidential? ? 'bg-sky-soft text-sky' : 'bg-grape-soft text-ink-soft' %>">
               <%= application.confidential? ? 'Confidential' : 'Public' %>
             </span>
+            <% if AppAccess.restricted?(application) %>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orchid-soft text-orchid">Restricted</span>
+            <% end %>
           </td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-ink">
             <% if application.scopes.present? %>

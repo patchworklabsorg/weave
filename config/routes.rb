@@ -8,9 +8,9 @@
 #                       oauth_authorization GET    /oauth/authorize(.:format)                                                                        oauth/authorizations#new
 #                                           DELETE /oauth/authorize(.:format)                                                                        oauth/authorizations#destroy
 #                                           POST   /oauth/authorize(.:format)                                                                        oauth/authorizations#create
-#                               oauth_token POST   /oauth/token(.:format)                                                                            doorkeeper/tokens#create
-#                              oauth_revoke POST   /oauth/revoke(.:format)                                                                           doorkeeper/tokens#revoke
-#                          oauth_introspect POST   /oauth/introspect(.:format)                                                                       doorkeeper/tokens#introspect
+#                               oauth_token POST   /oauth/token(.:format)                                                                            oauth/tokens#create
+#                              oauth_revoke POST   /oauth/revoke(.:format)                                                                           oauth/tokens#revoke
+#                          oauth_introspect POST   /oauth/introspect(.:format)                                                                       oauth/tokens#introspect
 #                        oauth_applications GET    /oauth/applications(.:format)                                                                     doorkeeper/applications#index
 #                                           POST   /oauth/applications(.:format)                                                                     doorkeeper/applications#create
 #                     new_oauth_application GET    /oauth/applications/new(.:format)                                                                 doorkeeper/applications#new
@@ -129,6 +129,9 @@
 #                                           PUT    /admin/services/:id(.:format)                                                                     admin/services#update
 #                                           DELETE /admin/services/:id(.:format)                                                                     admin/services#destroy
 # regenerate_secret_admin_oauth_application PATCH  /admin/oauth_applications/:id/regenerate_secret(.:format)                                         admin/oauth_applications#regenerate_secret
+#     access_policy_admin_oauth_application PATCH  /admin/oauth_applications/:id/access_policy(.:format)                                             admin/oauth_applications#access_policy
+#     admin_oauth_application_access_grants POST   /admin/oauth_applications/:oauth_application_id/access_grants(.:format)                           admin/oauth_application_access_grants#create
+#      admin_oauth_application_access_grant DELETE /admin/oauth_applications/:oauth_application_id/access_grants/:id(.:format)                       admin/oauth_application_access_grants#destroy
 #                  admin_oauth_applications GET    /admin/oauth_applications(.:format)                                                               admin/oauth_applications#index
 #                                           POST   /admin/oauth_applications(.:format)                                                               admin/oauth_applications#create
 #               new_admin_oauth_application GET    /admin/oauth_applications/new(.:format)                                                           admin/oauth_applications#new
@@ -283,7 +286,7 @@ Rails.application.routes.draw do
   # app/views/doorkeeper/authorizations/ (still found via the parent's view
   # prefixes). See app/controllers/oauth/authorizations_controller.rb.
   use_doorkeeper do
-    controllers authorizations: "oauth/authorizations"
+    controllers authorizations: "oauth/authorizations", tokens: "oauth/tokens"
   end
 
   # OpenID Connect. Mounts, at the spec-mandated locations:
@@ -467,7 +470,10 @@ Rails.application.routes.draw do
       resources :oauth_applications do
         member do
           patch :regenerate_secret
+          patch :access_policy
         end
+
+        resources :access_grants, controller: "oauth_application_access_grants", only: [:create, :destroy]
       end
 
       # Mount engines under /admin path
