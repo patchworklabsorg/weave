@@ -73,6 +73,7 @@ The OAuth provider supports the following scopes:
 - `email`: Access to email address and verification status
 - `admin`: Administrative privileges (restricted)
 - `slack`: Patchwork Labs Slack membership (`slack_member`, `slack_id`)
+- `groups`: the user's groups that are linked to this app (`groups`)
 
 The `profile` scope also includes `pronouns`, a non-standard claim (a free-text
 string such as `they/them`). It is in the ID token and the userinfo response.
@@ -237,6 +238,16 @@ flowchart TD
 - `client_credentials` tokens have no user, so the policy does not apply to them.
 - The admin user page shows, for each restricted app, whether the user has access and why.
 - When a user loses access (a membership is removed or expires, a grant is removed, or an app becomes restricted), `RevokeLostAppAccessJob` revokes their tokens and unredeemed codes for that app. The endpoints above refuse those tokens before the job runs, so the job is cleanup.
+
+### Group claims
+
+Request the `groups` scope to get a `groups` claim in the ID token and the
+userinfo response. The value is a list of group slugs, for example
+`["engineering", "staff"]`. It holds only the user's groups that have an access
+grant on this app. Weave never sends the full list of groups. An admin can
+link a group to an app that is open to everyone, to send the claim without
+limiting access. The list is empty when no linked group matches. Slugs never
+change after a group is created, so clients can compare them safely.
 
 ## Security Considerations
 

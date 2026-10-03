@@ -16,7 +16,7 @@ RSpec.describe "OpenID Connect", type: :request do
     Doorkeeper::Application.create!(
       name: "Test Client",
       redirect_uri: redirect_uri,
-      scopes: "openid profile email phone admin slack",
+      scopes: "openid profile email phone admin slack groups",
       confidential: false
     )
   end
@@ -159,7 +159,7 @@ RSpec.describe "OpenID Connect", type: :request do
         "email"              => user.email,
         "email_verified"     => true
       )
-      expect(claims).not_to include("phone_number", "phone_number_verified", "admin", "slack_member", "slack_id")
+      expect(claims).not_to include("phone_number", "phone_number_verified", "admin", "slack_member", "slack_id", "groups")
     end
 
     it "carries the Slack membership claims when the slack scope is granted" do
@@ -277,6 +277,49 @@ RSpec.describe "OpenID Connect", type: :request do
       user.update!(slack_id: "U0MEMBER", slack_membership: "member")
 
       expect(userinfo(scope: "openid slack")).to include("slack_member" => true, "slack_id" => "U0MEMBER")
+    end
+
+    describe "the groups claim" do
+      let(:engineering) { create(:group, name: "Engineering", slug: "engineering") }
+      let(:design) { create(:group, name: "Design", slug: "design") }
+      let(:unlinked) { create(:group, name: "Payroll", slug: "payroll") }
+
+      before do
+        [engineering, design, unlinked].each { |group| create(:group_membership, group: group, user: user) }
+        [engineering, design].each { |group| ApplicationAccessGrant.create!(application: application, grantee: group) }
+      end
+
+      it "lists only the user's groups that are linked to this app" do
+        expect(userinfo(scope: "openid groups")).to include("groups" => %w[design engineering])
+      end
+
+      it "is in the id_token too" do
+        groups_claims = verify_id_token(obtain_tokens(scope: "openid groups")["id_token"]).first
+
+        expect(groups_claims["groups"]).to eq(%w[design engineering])
+      end
+
+      it "leaves out a linked group whose membership has expired" do
+        Group::Membership.find_by!(group: design, user: user).update!(expires_at: 30.minutes.from_now)
+        token = obtain_tokens(scope: "openid groups").fetch("access_token")
+
+        # Within the access token's 2-hour lifetime.
+        travel 1.hour do
+          get oauth_userinfo_path, headers: { "Authorization" => "Bearer #{token}" }
+        end
+
+        expect(response.parsed_body["groups"]).to eq(%w[engineering])
+      end
+
+      it "is an empty list when no linked group matches" do
+        Group::Membership.where(user: user).delete_all
+
+        expect(userinfo(scope: "openid groups")).to include("groups" => [])
+      end
+
+      it "is not sent without the groups scope" do
+        expect(userinfo(scope: "openid profile")).not_to have_key("groups")
+      end
     end
 
     it "omits slack_id for a user who is not in Slack yet" do
