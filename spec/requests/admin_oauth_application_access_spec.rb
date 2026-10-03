@@ -45,6 +45,18 @@ RSpec.describe "Admin OAuth application access", type: :request do
       expect(application.reload.access_policy).to eq("everyone")
     end
 
+    it "revokes tokens of users without a grant when an app is restricted" do
+      expect { patch access_policy_admin_oauth_application_path(application), params: { access_policy: "restricted" } }
+        .to have_enqueued_job(RevokeLostAppAccessJob).with(application_id: application.id)
+    end
+
+    it "does not revoke anything when an app is opened to everyone" do
+      application.update!(access_policy: "restricted")
+
+      expect { patch access_policy_admin_oauth_application_path(application), params: { access_policy: "everyone" } }
+        .not_to have_enqueued_job(RevokeLostAppAccessJob)
+    end
+
     it "refuses an unknown policy" do
       patch access_policy_admin_oauth_application_path(application), params: { access_policy: "admins-only" }
 

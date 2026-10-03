@@ -81,6 +81,7 @@ class Admin::OauthApplicationsController < Admin::BaseController
     end
 
     @application.update!(access_policy: policy)
+    RevokeLostAppAccessJob.perform_later(application_id: @application.id) if policy == "restricted"
     redirect_to admin_oauth_application_path(@application),
                 notice: policy == "restricted" ? "Only users with an access grant can use this app now." : "Everyone can use this app now."
   end
