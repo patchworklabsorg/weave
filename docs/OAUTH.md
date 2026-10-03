@@ -213,6 +213,30 @@ Locking, suspending or deactivating a user ends their access everywhere, not jus
 
 Unlocking or reactivating the account doesn't bring old tokens back; the user signs in to each client again.
 
+## Restricting an app to some users
+
+Each application has an access policy:
+
+- `everyone` (the default): every user who can sign in to Weave can use the app.
+- `restricted`: only users with an access grant can use the app. A grant names a user or a group. Group members count only while their membership is not expired.
+
+There is no admin bypass. An admin needs a grant like any other user. Only a superadmin can change the policy or the grants, on the app page in `/admin/oauth_applications`.
+
+Weave checks access at every endpoint that issues or accepts a user's token:
+
+```mermaid
+flowchart TD
+  A[GET or POST /oauth/authorize] -->|no access| D[403 page: You don't have access]
+  A -->|access| C[Consent screen]
+  T[POST /oauth/token: code exchange or refresh] -->|no access| E[invalid_grant, new token revoked]
+  U[GET /oauth/userinfo] -->|no access| F["401, WWW-Authenticate: Bearer error=invalid_token"]
+  I[POST /oauth/introspect] -->|no access| G["200, {active: false}"]
+```
+
+- A user without access sees a Weave page. Weave does not redirect to the client with `error=access_denied`, because the client can't give access.
+- `client_credentials` tokens have no user, so the policy does not apply to them.
+- The admin user page shows, for each restricted app, whether the user has access and why.
+
 ## Security Considerations
 
 1. **HTTPS Required**: OAuth endpoints enforce HTTPS in production

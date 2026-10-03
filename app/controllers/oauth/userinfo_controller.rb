@@ -21,7 +21,7 @@ module Oauth
     # still works. `:openid` is added on top so a spec-compliant OIDC client
     # that asked for, say, `openid email` and no `profile` is not turned away.
     before_action -> { doorkeeper_authorize!(:openid, :profile) }
-    before_action :reject_accounts_that_cannot_authenticate
+    before_action :reject_tokens_that_are_no_longer_usable
 
     def show
       render json: Doorkeeper::OpenidConnect::UserInfo.new(doorkeeper_token)
@@ -32,11 +32,12 @@ module Oauth
     # Locking, suspending or deactivating an account revokes its tokens (see
     # User#revoke_oauth_access!), but that only runs through model callbacks.
     # This keeps a token from outliving the account's ability to sign in even
-    # when the change bypassed them.
-    def reject_accounts_that_cannot_authenticate
-      return if User.find_by(id: doorkeeper_token.resource_owner_id)&.can_authenticate?
+    # when the change bypassed them, and from outliving the user's access to a
+    # restricted app (see AppAccess).
+    def reject_tokens_that_are_no_longer_usable
+      return if AppAccess.token_usable?(doorkeeper_token)
 
-      response.headers["WWW-Authenticate"] = 'Bearer error="invalid_token", error_description="The account can no longer sign in"'
+      response.headers["WWW-Authenticate"] = 'Bearer error="invalid_token", error_description="The token can no longer be used"'
       head :unauthorized
     end
 

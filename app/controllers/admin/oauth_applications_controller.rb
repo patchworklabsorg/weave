@@ -1,13 +1,16 @@
 # frozen_string_literal: true
 
 class Admin::OauthApplicationsController < Admin::BaseController
-  before_action :set_application, only: [:show, :edit, :update, :destroy, :regenerate_secret]
+  before_action :set_application, only: [:show, :edit, :update, :destroy, :regenerate_secret, :access_policy]
+  before_action :require_superadmin, only: [:access_policy]
 
   def index
     @applications = Doorkeeper::Application.order(created_at: :desc)
   end
 
   def show
+    @access_grants = ApplicationAccessGrant.for_application(@application).includes(:grantee).order(:grantee_type, :created_at)
+    @grantable_groups = Group.where.not(id: @access_grants.select { |grant| grant.grantee_type == "Group" }.map(&:grantee_id)).order(:name)
   end
 
   def new
@@ -69,7 +72,26 @@ class Admin::OauthApplicationsController < Admin::BaseController
     redirect_to admin_oauth_application_path(@application)
   end
 
+  # Opens an app to everyone or limits it to its access grants (see AppAccess).
+  # Superadmin only: this decides who can sign in to the app.
+  def access_policy
+    policy = params.require(:access_policy)
+    unless %w[everyone restricted].include?(policy)
+      return redirect_to(admin_oauth_application_path(@application), alert: "Unknown access policy.")
+    end
+
+    @application.update!(access_policy: policy)
+    redirect_to admin_oauth_application_path(@application),
+                notice: policy == "restricted" ? "Only users with an access grant can use this app now." : "Everyone can use this app now."
+  end
+
   private
+
+  def require_superadmin
+    return if current_user.superadmin?
+
+    redirect_to admin_oauth_application_path(@application), alert: "Only a superadmin can change who can use an app."
+  end
 
   def set_application
     @application = Doorkeeper::Application.find(params[:id])

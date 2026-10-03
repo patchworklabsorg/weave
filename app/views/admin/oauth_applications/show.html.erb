@@ -119,6 +119,79 @@
   </div>
 
   <!-- Redirect URIs -->
+  <!-- Access -->
+  <div id="access" class="patch p-6 lg:col-span-2">
+    <div class="flex flex-wrap justify-between items-start gap-4 mb-4">
+      <div>
+        <h3 class="font-display text-lg font-bold text-ink">Access</h3>
+        <% if AppAccess.restricted?(@application) %>
+          <p class="text-sm text-ink-soft">Only the users and groups below can use this app.</p>
+        <% else %>
+          <p class="text-sm text-ink-soft">Everyone who can sign in to Weave can use this app.</p>
+        <% end %>
+      </div>
+      <% if current_user.superadmin? %>
+        <% if AppAccess.restricted?(@application) %>
+          <%= button_to "Open to everyone", access_policy_admin_oauth_application_path(@application),
+              method: :patch, params: { access_policy: "everyone" }, class: "btn-stitch-ghost",
+              data: { turbo_confirm: "Let everyone who can sign in use #{@application.name}?" } %>
+        <% else %>
+          <%= button_to "Restrict access", access_policy_admin_oauth_application_path(@application),
+              method: :patch, params: { access_policy: "restricted" }, class: "btn-stitch",
+              data: { turbo_confirm: "Only users and groups with a grant will be able to use #{@application.name}. Continue?" } %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <% if @access_grants.any? %>
+      <ul class="divide-y divide-ink-soft/10 mb-4">
+        <% @access_grants.each do |grant| %>
+          <li class="flex items-center justify-between py-2 text-sm">
+            <span>
+              <% if grant.grantee.is_a?(Group) %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-soft text-teal mr-2">Group</span>
+                <%= link_to grant.grantee.name, admin_group_path(grant.grantee), class: "text-ink hover:text-grape font-medium" %>
+              <% else %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-soft text-sky mr-2">User</span>
+                <%= link_to grant.grantee.full_name, admin_user_path(grant.grantee), class: "text-ink hover:text-grape font-medium" %>
+                <span class="text-xs text-ink-faint"><%= grant.grantee.email %></span>
+              <% end %>
+            </span>
+            <% if current_user.superadmin? %>
+              <%= button_to "Remove", admin_oauth_application_access_grant_path(@application, grant), method: :delete,
+                  class: "text-red-600 hover:text-red-900",
+                  data: { turbo_confirm: "Remove this access grant?" } %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% elsif AppAccess.restricted?(@application) %>
+      <p class="text-sm text-ink-faint mb-4">No grants yet. Nobody can use this app.</p>
+    <% end %>
+
+    <% if current_user.superadmin? %>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <%= form_with scope: :access_grant, url: admin_oauth_application_access_grants_path(@application), local: true,
+            class: "flex items-end gap-2" do |form| %>
+          <div class="flex-1">
+            <%= form.label :group_id, "Add a group", class: "block text-sm font-medium text-ink" %>
+            <%= form.select :group_id, @grantable_groups.map { |group| [group.name, group.id] },
+                { include_blank: "Choose a group" }, required: true, class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+          </div>
+          <%= form.submit "Add", class: "btn-stitch" %>
+        <% end %>
+        <%= form_with scope: :access_grant, url: admin_oauth_application_access_grants_path(@application), local: true,
+            class: "flex items-end gap-2" do |form| %>
+          <div class="flex-1">
+            <%= form.label :email, "Add a user", class: "block text-sm font-medium text-ink" %>
+            <%= form.email_field :email, required: true, placeholder: "person@example.com", class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+          </div>
+          <%= form.submit "Add", class: "btn-stitch" %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
   <div class="patch p-6 lg:col-span-2">
     <h3 class="font-display text-lg font-bold text-ink mb-4">Redirect URIs</h3>
 

@@ -207,6 +207,27 @@
       <% end %>
     </div>
 
+    <!-- App Access -->
+    <div class="patch p-6">
+      <h2 class="font-display text-lg font-bold text-ink mb-4">App Access</h2>
+      <% restricted_apps = Doorkeeper::Application.where.not(access_policy: "everyone").order(:name) %>
+      <% if restricted_apps.any? %>
+        <ul class="space-y-2">
+          <% restricted_apps.each do |application| %>
+            <% decision = AppAccess.explain(@user, application) %>
+            <li class="text-sm">
+              <span class="<%= decision.permitted? ? 'text-teal' : 'text-red-600' %> font-medium"><%= decision.permitted? ? "Yes" : "No" %></span>
+              <%= link_to application.name, admin_oauth_application_path(application), class: "text-ink hover:text-grape font-medium" %>
+              <div class="text-xs text-ink-faint"><%= decision %></div>
+            </li>
+          <% end %>
+        </ul>
+        <p class="mt-3 text-xs text-ink-faint">Apps not listed are open to everyone who can sign in.</p>
+      <% else %>
+        <p class="text-sm text-ink-faint">Every app is open to everyone who can sign in.</p>
+      <% end %>
+    </div>
+
     <!-- Professional Information -->
     <div class="patch p-6">
       <h2 class="font-display text-lg font-bold text-ink mb-4">Professional Information</h2>

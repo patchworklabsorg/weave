@@ -1,0 +1,26 @@
+<% content_for :title, "No access" %>
+
+<div class="absolute inset-0 flex items-center justify-center p-6">
+  <div class="patch patch-tilt-l w-full max-w-md">
+    <div class="p-9 pb-5 text-center">
+      <p class="text-sm font-medium text-ink-faint uppercase tracking-wide">Weave &middot; Patchwork Labs</p>
+      <h1 class="font-display text-3xl font-bold text-ink mt-2">You don't have access</h1>
+    </div>
+
+    <div class="px-9 pb-9 space-y-6">
+      <div class="patch border-2 border-red-400 bg-red-50 p-5">
+        <p class="text-sm text-ink">
+          Your account can't use <strong class="text-grape"><%= @application.name %></strong>.
+        </p>
+      </div>
+
+      <p class="text-xs text-ink-faint text-center">
+        Access to this app is limited to some people and groups. If you need it, ask a Weave admin to give you access.
+      </p>
+
+      <div class="text-center">
+        <%= link_to "Go to your Weave account", root_path, class: "btn-stitch-ghost" %>
+      </div>
+    </div>
+  </div>
+</div>
