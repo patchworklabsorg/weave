@@ -58,6 +58,7 @@ class Group < ApplicationRecord
   validate :name_unique_among_live_groups
   validate :slug_unique_among_live_groups
   validate :slug_unchanged, on: :update
+  validate :slug_not_reserved, if: :manual?
 
   def to_param = slug
 
@@ -85,6 +86,12 @@ class Group < ApplicationRecord
     return unless Group.where.not(id: id).exists?(slug: slug)
 
     errors.add(:slug, :taken)
+  end
+
+  # System group slugs belong to SystemGroups, even before the system group
+  # exists, so a hand-made group can't take one and pick up synced members.
+  def slug_not_reserved
+    errors.add(:slug, "is reserved for a system group") if SystemGroups::SLUGS.include?(slug)
   end
 
   def slug_unchanged

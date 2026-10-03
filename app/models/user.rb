@@ -152,6 +152,8 @@ class User < ApplicationRecord
   after_update :sync_primary_email_address, if: -> { saved_change_to_email? || saved_change_to_email_confirmed_at? }
   after_update :revoke_oauth_access!, if: :lost_ability_to_authenticate?
   after_update_commit :push_pronouns_to_slack, if: :pronouns_need_push?
+  before_save :note_system_group_attribute_changes
+  after_commit :sync_system_groups, on: [:create, :update], if: -> { @system_group_attributes_changed }
 
   # Pronouns are one field, kept in sync with the Slack profile:
   # - An edit in Weave is pushed to Slack (blank clears Slack too) by
@@ -560,6 +562,22 @@ class User < ApplicationRecord
 
   def lost_ability_to_authenticate?
     (saved_change_to_locked_at? || saved_change_to_status?) && !can_authenticate?
+  end
+
+  # Noted before each save, not read from saved_changes after commit: another
+  # save in the same transaction (after_create callbacks do one) would replace
+  # saved_changes and hide the change.
+  def note_system_group_attribute_changes
+    return unless new_record? || SystemGroups::ATTRIBUTES.any? { |attribute| will_save_change_to_attribute?(attribute) }
+
+    @system_group_attributes_changed = true
+  end
+
+  # Keeps the system groups (staff, board, ...) in line with this user's
+  # attributes. Runs in the same request, so access follows the change at once.
+  def sync_system_groups
+    @system_group_attributes_changed = false
+    SystemGroups.sync(self)
   end
 
   def pronouns_need_push?
