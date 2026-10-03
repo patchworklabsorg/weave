@@ -1,0 +1,114 @@
+<% content_for :title, @group.name %>
+<% can_change = current_user.superadmin? && @group.editable? %>
+
+<div class="mb-6">
+  <div class="flex justify-between items-center mb-4">
+    <div>
+      <h2 class="font-display text-2xl font-bold text-ink"><%= @group.name %></h2>
+      <p class="text-ink-soft font-mono text-sm"><%= @group.slug %></p>
+    </div>
+    <div class="flex space-x-3">
+      <%= link_to "Back to Groups", admin_groups_path, class: "btn-stitch-ghost" %>
+      <% if can_change %>
+        <%= link_to "Edit", edit_admin_group_path(@group), class: "btn-stitch" %>
+        <%= button_to "Delete", admin_group_path(@group), method: :delete,
+            class: "btn-stitch-ghost text-red-600",
+            data: { turbo_confirm: "Delete #{@group.name}? All members will be removed from it." } %>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="patch p-6">
+    <h3 class="font-display text-lg font-bold text-ink mb-4">Details</h3>
+    <dl class="space-y-4">
+      <div>
+        <dt class="text-sm font-medium text-ink-faint">Type</dt>
+        <dd class="mt-1"><%= render "kind_badge", group: @group %></dd>
+      </div>
+      <% if @group.system? %>
+        <div>
+          <dd class="text-sm text-ink-soft">Weave keeps this group in sync from user attributes. You can't change it by hand.</dd>
+        </div>
+      <% end %>
+      <% if @group.description.present? %>
+        <div>
+          <dt class="text-sm font-medium text-ink-faint">Description</dt>
+          <dd class="mt-1 text-sm text-ink"><%= @group.description %></dd>
+        </div>
+      <% end %>
+      <div>
+        <dt class="text-sm font-medium text-ink-faint">Created</dt>
+        <dd class="mt-1 text-sm text-ink">
+          <%= @group.created_at.strftime("%B %d, %Y") %>
+          <% if @group.created_by %>by <%= @group.created_by.full_name %><% end %>
+        </dd>
+      </div>
+    </dl>
+  </div>
+
+  <div class="patch p-6 lg:col-span-2">
+    <h3 class="font-display text-lg font-bold text-ink mb-4">Members (<%= @memberships.count(&:active?) %>)</h3>
+
+    <% if can_change %>
+      <%= form_with model: @membership, scope: :group_membership, url: admin_group_memberships_path(@group), local: true,
+          class: "flex flex-wrap items-end gap-3 mb-6" do |form| %>
+        <div class="flex-1 min-w-48">
+          <%= form.label :email, "Email", class: "block text-sm font-medium text-ink" %>
+          <%= form.email_field :email, required: true, class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint", placeholder: "person@example.com" %>
+        </div>
+        <div>
+          <%= form.label :expires_at, "Expires (optional)", class: "block text-sm font-medium text-ink" %>
+          <%= form.datetime_local_field :expires_at, class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+        </div>
+        <%= form.submit "Add Member", class: "btn-stitch" %>
+      <% end %>
+    <% end %>
+
+    <% if @memberships.any? %>
+      <table class="min-w-full divide-y divide-ink-soft/20">
+        <thead>
+          <tr>
+            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-grape uppercase tracking-wider">User</th>
+            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-grape uppercase tracking-wider">Added</th>
+            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-grape uppercase tracking-wider">Expires</th>
+            <th scope="col" class="relative px-4 py-2"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-ink-soft/10">
+          <% @memberships.each do |membership| %>
+            <tr>
+              <td class="px-4 py-3 text-sm text-ink">
+                <%= link_to membership.user.full_name, admin_user_path(membership.user), class: "font-medium hover:text-grape" %>
+                <div class="text-xs text-ink-faint"><%= membership.user.email %></div>
+              </td>
+              <td class="px-4 py-3 text-sm text-ink-soft">
+                <%= time_ago_in_words(membership.created_at) %> ago
+                <% if membership.added_by %><div class="text-xs text-ink-faint">by <%= membership.added_by.full_name %></div><% end %>
+              </td>
+              <td class="px-4 py-3 text-sm">
+                <% if membership.expired? %>
+                  <span class="text-red-600">Expired</span>
+                <% elsif membership.expires_at %>
+                  <span class="text-ink"><%= membership.expires_at.strftime("%b %d, %Y %I:%M %p") %></span>
+                <% else %>
+                  <span class="text-ink-faint">Never</span>
+                <% end %>
+              </td>
+              <td class="px-4 py-3 text-right text-sm">
+                <% if can_change && membership.manual? %>
+                  <%= button_to "Remove", admin_group_membership_path(@group, membership), method: :delete,
+                      class: "text-red-600 hover:text-red-900",
+                      data: { turbo_confirm: "Remove #{membership.user.full_name} from #{@group.name}?" } %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <p class="text-sm text-ink-faint">This group has no members.</p>
+    <% end %>
+  </div>
+</div>

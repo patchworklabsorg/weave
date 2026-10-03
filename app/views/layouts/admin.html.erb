@@ -388,6 +388,12 @@
               <% end %>
             </li>
             <li class="admin-nav-item">
+              <%= link_to admin_groups_path,
+                  class: "admin-nav-link #{controller_name.in?(%w[groups group_memberships]) ? 'active' : ''}" do %>
+                Groups
+              <% end %>
+            </li>
+            <li class="admin-nav-item">
               <%= link_to admin_oauth_applications_path,
                   class: "admin-nav-link #{controller_name == 'oauth_applications' ? 'active' : ''}" do %>
                 OAuth Apps

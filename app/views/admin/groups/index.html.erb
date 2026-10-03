@@ -1,0 +1,48 @@
+<% content_for :title, "Groups" %>
+
+<div class="mb-6">
+  <h2 class="font-display text-2xl font-bold text-ink mb-4">Groups</h2>
+
+  <div class="flex justify-between items-center mb-4">
+    <p class="text-ink-soft">Sets of users. Groups will control who can use each OAuth app.</p>
+    <% if current_user.superadmin? %>
+      <%= link_to "New Group", new_admin_group_path, class: "btn-stitch" %>
+    <% end %>
+  </div>
+</div>
+
+<div class="patch overflow-hidden">
+  <table class="min-w-full divide-y divide-ink-soft/20">
+    <thead>
+      <tr>
+        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Name</th>
+        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Slug</th>
+        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Type</th>
+        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Members</th>
+        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Created</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-ink-soft/10">
+      <% @groups.each do |group| %>
+        <tr>
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-ink">
+            <%= link_to group.name, admin_group_path(group), class: "hover:text-grape" %>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-ink"><%= group.slug %></td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <%= render "kind_badge", group: group %>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-ink"><%= @member_counts.fetch(group.id, 0) %></td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-ink-soft"><%= time_ago_in_words(group.created_at) %> ago</td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <% if @groups.empty? %>
+    <div class="text-center py-12">
+      <p class="text-ink-soft text-lg mb-2">No groups yet</p>
+      <p class="text-ink-faint text-sm">Create a group to give a set of users access to an app.</p>
+    </div>
+  <% end %>
+</div>

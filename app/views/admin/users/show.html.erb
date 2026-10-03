@@ -187,6 +187,26 @@
       </dl>
     </div>
 
+    <!-- Groups -->
+    <div class="patch p-6">
+      <h2 class="font-display text-lg font-bold text-ink mb-4">Groups</h2>
+      <% memberships = @user.active_group_memberships.includes(:group).select(&:group).sort_by { |m| m.group.name } %>
+      <% if memberships.any? %>
+        <ul class="space-y-2">
+          <% memberships.each do |membership| %>
+            <li class="text-sm text-ink">
+              <%= link_to membership.group.name, admin_group_path(membership.group), class: "text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2" %>
+              <% if membership.expires_at %>
+                <span class="text-xs text-ink-faint">until <%= membership.expires_at.strftime("%b %d, %Y") %></span>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="text-sm text-ink-faint">Not in any group</p>
+      <% end %>
+    </div>
+
     <!-- Professional Information -->
     <div class="patch p-6">
       <h2 class="font-display text-lg font-bold text-ink mb-4">Professional Information</h2>
