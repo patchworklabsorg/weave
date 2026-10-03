@@ -37,3 +37,9 @@ slack_sync_bidirectional:
 expire_group_memberships:
   class: ExpireGroupMembershipsJob
   schedule: every 15 minutes
+
+# Repair drift in the system groups (staff, board, ...). User callbacks keep
+# them in sync; this catches changes that skipped callbacks.
+sync_system_groups:
+  class: SyncSystemGroupsJob
+  schedule: every hour

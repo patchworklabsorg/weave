@@ -139,7 +139,7 @@ RSpec.describe "Admin groups", type: :request do
     end
 
     context "with a system group" do
-      let!(:system_group) { create(:group, :system, name: "Staff", slug: "staff") }
+      let!(:system_group) { SystemGroups.ensure_groups!.fetch("staff") }
 
       it "refuses hand edits, deletion and member changes" do
         patch admin_group_path(system_group), params: { group: { name: "Renamed" } }
