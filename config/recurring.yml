@@ -31,3 +31,9 @@ blazer_send_failing_checks:
 slack_sync_bidirectional:
   command: "SlackSyncJob.perform_later(direction: 'both')"
   schedule: every 6 hours
+
+# Remove group memberships whose expiry has passed. They already grant nothing;
+# this keeps the member lists accurate and records the removal.
+expire_group_memberships:
+  class: ExpireGroupMembershipsJob
+  schedule: every 15 minutes

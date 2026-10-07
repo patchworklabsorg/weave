@@ -85,6 +85,16 @@
 #                                           PATCH  /admin/users/:id(.:format)                                                                        admin/users#update
 #                                           PUT    /admin/users/:id(.:format)                                                                        admin/users#update
 #                                           DELETE /admin/users/:id(.:format)                                                                        admin/users#destroy
+#                   admin_group_memberships POST   /admin/groups/:group_id/memberships(.:format)                                                     admin/group_memberships#create
+#                    admin_group_membership DELETE /admin/groups/:group_id/memberships/:id(.:format)                                                 admin/group_memberships#destroy
+#                              admin_groups GET    /admin/groups(.:format)                                                                           admin/groups#index
+#                                           POST   /admin/groups(.:format)                                                                           admin/groups#create
+#                           new_admin_group GET    /admin/groups/new(.:format)                                                                       admin/groups#new
+#                          edit_admin_group GET    /admin/groups/:id/edit(.:format)                                                                  admin/groups#edit
+#                               admin_group GET    /admin/groups/:id(.:format)                                                                       admin/groups#show
+#                                           PATCH  /admin/groups/:id(.:format)                                                                       admin/groups#update
+#                                           PUT    /admin/groups/:id(.:format)                                                                       admin/groups#update
+#                                           DELETE /admin/groups/:id(.:format)                                                                       admin/groups#destroy
 #                    activate_admin_service PATCH  /admin/services/:id/activate(.:format)                                                            admin/services#activate
 #                  deactivate_admin_service PATCH  /admin/services/:id/deactivate(.:format)                                                          admin/services#deactivate
 #                     suspend_admin_service PATCH  /admin/services/:id/suspend(.:format)                                                             admin/services#suspend
@@ -424,6 +434,10 @@ Rails.application.routes.draw do
           patch :regen_pid
           post :invite_to_slack
         end
+      end
+
+      resources :groups do
+        resources :memberships, controller: "group_memberships", only: [:create, :destroy]
       end
 
       resources :services do

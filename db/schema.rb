@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_01_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -295,6 +295,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_200000) do
     t.index ["sluggable_type", "sluggable_id"], name: "index_friendly_id_slugs_on_sluggable_type_and_sluggable_id"
   end
 
+  create_table "group_memberships", force: :cascade do |t|
+    t.bigint "added_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "expires_at"
+    t.bigint "group_id", null: false
+    t.string "source", default: "manual", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["added_by_id"], name: "index_group_memberships_on_added_by_id"
+    t.index ["expires_at"], name: "index_group_memberships_on_expires_at", where: "(expires_at IS NOT NULL)"
+    t.index ["group_id", "user_id"], name: "index_group_memberships_on_group_id_and_user_id", unique: true
+    t.index ["user_id"], name: "index_group_memberships_on_user_id"
+  end
+
+  create_table "groups", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.datetime "deleted_at"
+    t.text "description"
+    t.string "kind", default: "manual", null: false
+    t.string "name", null: false
+    t.string "slug", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_groups_on_created_by_id"
+    t.index ["deleted_at"], name: "index_groups_on_deleted_at"
+    t.index ["name"], name: "index_groups_on_name", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["slug"], name: "index_groups_on_slug", unique: true, where: "(deleted_at IS NULL)"
+  end
+
   create_table "lockbox_audits", force: :cascade do |t|
     t.string "context"
     t.datetime "created_at"
@@ -565,6 +594,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_200000) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "email_addresses", "users"
+  add_foreign_key "group_memberships", "groups"
+  add_foreign_key "group_memberships", "users"
+  add_foreign_key "group_memberships", "users", column: "added_by_id", on_delete: :nullify
+  add_foreign_key "groups", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_grants", "users", column: "resource_owner_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
