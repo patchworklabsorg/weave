@@ -21,11 +21,38 @@ module Oauth
   # redirect_uri parameter, so a crafted request cannot widen the policy by
   # asking to be sent somewhere new. Doorkeeper has already checked the parameter
   # against this same list before any consent screen renders.
+  #
+  # It also refuses users who may not use a restricted app (see AppAccess).
+  # The check runs after sign-in and before consent, for both the consent
+  # screen and the consent POST, so a previously approved app can't skip it.
+  # The user sees a Weave page instead of a redirect to the client with
+  # `error=access_denied`: the client can't grant access, and Weave can say who
+  # to ask.
   class AuthorizationsController < Doorkeeper::AuthorizationsController
     include OauthClientRedirectOrigins
 
+    before_action :require_app_access, only: [:new, :create] # rubocop:disable Rails/LexicallyScopedActionFilter -- both are defined by Doorkeeper::AuthorizationsController
+
     content_security_policy do |policy|
       policy.form_action(:self, *redirect_origins_for(pre_auth.client&.application))
+    end
+
+    private
+
+    def require_app_access
+      # PreAuthorization finds the client only while it validates, so validate
+      # first. A request that is not valid is Doorkeeper's error to report.
+      return unless pre_auth.authorizable?
+
+      application = pre_auth.client.application
+      return if AppAccess.permitted?(current_resource_owner, application)
+
+      # Ahoy drops requests it takes for bots, so the log line is the record
+      # that is always kept.
+      Rails.logger.info("OAuth access denied: user=#{current_resource_owner.p_id} application=#{application.uid}")
+      ahoy.track "OAuth access denied", application_uid: application.uid, user_id: current_resource_owner.id
+      @application = application
+      render "doorkeeper/authorizations/access_denied", status: :forbidden
     end
 
   end

@@ -486,16 +486,17 @@ Doorkeeper.configure do
   # end
   #
   # Refuse to hand out tokens (code exchange or refresh) for an account that can
-  # no longer sign in. Locking, suspending or deactivating already revokes the
-  # account's tokens and codes (User#revoke_oauth_access!), but only through
-  # model callbacks; this is the backstop for changes that bypassed them.
+  # no longer sign in, or that may no longer use this app (see AppAccess).
+  # Locking, suspending or deactivating already revokes the account's tokens
+  # and codes (User#revoke_oauth_access!), but only through model callbacks;
+  # this is the backstop for changes that bypassed them. It is also what stops
+  # a refresh token once its user loses access to a restricted app.
   # Doorkeeper calls this after it has created the new token, so that token is
   # revoked before the refusal (nobody has seen it: it's stored hashed).
   before_successful_strategy_response do |request|
     token = request.try(:access_token)
-    owner_id = token&.resource_owner_id
-    next if owner_id.nil? # client_credentials: no user involved
-    next if User.find_by(id: owner_id)&.can_authenticate?
+    next if token.nil?
+    next if AppAccess.token_usable?(token)
 
     token.revoke
     raise Doorkeeper::Errors::InvalidGrantReuse

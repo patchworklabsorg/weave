@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_02_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -141,6 +141,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_120000) do
     t.index ["user_id"], name: "index_ahoy_visits_on_user_id"
     t.index ["visit_token"], name: "index_ahoy_visits_on_visit_token", unique: true
     t.index ["visitor_token", "started_at"], name: "index_ahoy_visits_on_visitor_token_and_started_at"
+  end
+
+  create_table "application_access_grants", force: :cascade do |t|
+    t.bigint "application_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.bigint "grantee_id", null: false
+    t.string "grantee_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["application_id", "grantee_type", "grantee_id"], name: "index_application_access_grants_uniqueness", unique: true
+    t.index ["created_by_id"], name: "index_application_access_grants_on_created_by_id"
+    t.index ["grantee_type", "grantee_id"], name: "index_application_access_grants_on_grantee"
   end
 
   create_table "audits1984_audits", force: :cascade do |t|
@@ -370,6 +382,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_120000) do
   end
 
   create_table "oauth_applications", force: :cascade do |t|
+    t.string "access_policy", default: "everyone", null: false
     t.boolean "confidential", default: true, null: false
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -593,6 +606,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_120000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "application_access_grants", "oauth_applications", column: "application_id", on_delete: :cascade
+  add_foreign_key "application_access_grants", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "email_addresses", "users"
   add_foreign_key "group_memberships", "groups"
   add_foreign_key "group_memberships", "users"
