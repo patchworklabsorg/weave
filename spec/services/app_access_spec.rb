@@ -42,6 +42,47 @@ RSpec.describe AppAccess do
     expect(described_class.explain(user, application).reason).to eq(:direct)
   end
 
+  describe "app roles" do
+    let(:role) { ApplicationRole.create!(application: application, key: "reviewer", name: "Reviewer") }
+
+    it "allows a user who holds a role in the app and names the role" do
+      ApplicationRoleAssignment.create!(role: role, assignee: user)
+
+      decision = described_class.explain(user, application)
+
+      expect(decision).to be_permitted
+      expect(decision.to_s).to eq("Holds the Reviewer role")
+    end
+
+    it "allows a member of a group that holds a role" do
+      group = create(:group)
+      create(:group_membership, group: group, user: user)
+      ApplicationRoleAssignment.create!(role: role, assignee: group)
+
+      expect(described_class.explain(user, application).reason).to eq(:role)
+    end
+
+    it "does not count a role in another app" do
+      other = Doorkeeper::Application.create!(name: "Other", redirect_uri: "https://other.example.com/cb")
+      other_role = ApplicationRole.create!(application: other, key: "reviewer", name: "Reviewer")
+      ApplicationRoleAssignment.create!(role: other_role, assignee: user)
+
+      expect(described_class.permitted?(user, application)).to be(false)
+    end
+
+    it "lists role keys and linked group slugs for the app, sorted" do
+      admin_role = ApplicationRole.create!(application: application, key: "admin", name: "Admin")
+      group = create(:group, name: "Krater Admins")
+      unlinked = create(:group, name: "Payroll")
+      [group, unlinked].each { |g| create(:group_membership, group: g, user: user) }
+      ApplicationRoleAssignment.create!(role: admin_role, assignee: group)
+      ApplicationRoleAssignment.create!(role: role, assignee: user)
+
+      expect(described_class.role_keys(user, application)).to eq(%w[admin reviewer])
+      expect(described_class.group_slugs(user, application)).to eq(["krater-admins"])
+    end
+  end
+
   it "allows a member of a granted group and names the group" do
     group = create(:group, name: "Engineering")
     create(:group_membership, group: group, user: user)

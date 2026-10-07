@@ -228,6 +228,25 @@
       <% end %>
     </div>
 
+    <!-- App Roles -->
+    <div class="patch p-6">
+      <h2 class="font-display text-lg font-bold text-ink mb-4">App Roles</h2>
+      <% held_roles = ApplicationRole.held_by(@user).includes(:application).sort_by { |role| [role.application.name, role.key] } %>
+      <% if held_roles.any? %>
+        <ul class="space-y-2">
+          <% held_roles.each do |role| %>
+            <li class="text-sm">
+              <%= link_to role.application.name, admin_oauth_application_path(role.application, anchor: "roles"), class: "text-ink hover:text-grape font-medium" %>
+              <span class="text-ink-soft"><%= role.name %></span>
+              <code class="text-xs text-ink-faint"><%= role.key %></code>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="text-sm text-ink-faint">No roles in any app</p>
+      <% end %>
+    </div>
+
     <!-- Professional Information -->
     <div class="patch p-6">
       <h2 class="font-display text-lg font-bold text-ink mb-4">Professional Information</h2>

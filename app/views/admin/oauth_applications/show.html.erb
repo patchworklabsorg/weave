@@ -192,6 +192,107 @@
     <% end %>
   </div>
 
+  <!-- Roles -->
+  <div id="roles" class="patch p-6 lg:col-span-2">
+    <div class="mb-4">
+      <h3 class="font-display text-lg font-bold text-ink">Roles</h3>
+      <p class="text-sm text-ink-soft">Roles this app defines. The app reads the keys from the <code>roles</code> claim. A role also gives access when the app is restricted.</p>
+    </div>
+
+    <% if @roles.any? %>
+      <div class="space-y-4 mb-4">
+        <% @roles.each do |role| %>
+          <div class="rounded-lg border border-ink-soft/10 p-4">
+            <div class="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <span class="font-medium text-ink"><%= role.name %></span>
+                <code class="ml-2 text-xs text-ink-soft"><%= role.key %></code>
+                <% if role.description.present? %>
+                  <p class="text-xs text-ink-faint"><%= role.description %></p>
+                <% end %>
+              </div>
+              <% if current_user.superadmin? %>
+                <%= button_to "Delete role", admin_oauth_application_role_path(@application, role), method: :delete,
+                    class: "text-red-600 hover:text-red-900 text-sm",
+                    data: { turbo_confirm: "Delete the #{role.name} role? Everyone loses it." } %>
+              <% end %>
+            </div>
+
+            <% if role.assignments.any? %>
+              <ul class="divide-y divide-ink-soft/10 mt-2">
+                <% role.assignments.sort_by { |assignment| [assignment.assignee_type, assignment.created_at] }.each do |assignment| %>
+                  <li class="flex items-center justify-between py-2 text-sm">
+                    <span>
+                      <% if assignment.assignee.is_a?(Group) %>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-soft text-teal mr-2">Group</span>
+                        <%= link_to assignment.assignee.name, admin_group_path(assignment.assignee), class: "text-ink hover:text-grape font-medium" %>
+                      <% else %>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-soft text-sky mr-2">User</span>
+                        <%= link_to assignment.assignee.full_name, admin_user_path(assignment.assignee), class: "text-ink hover:text-grape font-medium" %>
+                        <span class="text-xs text-ink-faint"><%= assignment.assignee.email %></span>
+                      <% end %>
+                    </span>
+                    <% if current_user.superadmin? %>
+                      <%= button_to "Remove", admin_oauth_application_role_assignment_path(@application, role, assignment), method: :delete,
+                          class: "text-red-600 hover:text-red-900",
+                          data: { turbo_confirm: "Remove this role assignment?" } %>
+                    <% end %>
+                  </li>
+                <% end %>
+              </ul>
+            <% else %>
+              <p class="text-xs text-ink-faint mt-2">Nobody has this role.</p>
+            <% end %>
+
+            <% if current_user.superadmin? %>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                <%= form_with scope: :assignment, url: admin_oauth_application_role_assignments_path(@application, role), local: true,
+                    class: "flex items-end gap-2" do |form| %>
+                  <div class="flex-1">
+                    <%= form.label :group_id, "Give to a group", class: "block text-sm font-medium text-ink", for: "role_#{role.id}_group_id" %>
+                    <%= form.select :group_id, @groups.map { |group| [group.name, group.id] },
+                        { include_blank: "Choose a group" }, required: true, id: "role_#{role.id}_group_id", class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+                  </div>
+                  <%= form.submit "Add", class: "btn-stitch" %>
+                <% end %>
+                <%= form_with scope: :assignment, url: admin_oauth_application_role_assignments_path(@application, role), local: true,
+                    class: "flex items-end gap-2" do |form| %>
+                  <div class="flex-1">
+                    <%= form.label :email, "Give to a user", class: "block text-sm font-medium text-ink", for: "role_#{role.id}_email" %>
+                    <%= form.email_field :email, required: true, placeholder: "person@example.com", id: "role_#{role.id}_email", class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+                  </div>
+                  <%= form.submit "Add", class: "btn-stitch" %>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="text-sm text-ink-faint mb-4">This app has no roles.</p>
+    <% end %>
+
+    <% if current_user.superadmin? %>
+      <%= form_with scope: :role, url: admin_oauth_application_roles_path(@application), local: true,
+          class: "grid grid-cols-1 md:grid-cols-4 gap-2 items-end" do |form| %>
+        <div>
+          <%= form.label :key, "Key", class: "block text-sm font-medium text-ink" %>
+          <%= form.text_field :key, required: true, placeholder: "reviewer", class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+        </div>
+        <div>
+          <%= form.label :name, "Name", class: "block text-sm font-medium text-ink" %>
+          <%= form.text_field :name, required: true, placeholder: "Reviewer", class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+        </div>
+        <div>
+          <%= form.label :description, "Description", class: "block text-sm font-medium text-ink" %>
+          <%= form.text_field :description, class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+        </div>
+        <%= form.submit "Add role", class: "btn-stitch" %>
+      <% end %>
+      <p class="mt-2 text-xs text-ink-faint">The key can't change after the role is created. Use lowercase letters, digits, <code>-</code>, <code>_</code> or <code>:</code>.</p>
+    <% end %>
+  </div>
+
   <div class="patch p-6 lg:col-span-2">
     <h3 class="font-display text-lg font-bold text-ink mb-4">Redirect URIs</h3>
 

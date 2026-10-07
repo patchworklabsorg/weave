@@ -291,7 +291,7 @@ Doorkeeper.configure do
   # documents, and each of the non-openid scopes maps to a claim block in
   # config/initializers/doorkeeper_openid_connect.rb.
   default_scopes  :profile
-  optional_scopes :openid, :email, :phone, :admin, :slack, :groups
+  optional_scopes :openid, :email, :phone, :admin, :slack, :groups, :roles
 
   # Allows to restrict only certain scopes for grant_type.
   # By default, all the scopes will be available for all the grant types.

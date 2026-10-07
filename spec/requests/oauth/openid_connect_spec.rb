@@ -16,7 +16,7 @@ RSpec.describe "OpenID Connect", type: :request do
     Doorkeeper::Application.create!(
       name: "Test Client",
       redirect_uri: redirect_uri,
-      scopes: "openid profile email phone admin slack groups",
+      scopes: "openid profile email phone admin slack groups roles",
       confidential: false
     )
   end
@@ -159,7 +159,7 @@ RSpec.describe "OpenID Connect", type: :request do
         "email"              => user.email,
         "email_verified"     => true
       )
-      expect(claims).not_to include("phone_number", "phone_number_verified", "admin", "slack_member", "slack_id", "groups")
+      expect(claims).not_to include("phone_number", "phone_number_verified", "admin", "slack_member", "slack_id", "groups", "roles")
     end
 
     it "carries the Slack membership claims when the slack scope is granted" do
@@ -318,6 +318,56 @@ RSpec.describe "OpenID Connect", type: :request do
 
       it "is not sent without the groups scope" do
         expect(userinfo(scope: "openid profile")).not_to have_key("groups")
+      end
+    end
+
+    describe "the roles claim" do
+      let(:other_application) { Doorkeeper::Application.create!(name: "Other", redirect_uri: "https://other.example.com/cb") }
+      let(:reviewers) { create(:group, name: "Reviewers") }
+
+      before do
+        create(:group_membership, group: reviewers, user: user)
+        %w[admin member reviewer].each { |key| ApplicationRole.create!(application: application, key: key, name: key.titleize) }
+        role = ->(key) { ApplicationRole.find_by!(application: application, key: key) }
+        ApplicationRoleAssignment.create!(role: role.call("member"), assignee: user)
+        ApplicationRoleAssignment.create!(role: role.call("reviewer"), assignee: reviewers)
+        other_role = ApplicationRole.create!(application: other_application, key: "owner", name: "Owner")
+        ApplicationRoleAssignment.create!(role: other_role, assignee: user)
+      end
+
+      it "lists this app's roles that the user holds, directly or through a group" do
+        expect(userinfo(scope: "openid roles")).to include("roles" => %w[member reviewer])
+      end
+
+      it "is in the id_token too" do
+        claims = verify_id_token(obtain_tokens(scope: "openid roles")["id_token"]).first
+
+        expect(claims["roles"]).to eq(%w[member reviewer])
+      end
+
+      it "drops a role held through a membership that has expired" do
+        Group::Membership.find_by!(group: reviewers, user: user).update!(expires_at: 30.minutes.from_now)
+        token = obtain_tokens(scope: "openid roles").fetch("access_token")
+
+        travel 1.hour do
+          get oauth_userinfo_path, headers: { "Authorization" => "Bearer #{token}" }
+        end
+
+        expect(response.parsed_body["roles"]).to eq(%w[member])
+      end
+
+      it "is an empty list when the user holds no role" do
+        ApplicationRoleAssignment.delete_all
+
+        expect(userinfo(scope: "openid roles")).to include("roles" => [])
+      end
+
+      it "is not sent without the roles scope" do
+        expect(userinfo(scope: "openid profile")).not_to have_key("roles")
+      end
+
+      it "puts a group linked only by a role assignment in the groups claim" do
+        expect(userinfo(scope: "openid groups")).to include("groups" => [reviewers.slug])
       end
     end
 

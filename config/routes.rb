@@ -474,6 +474,9 @@ Rails.application.routes.draw do
         end
 
         resources :access_grants, controller: "oauth_application_access_grants", only: [:create, :destroy]
+        resources :roles, controller: "oauth_application_roles", only: [:create, :destroy] do
+          resources :assignments, controller: "oauth_application_role_assignments", only: [:create, :destroy]
+        end
       end
 
       # Mount engines under /admin path

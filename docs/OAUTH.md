@@ -74,6 +74,7 @@ The OAuth provider supports the following scopes:
 - `admin`: Administrative privileges (restricted)
 - `slack`: Patchwork Labs Slack membership (`slack_member`, `slack_id`)
 - `groups`: the user's groups that are linked to this app (`groups`)
+- `roles`: the user's roles in this app (`roles`)
 
 The `profile` scope also includes `pronouns`, a non-standard claim (a free-text
 string such as `they/them`). It is in the ID token and the userinfo response.
@@ -219,7 +220,7 @@ Unlocking or reactivating the account doesn't bring old tokens back; the user si
 Each application has an access policy:
 
 - `everyone` (the default): every user who can sign in to Weave can use the app.
-- `restricted`: only users with an access grant can use the app. A grant names a user or a group. Group members count only while their membership is not expired.
+- `restricted`: only users with an access grant or a role in the app can use the app. A grant or a role assignment names a user or a group. Group members count only while their membership is not expired.
 
 There is no admin bypass. An admin needs a grant like any other user. Only a superadmin can change the policy or the grants, on the app page in `/admin/oauth_applications`.
 
@@ -237,17 +238,41 @@ flowchart TD
 - A user without access sees a Weave page. Weave does not redirect to the client with `error=access_denied`, because the client can't give access.
 - `client_credentials` tokens have no user, so the policy does not apply to them.
 - The admin user page shows, for each restricted app, whether the user has access and why.
-- When a user loses access (a membership is removed or expires, a grant is removed, or an app becomes restricted), `RevokeLostAppAccessJob` revokes their tokens and unredeemed codes for that app. The endpoints above refuse those tokens before the job runs, so the job is cleanup.
+- When a user loses access (a membership is removed or expires, a grant, role or role assignment is removed, or an app becomes restricted), `RevokeLostAppAccessJob` revokes their tokens and unredeemed codes for that app. The endpoints above refuse those tokens before the job runs, so the job is cleanup.
 
 ### Group claims
 
 Request the `groups` scope to get a `groups` claim in the ID token and the
 userinfo response. The value is a list of group slugs, for example
-`["engineering", "staff"]`. It holds only the user's groups that have an access
-grant on this app. Weave never sends the full list of groups. An admin can
+`["engineering", "staff"]`. It holds only the user's groups that are linked to
+this app by an access grant or a role assignment. Weave never sends the full list of groups. An admin can
 link a group to an app that is open to everyone, to send the claim without
 limiting access. The list is empty when no linked group matches. Slugs never
 change after a group is created, so clients can compare them safely.
+
+### App roles
+
+An app can define its own roles, for example `member`, `reviewer` and `admin`.
+A superadmin adds roles in the "Roles" panel on the app page, and gives each
+role to users or groups. A role key never changes after the role is created.
+
+Request the `roles` scope to get a `roles` claim in the ID token and the
+userinfo response. The value is the sorted list of the app's role keys that the
+user holds, directly or through an unexpired group membership, for example
+`["admin", "reviewer"]`. The list is empty when the user holds no role.
+
+A role also gives access to a restricted app, so an app that gives every user
+a role does not need separate access grants. Prefer `roles` over `groups` to
+make decisions in the app: the app owns its role keys, and group slugs belong
+to Weave.
+
+```mermaid
+flowchart LR
+  U[User] -->|direct| RA[Role assignment]
+  U -->|member| G[Group] -->|assignee| RA
+  RA --> R[App role: reviewer] --> C["roles claim: [reviewer]"]
+  RA -->|restricted app| A[Access]
+```
 
 ## Security Considerations
 

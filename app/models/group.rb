@@ -51,6 +51,7 @@ class Group < ApplicationRecord
   has_many :active_memberships, -> { active }, class_name: "Group::Membership", inverse_of: :group, dependent: nil
   has_many :users, through: :active_memberships
   has_many :application_access_grants, as: :grantee, dependent: :destroy
+  has_many :application_role_assignments, as: :assignee, dependent: :destroy
 
   before_validation :generate_slug, on: :create
 
