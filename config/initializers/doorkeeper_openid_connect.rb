@@ -188,11 +188,17 @@ Doorkeeper::OpenidConnect.configure do
     end
 
     # Slugs of the user's groups that are linked to this app by an access grant
-    # (see AppAccess). Groups not linked to the app are left out, so an app
-    # never learns the full list of group names. An empty list when none match.
+    # or a role assignment (see AppAccess.linked_groups). Groups not linked to
+    # the app are left out, so an app never learns the full list of group
+    # names. An empty list when none match.
     normal_claim :groups, scope: :groups, response: [:id_token, :user_info] do |user, _scopes, access_token|
-      linked = ApplicationAccessGrant.where(application_id: access_token.application_id, grantee_type: "Group")
-      user.groups.where(id: linked.select(:grantee_id)).order(:slug).pluck(:slug)
+      AppAccess.group_slugs(user, access_token.application)
+    end
+
+    # Keys of the roles this app defined that the user holds, directly or
+    # through a group (see ApplicationRole). An empty list when none match.
+    normal_claim :roles, scope: :roles, response: [:id_token, :user_info] do |user, _scopes, access_token|
+      AppAccess.role_keys(user, access_token.application)
     end
   end
 end

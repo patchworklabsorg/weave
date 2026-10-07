@@ -23,6 +23,7 @@ en:
       admin: 'Perform administrative actions on your behalf'
       slack: 'See your Patchwork Labs Slack membership and Slack ID'
       groups: 'See which of your Weave groups apply to this app'
+      roles: 'See your roles in this app'
 
     applications:
       confirmations:

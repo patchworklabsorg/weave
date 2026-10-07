@@ -11,6 +11,8 @@ class Admin::OauthApplicationsController < Admin::BaseController
   def show
     @access_grants = ApplicationAccessGrant.for_application(@application).includes(:grantee).order(:grantee_type, :created_at)
     @grantable_groups = Group.where.not(id: @access_grants.select { |grant| grant.grantee_type == "Group" }.map(&:grantee_id)).order(:name)
+    @roles = ApplicationRole.for_application(@application).includes(assignments: :assignee).order(:key)
+    @groups = Group.order(:name)
   end
 
   def new

@@ -3,8 +3,8 @@
 # Who may use which OAuth app.
 #
 # An app's access_policy is "everyone" (any user who can sign in) or
-# "restricted" (only users with a matching ApplicationAccessGrant, directly or
-# through an unexpired group membership). Any value other than "everyone"
+# "restricted" (only users with a matching ApplicationAccessGrant or a role in
+# the app, directly or through an unexpired group membership). Any value other than "everyone"
 # counts as restricted, so a bad value fails closed.
 #
 # There is no admin bypass: an admin needs a grant like anyone else.
@@ -14,7 +14,7 @@
 # introspection, and userinfo. Checking at consent alone is not enough,
 # because a refresh token would keep working after access is removed.
 module AppAccess
-  Decision = Data.define(:permitted, :reason, :groups) do
+  Decision = Data.define(:permitted, :reason, :groups, :roles) do
     alias_method :permitted?, :permitted
 
     def to_s
@@ -22,6 +22,7 @@ module AppAccess
       when :open then "Open to everyone"
       when :direct then "Direct grant"
       when :group then "Member of #{groups.map(&:name).to_sentence}"
+      when :role then "Holds the #{roles.map(&:name).to_sentence} role"
       when :no_user then "No user"
       else "No grant for this user or their groups"
       end
@@ -39,12 +40,33 @@ module AppAccess
       return decision(true, :direct) if grants.exists?(grantee: user)
 
       groups = user.groups.where(id: grants.where(grantee_type: "Group").select(:grantee_id)).order(:name).to_a
-      return decision(true, :group, groups) if groups.any?
+      return decision(true, :group, groups:) if groups.any?
+
+      roles = ApplicationRole.for_application(application).held_by(user).order(:name).to_a
+      return decision(true, :role, roles:) if roles.any?
 
       decision(false, :no_grant)
     end
 
     def restricted?(application) = application.access_policy != "everyone"
+
+    # Groups linked to an app by an access grant or a role assignment. These
+    # are the only groups the app may see (the `groups` claim, the directory).
+    def linked_groups(application)
+      granted = ApplicationAccessGrant.for_application(application).where(grantee_type: "Group").select(:grantee_id)
+      assigned = ApplicationRoleAssignment.for_application(application).where(assignee_type: "Group").select(:assignee_id)
+      Group.where(id: granted).or(Group.where(id: assigned))
+    end
+
+    # Slugs of the user's groups that are linked to the app, sorted.
+    def group_slugs(user, application)
+      user.groups.where(id: linked_groups(application).select(:id)).order(:slug).pluck(:slug)
+    end
+
+    # Keys of the app's roles that the user holds, sorted.
+    def role_keys(user, application)
+      ApplicationRole.for_application(application).held_by(user).order(:key).pluck(:key)
+    end
 
     # Whether a token may still be used: its user can sign in and may use the
     # app it was issued to. A token with no user (client_credentials) involves
@@ -61,7 +83,7 @@ module AppAccess
 
     private
 
-    def decision(permitted, reason, groups = []) = Decision.new(permitted:, reason:, groups:)
+    def decision(permitted, reason, groups: [], roles: []) = Decision.new(permitted:, reason:, groups:, roles:)
 
   end
 end

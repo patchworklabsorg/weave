@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # This file is auto-generated from the current state of the database. Instead
 # of editing this file, please use the migrations feature of Active Record to
 # incrementally modify your database, and then regenerate this schema definition.
@@ -10,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_07_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -153,6 +155,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
     t.index ["application_id", "grantee_type", "grantee_id"], name: "index_application_access_grants_uniqueness", unique: true
     t.index ["created_by_id"], name: "index_application_access_grants_on_created_by_id"
     t.index ["grantee_type", "grantee_id"], name: "index_application_access_grants_on_grantee"
+  end
+
+  create_table "application_role_assignments", force: :cascade do |t|
+    t.bigint "assignee_id", null: false
+    t.string "assignee_type", null: false
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.bigint "role_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["assignee_type", "assignee_id"], name: "index_application_role_assignments_on_assignee"
+    t.index ["created_by_id"], name: "index_application_role_assignments_on_created_by_id"
+    t.index ["role_id", "assignee_type", "assignee_id"], name: "index_application_role_assignments_uniqueness", unique: true
+  end
+
+  create_table "application_roles", force: :cascade do |t|
+    t.bigint "application_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "created_by_id"
+    t.text "description"
+    t.string "key", null: false
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["application_id", "key"], name: "index_application_roles_on_application_id_and_key", unique: true
+    t.index ["created_by_id"], name: "index_application_roles_on_created_by_id"
   end
 
   create_table "audits1984_audits", force: :cascade do |t|
@@ -608,6 +634,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_130000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "application_access_grants", "oauth_applications", column: "application_id", on_delete: :cascade
   add_foreign_key "application_access_grants", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "application_role_assignments", "application_roles", column: "role_id", on_delete: :cascade
+  add_foreign_key "application_role_assignments", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "application_roles", "oauth_applications", column: "application_id", on_delete: :cascade
+  add_foreign_key "application_roles", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "email_addresses", "users"
   add_foreign_key "group_memberships", "groups"
   add_foreign_key "group_memberships", "users"
