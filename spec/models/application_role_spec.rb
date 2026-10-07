@@ -1,5 +1,29 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: application_roles
+# Database name: primary
+#
+#  id             :bigint           not null, primary key
+#  description    :text
+#  key            :string           not null
+#  name           :string           not null
+#  created_at     :datetime         not null
+#  updated_at     :datetime         not null
+#  application_id :bigint           not null
+#  created_by_id  :bigint
+#
+# Indexes
+#
+#  index_application_roles_on_application_id_and_key  (application_id,key) UNIQUE
+#  index_application_roles_on_created_by_id           (created_by_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (application_id => oauth_applications.id) ON DELETE => cascade
+#  fk_rails_...  (created_by_id => users.id) ON DELETE => nullify
+#
 require "rails_helper"
 
 RSpec.describe ApplicationRole do
