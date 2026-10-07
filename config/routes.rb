@@ -152,6 +152,8 @@
 #                                           GET    /admin/*path(.:format)                                                                            redirect(301, /login)
 #                         letter_opener_web        /letter_opener                                                                                    LetterOpenerWeb::Engine
 #                             api_v1_health GET    /api/v1/health(.:format)                                                                          api/v1/health#index
+#                    api_v1_directory_users GET    /api/v1/directory/users(.:format)                                                                 api/v1/directory/users#index
+#                     api_v1_directory_user GET    /api/v1/directory/users/:sub(.:format)                                                            api/v1/directory/users#show
 #                     webhooks_slack_events POST   /webhooks/slack/events(.:format)                                                                  webhooks/slack#events
 #               webhooks_slack_interactions POST   /webhooks/slack/interactions(.:format)                                                            webhooks/slack#interactions
 #          turbo_recede_historical_location GET    /recede_historical_location(.:format)                                                             turbo/native/navigation#recede
@@ -504,6 +506,10 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       get "health", to: "health#index"
+
+      namespace :directory do
+        resources :users, only: [:index, :show], param: :sub
+      end
     end
   end
 
