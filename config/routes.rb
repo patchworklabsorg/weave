@@ -132,6 +132,10 @@
 #     access_policy_admin_oauth_application PATCH  /admin/oauth_applications/:id/access_policy(.:format)                                             admin/oauth_applications#access_policy
 #     admin_oauth_application_access_grants POST   /admin/oauth_applications/:oauth_application_id/access_grants(.:format)                           admin/oauth_application_access_grants#create
 #      admin_oauth_application_access_grant DELETE /admin/oauth_applications/:oauth_application_id/access_grants/:id(.:format)                       admin/oauth_application_access_grants#destroy
+#  admin_oauth_application_role_assignments POST   /admin/oauth_applications/:oauth_application_id/roles/:role_id/assignments(.:format)              admin/oauth_application_role_assignments#create
+#   admin_oauth_application_role_assignment DELETE /admin/oauth_applications/:oauth_application_id/roles/:role_id/assignments/:id(.:format)          admin/oauth_application_role_assignments#destroy
+#             admin_oauth_application_roles POST   /admin/oauth_applications/:oauth_application_id/roles(.:format)                                   admin/oauth_application_roles#create
+#              admin_oauth_application_role DELETE /admin/oauth_applications/:oauth_application_id/roles/:id(.:format)                               admin/oauth_application_roles#destroy
 #                  admin_oauth_applications GET    /admin/oauth_applications(.:format)                                                               admin/oauth_applications#index
 #                                           POST   /admin/oauth_applications(.:format)                                                               admin/oauth_applications#create
 #               new_admin_oauth_application GET    /admin/oauth_applications/new(.:format)                                                           admin/oauth_applications#new
