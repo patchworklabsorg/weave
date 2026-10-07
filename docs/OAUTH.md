@@ -236,6 +236,7 @@ flowchart TD
 - A user without access sees a Weave page. Weave does not redirect to the client with `error=access_denied`, because the client can't give access.
 - `client_credentials` tokens have no user, so the policy does not apply to them.
 - The admin user page shows, for each restricted app, whether the user has access and why.
+- When a user loses access (a membership is removed or expires, a grant is removed, or an app becomes restricted), `RevokeLostAppAccessJob` revokes their tokens and unredeemed codes for that app. The endpoints above refuse those tokens before the job runs, so the job is cleanup.
 
 ## Security Considerations
 

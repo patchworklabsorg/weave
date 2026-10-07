@@ -53,6 +53,9 @@ class Group::Membership < ApplicationRecord
   scope :active, -> { where(expires_at: nil).or(where(expires_at: Time.current..)) }
   scope :expired, -> { where(expires_at: ...Time.current) }
 
+  # Leaving a group can end access to apps granted to it.
+  after_destroy_commit -> { RevokeLostAppAccessJob.perform_later(user_id: user_id) }
+
   validates :user_id, uniqueness: { scope: :group_id, message: "is already in this group" }
   validate :expires_in_the_future, if: -> { expires_at.present? && will_save_change_to_expires_at? }
 
