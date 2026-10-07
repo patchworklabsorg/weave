@@ -75,6 +75,7 @@ The OAuth provider supports the following scopes:
 - `slack`: Patchwork Labs Slack membership (`slack_member`, `slack_id`)
 - `groups`: the user's groups that are linked to this app (`groups`)
 - `roles`: the user's roles in this app (`roles`)
+- `directory`: the directory API, for `client_credentials` tokens only (see "Directory API")
 
 The `profile` scope also includes `pronouns`, a non-standard claim (a free-text
 string such as `they/them`). It is in the ID token and the userinfo response.
@@ -273,6 +274,52 @@ flowchart LR
   RA --> R[App role: reviewer] --> C["roles claim: [reviewer]"]
   RA -->|restricted app| A[Access]
 ```
+
+### Directory API
+
+An app can check a user again without a browser session, for example before a
+state change or when someone clicks a button in Slack. It calls the directory
+API with its own `client_credentials` token.
+
+To turn it on for an app, add `directory` to the app's scopes in
+`/admin/oauth_applications`. Then request a token:
+
+```bash
+curl -u "$CLIENT_ID:$CLIENT_SECRET" -d grant_type=client_credentials -d scope=directory \
+  https://weave.patchworklabs.org/oauth/token
+```
+
+| Request | Result |
+|---|---|
+| `GET /api/v1/directory/users/:sub` | One user |
+| `GET /api/v1/directory/users?role=<key>` | `{"users": [...]}`: users who hold this app role |
+| `GET /api/v1/directory/users?group=<slug>` | `{"users": [...]}`: members of a group linked to this app |
+
+Each user has the same fields as the claims:
+
+```json
+{
+  "sub": "PWL1A2B3C4D5E",
+  "name": "Ada Lovelace",
+  "email": "ada@example.com",
+  "email_verified": true,
+  "slack_id": "U0123ABCD",
+  "slack_member": true,
+  "groups": ["krater-reviewers"],
+  "roles": ["reviewer"],
+  "active": true
+}
+```
+
+Rules:
+
+- `sub` is the Patchwork Labs ID. Use it as the key for users. Do not use `slack_id` or `email` as the key.
+- A user that the app may not serve (see "Restricting an app to some users") gives `404`, the same as an unknown `sub`.
+- `groups` and `roles` hold only the groups and roles linked to the calling app.
+- `active` is `false` when the user can no longer sign in.
+- `?group=` works only for a group linked to the app. `?role=` works only for a role of the app. Other values give `404`.
+- Pass exactly one of `role` and `group`, or the API answers `400`.
+- A token with a user, a token without the `directory` scope, or a token of an app whose scopes do not list `directory` gives `403`.
 
 ## Security Considerations
 

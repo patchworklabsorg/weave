@@ -24,6 +24,7 @@ en:
       slack: 'See your Patchwork Labs Slack membership and Slack ID'
       groups: 'See which of your Weave groups apply to this app'
       roles: 'See your roles in this app'
+      directory: 'Look up users of this app (app tokens only)'
 
     applications:
       confirmations:
