@@ -66,18 +66,58 @@
           <%= button_to "Resend my invite", slack_onboarding_path, class: "btn-stitch-ghost w-full justify-center" %>
 
         <% when :accept_code_of_conduct %>
-          <p class="text-sm text-ink">
-            You're in the Slack as a guest. To get full access, accept our Code of
-            Conduct. We sent it to you as a Slack DM, or you can accept it here.
-          </p>
+          <% if current_user.slack_member? %>
+            <p class="text-sm text-ink">
+              Everyone in the Patchwork Labs Slack now accepts our Code of Conduct.
+              Please read it and accept it here.
+            </p>
+          <% else %>
+            <p class="text-sm text-ink">
+              You're in the Slack as a guest. To get full access, accept our Code of
+              Conduct. We sent it to you as a Slack DM, or you can accept it here.
+            </p>
+          <% end %>
           <% if SlackService.code_of_conduct_url.present? %>
             <p class="text-sm">
               <%= link_to "Read the Code of Conduct", SlackService.code_of_conduct_url,
                     target: "_blank", rel: "noopener noreferrer", class: link_class %>
             </p>
           <% end %>
-          <%= button_to "I accept the Code of Conduct", accept_code_of_conduct_slack_onboarding_path,
-                class: "btn-stitch w-full justify-center" %>
+          <%= form_with url: accept_code_of_conduct_slack_onboarding_path, method: :post, class: "space-y-4 text-left" do |form| %>
+            <% if current_user.name_missing? %>
+              <p class="text-sm text-ink"><%= t("code_of_conduct_form.name_why") %></p>
+              <% CodeOfConductSlackViews::NAME_FIELDS.each do |field, options| %>
+                <div>
+                  <%= form.label field, "#{options[:label]}#{' (optional)' if options[:optional]}", class: "block text-sm font-medium text-ink" %>
+                  <%= form.text_field field, value: params[field], required: !options[:optional], maxlength: options.fetch(:max_length, 100),
+                        autocomplete: { first_name: "given-name", last_name: "family-name", slack_name: "nickname" }.fetch(field, "off"),
+                        aria: { describedby: "#{options.fetch(:hint_for, field)}_hint" },
+                        class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors" %>
+                  <% if options[:hint] %>
+                    <p id="<%= field %>_hint" class="mt-1 text-xs text-ink-faint"><%= t("code_of_conduct_form.#{options[:hint]}") %></p>
+                  <% end %>
+                  <% if @form_errors&.key?(field) %>
+                    <p class="mt-1 text-sm text-orchid"><%= @form_errors[field] %></p>
+                  <% end %>
+                </div>
+              <% end %>
+            <% end %>
+            <div>
+              <label class="flex items-start gap-3 text-sm text-ink">
+                <%= check_box_tag :accept, "1", params[:accept] == "1", required: true,
+                      class: "mt-0.5 h-4 w-4 rounded border-neutral-300 text-grape focus:ring-grape" %>
+                <span><%= t("code_of_conduct_form.accept_label") %></span>
+              </label>
+              <% if @form_errors&.key?(:accept) %>
+                <p class="mt-1 text-sm text-orchid"><%= @form_errors[:accept] %></p>
+              <% end %>
+            </div>
+            <%= form.submit "I accept the Code of Conduct", class: "btn-stitch w-full justify-center" %>
+            <div class="text-xs text-ink-faint">
+              <p class="font-semibold"><%= t("code_of_conduct_form.data_use_title") %></p>
+              <p class="mt-1"><%= t("code_of_conduct_form.data_use") %></p>
+            </div>
+          <% end %>
 
         <% when :awaiting_promotion %>
           <p class="text-sm text-ink">

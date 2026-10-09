@@ -2,11 +2,16 @@
 
 <div class="max-w-5xl mx-auto px-4 py-10">
 
-  <% if @user.slack_pending? %>
+  <% unless @user.slack_onboarding_complete? %>
     <div class="patch border-2 border-grape bg-grape-soft/40 p-5 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
       <div class="flex-1">
-        <p class="font-semibold text-ink">Finish joining the Patchwork Labs Slack</p>
-        <p class="text-sm text-ink-soft mt-1">You become a full member once you're in the Slack and have accepted the Code of Conduct.</p>
+        <% if @user.slack_member? %>
+          <p class="font-semibold text-ink">Accept the Code of Conduct</p>
+          <p class="text-sm text-ink-soft mt-1">Everyone in the Patchwork Labs Slack now accepts the Code of Conduct. It takes a few seconds.</p>
+        <% else %>
+          <p class="font-semibold text-ink">Finish joining the Patchwork Labs Slack</p>
+          <p class="text-sm text-ink-soft mt-1">You become a full member once you're in the Slack and have accepted the Code of Conduct.</p>
+        <% end %>
       </div>
       <%= link_to "Continue", slack_onboarding_path, class: "btn-stitch shrink-0 justify-center" %>
     </div>

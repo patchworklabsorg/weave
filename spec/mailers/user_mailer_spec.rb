@@ -39,4 +39,15 @@ RSpec.describe UserMailer, type: :mailer do
       expect(body).to match(/didn't change/i)
     end
   end
+
+  describe "#code_of_conduct_request" do
+    subject(:mail) { described_class.code_of_conduct_request(user, deadline: Date.new(2026, 11, 1)) }
+
+    it "asks the member to sign in and accept" do
+      expect(mail.to).to eq(["ada@example.com"])
+      expect(mail.subject).to include("Code of Conduct")
+      body = mail.body.encoded
+      expect(body).to include("Hi Ada,", "Sign in to Weave with ada@example.com", "/login", "November 1, 2026")
+    end
+  end
 end

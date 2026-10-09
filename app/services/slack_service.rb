@@ -39,6 +39,9 @@ class SlackService
   MANAGER_FIELD = "Manager"
   PWL_ID_FIELD = "pwl_idp_id"
 
+  # callback_id of the code-of-conduct form (see #open_code_of_conduct_form).
+  CODE_OF_CONDUCT_FORM = CodeOfConductSlackViews::FORM_CALLBACK
+
   # How long a workspace's label -> field ID map is cached.
   CUSTOM_FIELD_IDS_TTL = 1.hour
 
@@ -151,37 +154,82 @@ class SlackService
     { ok: false, error: "request_failed", raw: nil }
   end
 
-  # DM a newly-joined guest the code of conduct with an "I accept" button. Uses
-  # the bot token (needs chat:write + im:write). The button's action_id is
-  # "accept_coc" and its value is the Slack user id, handled by the interactions
-  # webhook. Returns the Slack API response.
-  def post_code_of_conduct(slack_user_id, coc_url: nil)
+  # DM someone the code of conduct with a button to accept it. Uses the bot
+  # token (needs chat:write + im:write). Returns the Slack API response. The
+  # blocks come from CodeOfConductSlackViews.request.
+  #
+  # title and paragraphs (mrkdwn) open the message. They default to the
+  # welcome for a newly-joined guest. CodeOfConductRequestJob passes its own.
+  #
+  # With form: false, the button accepts at once: its action_id is
+  # "accept_coc" and its value is the Slack user id. With form: true, the
+  # button ("open_coc_form") opens a form with a box to check, and name fields
+  # when the name is missing (see #open_code_of_conduct_form). Use the form for
+  # people whose name the Slack import could not find. The interactions
+  # webhook handles both.
+  def post_code_of_conduct(slack_user_id, title: nil, paragraphs: nil, form: false)
     raise ConfigurationError, "Slack client not configured" unless @client
 
-    coc_url ||= self.class.code_of_conduct_url
-    intro = "Welcome to Patchwork Labs! :wave: Before you get full access to the community, " \
-            "please read our Code of Conduct and accept it below."
-    coc_line = coc_url.present? ? "Read it here: #{coc_url}" : "Please review our Code of Conduct."
+    title ||= "Welcome to Patchwork Labs! 👋"
+    paragraphs ||= ["Before you get full access to the community, please read our Code of Conduct and accept it."]
+    button = if form
+               { text: "Review and accept", action_id: "open_coc_form", value: slack_user_id }
+             else
+               { text: "I accept the Code of Conduct", action_id: "accept_coc", value: slack_user_id }
+             end
+
+    message = CodeOfConductSlackViews.request(
+      title: title,
+      paragraphs: paragraphs,
+      action_text: I18n.t(form ? "code_of_conduct_form.slack_form_action" : "code_of_conduct_form.slack_action"),
+      button: button,
+      coc_url: self.class.code_of_conduct_url,
+      web_url: Rails.application.routes.url_helpers.slack_onboarding_url(**Rails.application.config.action_mailer.default_url_options)
+    )
 
     @client.chat_postMessage(
       channel: slack_user_id,
-      text: "Please review and accept the Patchwork Labs Code of Conduct to get full access.",
-      blocks: [
-        { type: "section", text: { type: "mrkdwn", text: "*#{intro}*\n\n#{coc_line}" } },
-        {
-          type: "actions",
-          elements: [
-            {
-              type: "button",
-              style: "primary",
-              text: { type: "plain_text", text: "I accept the Code of Conduct", emoji: true },
-              action_id: "accept_coc",
-              value: slack_user_id
-            }
-          ]
-        }
-      ]
+      text: "Please review and accept the Patchwork Labs Code of Conduct.",
+      blocks: message[:blocks]
     )
+  end
+
+  # Opens the code-of-conduct form from a button click. trigger_id comes from
+  # the click and expires after 3 seconds, so call this while answering it.
+  # The view comes from CodeOfConductSlackViews.form.
+  #
+  # The form has a required "I have read and accept" box, and says how Weave
+  # uses what it collects. It also asks for a preferred name, an optional
+  # legal name and an optional Slack nickname when the user's name is missing (or when there is no linked user, since nothing is
+  # known about them). message is the DM the button was in, as
+  # { channel:, ts: }. It goes into private_metadata, so the submission can
+  # replace the DM.
+  def open_code_of_conduct_form(trigger_id:, user:, message: nil)
+    raise ConfigurationError, "Slack client not configured" unless @client
+
+    view = CodeOfConductSlackViews.form(
+      ask_name: user.nil? || user.name_missing?,
+      coc_url: self.class.code_of_conduct_url,
+      private_metadata: (message || {}).to_json
+    )
+
+    @client.views_open(trigger_id: trigger_id, view: view)
+  end
+
+  # Replaces a code-of-conduct DM with a thank-you, so its button can't be
+  # used again.
+  def mark_code_of_conduct_accepted(channel:, ts:, already_member: false)
+    raise ConfigurationError, "Slack client not configured" unless @client
+
+    @client.chat_update(channel: channel, ts: ts, text: self.class.code_of_conduct_thanks(already_member:), blocks: [])
+  end
+
+  def self.code_of_conduct_thanks(already_member:)
+    if already_member
+      ":white_check_mark: Thanks for accepting the Code of Conduct! :tada:"
+    else
+      ":white_check_mark: Thanks for accepting the Code of Conduct — you now have full access to the Patchwork Labs Slack. Welcome! :tada:"
+    end
   end
 
   # Where members open the workspace, e.g. https://patchworklabs.slack.com.
@@ -413,6 +461,24 @@ class SlackService
   # Uses user token (requires users.profile:write scope)
   # Returns false when there is nothing to do (no Slack ID or no user token).
   # Slack errors are raised, so PushPronounsToSlackJob can retry them.
+  # Sets name fields on a Slack profile (first_name, last_name,
+  # display_name). Uses the user token (users.profile:write).
+  def update_slack_profile_name(slack_user_id, **profile)
+    return false if slack_user_id.blank? || profile.empty?
+
+    unless @user_client
+      Rails.logger.warn "Slack user token not configured, cannot update the profile name"
+      return false
+    end
+
+    @user_client.users_profile_set(user: slack_user_id, profile: profile.to_json)
+    Rails.logger.info "Updated Slack profile name (#{profile.keys.join(', ')}) for user #{slack_user_id}"
+    true
+  rescue Slack::Web::Api::Errors::SlackError, Slack::Web::Api::Errors::TooManyRequestsError => e
+    Rails.logger.error "Error updating Slack profile name for #{slack_user_id}: #{e.message}"
+    raise
+  end
+
   def update_slack_pronouns(slack_user_id, pronouns)
     return false if slack_user_id.blank?
 

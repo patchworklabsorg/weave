@@ -42,16 +42,44 @@ class SlackOnboardingController < ApplicationController
   end
 
   # Accepts the code of conduct from the web, for people who can't find the
-  # Slack DM. Also retries the promotion if it failed after an earlier
-  # acceptance.
+  # Slack DM and for full members who joined before the code-of-conduct flow.
+  # Also asks for a real name when the Slack import could not find one, and
+  # retries the promotion if it failed after an earlier acceptance.
   def accept_code_of_conduct
     unless %i[accept_code_of_conduct awaiting_promotion].include?(current_user.slack_onboarding_step)
       redirect_to slack_onboarding_path
       return
     end
 
-    SlackCodeOfConductAcceptedJob.perform_later(current_user.slack_id)
-    redirect_to slack_onboarding_path, notice: "Thanks for accepting the Code of Conduct. Your full Slack access is on its way."
+    # "Try again" after an earlier acceptance needs no new check.
+    unless params[:accept] == "1" || current_user.slack_coc_accepted_at.present?
+      render_form_errors(accept: I18n.t("code_of_conduct_form.accept_error"))
+      return
+    end
+
+    result = CodeOfConductAcceptance.call(
+      current_user,
+      names: params.slice(*CodeOfConductAcceptance::NAME_FIELDS).permit(*CodeOfConductAcceptance::NAME_FIELDS).to_h.symbolize_keys
+    )
+    unless result.success?
+      render_form_errors(result.errors)
+      return
+    end
+
+    notice = if current_user.slack_member?
+               "Thanks for accepting the Code of Conduct."
+             else
+               "Thanks for accepting the Code of Conduct. Your full Slack access is on its way."
+             end
+    redirect_to slack_onboarding_path, notice: notice
+  end
+
+  private
+
+  def render_form_errors(errors)
+    @step = current_user.slack_onboarding_step
+    @form_errors = errors
+    render :show, status: :unprocessable_content
   end
 
 end

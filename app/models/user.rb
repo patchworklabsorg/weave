@@ -28,6 +28,7 @@
 #  slack_birthday           :date
 #  slack_city               :string
 #  slack_coc_accepted_at    :datetime
+#  slack_coc_requested_at   :datetime
 #  slack_cost_center        :string
 #  slack_country            :string
 #  slack_department         :string
@@ -187,6 +188,15 @@ class User < ApplicationRecord
   # as the `slack_member` claim.
   enum :slack_membership, { pending: "pending", member: "member" }, prefix: :slack
 
+  # Full Slack members who have not accepted the code of conduct. They joined
+  # before the code-of-conduct flow, so nothing has asked them yet (see
+  # CodeOfConductRequestJob).
+  scope :code_of_conduct_pending, -> { slack_member.where(slack_coc_accepted_at: nil).where.not(slack_id: nil) }
+
+  # Names the Slack import saves when a Slack profile has no name.
+  PLACEHOLDER_NAMES = %w[NOTSET Unknown User].freeze
+  scope :name_missing, -> { where(first_name: PLACEHOLDER_NAMES).or(where(last_name: PLACEHOLDER_NAMES)) }
+
   scope :last_seen_within, ->(ago) { joins(:user_sessions).where(user_sessions: { last_seen_at: ago.. }).distinct }
   scope :currently_online, -> { last_seen_within(15.minutes.ago) }
   scope :active, -> { last_seen_within(30.days.ago) }
@@ -252,6 +262,9 @@ class User < ApplicationRecord
       transitions from: %i[active suspended], to: :deactivated
     end
   end
+
+  # True when the name is one the Slack import made up (see PLACEHOLDER_NAMES).
+  def name_missing? = PLACEHOLDER_NAMES.include?(first_name) || PLACEHOLDER_NAMES.include?(last_name)
 
   def full_name
     # Display names capitalized (many Slack-imported names arrive lowercase).
@@ -472,14 +485,19 @@ class User < ApplicationRecord
 
   # Where this person is in joining the Slack. Drives the /slack onboarding
   # page. Each step is the next thing the person must do.
+  #
+  # Full members who joined before the code-of-conduct flow still have to
+  # accept it. They are not demoted for that, so they skip :awaiting_promotion.
   def slack_onboarding_step
-    return :member if slack_member?
+    return slack_coc_accepted_at.present? ? :member : :accept_code_of_conduct if slack_member?
     return :awaiting_promotion if in_slack_workspace? && slack_coc_accepted_at.present?
     return :accept_code_of_conduct if in_slack_workspace?
     return :accept_invite if slack_invited_at.present?
 
     :request_invite
   end
+
+  def slack_onboarding_complete? = slack_onboarding_step == :member
 
   # The membership a Slack user object (from users.info, users.lookupByEmail,
   # users.list or a team_join/user_change event) entitles its owner to. Guests

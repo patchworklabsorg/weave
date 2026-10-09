@@ -57,32 +57,92 @@ module Webhooks
       render json: { status: "ok" }, status: :ok
     end
 
-    # Slack interactivity (Block Kit button clicks). Handles the "I accept the
-    # Code of Conduct" button, which promotes a single-channel guest to a full
-    # member. Slack posts the interaction as a form-encoded `payload` field.
+    # Slack interactivity. Handles the code-of-conduct DM (see
+    # SlackService#post_code_of_conduct):
+    #
+    # - "accept_coc" button: accepts at once, and promotes a single-channel
+    #   guest to a full member.
+    # - "open_coc_form" button: opens the form with the box to check, which
+    #   also asks for a missing name.
+    # - Submission of that form: saves the name and accepts.
+    #
+    # Slack posts the interaction as a form-encoded `payload` field.
     def interactions
       payload = JSON.parse(params[:payload].to_s.presence || "{}")
+
+      if payload["type"] == "view_submission"
+        return submit_code_of_conduct_form(payload) if payload.dig("view", "callback_id") == SlackService::CODE_OF_CONDUCT_FORM
+
+        head :ok
+        return
+      end
+
       action = (payload["actions"] || []).first || {}
 
-      if action["action_id"] == "accept_coc"
+      case action["action_id"]
+      when "accept_coc"
         slack_user_id = action["value"].presence || payload.dig("user", "id")
         SlackCodeOfConductAcceptedJob.perform_later(slack_user_id) if slack_user_id.present?
 
         # Replace the original message so the button can't be used twice.
-        render json: {
-          replace_original: true,
-          text: ":white_check_mark: Thanks for accepting the Code of Conduct — you now have full access to the Patchwork Labs Slack. Welcome! :tada:"
-        }
-        return
+        already_member = User.find_by(slack_id: slack_user_id)&.slack_member? || false
+        render json: { replace_original: true, text: SlackService.code_of_conduct_thanks(already_member:) }
+      when "open_coc_form"
+        open_code_of_conduct_form(payload)
+        head :ok
+      else
+        head :ok
       end
-
-      head :ok
     rescue JSON::ParserError => e
       Rails.logger.error "[Slack Interactions] Invalid payload: #{e.message}"
       head :bad_request
     end
 
     private
+
+    # Called while Slack waits for the answer to the click: the trigger_id
+    # expires after 3 seconds.
+    def open_code_of_conduct_form(payload)
+      SlackService.new.open_code_of_conduct_form(
+        trigger_id: payload["trigger_id"],
+        user: User.find_by(slack_id: payload.dig("user", "id")),
+        message: { channel: payload.dig("container", "channel_id"), ts: payload.dig("container", "message_ts") }.compact.presence
+      )
+    rescue => e
+      Rails.logger.error "[Slack Interactions] Could not open CoC form: #{e.message}"
+    end
+
+    # The person who submits the form is the one who accepts, so the user
+    # comes from the payload's user, never from a value in the form.
+    def submit_code_of_conduct_form(payload)
+      slack_user_id = payload.dig("user", "id")
+      values = payload.dig("view", "state", "values") || {}
+      message = JSON.parse(payload.dig("view", "private_metadata").presence || "{}").symbolize_keys.slice(:channel, :ts).presence
+      user = User.find_by(slack_id: slack_user_id)
+
+      # Slack makes the box required, but check it here too.
+      accepted = Array(values.dig("accept", "value", "selected_options")).any? { |option| option["value"] == "accept" }
+      unless accepted
+        render json: { response_action: "errors", errors: { "accept" => I18n.t("code_of_conduct_form.accept_error") } }
+        return
+      end
+
+      if user
+        result = CodeOfConductAcceptance.call(
+          user,
+          names: CodeOfConductAcceptance::NAME_FIELDS.index_with { |field| values.dig(field.to_s, "value", "value") },
+          message: message
+        )
+        unless result.success?
+          render json: { response_action: "errors", errors: result.errors.transform_keys(&:to_s) }
+          return
+        end
+      elsif slack_user_id.present?
+        SlackCodeOfConductAcceptedJob.perform_later(slack_user_id, **{ message: message }.compact)
+      end
+
+      render json: { response_action: "clear" }
+    end
 
     def devise_configured?
       defined?(Devise)
