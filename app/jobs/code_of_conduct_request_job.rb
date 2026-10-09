@@ -47,8 +47,12 @@ class CodeOfConductRequestJob < ApplicationJob
     service = SlackService.new
     return unless service.configured?
 
-    intro = [*self.class.paragraphs(user, deadline:), I18n.t("code_of_conduct_request.slack_action")].join("\n\n")
-    service.post_code_of_conduct(user.slack_id, intro: intro, collect_name: user.name_missing?)
+    service.post_code_of_conduct(
+      user.slack_id,
+      title: I18n.t("code_of_conduct_request.slack_title"),
+      paragraphs: self.class.paragraphs(user, deadline:),
+      form: user.name_missing?
+    )
   rescue => e
     Rails.logger.error "Failed to DM the CoC request to #{user.slack_id}: #{e.message}"
   end

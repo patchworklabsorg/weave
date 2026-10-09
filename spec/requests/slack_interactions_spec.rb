@@ -60,14 +60,20 @@ RSpec.describe "Slack interactions webhook", type: :request do
 
     before { allow(SlackService).to receive(:new).and_return(slack) }
 
-    def submission(first_name:, last_name:, user_id: "U123")
+    def submission(first_name:, last_name:, user_id: "U123", accept: true)
       {
         type: "view_submission",
         user: { id: user_id },
         view: {
           callback_id: "coc_form",
           private_metadata: { channel: "D1", ts: "1.2" }.to_json,
-          state: { values: { first_name: { value: { value: first_name } }, last_name: { value: { value: last_name } } } }
+          state: {
+            values: {
+              accept: { value: { selected_options: accept ? [{ value: "accept" }] : [] } },
+              first_name: { value: { value: first_name } },
+              last_name: { value: { value: last_name } }
+            }
+          }
         }
       }.to_json
     end
@@ -100,6 +106,13 @@ RSpec.describe "Slack interactions webhook", type: :request do
       signed_post("payload=#{CGI.escape(submission(first_name: "Ada", last_name: ""))}")
 
       expect(response.parsed_body).to eq("response_action" => "errors", "errors" => { "last_name" => "Enter your last name." })
+      expect(user.reload.slack_coc_accepted_at).to be_nil
+    end
+
+    it "does not accept without the box checked" do
+      signed_post("payload=#{CGI.escape(submission(first_name: "Ada", last_name: "Lovelace", accept: false))}")
+
+      expect(response.parsed_body["errors"]).to have_key("accept")
       expect(user.reload.slack_coc_accepted_at).to be_nil
     end
 

@@ -1,0 +1,13 @@
+# The form people use to accept the code of conduct: the Slack form (see
+# app/views/slack/code_of_conduct/form.slack_modal.slocks) and the /slack page.
+# Both tell people why we ask for their data and how we use it.
+en:
+  code_of_conduct_form:
+    slack_action: "Choose the button below to accept."
+    slack_form_action: "Choose *Review and accept*, then check the box."
+    intro: "Read the Code of Conduct, then check the box below to accept it."
+    accept_label: "I have read and accept the Code of Conduct"
+    accept_error: "Check the box to accept the Code of Conduct."
+    name_why: "Your Slack profile has no name, so we don't know what to call you. Please add your first and last name."
+    data_use_title: "How we use this information"
+    data_use: "We save the date and time you accept in your Weave account, so we have a record that you accepted. If you add your name, we save it in your Weave account too. Weave admins can see this information. Patchwork Labs apps that you can use with Weave can see your name."

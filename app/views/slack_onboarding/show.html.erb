@@ -85,20 +85,34 @@
           <% end %>
           <%= form_with url: accept_code_of_conduct_slack_onboarding_path, method: :post, class: "space-y-4 text-left" do |form| %>
             <% if current_user.name_missing? %>
-              <p class="text-sm text-ink">We don't have your name yet. Please add it.</p>
+              <p class="text-sm text-ink"><%= t("code_of_conduct_form.name_why") %></p>
               <% [[:first_name, "First name"], [:last_name, "Last name"]].each do |field, label| %>
                 <div>
                   <%= form.label field, label, class: "block text-sm font-medium text-ink" %>
                   <%= form.text_field field, value: params[field], required: true, maxlength: 100,
                         autocomplete: field == :first_name ? "given-name" : "family-name",
                         class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors" %>
-                  <% if @name_errors&.key?(field) %>
-                    <p class="mt-1 text-sm text-orchid"><%= @name_errors[field] %></p>
+                  <% if @form_errors&.key?(field) %>
+                    <p class="mt-1 text-sm text-orchid"><%= @form_errors[field] %></p>
                   <% end %>
                 </div>
               <% end %>
             <% end %>
+            <div>
+              <label class="flex items-start gap-3 text-sm text-ink">
+                <%= check_box_tag :accept, "1", params[:accept] == "1", required: true,
+                      class: "mt-0.5 h-4 w-4 rounded border-neutral-300 text-grape focus:ring-grape" %>
+                <span><%= t("code_of_conduct_form.accept_label") %></span>
+              </label>
+              <% if @form_errors&.key?(:accept) %>
+                <p class="mt-1 text-sm text-orchid"><%= @form_errors[:accept] %></p>
+              <% end %>
+            </div>
             <%= form.submit "I accept the Code of Conduct", class: "btn-stitch w-full justify-center" %>
+            <div class="text-xs text-ink-faint">
+              <p class="font-semibold"><%= t("code_of_conduct_form.data_use_title") %></p>
+              <p class="mt-1"><%= t("code_of_conduct_form.data_use") %></p>
+            </div>
           <% end %>
 
         <% when :awaiting_promotion %>

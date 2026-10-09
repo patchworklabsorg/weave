@@ -155,83 +155,76 @@ class SlackService
   end
 
   # DM someone the code of conduct with a button to accept it. Uses the bot
-  # token (needs chat:write + im:write). Returns the Slack API response.
+  # token (needs chat:write + im:write). Returns the Slack API response. The
+  # blocks come from app/views/slack/code_of_conduct/request.slack_message.slocks.
   #
-  # intro is the opening text (mrkdwn). It defaults to the welcome for a
-  # newly-joined guest. CodeOfConductRequestJob passes its own.
+  # title and paragraphs (mrkdwn) open the message. They default to the
+  # welcome for a newly-joined guest. CodeOfConductRequestJob passes its own.
   #
-  # With collect_name: false, the button accepts at once: its action_id is
-  # "accept_coc" and its value is the Slack user id. With collect_name: true
-  # (for people whose name the Slack import could not find), the button
-  # ("open_coc_form") opens a form that asks for their name and then accepts
-  # (see #open_code_of_conduct_form). The interactions webhook handles both.
-  def post_code_of_conduct(slack_user_id, coc_url: nil, intro: nil, collect_name: false)
+  # With form: false, the button accepts at once: its action_id is
+  # "accept_coc" and its value is the Slack user id. With form: true, the
+  # button ("open_coc_form") opens a form with a box to check, and name fields
+  # when the name is missing (see #open_code_of_conduct_form). Use the form for
+  # people whose name the Slack import could not find. The interactions
+  # webhook handles both.
+  def post_code_of_conduct(slack_user_id, title: nil, paragraphs: nil, form: false)
     raise ConfigurationError, "Slack client not configured" unless @client
 
-    coc_url ||= self.class.code_of_conduct_url
-    intro ||= "*Welcome to Patchwork Labs! :wave: Before you get full access to the community, " \
-              "please read our Code of Conduct and accept it below.*"
-    coc_line = coc_url.present? ? "Read it here: #{coc_url}" : "Please review our Code of Conduct."
-
-    button = if collect_name
-               { text: "Review and accept", action_id: "open_coc_form" }
+    title ||= "Welcome to Patchwork Labs! 👋"
+    paragraphs ||= ["Before you get full access to the community, please read our Code of Conduct and accept it."]
+    button = if form
+               { text: "Review and accept", action_id: "open_coc_form", value: slack_user_id }
              else
-               { text: "I accept the Code of Conduct", action_id: "accept_coc" }
+               { text: "I accept the Code of Conduct", action_id: "accept_coc", value: slack_user_id }
              end
+
+    message = self.class.render_slack_view(
+      "request", :slack_message,
+      title: title,
+      paragraphs: paragraphs,
+      action_text: I18n.t(form ? "code_of_conduct_form.slack_form_action" : "code_of_conduct_form.slack_action"),
+      button: button,
+      coc_url: self.class.code_of_conduct_url,
+      web_url: Rails.application.routes.url_helpers.slack_onboarding_url(**Rails.application.config.action_mailer.default_url_options)
+    )
 
     @client.chat_postMessage(
       channel: slack_user_id,
       text: "Please review and accept the Patchwork Labs Code of Conduct.",
-      blocks: [
-        { type: "section", text: { type: "mrkdwn", text: "#{intro}\n\n#{coc_line}" } },
-        {
-          type: "actions",
-          elements: [
-            {
-              type: "button",
-              style: "primary",
-              text: { type: "plain_text", text: button[:text], emoji: true },
-              action_id: button[:action_id],
-              value: slack_user_id
-            }
-          ]
-        }
-      ]
+      blocks: message[:blocks]
     )
   end
 
   # Opens the code-of-conduct form from a button click. trigger_id comes from
   # the click and expires after 3 seconds, so call this while answering it.
+  # The view comes from app/views/slack/code_of_conduct/form.slack_modal.slocks.
   #
-  # The form asks for a first and last name when the user's name is missing
-  # (or when there is no linked user, since nothing is known about them).
-  # message is the DM the button was in, as { channel:, ts: }. It goes into
-  # private_metadata, so the submission can replace the DM.
+  # The form has a required "I have read and accept" box, and says how Weave
+  # uses what it collects. It also asks for a first and last name when the
+  # user's name is missing (or when there is no linked user, since nothing is
+  # known about them). message is the DM the button was in, as
+  # { channel:, ts: }. It goes into private_metadata, so the submission can
+  # replace the DM.
   def open_code_of_conduct_form(trigger_id:, user:, message: nil)
     raise ConfigurationError, "Slack client not configured" unless @client
 
-    coc_url = self.class.code_of_conduct_url
-    coc_text = coc_url.present? ? "<#{coc_url}|Read the Code of Conduct>" : "Please review our Code of Conduct."
-    blocks = [
-      { type: "section", text: { type: "mrkdwn", text: "#{coc_text}, then choose *I accept* below." } }
-    ]
-    if user.nil? || user.name_missing?
-      blocks.unshift({ type: "section", text: { type: "mrkdwn", text: "We don't have your name yet. Please add it." } })
-      blocks.insert(1, name_input("first_name", "First name"), name_input("last_name", "Last name"))
-    end
-
-    @client.views_open(
-      trigger_id: trigger_id,
-      view: {
-        type: "modal",
-        callback_id: CODE_OF_CONDUCT_FORM,
-        private_metadata: (message || {}).to_json,
-        title: { type: "plain_text", text: "Code of Conduct" },
-        submit: { type: "plain_text", text: "I accept" },
-        close: { type: "plain_text", text: "Not now" },
-        blocks: blocks
-      }
+    view = self.class.render_slack_view(
+      "form", :slack_modal,
+      ask_name: user.nil? || user.name_missing?,
+      coc_url: self.class.code_of_conduct_url,
+      private_metadata: (message || {}).to_json
     )
+
+    @client.views_open(trigger_id: trigger_id, view: view)
+  end
+
+  # Renders a Block Kit template from app/views/slack/code_of_conduct with
+  # slocks, and returns it as a Hash with symbol keys.
+  def self.render_slack_view(template, format, **assigns)
+    json = ApplicationController.render(
+      template: "slack/code_of_conduct/#{template}", formats: [format], layout: false, assigns: assigns
+    )
+    JSON.parse(json, symbolize_names: true)
   end
 
   # Replaces a code-of-conduct DM with a thank-you, so its button can't be
@@ -583,15 +576,6 @@ class SlackService
   # Workspace subdomain, e.g. "patchworklabs" for patchworklabs.slack.com.
   def workspace_subdomain
     @workspace_subdomain ||= ENV["SLACK_WORKSPACE_SUBDOMAIN"] || Rails.application.credentials.dig(:slack, :workspace_subdomain)
-  end
-
-  def name_input(block_id, label)
-    {
-      type: "input",
-      block_id: block_id,
-      label: { type: "plain_text", text: label },
-      element: { type: "plain_text_input", action_id: "value", max_length: 100 }
-    }
   end
 
   # Channel single-channel guests are invited into (the code-of-conduct channel).

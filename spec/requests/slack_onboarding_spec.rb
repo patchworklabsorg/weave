@@ -75,7 +75,7 @@ RSpec.describe "Slack onboarding", type: :request do
 
       get slack_onboarding_path
 
-      expect(response.body).to include("now accepts our Code of Conduct", "I accept the Code of Conduct")
+      expect(response.body).to include("now accepts our Code of Conduct", "I have read and accept", "How we use this information")
       expect(response.body).not_to include("First name")
     end
 
@@ -131,7 +131,7 @@ RSpec.describe "Slack onboarding", type: :request do
     it "accepts the code of conduct for a guest" do
       user.update!(slack_id: "U1")
 
-      expect { post accept_code_of_conduct_slack_onboarding_path }
+      expect { post accept_code_of_conduct_slack_onboarding_path, params: { accept: "1" } }
         .to have_enqueued_job(SlackCodeOfConductAcceptedJob).with("U1")
     end
 
@@ -140,6 +140,16 @@ RSpec.describe "Slack onboarding", type: :request do
 
       expect { post accept_code_of_conduct_slack_onboarding_path }
         .to have_enqueued_job(SlackCodeOfConductAcceptedJob).with("U1")
+    end
+
+    it "does not accept without the box checked" do
+      user.update!(slack_id: "U1", slack_membership: "member")
+
+      post accept_code_of_conduct_slack_onboarding_path
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Check the box")
+      expect(user.reload.slack_coc_accepted_at).to be_nil
     end
 
     it "does nothing for someone who isn't in the Slack yet" do
@@ -155,7 +165,7 @@ RSpec.describe "Slack onboarding", type: :request do
     it "records the acceptance for a full member who joined before the code-of-conduct flow" do
       user.update!(slack_id: "U1", slack_membership: "member")
 
-      post accept_code_of_conduct_slack_onboarding_path
+      post accept_code_of_conduct_slack_onboarding_path, params: { accept: "1" }
 
       expect(user.reload.slack_coc_accepted_at).to be_present
       expect(user).to be_slack_onboarding_complete
@@ -166,7 +176,7 @@ RSpec.describe "Slack onboarding", type: :request do
       before { user.update!(slack_id: "U1", slack_membership: "member", first_name: "NOTSET", last_name: "NOTSET") }
 
       it "saves the name with the acceptance" do
-        post accept_code_of_conduct_slack_onboarding_path, params: { first_name: "Ada", last_name: "Lovelace" }
+        post accept_code_of_conduct_slack_onboarding_path, params: { accept: "1", first_name: "Ada", last_name: "Lovelace" }
 
         user.reload
         expect(user.full_name).to eq("Ada Lovelace")
@@ -174,7 +184,7 @@ RSpec.describe "Slack onboarding", type: :request do
       end
 
       it "does not accept without a name" do
-        post accept_code_of_conduct_slack_onboarding_path, params: { first_name: "Ada", last_name: "" }
+        post accept_code_of_conduct_slack_onboarding_path, params: { accept: "1", first_name: "Ada", last_name: "" }
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(response.body).to include("Enter your last name.")

@@ -62,7 +62,8 @@ module Webhooks
     #
     # - "accept_coc" button: accepts at once, and promotes a single-channel
     #   guest to a full member.
-    # - "open_coc_form" button: opens the form that asks for a missing name.
+    # - "open_coc_form" button: opens the form with the box to check, which
+    #   also asks for a missing name.
     # - Submission of that form: saves the name and accepts.
     #
     # Slack posts the interaction as a form-encoded `payload` field.
@@ -118,6 +119,13 @@ module Webhooks
       values = payload.dig("view", "state", "values") || {}
       message = JSON.parse(payload.dig("view", "private_metadata").presence || "{}").symbolize_keys.slice(:channel, :ts).presence
       user = User.find_by(slack_id: slack_user_id)
+
+      # Slack makes the box required, but check it here too.
+      accepted = Array(values.dig("accept", "value", "selected_options")).any? { |option| option["value"] == "accept" }
+      unless accepted
+        render json: { response_action: "errors", errors: { "accept" => I18n.t("code_of_conduct_form.accept_error") } }
+        return
+      end
 
       if user
         result = CodeOfConductAcceptance.call(

@@ -611,6 +611,9 @@ GEM
       gli
       hashie
       logger
+    slocks (0.1.2)
+      actionview (>= 6.0)
+      activesupport (>= 6.0)
     solargraph (0.57.0)
       backport (~> 1.2)
       benchmark (~> 0.4)
@@ -802,6 +805,7 @@ DEPENDENCIES
   selenium-webdriver
   shoulda-matchers
   slack-ruby-client
+  slocks (~> 0.1.2)
   solargraph
   solargraph-rails (~> 1.2.4)
   solid_cable

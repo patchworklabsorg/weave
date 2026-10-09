@@ -51,16 +51,19 @@ class SlackOnboardingController < ApplicationController
       return
     end
 
+    # "Try again" after an earlier acceptance needs no new check.
+    unless params[:accept] == "1" || current_user.slack_coc_accepted_at.present?
+      render_form_errors(accept: I18n.t("code_of_conduct_form.accept_error"))
+      return
+    end
+
     result = CodeOfConductAcceptance.call(
       current_user,
       first_name: params[:first_name],
       last_name: params[:last_name]
     )
-
     unless result.success?
-      @step = current_user.slack_onboarding_step
-      @name_errors = result.errors
-      render :show, status: :unprocessable_content
+      render_form_errors(result.errors)
       return
     end
 
@@ -70,6 +73,14 @@ class SlackOnboardingController < ApplicationController
                "Thanks for accepting the Code of Conduct. Your full Slack access is on its way."
              end
     redirect_to slack_onboarding_path, notice: notice
+  end
+
+  private
+
+  def render_form_errors(errors)
+    @step = current_user.slack_onboarding_step
+    @form_errors = errors
+    render :show, status: :unprocessable_content
   end
 
 end
