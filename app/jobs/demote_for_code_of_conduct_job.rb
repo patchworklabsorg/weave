@@ -11,14 +11,14 @@
 # and an email. Their apps already need the acceptance (see AppAccess).
 #
 # Enqueued by `bin/rails slack:coc:demote`. Skips anyone who accepted in the
-# meantime.
+# meantime, and exempt users.
 class DemoteForCodeOfConductJob < ApplicationJob
   queue_as :default
 
   def perform(user_id)
     user = User.find_by(id: user_id)
     return unless user&.slack_member? && user.slack_id.present?
-    return if user.slack_coc_accepted_at.present?
+    return if user.slack_coc_accepted_at.present? || user.code_of_conduct_exempt
 
     service = SlackService.new
     return unless service.configured?

@@ -36,6 +36,13 @@ RSpec.describe DemoteForCodeOfConductJob do
     described_class.perform_now(user.id)
   end
 
+  it "skips an exempt user" do
+    user.update!(code_of_conduct_exempt: true)
+    expect(slack).not_to receive(:demote_to_guest)
+
+    described_class.perform_now(user.id)
+  end
+
   it "asks Slack admins and owners to accept through the form, without demoting them" do
     allow(slack).to receive(:workspace_admin?).with("U1").and_return(true)
     expect(slack).not_to receive(:demote_to_guest)

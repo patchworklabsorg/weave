@@ -32,4 +32,9 @@ Run these in the production container.
 
 Every OAuth app requires the code of conduct (see `AppAccess`). A user who has not accepted cannot use the app. The authorize endpoint sends them to `/slack` to accept and then back to the app. Their existing tokens stop working until they accept.
 
-A superadmin can opt one app out on its admin page (`requires_code_of_conduct`). The app's access policy still applies.
+A superadmin can opt out:
+
+- one app, on the app's admin page (`oauth_applications.requires_code_of_conduct`), or
+- one user, on the user's admin page (`users.code_of_conduct_exempt`). Exempt users are also not asked to accept and not demoted.
+
+The access policy of the app still applies in both cases.
