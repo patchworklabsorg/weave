@@ -29,16 +29,23 @@ class CodeOfConductRequestJob < ApplicationJob
 
   # The opening of the message, as plain-text paragraphs. Shared by the Slack
   # DM and the email.
-  def self.paragraphs(user, deadline: nil)
+  #
+  # reason is :update for the first request, :demoted for a member who did not
+  # accept by the deadline and is now a guest, or :admin for a Slack admin who
+  # can't be demoted (see DemoteForCodeOfConductJob).
+  def self.paragraphs(user, deadline: nil, reason: :update)
     t = ->(key, **args) { I18n.t("code_of_conduct_request.#{key}", **args) }
     [
       # Capitalized like User#full_name: many Slack-imported names are lowercase.
       t.call(:greeting, first_name: user.name_missing? ? "there" : user.first_name.gsub(/\b\p{L}/, &:upcase)),
-      *t.call(:update).split(/\n{2,}/),
+      *t.call(reason).split(/\n{2,}/),
       (t.call(:name_missing) if user.name_missing?),
-      (t.call(:deadline, deadline: deadline.strftime("%B %-d, %Y")) if deadline)
+      (t.call(:deadline, deadline: deadline.strftime("%B %-d, %Y")) if deadline && reason == :update)
     ].compact
   end
+
+  # The header of the Slack DM for a reason (see .paragraphs).
+  def self.slack_title(reason) = I18n.t("code_of_conduct_request.slack_titles.#{reason}")
 
   private
 
@@ -49,7 +56,7 @@ class CodeOfConductRequestJob < ApplicationJob
 
     service.post_code_of_conduct(
       user.slack_id,
-      title: I18n.t("code_of_conduct_request.slack_title"),
+      title: self.class.slack_title(:update),
       paragraphs: self.class.paragraphs(user, deadline:),
       form: user.name_missing?
     )

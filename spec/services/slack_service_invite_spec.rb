@@ -79,4 +79,22 @@ RSpec.describe SlackService do
       expect(service.promote_to_member("U123")).to include(ok: false, error: "user_not_found")
     end
   end
+
+  describe "#demote_to_guest" do
+    it "makes the member a single-channel guest in the CoC channel" do
+      stub_faraday("ok" => true)
+
+      result = service.demote_to_guest("U1")
+
+      expect(@url).to eq("https://patchworklabs.slack.com/api/users.admin.setUltraRestricted")
+      expect(@body).to include("U1", "C_COC", "T123")
+      expect(result[:ok]).to be true
+    end
+
+    it "reports Slack's error" do
+      stub_faraday("ok" => false, "error" => "not_allowed")
+
+      expect(service.demote_to_guest("U1")).to include(ok: false, error: "not_allowed")
+    end
+  end
 end

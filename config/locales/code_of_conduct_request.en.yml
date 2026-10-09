@@ -12,8 +12,17 @@ en:
       Here is a quick update on Patchwork Labs. We set up Weave, our new account system. Your Weave account is linked to your Slack account, and it is how you sign in to Patchwork Labs apps.
 
       New members now join the Slack through Weave, and they accept our Code of Conduct when they join. You joined before we added that step, so we ask you to accept it now. It takes a few seconds.
+    demoted: |-
+      We asked you to accept our Code of Conduct, and we have not seen your acceptance yet. Your Slack account is now a guest account, so you can only see the Code of Conduct channel.
+
+      Accept the Code of Conduct to get full access back right away.
+    admin: |-
+      You are a Slack admin, so your account stays a full member. As an admin, please accept the Code of Conduct now, so that everyone in the Slack has accepted it.
     name_missing: "We also don't have your name yet. Please add it when you accept."
     deadline: "Please accept by %{deadline}. After that date, members who have not accepted move to guest access in the Slack until they accept."
-    slack_title: "📜 Please accept our Code of Conduct"
+    slack_titles:
+      update: "📜 Please accept our Code of Conduct"
+      demoted: "📜 Your Slack account is now a guest account"
+      admin: "📜 Slack admins: please accept our Code of Conduct"
     email_action: "Sign in to Weave with %{email} to accept."
     sign_off: "Thanks for being part of Patchwork Labs!"
