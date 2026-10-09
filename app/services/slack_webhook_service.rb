@@ -143,7 +143,7 @@ class SlackWebhookService
       return if user&.slack_id.blank?
       return if user.slack_coc_accepted_at.present?
 
-      SlackService.new.post_code_of_conduct(user.slack_id)
+      SlackService.new.post_code_of_conduct(user.slack_id, collect_name: user.name_missing?)
     rescue => e
       Rails.logger.error "[SlackWebhookService] Failed to post CoC to #{user&.slack_id}: #{e.message}"
     end

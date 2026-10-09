@@ -207,7 +207,7 @@ RSpec.describe SlackWebhookService do
       it "looks the email up, links the invited guest, and sends the code of conduct" do
         user = create(:user, :verified, email: "guest@example.com", slack_invited_at: 1.hour.ago)
         allow(slack).to receive(:find_email).with("U605").and_return("guest@example.com")
-        expect(slack).to receive(:post_code_of_conduct).with("U605")
+        expect(slack).to receive(:post_code_of_conduct).with("U605", collect_name: false)
 
         described_class.process_team_join(
           "id" => "U605", "is_restricted" => true, "is_ultra_restricted" => true,

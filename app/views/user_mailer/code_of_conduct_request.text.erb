@@ -1,0 +1,17 @@
+Please accept our Code of Conduct
+
+<% @paragraphs.each do |paragraph| %>
+<%= paragraph %>
+
+<% end %>
+<% if @code_of_conduct_url.present? %>
+Read the Code of Conduct: <%= @code_of_conduct_url %>
+
+<% end %>
+<%= t("code_of_conduct_request.email_action", email: @user.email) %>
+
+<%= @login_url %>
+
+<%= t("code_of_conduct_request.sign_off") %>
+
+We also sent this to you as a Slack DM. You only need to accept once.

@@ -70,8 +70,48 @@ RSpec.describe User do
       expect(user.slack_onboarding_step).to eq(:awaiting_promotion)
     end
 
-    it "is done for a full member" do
-      expect(build(:user, slack_id: "U1", slack_membership: "member").slack_onboarding_step).to eq(:member)
+    it "is done for a full member who accepted the code of conduct" do
+      user = build(:user, slack_id: "U1", slack_membership: "member", slack_coc_accepted_at: 1.day.ago)
+
+      expect(user.slack_onboarding_step).to eq(:member)
+      expect(user).to be_slack_onboarding_complete
+    end
+
+    it "asks a full member who joined before the code-of-conduct flow to accept it" do
+      user = build(:user, slack_id: "U1", slack_membership: "member")
+
+      expect(user.slack_onboarding_step).to eq(:accept_code_of_conduct)
+      expect(user).not_to be_slack_onboarding_complete
+    end
+  end
+
+  describe ".code_of_conduct_pending" do
+    it "finds full members without an acceptance" do
+      legacy = create(:user, slack_id: "U1", slack_membership: "member")
+      create(:user, slack_id: "U2", slack_membership: "member", slack_coc_accepted_at: 1.day.ago)
+      create(:user, slack_id: "U3")
+      create(:user)
+
+      expect(described_class.code_of_conduct_pending).to contain_exactly(legacy)
+    end
+  end
+
+  describe "#name_missing?" do
+    it "is true for the names the Slack import makes up" do
+      expect(build(:user, first_name: "NOTSET", last_name: "NOTSET")).to be_name_missing
+      expect(build(:user, first_name: "Ada", last_name: "NOTSET")).to be_name_missing
+      expect(build(:user, first_name: "Unknown", last_name: "User")).to be_name_missing
+    end
+
+    it "is false for a real name" do
+      expect(build(:user, first_name: "Ada", last_name: "Lovelace")).not_to be_name_missing
+    end
+
+    it "matches the name_missing scope" do
+      missing = create(:user, first_name: "NOTSET", last_name: "NOTSET")
+      create(:user, first_name: "Ada", last_name: "Lovelace")
+
+      expect(described_class.name_missing).to contain_exactly(missing)
     end
   end
 end

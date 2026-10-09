@@ -1,0 +1,27 @@
+<h2 style="margin: 0 0 16px 0; color: #2a2050; font-size: 20px; font-weight: 700;">Please accept our Code of Conduct 🧵</h2>
+
+<% @paragraphs.each do |paragraph| %>
+  <p style="margin: 0 0 16px 0; color: #2a2050;"><%= paragraph %></p>
+<% end %>
+
+<% if @code_of_conduct_url.present? %>
+  <p style="margin: 0 0 16px 0; color: #2a2050;"><a href="<%= @code_of_conduct_url %>" style="color: #6c3ec1;">Read the Code of Conduct</a></p>
+<% end %>
+
+<p style="margin: 0 0 16px 0; color: #2a2050;"><%= t("code_of_conduct_request.email_action", email: @user.email) %></p>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 8px 0 24px 0;">
+  <tr>
+    <td style="border-radius: 8px; background-color: #6c3ec1;">
+      <a href="<%= @login_url %>" style="display: inline-block; padding: 12px 28px; background-color: #6c3ec1; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 15px; font-family: 'Geist', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+        Sign in and accept
+      </a>
+    </td>
+  </tr>
+</table>
+
+<p style="margin: 0 0 16px 0; color: #2a2050;"><%= t("code_of_conduct_request.sign_off") %></p>
+
+<div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #ebe3f9; color: #5d5584; font-size: 13px; line-height: 1.6;">
+  <p style="margin: 0;">We also sent this to you as a Slack DM. You only need to accept once.</p>
+</div>

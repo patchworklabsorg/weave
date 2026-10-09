@@ -34,4 +34,19 @@ class UserMailer < ApplicationMailer
     )
   end
 
+  # Asks a member who joined the Slack before the code-of-conduct flow to
+  # accept it (see CodeOfConductRequestJob). Signing in sends them to /slack,
+  # which shows the accept step.
+  def code_of_conduct_request(user, deadline: nil)
+    @user = user
+    @paragraphs = CodeOfConductRequestJob.paragraphs(user, deadline:)
+    @login_url = login_url
+    @code_of_conduct_url = SlackService.code_of_conduct_url
+
+    mail(
+      to: @user.email,
+      subject: env_subject(I18n.t("code_of_conduct_request.subject"))
+    )
+  end
+
 end

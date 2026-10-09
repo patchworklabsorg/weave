@@ -39,6 +39,9 @@ class SlackService
   MANAGER_FIELD = "Manager"
   PWL_ID_FIELD = "pwl_idp_id"
 
+  # callback_id of the code-of-conduct form (see #open_code_of_conduct_form).
+  CODE_OF_CONDUCT_FORM = "coc_form"
+
   # How long a workspace's label -> field ID map is cached.
   CUSTOM_FIELD_IDS_TTL = 1.hour
 
@@ -151,37 +154,100 @@ class SlackService
     { ok: false, error: "request_failed", raw: nil }
   end
 
-  # DM a newly-joined guest the code of conduct with an "I accept" button. Uses
-  # the bot token (needs chat:write + im:write). The button's action_id is
-  # "accept_coc" and its value is the Slack user id, handled by the interactions
-  # webhook. Returns the Slack API response.
-  def post_code_of_conduct(slack_user_id, coc_url: nil)
+  # DM someone the code of conduct with a button to accept it. Uses the bot
+  # token (needs chat:write + im:write). Returns the Slack API response.
+  #
+  # intro is the opening text (mrkdwn). It defaults to the welcome for a
+  # newly-joined guest. CodeOfConductRequestJob passes its own.
+  #
+  # With collect_name: false, the button accepts at once: its action_id is
+  # "accept_coc" and its value is the Slack user id. With collect_name: true
+  # (for people whose name the Slack import could not find), the button
+  # ("open_coc_form") opens a form that asks for their name and then accepts
+  # (see #open_code_of_conduct_form). The interactions webhook handles both.
+  def post_code_of_conduct(slack_user_id, coc_url: nil, intro: nil, collect_name: false)
     raise ConfigurationError, "Slack client not configured" unless @client
 
     coc_url ||= self.class.code_of_conduct_url
-    intro = "Welcome to Patchwork Labs! :wave: Before you get full access to the community, " \
-            "please read our Code of Conduct and accept it below."
+    intro ||= "*Welcome to Patchwork Labs! :wave: Before you get full access to the community, " \
+              "please read our Code of Conduct and accept it below.*"
     coc_line = coc_url.present? ? "Read it here: #{coc_url}" : "Please review our Code of Conduct."
+
+    button = if collect_name
+               { text: "Review and accept", action_id: "open_coc_form" }
+             else
+               { text: "I accept the Code of Conduct", action_id: "accept_coc" }
+             end
 
     @client.chat_postMessage(
       channel: slack_user_id,
-      text: "Please review and accept the Patchwork Labs Code of Conduct to get full access.",
+      text: "Please review and accept the Patchwork Labs Code of Conduct.",
       blocks: [
-        { type: "section", text: { type: "mrkdwn", text: "*#{intro}*\n\n#{coc_line}" } },
+        { type: "section", text: { type: "mrkdwn", text: "#{intro}\n\n#{coc_line}" } },
         {
           type: "actions",
           elements: [
             {
               type: "button",
               style: "primary",
-              text: { type: "plain_text", text: "I accept the Code of Conduct", emoji: true },
-              action_id: "accept_coc",
+              text: { type: "plain_text", text: button[:text], emoji: true },
+              action_id: button[:action_id],
               value: slack_user_id
             }
           ]
         }
       ]
     )
+  end
+
+  # Opens the code-of-conduct form from a button click. trigger_id comes from
+  # the click and expires after 3 seconds, so call this while answering it.
+  #
+  # The form asks for a first and last name when the user's name is missing
+  # (or when there is no linked user, since nothing is known about them).
+  # message is the DM the button was in, as { channel:, ts: }. It goes into
+  # private_metadata, so the submission can replace the DM.
+  def open_code_of_conduct_form(trigger_id:, user:, message: nil)
+    raise ConfigurationError, "Slack client not configured" unless @client
+
+    coc_url = self.class.code_of_conduct_url
+    coc_text = coc_url.present? ? "<#{coc_url}|Read the Code of Conduct>" : "Please review our Code of Conduct."
+    blocks = [
+      { type: "section", text: { type: "mrkdwn", text: "#{coc_text}, then choose *I accept* below." } }
+    ]
+    if user.nil? || user.name_missing?
+      blocks.unshift({ type: "section", text: { type: "mrkdwn", text: "We don't have your name yet. Please add it." } })
+      blocks.insert(1, name_input("first_name", "First name"), name_input("last_name", "Last name"))
+    end
+
+    @client.views_open(
+      trigger_id: trigger_id,
+      view: {
+        type: "modal",
+        callback_id: CODE_OF_CONDUCT_FORM,
+        private_metadata: (message || {}).to_json,
+        title: { type: "plain_text", text: "Code of Conduct" },
+        submit: { type: "plain_text", text: "I accept" },
+        close: { type: "plain_text", text: "Not now" },
+        blocks: blocks
+      }
+    )
+  end
+
+  # Replaces a code-of-conduct DM with a thank-you, so its button can't be
+  # used again.
+  def mark_code_of_conduct_accepted(channel:, ts:, already_member: false)
+    raise ConfigurationError, "Slack client not configured" unless @client
+
+    @client.chat_update(channel: channel, ts: ts, text: self.class.code_of_conduct_thanks(already_member:), blocks: [])
+  end
+
+  def self.code_of_conduct_thanks(already_member:)
+    if already_member
+      ":white_check_mark: Thanks for accepting the Code of Conduct! :tada:"
+    else
+      ":white_check_mark: Thanks for accepting the Code of Conduct — you now have full access to the Patchwork Labs Slack. Welcome! :tada:"
+    end
   end
 
   # Where members open the workspace, e.g. https://patchworklabs.slack.com.
@@ -517,6 +583,15 @@ class SlackService
   # Workspace subdomain, e.g. "patchworklabs" for patchworklabs.slack.com.
   def workspace_subdomain
     @workspace_subdomain ||= ENV["SLACK_WORKSPACE_SUBDOMAIN"] || Rails.application.credentials.dig(:slack, :workspace_subdomain)
+  end
+
+  def name_input(block_id, label)
+    {
+      type: "input",
+      block_id: block_id,
+      label: { type: "plain_text", text: label },
+      element: { type: "plain_text_input", action_id: "value", max_length: 100 }
+    }
   end
 
   # Channel single-channel guests are invited into (the code-of-conduct channel).

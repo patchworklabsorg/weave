@@ -42,16 +42,34 @@ class SlackOnboardingController < ApplicationController
   end
 
   # Accepts the code of conduct from the web, for people who can't find the
-  # Slack DM. Also retries the promotion if it failed after an earlier
-  # acceptance.
+  # Slack DM and for full members who joined before the code-of-conduct flow.
+  # Also asks for a real name when the Slack import could not find one, and
+  # retries the promotion if it failed after an earlier acceptance.
   def accept_code_of_conduct
     unless %i[accept_code_of_conduct awaiting_promotion].include?(current_user.slack_onboarding_step)
       redirect_to slack_onboarding_path
       return
     end
 
-    SlackCodeOfConductAcceptedJob.perform_later(current_user.slack_id)
-    redirect_to slack_onboarding_path, notice: "Thanks for accepting the Code of Conduct. Your full Slack access is on its way."
+    result = CodeOfConductAcceptance.call(
+      current_user,
+      first_name: params[:first_name],
+      last_name: params[:last_name]
+    )
+
+    unless result.success?
+      @step = current_user.slack_onboarding_step
+      @name_errors = result.errors
+      render :show, status: :unprocessable_content
+      return
+    end
+
+    notice = if current_user.slack_member?
+               "Thanks for accepting the Code of Conduct."
+             else
+               "Thanks for accepting the Code of Conduct. Your full Slack access is on its way."
+             end
+    redirect_to slack_onboarding_path, notice: notice
   end
 
 end

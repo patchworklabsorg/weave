@@ -67,4 +67,51 @@ namespace :slack do
     Rake::Task["slack:sync_to_slack"].invoke
     puts "✅ Bidirectional sync complete!"
   end
+
+  # Full members who joined before the code-of-conduct flow never accepted it.
+  # These tasks ask them to (see CodeOfConductRequestJob).
+  namespace :coc do
+    desc "Count full members who have not accepted the code of conduct"
+    task status: :environment do
+      pending = User.code_of_conduct_pending
+      puts "Full members without CoC: #{pending.count}"
+      puts "  asked:                  #{pending.where.not(slack_coc_requested_at: nil).count}"
+      puts "  not asked yet:          #{pending.where(slack_coc_requested_at: nil).count}"
+      puts "  name missing:           #{pending.name_missing.count}"
+      puts "All users with a missing name: #{User.name_missing.count}"
+    end
+
+    # Shows the message and who gets it. Nothing is sent without SEND=1.
+    #
+    #   bin/rails slack:coc:request                          # preview
+    #   bin/rails slack:coc:request SEND=1                   # ask everyone not asked yet
+    #   bin/rails slack:coc:request SEND=1 DEADLINE=2026-11-01
+    #   bin/rails slack:coc:request SEND=1 REMIND=1          # ask again, including people already asked
+    desc "Ask full members to accept the code of conduct by Slack DM and email (SEND=1 to send)"
+    task request: :environment do
+      deadline = ENV["DEADLINE"].presence && Date.iso8601(ENV["DEADLINE"])
+      reminder = ENV["REMIND"] == "1"
+      users = User.code_of_conduct_pending
+      users = users.where(slack_coc_requested_at: nil) unless reminder
+      users = users.select(&:can_authenticate?)
+
+      sample = users.first || User.new(first_name: "Ada", last_name: "Lovelace")
+      puts "Message for #{sample.email.presence || 'a sample member'}:"
+      puts "-" * 50
+      puts CodeOfConductRequestJob.paragraphs(sample, deadline:).join("\n\n")
+      puts "-" * 50
+      puts "#{users.size} members to ask#{' (reminder)' if reminder}."
+
+      unless ENV["SEND"] == "1"
+        puts "Preview only. Run again with SEND=1 to send."
+        next
+      end
+
+      # Space the jobs out to stay under Slack's chat.postMessage rate limit.
+      users.each_with_index do |user, index|
+        CodeOfConductRequestJob.set(wait: (index * 2).seconds).perform_later(user.id, deadline: deadline, reminder: reminder)
+      end
+      puts "Enqueued #{users.size} requests."
+    end
+  end
 end

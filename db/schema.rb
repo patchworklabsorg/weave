@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+
 # This file is auto-generated from the current state of the database. Instead
 # of editing this file, please use the migrations feature of Active Record to
 # incrementally modify your database, and then regenerate this schema definition.
@@ -12,7 +13,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_07_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_09_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -588,6 +589,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_07_120000) do
     t.date "slack_birthday"
     t.string "slack_city"
     t.datetime "slack_coc_accepted_at"
+    t.datetime "slack_coc_requested_at"
     t.string "slack_cost_center"
     t.string "slack_country"
     t.string "slack_department"

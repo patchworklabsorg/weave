@@ -303,6 +303,11 @@
               <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-soft text-teal">Full member</span>
               <% if @user.slack_coc_accepted_at.present? %>
                 <span class="text-ink-faint text-xs">accepted CoC <%= @user.slack_coc_accepted_at.strftime("%b %-d, %Y") %></span>
+              <% else %>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-soft text-sky">CoC pending</span>
+                <% if @user.slack_coc_requested_at.present? %>
+                  <span class="text-ink-faint text-xs">asked <%= @user.slack_coc_requested_at.strftime("%b %-d, %Y") %></span>
+                <% end %>
               <% end %>
             <% elsif @user.in_slack_workspace? && @user.slack_coc_accepted_at.present? %>
               <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orchid-soft text-orchid">Guest · promotion pending</span>

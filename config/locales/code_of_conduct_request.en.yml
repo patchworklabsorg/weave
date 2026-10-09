@@ -1,0 +1,19 @@
+# The message that asks members who joined the Slack before the
+# code-of-conduct flow to accept it (see CodeOfConductRequestJob). It goes out
+# as a Slack DM and as an email, so keep it plain text: no Slack markup and no
+# HTML. Blank lines separate paragraphs.
+#
+# Preview it before sending: bin/rails slack:coc:request
+en:
+  code_of_conduct_request:
+    subject: "Please accept the Patchwork Labs Code of Conduct"
+    greeting: "Hi %{first_name},"
+    update: |-
+      Here is a quick update on Patchwork Labs. We set up Weave, our new account system. Your Weave account is linked to your Slack account, and it is how you sign in to Patchwork Labs apps.
+
+      New members now join the Slack through Weave, and they accept our Code of Conduct when they join. You joined before we added that step, so we ask you to accept it now. It takes a few seconds.
+    name_missing: "We also don't have your name yet. Please add it when you accept."
+    deadline: "Please accept by %{deadline}. After that date, members who have not accepted move to guest access in the Slack until they accept."
+    slack_action: "Choose the button below to accept."
+    email_action: "Sign in to Weave with %{email} to accept."
+    sign_off: "Thanks for being part of Patchwork Labs!"
