@@ -9,11 +9,18 @@
 #
 # There is no admin bypass: an admin needs a grant like anyone else.
 #
+# When the :require_code_of_conduct flag is on, a user who has not accepted
+# the code of conduct may use no app at all, open or restricted. The flag is
+# read only when the feature exists, so a missing flag means "off" and never
+# trips Flipper's strict mode in production.
+#
 # Every place that hands out or honors a user's token asks this module:
 # the authorize endpoint, the token endpoint (code exchange and refresh),
 # introspection, and userinfo. Checking at consent alone is not enough,
 # because a refresh token would keep working after access is removed.
 module AppAccess
+  CODE_OF_CONDUCT_FLAG = :require_code_of_conduct
+
   Decision = Data.define(:permitted, :reason, :groups, :roles) do
     alias_method :permitted?, :permitted
 
@@ -24,6 +31,7 @@ module AppAccess
       when :group then "Member of #{groups.map(&:name).to_sentence}"
       when :role then "Holds the #{roles.map(&:name).to_sentence} role"
       when :no_user then "No user"
+      when :code_of_conduct then "Has not accepted the Code of Conduct"
       else "No grant for this user or their groups"
       end
     end
@@ -33,6 +41,7 @@ module AppAccess
     def permitted?(user, application) = explain(user, application).permitted?
 
     def explain(user, application)
+      return decision(false, :code_of_conduct) if code_of_conduct_missing?(user)
       return decision(true, :open) unless restricted?(application)
       return decision(false, :no_user) if user.nil?
 
@@ -49,6 +58,10 @@ module AppAccess
     end
 
     def restricted?(application) = application.access_policy != "everyone"
+
+    def code_of_conduct_required? = Flipper.exist?(CODE_OF_CONDUCT_FLAG) && Flipper.enabled?(CODE_OF_CONDUCT_FLAG)
+
+    def code_of_conduct_missing?(user) = user.present? && user.slack_coc_accepted_at.nil? && code_of_conduct_required?
 
     # Groups linked to an app by an access grant or a role assignment. These
     # are the only groups the app may see (the `groups` claim, the directory).

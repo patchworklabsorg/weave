@@ -145,4 +145,49 @@ RSpec.describe AppAccess do
       expect(described_class.token_usable?(token_for(user))).to be(true)
     end
   end
+
+  describe "the code-of-conduct requirement" do
+    before { application.update!(access_policy: "everyone") }
+    after { Flipper.remove(described_class::CODE_OF_CONDUCT_FLAG) }
+
+    it "is off while the flag does not exist" do
+      expect(described_class.explain(user, application)).to be_permitted
+    end
+
+    it "is off while the flag is disabled" do
+      Flipper.disable(described_class::CODE_OF_CONDUCT_FLAG)
+
+      expect(described_class.explain(user, application)).to be_permitted
+    end
+
+    context "when the flag is on" do
+      before { Flipper.enable(described_class::CODE_OF_CONDUCT_FLAG) }
+
+      it "refuses a user who has not accepted, even for an open app" do
+        decision = described_class.explain(user, application)
+
+        expect(decision).not_to be_permitted
+        expect(decision.to_s).to eq("Has not accepted the Code of Conduct")
+      end
+
+      it "refuses a user who has not accepted, even with a grant" do
+        application.update!(access_policy: "restricted")
+        grant(user)
+
+        expect(described_class.permitted?(user, application)).to be(false)
+      end
+
+      it "lets a user who accepted use the app" do
+        user.update!(slack_coc_accepted_at: 1.day.ago)
+
+        expect(described_class.permitted?(user, application)).to be(true)
+      end
+
+      it "stops the user's tokens" do
+        token = Doorkeeper::AccessToken.create!(application: application, resource_owner_id: user.id)
+
+        expect(described_class.token_usable?(token)).to be(false)
+      end
+    end
+  end
 end

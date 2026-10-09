@@ -89,6 +89,45 @@ RSpec.describe "OAuth access to restricted apps", type: :request do
     expect(response.body).to include("Authorization required")
   end
 
+  describe "the code-of-conduct requirement" do
+    before { Flipper.enable(AppAccess::CODE_OF_CONDUCT_FLAG) }
+    after { Flipper.remove(AppAccess::CODE_OF_CONDUCT_FLAG) }
+
+    it "sends a user who has not accepted to accept, then back to the app" do
+      user.update!(slack_id: "U1", slack_membership: "member")
+      sign_in_via_magic_link(user)
+
+      get oauth_authorization_path, params: authorization_params
+
+      expect(response).to redirect_to(slack_onboarding_path)
+      authorize_path = URI.parse(request.url).request_uri
+
+      post accept_code_of_conduct_slack_onboarding_path
+
+      expect(response).to redirect_to(authorize_path)
+      follow_redirect!
+      expect(response.body).to include("Authorization required")
+    end
+
+    it "refuses the consent POST" do
+      sign_in_via_magic_link(user)
+
+      post oauth_authorization_path, params: authorization_params
+
+      expect(response).to have_http_status(:forbidden)
+      expect(response.body).to include("Accept the Code of Conduct")
+    end
+
+    it "stops a refresh token once acceptance is required" do
+      user.update!(slack_coc_accepted_at: 1.day.ago)
+      tokens = obtain_tokens
+      user.update_columns(slack_coc_accepted_at: nil) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(refresh(tokens["refresh_token"])["error"]).to be_present
+      expect(userinfo_status(tokens["access_token"])).to eq(401)
+    end
+  end
+
   describe "the authorization endpoint" do
     before { restrict! }
 

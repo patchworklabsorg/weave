@@ -27,7 +27,8 @@ module Oauth
   # screen and the consent POST, so a previously approved app can't skip it.
   # The user sees a Weave page instead of a redirect to the client with
   # `error=access_denied`: the client can't grant access, and Weave can say who
-  # to ask.
+  # to ask. A user who only lacks the code of conduct is sent to accept it, and
+  # comes back here afterwards (see SlackOnboardingController).
   class AuthorizationsController < Doorkeeper::AuthorizationsController
     include OauthClientRedirectOrigins
 
@@ -45,13 +46,21 @@ module Oauth
       return unless pre_auth.authorizable?
 
       application = pre_auth.client.application
-      return if AppAccess.permitted?(current_resource_owner, application)
+      decision = AppAccess.explain(current_resource_owner, application)
+      return if decision.permitted?
+
+      if decision.reason == :code_of_conduct && request.get?
+        session[:code_of_conduct_return_to] = request.fullpath
+        redirect_to slack_onboarding_path, alert: "Please accept the Code of Conduct to continue to #{application.name}."
+        return
+      end
 
       # Ahoy drops requests it takes for bots, so the log line is the record
       # that is always kept.
       Rails.logger.info("OAuth access denied: user=#{current_resource_owner.p_id} application=#{application.uid}")
       ahoy.track "OAuth access denied", application_uid: application.uid, user_id: current_resource_owner.id
       @application = application
+      @decision = decision
       render "doorkeeper/authorizations/access_denied", status: :forbidden
     end
 
