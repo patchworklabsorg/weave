@@ -113,5 +113,30 @@ namespace :slack do
       end
       puts "Enqueued #{users.size} requests."
     end
+
+    # Moves members who were asked and still have not accepted back to
+    # single-channel guests. Nothing changes without CONFIRM=1.
+    #
+    #   bin/rails slack:coc:demote                             # preview
+    #   bin/rails slack:coc:demote CONFIRM=1                   # asked 14 or more days ago
+    #   bin/rails slack:coc:demote CONFIRM=1 ASKED_BEFORE=2026-10-15
+    desc "Move members who did not accept the code of conduct back to guests (CONFIRM=1 to run)"
+    task demote: :environment do
+      asked_before = ENV["ASKED_BEFORE"].presence ? Date.iso8601(ENV["ASKED_BEFORE"]).beginning_of_day : 14.days.ago
+      users = User.code_of_conduct_pending.where(slack_coc_requested_at: ...asked_before).order(:id).to_a
+
+      puts "Members asked before #{asked_before.to_date} who have not accepted: #{users.size}"
+      users.each { |user| puts "  #{user.email} (#{user.slack_id}), asked #{user.slack_coc_requested_at.to_date}" }
+
+      unless ENV["CONFIRM"] == "1"
+        puts "Preview only. Run again with CONFIRM=1 to demote them."
+        next
+      end
+
+      users.each_with_index do |user, index|
+        DemoteForCodeOfConductJob.set(wait: (index * 3).seconds).perform_later(user.id)
+      end
+      puts "Enqueued #{users.size} demotions. Slack admins and owners are skipped."
+    end
   end
 end

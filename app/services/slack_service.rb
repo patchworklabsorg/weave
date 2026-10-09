@@ -154,6 +154,36 @@ class SlackService
     { ok: false, error: "request_failed", raw: nil }
   end
 
+  # Move a full member back to a single-channel guest in the code-of-conduct
+  # channel, via the undocumented `users.admin.setUltraRestricted` endpoint
+  # (same xoxc/xoxd auth as #promote_to_member, which undoes it). Used for
+  # members who joined before the code-of-conduct flow and did not accept it
+  # by the deadline. Returns { ok:, error:, raw: }.
+  def demote_to_guest(slack_user_id)
+    raise ConfigurationError, "Slack code-of-conduct channel (SLACK_COC_CHANNEL) not configured" if coc_channel.blank?
+
+    body = admin_api_post("users.admin.setUltraRestricted", {
+                            "user"      => slack_user_id,
+                            "channel"   => coc_channel,
+                            "team_id"   => team_id,
+                            "_x_reason" => "member-set-ultra-restricted"
+                          })
+
+    Rails.logger.error "Slack demote failed for #{slack_user_id}: #{body["error"].inspect}" unless body["ok"]
+    { ok: !!body["ok"], error: body["error"], raw: body }
+  rescue Faraday::Error => e
+    Rails.logger.error "Slack demote request error for #{slack_user_id}: #{e.message}"
+    { ok: false, error: "request_failed", raw: nil }
+  end
+
+  # True for workspace admins and owners. They are never demoted.
+  def workspace_admin?(slack_user_id)
+    raise ConfigurationError, "Slack client not configured" unless @client
+
+    user = @client.users_info(user: slack_user_id)["user"] || {}
+    user["is_admin"] || user["is_owner"] || user["is_primary_owner"] || false
+  end
+
   # DM someone the code of conduct with a button to accept it. Uses the bot
   # token (needs chat:write + im:write). Returns the Slack API response. The
   # blocks come from CodeOfConductSlackViews.request.

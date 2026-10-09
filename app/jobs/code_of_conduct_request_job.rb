@@ -29,14 +29,17 @@ class CodeOfConductRequestJob < ApplicationJob
 
   # The opening of the message, as plain-text paragraphs. Shared by the Slack
   # DM and the email.
-  def self.paragraphs(user, deadline: nil)
+  #
+  # demoted: true is for a member who did not accept by the deadline and is
+  # now a guest (see DemoteForCodeOfConductJob).
+  def self.paragraphs(user, deadline: nil, demoted: false)
     t = ->(key, **args) { I18n.t("code_of_conduct_request.#{key}", **args) }
     [
       # Capitalized like User#full_name: many Slack-imported names are lowercase.
       t.call(:greeting, first_name: user.name_missing? ? "there" : user.first_name.gsub(/\b\p{L}/, &:upcase)),
-      *t.call(:update).split(/\n{2,}/),
+      *t.call(demoted ? :demoted : :update).split(/\n{2,}/),
       (t.call(:name_missing) if user.name_missing?),
-      (t.call(:deadline, deadline: deadline.strftime("%B %-d, %Y")) if deadline)
+      (t.call(:deadline, deadline: deadline.strftime("%B %-d, %Y")) if deadline && !demoted)
     ].compact
   end
 
