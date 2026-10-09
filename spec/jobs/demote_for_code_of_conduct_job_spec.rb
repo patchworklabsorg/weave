@@ -13,7 +13,7 @@ RSpec.describe DemoteForCodeOfConductJob do
   it "makes the member a guest and asks them again by DM and email" do
     allow(slack).to receive(:demote_to_guest).with("U1").and_return({ ok: true })
     expect(slack).to receive(:post_code_of_conduct)
-      .with("U1", intro: a_string_including("now a guest account"), collect_name: false)
+      .with("U1", title: a_string_including("guest account"), paragraphs: include(a_string_including("now a guest account")), form: false)
 
     expect { described_class.perform_now(user.id) }.to have_enqueued_mail(UserMailer, :code_of_conduct_request)
 
@@ -36,10 +36,13 @@ RSpec.describe DemoteForCodeOfConductJob do
     described_class.perform_now(user.id)
   end
 
-  it "skips Slack admins and owners" do
+  it "asks Slack admins and owners to accept through the form, without demoting them" do
     allow(slack).to receive(:workspace_admin?).with("U1").and_return(true)
     expect(slack).not_to receive(:demote_to_guest)
+    expect(slack).to receive(:post_code_of_conduct)
+      .with("U1", title: a_string_including("Slack admins"), paragraphs: include(a_string_including("You are a Slack admin")), form: true)
 
-    described_class.perform_now(user.id)
+    expect { described_class.perform_now(user.id) }.to have_enqueued_mail(UserMailer, :code_of_conduct_request)
+    expect(user.reload).to be_slack_member
   end
 end

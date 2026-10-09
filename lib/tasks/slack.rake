@@ -136,7 +136,7 @@ namespace :slack do
       users.each_with_index do |user, index|
         DemoteForCodeOfConductJob.set(wait: (index * 3).seconds).perform_later(user.id)
       end
-      puts "Enqueued #{users.size} demotions. Slack admins and owners are skipped."
+      puts "Enqueued #{users.size} demotions. Slack admins and owners are not demoted: they get a request with the form instead."
     end
   end
 end
