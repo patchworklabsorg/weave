@@ -1,6 +1,6 @@
 # The form people use to accept the code of conduct: the Slack form (see
-# app/views/slack/code_of_conduct/form.slack_modal.slocks) and the /slack page.
-# Both tell people why we ask for their data and how we use it.
+# CodeOfConductSlackViews.form) and the /slack page. Both tell people why we
+# ask for their data and how we use it.
 en:
   code_of_conduct_form:
     slack_action: "Choose the button below to accept."
@@ -8,6 +8,9 @@ en:
     intro: "Read the Code of Conduct, then check the box below to accept it."
     accept_label: "I have read and accept the Code of Conduct"
     accept_error: "Check the box to accept the Code of Conduct."
-    name_why: "Your Slack profile has no name, so we don't know what to call you. Please add your first and last name."
+    name_why: "We don't have your name yet. Please tell us what to call you."
+    preferred_hint: "The name we call you. Weave and Patchwork Labs apps show it."
+    legal_hint: "Only if it is different from your preferred name. We use it only where the law asks for your legal name, for example a contract. Apps never get it."
+    slack_name_hint: "A nickname for Slack, if you don't want your preferred name there. Leave it blank to show your preferred name in Slack."
     data_use_title: "How we use this information"
-    data_use: "We save the date and time you accept in your Weave account, so we have a record that you accepted. If you add your name, we save it in your Weave account too. Weave admins can see this information. Patchwork Labs apps that you can use with Weave can see your name."
+    data_use: "We save the date and time you accept in your Weave account, so we have a record that you accepted. We save the names you add there too, and Weave admins can see them. Patchwork Labs apps that you can use with Weave can see your preferred name, but never your legal name. Your Slack profile shows your Slack nickname, or your preferred name if you leave the nickname blank."

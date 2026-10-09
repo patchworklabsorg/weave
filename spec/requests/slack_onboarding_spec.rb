@@ -76,7 +76,7 @@ RSpec.describe "Slack onboarding", type: :request do
       get slack_onboarding_path
 
       expect(response.body).to include("now accepts our Code of Conduct", "I have read and accept", "How we use this information")
-      expect(response.body).not_to include("First name")
+      expect(response.body).not_to include("Preferred first name")
     end
 
     it "asks for a name the Slack import could not find" do
@@ -85,7 +85,7 @@ RSpec.describe "Slack onboarding", type: :request do
 
       get slack_onboarding_path
 
-      expect(response.body).to include("First name", "Last name")
+      expect(response.body).to include("Preferred first name", "Legal first name (optional)", "Slack nickname (optional)")
     end
   end
 
@@ -180,14 +180,34 @@ RSpec.describe "Slack onboarding", type: :request do
 
         user.reload
         expect(user.full_name).to eq("Ada Lovelace")
+        expect(user.legal_name?).to be(false)
         expect(user.slack_coc_accepted_at).to be_present
+      end
+
+      it "saves a legal name apart from the preferred name, and sends the preferred name to Slack" do
+        expect do
+          post accept_code_of_conduct_slack_onboarding_path,
+               params: { accept: "1", first_name: "Ada", last_name: "Lovelace", legal_first_name: "Augusta", legal_last_name: "King" }
+        end.to have_enqueued_job(PushSlackNameJob).with(user.id, nickname: nil)
+
+        user.reload
+        expect(user.full_name).to eq("Ada Lovelace")
+        expect(user.legal_full_name).to eq("Augusta King")
+      end
+
+      it "asks for both parts of a legal name" do
+        post accept_code_of_conduct_slack_onboarding_path,
+             params: { accept: "1", first_name: "Ada", last_name: "Lovelace", legal_first_name: "Augusta" }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("Enter both parts of your legal name")
       end
 
       it "does not accept without a name" do
         post accept_code_of_conduct_slack_onboarding_path, params: { accept: "1", first_name: "Ada", last_name: "" }
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(response.body).to include("Enter your last name.")
+        expect(response.body).to include("Enter your preferred last name.")
         expect(user.reload.slack_coc_accepted_at).to be_nil
         expect(user.first_name).to eq("NOTSET")
       end

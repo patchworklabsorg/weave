@@ -2,8 +2,8 @@
 
 require "rails_helper"
 
-# The code-of-conduct DM and form are Block Kit views rendered with slocks
-# (app/views/slack/code_of_conduct).
+# The code-of-conduct DM and form are Block Kit payloads built by
+# CodeOfConductSlackViews.
 RSpec.describe SlackService do
   subject(:service) { described_class.new }
 
@@ -49,7 +49,10 @@ RSpec.describe SlackService do
         expect(args[:trigger_id]).to eq("T1")
         expect(view).to include(type: "modal", callback_id: "coc_form", private_metadata: { channel: "D1", ts: "1.2" }.to_json)
         inputs = view[:blocks].select { |block| block[:type] == "input" }
-        expect(inputs.map { |block| block[:block_id] }).to eq(%w[first_name last_name accept])
+        expect(inputs.map { |block| [block[:block_id], block[:optional]] }).to eq(
+          [["first_name", false], ["last_name", false], ["legal_first_name", true], ["legal_last_name", true],
+           ["slack_name", true], ["accept", nil]]
+        )
         expect(inputs.last[:element][:type]).to eq("checkboxes")
         expect(view[:blocks].last[:elements].first[:text]).to include("How we use this information")
       end

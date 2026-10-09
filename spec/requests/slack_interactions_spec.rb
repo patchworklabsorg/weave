@@ -60,7 +60,7 @@ RSpec.describe "Slack interactions webhook", type: :request do
 
     before { allow(SlackService).to receive(:new).and_return(slack) }
 
-    def submission(first_name:, last_name:, user_id: "U123", accept: true)
+    def submission(first_name:, last_name:, user_id: "U123", accept: true, slack_name: nil)
       {
         type: "view_submission",
         user: { id: user_id },
@@ -71,7 +71,10 @@ RSpec.describe "Slack interactions webhook", type: :request do
             values: {
               accept: { value: { selected_options: accept ? [{ value: "accept" }] : [] } },
               first_name: { value: { value: first_name } },
-              last_name: { value: { value: last_name } }
+              last_name: { value: { value: last_name } },
+              legal_first_name: { value: { value: nil } },
+              legal_last_name: { value: { value: nil } },
+              slack_name: { value: { value: slack_name } }
             }
           }
         }
@@ -105,8 +108,13 @@ RSpec.describe "Slack interactions webhook", type: :request do
     it "shows an error next to a missing name" do
       signed_post("payload=#{CGI.escape(submission(first_name: "Ada", last_name: ""))}")
 
-      expect(response.parsed_body).to eq("response_action" => "errors", "errors" => { "last_name" => "Enter your last name." })
+      expect(response.parsed_body).to eq("response_action" => "errors", "errors" => { "last_name" => "Enter your preferred last name." })
       expect(user.reload.slack_coc_accepted_at).to be_nil
+    end
+
+    it "sets a Slack nickname instead of the preferred name when one is given" do
+      expect { signed_post("payload=#{CGI.escape(submission(first_name: "Ada", last_name: "Lovelace", slack_name: "ada"))}") }
+        .to have_enqueued_job(PushSlackNameJob).with(user.id, nickname: "ada")
     end
 
     it "does not accept without the box checked" do

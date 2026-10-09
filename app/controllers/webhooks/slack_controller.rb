@@ -130,8 +130,7 @@ module Webhooks
       if user
         result = CodeOfConductAcceptance.call(
           user,
-          first_name: values.dig("first_name", "value", "value"),
-          last_name: values.dig("last_name", "value", "value"),
+          names: CodeOfConductAcceptance::NAME_FIELDS.index_with { |field| values.dig(field.to_s, "value", "value") },
           message: message
         )
         unless result.success?

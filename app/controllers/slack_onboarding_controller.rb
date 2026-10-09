@@ -59,8 +59,7 @@ class SlackOnboardingController < ApplicationController
 
     result = CodeOfConductAcceptance.call(
       current_user,
-      first_name: params[:first_name],
-      last_name: params[:last_name]
+      names: params.slice(*CodeOfConductAcceptance::NAME_FIELDS).permit(*CodeOfConductAcceptance::NAME_FIELDS).to_h.symbolize_keys
     )
     unless result.success?
       render_form_errors(result.errors)
