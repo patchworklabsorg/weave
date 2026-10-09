@@ -18,9 +18,12 @@ RSpec.describe "Slack membership flow", type: :request do
     )
   end
 
+  # Opted out of the code-of-conduct requirement, so the claims can be read
+  # before the user accepts (see AppAccess).
   let(:application) do
     Doorkeeper::Application.create!(
-      name: "Krater", redirect_uri: "https://krater.example.com/callback", scopes: "openid profile slack"
+      name: "Krater", redirect_uri: "https://krater.example.com/callback", scopes: "openid profile slack",
+      requires_code_of_conduct: false
     )
   end
 
@@ -73,7 +76,7 @@ RSpec.describe "Slack membership flow", type: :request do
   end
 
   it "makes an existing account a member when the Slack sync finds it as a full member" do
-    user = create(:user, :verified, email: "known@example.com", slack_id: "U0KNOWN")
+    user = create(:user, :verified, :accepted_code_of_conduct, email: "known@example.com", slack_id: "U0KNOWN")
     service = SlackService.allocate
     allow(service).to receive_messages(configured?: true, list_members: [
                                          { "id" => "U0KNOWN", "updated" => 1.year.ago.to_i, "profile" => { "email" => "known@example.com" } }

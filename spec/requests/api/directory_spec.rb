@@ -9,7 +9,7 @@ RSpec.describe "Directory API", type: :request do
     Doorkeeper::Application.create!(name: "Krater", redirect_uri: "https://krater.example.com/cb",
                                     scopes: "openid profile groups roles directory", access_policy: "restricted")
   end
-  let(:reviewer) { create(:user, :verified, slack_id: "U0REVIEW") }
+  let(:reviewer) { create(:user, :verified, :accepted_code_of_conduct, slack_id: "U0REVIEW") }
   let(:reviewers) { create(:group, name: "Krater Reviewers") }
   let(:role) { ApplicationRole.create!(application: application, key: "reviewer", name: "Reviewer") }
 
@@ -51,7 +51,7 @@ RSpec.describe "Directory API", type: :request do
     end
 
     it "is not found for a user the app may not serve" do
-      directory_get(api_v1_directory_user_path(create(:user, :verified).p_id))
+      directory_get(api_v1_directory_user_path(create(:user, :verified, :accepted_code_of_conduct).p_id))
 
       expect(response).to have_http_status(:not_found)
     end
@@ -72,7 +72,7 @@ RSpec.describe "Directory API", type: :request do
 
   describe "GET /api/v1/directory/users" do
     it "lists users who hold a role, directly or through a group" do
-      direct = create(:user, :verified)
+      direct = create(:user, :verified, :accepted_code_of_conduct)
       ApplicationRoleAssignment.create!(role: role, assignee: direct)
 
       body = directory_get(api_v1_directory_users_path, params: { role: "reviewer" })

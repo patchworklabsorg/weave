@@ -14,7 +14,7 @@ require "rails_helper"
 # itself is remembered, that return lands on the dashboard and the client waits
 # for a callback that never arrives.
 RSpec.describe "OAuth login screen", type: :request do
-  let(:user) { create(:user, :verified) }
+  let(:user) { create(:user, :verified, :accepted_code_of_conduct) }
 
   let(:application) do
     Doorkeeper::Application.create!(
@@ -105,7 +105,7 @@ RSpec.describe "OAuth login screen", type: :request do
     # the authorize request goes through instead of stalling behind a second
     # email the client would never wait for.
     it "carries an unconfirmed account through to consent" do
-      unconfirmed = create(:user, :unverified)
+      unconfirmed = create(:user, :unverified, :accepted_code_of_conduct)
 
       get oauth_authorization_path, params: authorization_params
       sign_in_via_magic_link(unconfirmed)

@@ -477,6 +477,7 @@ Rails.application.routes.draw do
         member do
           patch :regenerate_secret
           patch :access_policy
+          patch :code_of_conduct
         end
 
         resources :access_grants, controller: "oauth_application_access_grants", only: [:create, :destroy]

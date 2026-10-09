@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe AppAccess do
-  let(:user) { create(:user, :verified) }
+  let(:user) { create(:user, :verified, :accepted_code_of_conduct) }
   let(:application) do
     Doorkeeper::Application.create!(name: "Client", redirect_uri: "https://client.example.com/cb", access_policy: "restricted")
   end
@@ -147,47 +147,46 @@ RSpec.describe AppAccess do
   end
 
   describe "the code-of-conduct requirement" do
+    let(:user) { create(:user, :verified, slack_coc_accepted_at: nil) }
+
     before { application.update!(access_policy: "everyone") }
-    after { Flipper.remove(described_class::CODE_OF_CONDUCT_FLAG) }
 
-    it "is off while the flag does not exist" do
-      expect(described_class.explain(user, application)).to be_permitted
+    it "refuses a user who has not accepted, even for an open app" do
+      decision = described_class.explain(user, application)
+
+      expect(decision).not_to be_permitted
+      expect(decision.to_s).to eq("Has not accepted the Code of Conduct")
     end
 
-    it "is off while the flag is disabled" do
-      Flipper.disable(described_class::CODE_OF_CONDUCT_FLAG)
+    it "refuses a user who has not accepted, even with a grant" do
+      application.update!(access_policy: "restricted")
+      grant(user)
 
-      expect(described_class.explain(user, application)).to be_permitted
+      expect(described_class.permitted?(user, application)).to be(false)
     end
 
-    context "when the flag is on" do
-      before { Flipper.enable(described_class::CODE_OF_CONDUCT_FLAG) }
+    it "lets a user who accepted use the app" do
+      user.update!(slack_coc_accepted_at: 1.day.ago)
 
-      it "refuses a user who has not accepted, even for an open app" do
-        decision = described_class.explain(user, application)
+      expect(described_class.permitted?(user, application)).to be(true)
+    end
 
-        expect(decision).not_to be_permitted
-        expect(decision.to_s).to eq("Has not accepted the Code of Conduct")
-      end
+    it "lets anyone use an app that is opted out" do
+      application.update!(requires_code_of_conduct: false)
 
-      it "refuses a user who has not accepted, even with a grant" do
-        application.update!(access_policy: "restricted")
-        grant(user)
+      expect(described_class.permitted?(user, application)).to be(true)
+    end
 
-        expect(described_class.permitted?(user, application)).to be(false)
-      end
+    it "still applies the access policy to an app that is opted out" do
+      application.update!(requires_code_of_conduct: false, access_policy: "restricted")
 
-      it "lets a user who accepted use the app" do
-        user.update!(slack_coc_accepted_at: 1.day.ago)
+      expect(described_class.permitted?(user, application)).to be(false)
+    end
 
-        expect(described_class.permitted?(user, application)).to be(true)
-      end
+    it "stops the user's tokens" do
+      token = Doorkeeper::AccessToken.create!(application: application, resource_owner_id: user.id)
 
-      it "stops the user's tokens" do
-        token = Doorkeeper::AccessToken.create!(application: application, resource_owner_id: user.id)
-
-        expect(described_class.token_usable?(token)).to be(false)
-      end
+      expect(described_class.token_usable?(token)).to be(false)
     end
   end
 end

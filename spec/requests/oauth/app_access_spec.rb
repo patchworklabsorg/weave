@@ -7,7 +7,7 @@ require "rails_helper"
 # tokens, userinfo and introspection working after access is removed, so
 # every endpoint that hands out or honors a user's token checks too.
 RSpec.describe "OAuth access to restricted apps", type: :request do
-  let(:user) { create(:user, :verified) }
+  let(:user) { create(:user, :verified, :accepted_code_of_conduct) }
   let(:group) { create(:group) }
   let(:redirect_uri) { "https://client.example.com/callback" }
   let(:code_verifier) { SecureRandom.urlsafe_base64(64) }
@@ -90,8 +90,7 @@ RSpec.describe "OAuth access to restricted apps", type: :request do
   end
 
   describe "the code-of-conduct requirement" do
-    before { Flipper.enable(AppAccess::CODE_OF_CONDUCT_FLAG) }
-    after { Flipper.remove(AppAccess::CODE_OF_CONDUCT_FLAG) }
+    before { user.update!(slack_coc_accepted_at: nil) }
 
     it "sends a user who has not accepted to accept, then back to the app" do
       user.update!(slack_id: "U1", slack_membership: "member")
@@ -116,6 +115,15 @@ RSpec.describe "OAuth access to restricted apps", type: :request do
 
       expect(response).to have_http_status(:forbidden)
       expect(response.body).to include("Accept the Code of Conduct")
+    end
+
+    it "lets the user into an app that is opted out" do
+      application.update!(requires_code_of_conduct: false)
+      sign_in_via_magic_link(user)
+
+      get oauth_authorization_path, params: authorization_params
+
+      expect(response).to have_http_status(:ok)
     end
 
     it "stops a refresh token once acceptance is required" do

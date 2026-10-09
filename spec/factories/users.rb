@@ -100,6 +100,12 @@ FactoryBot.define do
       email_confirmed_at { nil }
     end
 
+    # Every OAuth app requires the code of conduct unless it is opted out (see
+    # AppAccess).
+    trait :accepted_code_of_conduct do
+      slack_coc_accepted_at { 1.day.ago }
+    end
+
     trait :with_magic_link do
       transient do
         magic_link_token { SecureRandom.urlsafe_base64(32) }

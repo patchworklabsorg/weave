@@ -9,7 +9,7 @@ require "rails_helper"
 # deactivated user with a browser cookie could still complete an OAuth sign-in
 # to every client, and their refresh tokens kept minting access tokens forever.
 RSpec.describe "OAuth access for accounts that can no longer sign in", type: :request do
-  let(:user) { create(:user, :verified) }
+  let(:user) { create(:user, :verified, :accepted_code_of_conduct) }
   let(:redirect_uri) { "https://client.example.com/callback" }
   let(:code_verifier) { SecureRandom.urlsafe_base64(64) }
 

@@ -7,7 +7,7 @@ require "rails_helper"
 # consent forms round-trip every pre-auth parameter — losing the OIDC nonce
 # here would silently break clients that validate it in the id_token.
 RSpec.describe "OAuth authorization consent screen", type: :request do
-  let(:user) { create(:user, :verified) }
+  let(:user) { create(:user, :verified, :accepted_code_of_conduct) }
 
   let(:application) do
     Doorkeeper::Application.create!(
