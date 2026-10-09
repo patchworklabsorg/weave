@@ -166,7 +166,11 @@ UI components use the defined color palette:
 - **Near-Black** (#18181A): Primary text, grounding elements
 
 ## Deployment
-Production deployment uses Kamal (Docker-based) with Thruster for HTTP acceleration. See `.kamal/` directory for configuration.
+Production runs as Docker containers on the `alastor` NixOS host, not Kamal. Ignore `config/deploy.yml` and `.kamal/`: they are unused leftovers. Thruster handles HTTP acceleration inside the image.
+
+- The infra repo (`~/dev/infra`, module `modules/weave/default.nix`) defines the containers. Deploy infra changes with `deploy .#alastor --remote-build --skip-checks`.
+- Production deploys are manual: `bin/deploy-local` (primary) or `gh workflow run deploy.yml` (fallback). A push to `main` does not deploy production.
+- Runtime env vars (for example `RAILS_MASTER_KEY`, `MAPBOX_ACCESS_TOKEN`) live in the agenix secrets `secrets/weave-env.age` and `secrets/weave-staging-env.age` in the infra repo, not in this repo. A container reads its env file only at start, so restart the service after a secret change.
 
 Staging (`weave-staging.patchworklabs.org`) runs the production image with `RAILS_ENV=production` plus `WEAVE_ENV=staging` and `APP_HOST`. It deploys on every push to `main` (`.github/workflows/deploy-staging.yml`). Read the deployment and host through `Weave.staging?` / `Weave.host` / `Weave.url` (`lib/weave.rb`), never `Rails.env.staging?` or a hardcoded host. Details: `docs/STAGING.md`.
 
