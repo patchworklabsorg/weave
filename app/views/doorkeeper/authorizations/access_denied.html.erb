@@ -14,13 +14,23 @@
         </p>
       </div>
 
-      <p class="text-xs text-ink-faint text-center">
-        Access to this app is limited to some people and groups. If you need it, ask a Weave admin to give you access.
-      </p>
+      <% if @decision&.reason == :code_of_conduct %>
+        <p class="text-xs text-ink-faint text-center">
+          Patchwork Labs apps are for members who have accepted the Code of Conduct.
+        </p>
 
-      <div class="text-center">
-        <%= link_to "Go to your Weave account", root_path, class: "btn-stitch-ghost" %>
-      </div>
+        <div class="text-center">
+          <%= link_to "Accept the Code of Conduct", slack_onboarding_path, class: "btn-stitch" %>
+        </div>
+      <% else %>
+        <p class="text-xs text-ink-faint text-center">
+          Access to this app is limited to some people and groups. If you need it, ask a Weave admin to give you access.
+        </p>
+
+        <div class="text-center">
+          <%= link_to "Go to your Weave account", root_path, class: "btn-stitch-ghost" %>
+        </div>
+      <% end %>
     </div>
   </div>
 </div>

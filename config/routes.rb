@@ -77,6 +77,7 @@
 #                    impersonate_admin_user POST   /admin/users/:id/impersonate(.:format)                                                            admin/users#impersonate
 #                      regen_pid_admin_user PATCH  /admin/users/:id/regen_pid(.:format)                                                              admin/users#regen_pid
 #                invite_to_slack_admin_user POST   /admin/users/:id/invite_to_slack(.:format)                                                        admin/users#invite_to_slack
+#      code_of_conduct_exemption_admin_user PATCH  /admin/users/:id/code_of_conduct_exemption(.:format)                                              admin/users#code_of_conduct_exemption
 #                               admin_users GET    /admin/users(.:format)                                                                            admin/users#index
 #                                           POST   /admin/users(.:format)                                                                            admin/users#create
 #                            new_admin_user GET    /admin/users/new(.:format)                                                                        admin/users#new
@@ -130,6 +131,7 @@
 #                                           DELETE /admin/services/:id(.:format)                                                                     admin/services#destroy
 # regenerate_secret_admin_oauth_application PATCH  /admin/oauth_applications/:id/regenerate_secret(.:format)                                         admin/oauth_applications#regenerate_secret
 #     access_policy_admin_oauth_application PATCH  /admin/oauth_applications/:id/access_policy(.:format)                                             admin/oauth_applications#access_policy
+#   code_of_conduct_admin_oauth_application PATCH  /admin/oauth_applications/:id/code_of_conduct(.:format)                                           admin/oauth_applications#code_of_conduct
 #     admin_oauth_application_access_grants POST   /admin/oauth_applications/:oauth_application_id/access_grants(.:format)                           admin/oauth_application_access_grants#create
 #      admin_oauth_application_access_grant DELETE /admin/oauth_applications/:oauth_application_id/access_grants/:id(.:format)                       admin/oauth_application_access_grants#destroy
 #  admin_oauth_application_role_assignments POST   /admin/oauth_applications/:oauth_application_id/roles/:role_id/assignments(.:format)              admin/oauth_application_role_assignments#create
@@ -442,6 +444,7 @@ Rails.application.routes.draw do
           post :impersonate
           patch :regen_pid
           post :invite_to_slack
+          patch :code_of_conduct_exemption
         end
       end
 
@@ -477,6 +480,7 @@ Rails.application.routes.draw do
         member do
           patch :regenerate_secret
           patch :access_policy
+          patch :code_of_conduct
         end
 
         resources :access_grants, controller: "oauth_application_access_grants", only: [:create, :destroy]

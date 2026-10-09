@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe AppAccess do
-  let(:user) { create(:user, :verified) }
+  let(:user) { create(:user, :verified, :accepted_code_of_conduct) }
   let(:application) do
     Doorkeeper::Application.create!(name: "Client", redirect_uri: "https://client.example.com/cb", access_policy: "restricted")
   end
@@ -143,6 +143,63 @@ RSpec.describe AppAccess do
       grant(user)
 
       expect(described_class.token_usable?(token_for(user))).to be(true)
+    end
+  end
+
+  describe "the code-of-conduct requirement" do
+    let(:user) { create(:user, :verified, slack_coc_accepted_at: nil) }
+
+    before { application.update!(access_policy: "everyone") }
+
+    it "refuses a user who has not accepted, even for an open app" do
+      decision = described_class.explain(user, application)
+
+      expect(decision).not_to be_permitted
+      expect(decision.to_s).to eq("Has not accepted the Code of Conduct")
+    end
+
+    it "refuses a user who has not accepted, even with a grant" do
+      application.update!(access_policy: "restricted")
+      grant(user)
+
+      expect(described_class.permitted?(user, application)).to be(false)
+    end
+
+    it "lets a user who accepted use the app" do
+      user.update!(slack_coc_accepted_at: 1.day.ago)
+
+      expect(described_class.permitted?(user, application)).to be(true)
+    end
+
+    it "lets anyone use an app that is opted out" do
+      application.update!(requires_code_of_conduct: false)
+
+      expect(described_class.permitted?(user, application)).to be(true)
+    end
+
+    it "lets an exempt user use any app" do
+      user.update!(code_of_conduct_exempt: true)
+
+      expect(described_class.permitted?(user, application)).to be(true)
+    end
+
+    it "still applies the access policy to an exempt user" do
+      user.update!(code_of_conduct_exempt: true)
+      application.update!(access_policy: "restricted")
+
+      expect(described_class.permitted?(user, application)).to be(false)
+    end
+
+    it "still applies the access policy to an app that is opted out" do
+      application.update!(requires_code_of_conduct: false, access_policy: "restricted")
+
+      expect(described_class.permitted?(user, application)).to be(false)
+    end
+
+    it "stops the user's tokens" do
+      token = Doorkeeper::AccessToken.create!(application: application, resource_owner_id: user.id)
+
+      expect(described_class.token_usable?(token)).to be(false)
     end
   end
 end

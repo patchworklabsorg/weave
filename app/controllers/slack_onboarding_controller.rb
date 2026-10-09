@@ -66,6 +66,13 @@ class SlackOnboardingController < ApplicationController
       return
     end
 
+    # Sent here from an app's sign-in (see Oauth::AuthorizationsController).
+    return_to = session.delete(:code_of_conduct_return_to).to_s
+    if return_to.start_with?("/oauth/authorize")
+      redirect_to return_to
+      return
+    end
+
     notice = if current_user.slack_member?
                "Thanks for accepting the Code of Conduct."
              else

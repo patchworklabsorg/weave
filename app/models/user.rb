@@ -8,6 +8,7 @@
 #  id                       :bigint           not null, primary key
 #  acknowledged_over_13_at  :datetime
 #  birthday                 :date
+#  code_of_conduct_exempt   :boolean          default(FALSE), not null
 #  confirmation_sent_at     :datetime
 #  confirmation_token       :string
 #  email                    :string           not null
@@ -190,8 +191,10 @@ class User < ApplicationRecord
 
   # Full Slack members who have not accepted the code of conduct. They joined
   # before the code-of-conduct flow, so nothing has asked them yet (see
-  # CodeOfConductRequestJob).
-  scope :code_of_conduct_pending, -> { slack_member.where(slack_coc_accepted_at: nil).where.not(slack_id: nil) }
+  # CodeOfConductRequestJob). Exempt users are left out.
+  scope :code_of_conduct_pending, lambda {
+    slack_member.where(slack_coc_accepted_at: nil, code_of_conduct_exempt: false).where.not(slack_id: nil)
+  }
 
   # Names the Slack import saves when a Slack profile has no name.
   PLACEHOLDER_NAMES = %w[NOTSET Unknown User].freeze

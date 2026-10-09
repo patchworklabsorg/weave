@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe RevokeLostAppAccessJob do
-  let(:user) { create(:user, :verified) }
+  let(:user) { create(:user, :verified, :accepted_code_of_conduct) }
   let(:group) { create(:group) }
   let(:application) do
     Doorkeeper::Application.create!(name: "Wiki", redirect_uri: "https://wiki.example.com/cb", access_policy: "restricted")
@@ -44,7 +44,7 @@ RSpec.describe RevokeLostAppAccessJob do
   end
 
   it "checks every user of an app when given the app" do
-    other = create(:user, :verified)
+    other = create(:user, :verified, :accepted_code_of_conduct)
     ApplicationAccessGrant.create!(application: application, grantee: other)
     kept = token_for(application, other)
     lost = token_for(application)

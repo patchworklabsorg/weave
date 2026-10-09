@@ -7,7 +7,7 @@ require "rails_helper"
 RSpec.describe "Admin OAuth application access", type: :request do
   let(:admin) { create(:user, :admin, :verified) }
   let(:superadmin) { create(:user, :superadmin, :verified) }
-  let(:member) { create(:user, :verified) }
+  let(:member) { create(:user, :verified, :accepted_code_of_conduct) }
   let(:group) { create(:group, name: "Engineering") }
   let(:application) { Doorkeeper::Application.create!(name: "Wiki", redirect_uri: "https://wiki.example.com/cb") }
 
@@ -113,6 +113,48 @@ RSpec.describe "Admin OAuth application access", type: :request do
       get admin_user_path(member)
 
       expect(response.body).to include("Wiki", "Member of Engineering", "Payroll", "No grant for this user or their groups")
+    end
+  end
+
+  describe "the code-of-conduct requirement" do
+    it "lets a superadmin opt an app out and back in" do
+      sign_in_via_magic_link(superadmin)
+
+      patch code_of_conduct_admin_oauth_application_path(application), params: { required: false }
+      expect(application.reload.requires_code_of_conduct).to be(false)
+
+      expect { patch code_of_conduct_admin_oauth_application_path(application), params: { required: true } }
+        .to have_enqueued_job(RevokeLostAppAccessJob).with(application_id: application.id)
+      expect(application.reload.requires_code_of_conduct).to be(true)
+    end
+
+    it "does not let a plain admin change it" do
+      sign_in_via_magic_link(admin)
+
+      patch code_of_conduct_admin_oauth_application_path(application), params: { required: false }
+
+      expect(application.reload.requires_code_of_conduct).to be(true)
+    end
+  end
+
+  describe "the code-of-conduct exemption for one user" do
+    it "lets a superadmin exempt a user and take the exemption away" do
+      sign_in_via_magic_link(superadmin)
+
+      patch code_of_conduct_exemption_admin_user_path(member), params: { exempt: true }
+      expect(member.reload.code_of_conduct_exempt).to be(true)
+
+      expect { patch code_of_conduct_exemption_admin_user_path(member), params: { exempt: false } }
+        .to have_enqueued_job(RevokeLostAppAccessJob).with(user_id: member.id)
+      expect(member.reload.code_of_conduct_exempt).to be(false)
+    end
+
+    it "does not let a plain admin change it" do
+      sign_in_via_magic_link(admin)
+
+      patch code_of_conduct_exemption_admin_user_path(member), params: { exempt: true }
+
+      expect(member.reload.code_of_conduct_exempt).to be(false)
     end
   end
 end

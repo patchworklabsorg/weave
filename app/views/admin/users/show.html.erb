@@ -210,6 +210,24 @@
     <!-- App Access -->
     <div class="patch p-6">
       <h2 class="font-display text-lg font-bold text-ink mb-4">App Access</h2>
+      <div class="mb-4 pb-4 border-b border-ink-soft/10">
+        <p class="text-sm font-medium text-ink">Code of Conduct</p>
+        <p class="text-xs text-ink-faint mt-1">
+          <% if @user.slack_coc_accepted_at.present? %>
+            Accepted <%= @user.slack_coc_accepted_at.strftime("%b %-d, %Y") %>.
+          <% elsif @user.code_of_conduct_exempt %>
+            Not accepted. This user is exempt, so they can use apps anyway.
+          <% else %>
+            Not accepted. This user can only use apps that are opted out of the Code of Conduct.
+          <% end %>
+        </p>
+        <% if current_user.superadmin? && @user.slack_coc_accepted_at.nil? %>
+          <%= button_to (@user.code_of_conduct_exempt ? "Remove the exemption" : "Exempt from the Code of Conduct"),
+              code_of_conduct_exemption_admin_user_path(@user),
+              method: :patch, params: { exempt: !@user.code_of_conduct_exempt }, class: "btn-stitch-ghost mt-2",
+              data: { turbo_confirm: @user.code_of_conduct_exempt ? "#{@user.full_name} will lose access to apps until they accept. Continue?" : "Let #{@user.full_name} use apps without accepting the Code of Conduct?" } %>
+        <% end %>
+      </div>
       <% restricted_apps = Doorkeeper::Application.where.not(access_policy: "everyone").order(:name) %>
       <% if restricted_apps.any? %>
         <ul class="space-y-2">
@@ -222,7 +240,7 @@
             </li>
           <% end %>
         </ul>
-        <p class="mt-3 text-xs text-ink-faint">Apps not listed are open to everyone who can sign in.</p>
+        <p class="mt-3 text-xs text-ink-faint">Apps not listed are open to everyone who can sign in and meets the Code of Conduct requirement.</p>
       <% else %>
         <p class="text-sm text-ink-faint">Every app is open to everyone who can sign in.</p>
       <% end %>

@@ -8,7 +8,7 @@ require "rails_helper"
 # suite exists to prevent was precisely a gap between what we claimed to do and
 # what we actually did.
 RSpec.describe "OpenID Connect", type: :request do
-  let(:user) { create(:user, :verified, phone_number: "+18025550123") }
+  let(:user) { create(:user, :verified, :accepted_code_of_conduct, phone_number: "+18025550123") }
 
   # Public (non-confidential) client, so `force_pkce` applies and the token
   # exchange is authenticated by the code_verifier rather than a secret.

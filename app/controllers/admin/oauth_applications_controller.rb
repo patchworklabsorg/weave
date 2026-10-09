@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 class Admin::OauthApplicationsController < Admin::BaseController
-  before_action :set_application, only: [:show, :edit, :update, :destroy, :regenerate_secret, :access_policy]
-  before_action :require_superadmin, only: [:access_policy]
+  before_action :set_application, only: [:show, :edit, :update, :destroy, :regenerate_secret, :access_policy, :code_of_conduct]
+  before_action :require_superadmin, only: [:access_policy, :code_of_conduct]
 
   def index
     @applications = Doorkeeper::Application.order(created_at: :desc)
@@ -86,6 +86,16 @@ class Admin::OauthApplicationsController < Admin::BaseController
     RevokeLostAppAccessJob.perform_later(application_id: @application.id) if policy == "restricted"
     redirect_to admin_oauth_application_path(@application),
                 notice: policy == "restricted" ? "Only users with an access grant can use this app now." : "Everyone can use this app now."
+  end
+
+  # Opts an app out of the code-of-conduct requirement, or back in (see
+  # AppAccess). Superadmin only: this decides who can sign in to the app.
+  def code_of_conduct
+    required = ActiveModel::Type::Boolean.new.cast(params.require(:required))
+    @application.update!(requires_code_of_conduct: required)
+    RevokeLostAppAccessJob.perform_later(application_id: @application.id) if required
+    redirect_to admin_oauth_application_path(@application),
+                notice: required ? "This app now requires the Code of Conduct." : "This app no longer requires the Code of Conduct."
   end
 
   private

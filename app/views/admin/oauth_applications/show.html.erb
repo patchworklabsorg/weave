@@ -169,6 +169,27 @@
       <p class="text-sm text-ink-faint mb-4">No grants yet. Nobody can use this app.</p>
     <% end %>
 
+    <div class="flex flex-wrap justify-between items-center gap-4 mb-4 py-3 border-y border-ink-soft/10">
+      <p class="text-sm text-ink-soft">
+        <% if @application.requires_code_of_conduct %>
+          Users must accept the Code of Conduct before they can use this app.
+        <% else %>
+          This app is opted out: users who have not accepted the Code of Conduct can use it.
+        <% end %>
+      </p>
+      <% if current_user.superadmin? %>
+        <% if @application.requires_code_of_conduct %>
+          <%= button_to "Opt out of the Code of Conduct", code_of_conduct_admin_oauth_application_path(@application),
+              method: :patch, params: { required: false }, class: "btn-stitch-ghost",
+              data: { turbo_confirm: "Let users who have not accepted the Code of Conduct use #{@application.name}?" } %>
+        <% else %>
+          <%= button_to "Require the Code of Conduct", code_of_conduct_admin_oauth_application_path(@application),
+              method: :patch, params: { required: true }, class: "btn-stitch-ghost",
+              data: { turbo_confirm: "Users who have not accepted the Code of Conduct will lose access to #{@application.name}. Continue?" } %>
+        <% end %>
+      <% end %>
+    </div>
+
     <% if current_user.superadmin? %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <%= form_with scope: :access_grant, url: admin_oauth_application_access_grants_path(@application), local: true,
