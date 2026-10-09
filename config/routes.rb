@@ -130,6 +130,7 @@
 #                                           DELETE /admin/services/:id(.:format)                                                                     admin/services#destroy
 # regenerate_secret_admin_oauth_application PATCH  /admin/oauth_applications/:id/regenerate_secret(.:format)                                         admin/oauth_applications#regenerate_secret
 #     access_policy_admin_oauth_application PATCH  /admin/oauth_applications/:id/access_policy(.:format)                                             admin/oauth_applications#access_policy
+#   code_of_conduct_admin_oauth_application PATCH  /admin/oauth_applications/:id/code_of_conduct(.:format)                                           admin/oauth_applications#code_of_conduct
 #     admin_oauth_application_access_grants POST   /admin/oauth_applications/:oauth_application_id/access_grants(.:format)                           admin/oauth_application_access_grants#create
 #      admin_oauth_application_access_grant DELETE /admin/oauth_applications/:oauth_application_id/access_grants/:id(.:format)                       admin/oauth_application_access_grants#destroy
 #  admin_oauth_application_role_assignments POST   /admin/oauth_applications/:oauth_application_id/roles/:role_id/assignments(.:format)              admin/oauth_application_role_assignments#create
