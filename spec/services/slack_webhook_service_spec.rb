@@ -198,6 +198,48 @@ RSpec.describe SlackWebhookService do
       expect(user.reload.pronouns).to eq("he/him")
     end
 
+    # Slack leaves profile.email out of team_join events.
+    context "when the event has no email" do
+      let(:slack) { instance_double(SlackService, post_code_of_conduct: true) }
+
+      before { allow(SlackService).to receive(:new).and_return(slack) }
+
+      it "looks the email up, links the invited guest, and sends the code of conduct" do
+        user = create(:user, :verified, email: "guest@example.com", slack_invited_at: 1.hour.ago)
+        allow(slack).to receive(:find_email).with("U605").and_return("guest@example.com")
+        expect(slack).to receive(:post_code_of_conduct).with("U605")
+
+        described_class.process_team_join(
+          "id" => "U605", "is_restricted" => true, "is_ultra_restricted" => true,
+          "profile" => { "real_name" => "Guest Person" }
+        )
+
+        user.reload
+        expect(user.slack_id).to eq("U605")
+        expect(user.slack_onboarding_step).to eq(:accept_code_of_conduct)
+      end
+
+      it "creates the account with the looked-up email for a walk-in" do
+        allow(slack).to receive(:find_email).with("U606").and_return("walkin2@example.com")
+
+        user = described_class.process_team_join(
+          "id" => "U606", "is_ultra_restricted" => true, "profile" => { "real_name" => "Walk In" }
+        )
+
+        expect(user.email).to eq("walkin2@example.com")
+        expect(user.slack_id).to eq("U606")
+      end
+
+      it "skips the joiner when Slack has no email for them either" do
+        allow(slack).to receive(:find_email).with("U607").and_return(nil)
+        expect(slack).not_to receive(:post_code_of_conduct)
+
+        expect do
+          expect(described_class.process_team_join("id" => "U607", "profile" => {})).to be_nil
+        end.not_to change(User, :count)
+      end
+    end
+
     it "creates a pending account for a guest who joins without a Weave account" do
       user = described_class.process_team_join(
         "id" => "U602", "is_ultra_restricted" => true,

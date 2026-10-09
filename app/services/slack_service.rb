@@ -195,6 +195,21 @@ class SlackService
     ENV["SLACK_COC_URL"] || Rails.application.credentials.dig(:slack, :coc_url)
   end
 
+  # The email address of a Slack user, from users.info (needs users:read.email).
+  # Events API payloads (team_join, user_change) leave profile.email out, so
+  # webhook handlers look it up here. nil when Slack does not return one.
+  def find_email(slack_user_id)
+    raise ConfigurationError, "Slack client not configured" unless @client
+
+    response = @client.users_info(user: slack_user_id)
+    response.dig("user", "profile", "email").presence if response["ok"]
+  rescue Slack::Web::Api::Errors::UserNotFound
+    nil
+  rescue Slack::Web::Api::Errors::SlackError => e
+    Rails.logger.error "Slack API error looking up email for #{slack_user_id}: #{e.message}"
+    raise ApiError, "Slack API error: #{e.message}"
+  end
+
   # Get user info by email with full profile including custom fields
   def find_user_by_email(email, include_profile: false)
     raise ConfigurationError, "Slack client not configured" unless configured?

@@ -7,8 +7,16 @@ class SlackWebhookService
       # Skip bots and deleted users
       return if slack_user_data["is_bot"] || slack_user_data["deleted"]
 
-      email = slack_user_data.dig("profile", "email")
       slack_id = slack_user_data["id"]
+      email = slack_user_data.dig("profile", "email").presence
+
+      # Slack leaves profile.email out of team_join events, even with the
+      # users:read.email scope. Without it the joiner is never linked and never
+      # gets the code of conduct, so look the address up.
+      if email.nil?
+        email = SlackService.new.find_email(slack_id)
+        (slack_user_data["profile"] ||= {})["email"] = email if email
+      end
 
       if email.blank?
         Rails.logger.warn "[SlackWebhookService] No email for Slack user #{slack_id}"
