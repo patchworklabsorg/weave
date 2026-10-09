@@ -177,6 +177,19 @@ RSpec.describe AppAccess do
       expect(described_class.permitted?(user, application)).to be(true)
     end
 
+    it "lets an exempt user use any app" do
+      user.update!(code_of_conduct_exempt: true)
+
+      expect(described_class.permitted?(user, application)).to be(true)
+    end
+
+    it "still applies the access policy to an exempt user" do
+      user.update!(code_of_conduct_exempt: true)
+      application.update!(access_policy: "restricted")
+
+      expect(described_class.permitted?(user, application)).to be(false)
+    end
+
     it "still applies the access policy to an app that is opted out" do
       application.update!(requires_code_of_conduct: false, access_policy: "restricted")
 

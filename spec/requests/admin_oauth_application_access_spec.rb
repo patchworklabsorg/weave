@@ -136,4 +136,25 @@ RSpec.describe "Admin OAuth application access", type: :request do
       expect(application.reload.requires_code_of_conduct).to be(true)
     end
   end
+
+  describe "the code-of-conduct exemption for one user" do
+    it "lets a superadmin exempt a user and take the exemption away" do
+      sign_in_via_magic_link(superadmin)
+
+      patch code_of_conduct_exemption_admin_user_path(member), params: { exempt: true }
+      expect(member.reload.code_of_conduct_exempt).to be(true)
+
+      expect { patch code_of_conduct_exemption_admin_user_path(member), params: { exempt: false } }
+        .to have_enqueued_job(RevokeLostAppAccessJob).with(user_id: member.id)
+      expect(member.reload.code_of_conduct_exempt).to be(false)
+    end
+
+    it "does not let a plain admin change it" do
+      sign_in_via_magic_link(admin)
+
+      patch code_of_conduct_exemption_admin_user_path(member), params: { exempt: true }
+
+      expect(member.reload.code_of_conduct_exempt).to be(false)
+    end
+  end
 end

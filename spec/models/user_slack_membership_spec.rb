@@ -90,6 +90,7 @@ RSpec.describe User do
       legacy = create(:user, slack_id: "U1", slack_membership: "member")
       create(:user, slack_id: "U2", slack_membership: "member", slack_coc_accepted_at: 1.day.ago)
       create(:user, slack_id: "U3")
+      create(:user, slack_id: "U4", slack_membership: "member", code_of_conduct_exempt: true)
       create(:user)
 
       expect(described_class.code_of_conduct_pending).to contain_exactly(legacy)

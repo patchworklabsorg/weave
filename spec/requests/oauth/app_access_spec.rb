@@ -101,7 +101,7 @@ RSpec.describe "OAuth access to restricted apps", type: :request do
       expect(response).to redirect_to(slack_onboarding_path)
       authorize_path = URI.parse(request.url).request_uri
 
-      post accept_code_of_conduct_slack_onboarding_path
+      post accept_code_of_conduct_slack_onboarding_path, params: { accept: "1" }
 
       expect(response).to redirect_to(authorize_path)
       follow_redirect!

@@ -8,6 +8,7 @@
 #  id                       :bigint           not null, primary key
 #  acknowledged_over_13_at  :datetime
 #  birthday                 :date
+#  code_of_conduct_exempt   :boolean          default(FALSE), not null
 #  confirmation_sent_at     :datetime
 #  confirmation_token       :string
 #  email                    :string           not null

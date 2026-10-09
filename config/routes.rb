@@ -443,6 +443,7 @@ Rails.application.routes.draw do
           post :impersonate
           patch :regen_pid
           post :invite_to_slack
+          patch :code_of_conduct_exemption
         end
       end
 

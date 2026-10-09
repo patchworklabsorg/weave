@@ -10,7 +10,8 @@
 # There is no admin bypass: an admin needs a grant like anyone else.
 #
 # A user who has not accepted the code of conduct may use no app, open or
-# restricted, unless an admin opted the app out (requires_code_of_conduct).
+# restricted. An admin can opt out an app (requires_code_of_conduct) or a user
+# (code_of_conduct_exempt).
 #
 # Every place that hands out or honors a user's token asks this module:
 # the authorize endpoint, the token endpoint (code exchange and refresh),
@@ -56,7 +57,8 @@ module AppAccess
     def restricted?(application) = application.access_policy != "everyone"
 
     def code_of_conduct_missing?(user, application)
-      user.present? && application.requires_code_of_conduct && user.slack_coc_accepted_at.nil?
+      user.present? && application.requires_code_of_conduct && !user.code_of_conduct_exempt &&
+        user.slack_coc_accepted_at.nil?
     end
 
     # Groups linked to an app by an access grant or a role assignment. These

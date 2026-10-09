@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
 class Admin::UsersController < Admin::BaseController
-  before_action :set_user, only: [:show, :edit, :update, :destroy, :impersonate, :regen_pid, :invite_to_slack]
+  before_action :set_user, only: [:show, :edit, :update, :destroy, :impersonate, :regen_pid, :invite_to_slack, :code_of_conduct_exemption]
   before_action :ensure_can_view_user, only: [:show]
   before_action :ensure_can_manage_user, only: [:edit, :update, :destroy, :regen_pid]
   before_action :ensure_can_impersonate, only: [:impersonate]
   before_action :ensure_not_already_impersonating, only: [:impersonate]
-  before_action :require_superadmin, only: [:regen_pid]
+  before_action :require_superadmin, only: [:regen_pid, :code_of_conduct_exemption]
   skip_before_action :authenticate_user!, only: [:stop_impersonating]
   skip_before_action :require_admin, only: [:stop_impersonating]
   helper_method :admin_permissions_for
@@ -131,6 +131,17 @@ class Admin::UsersController < Admin::BaseController
     InviteToSlackJob.perform_later(@user.id, resend: resend)
     verb = resend ? "Re-invited" : "Invited"
     redirect_to admin_user_path(@user), notice: "#{verb} #{@user.email} to Slack (queued)."
+  end
+
+  # Lets one user use apps without accepting the code of conduct, or takes
+  # that away (see AppAccess). Superadmin only: this decides who can sign in to
+  # apps.
+  def code_of_conduct_exemption
+    exempt = ActiveModel::Type::Boolean.new.cast(params.require(:exempt))
+    @user.update!(code_of_conduct_exempt: exempt)
+    RevokeLostAppAccessJob.perform_later(user_id: @user.id) unless exempt
+    redirect_to admin_user_path(@user),
+                notice: exempt ? "#{@user.full_name} can use apps without accepting the Code of Conduct." : "#{@user.full_name} must accept the Code of Conduct to use apps."
   end
 
   private
