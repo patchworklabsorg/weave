@@ -33,6 +33,7 @@
 #                                           GET    /(*path)                                                                                          redirect(302)
 #                                      root GET    /                                                                                                 home#index
 #   accept_code_of_conduct_slack_onboarding POST   /slack/code-of-conduct(.:format)                                                                  slack_onboarding#accept_code_of_conduct
+#                   status_slack_onboarding GET    /slack/status(.:format)                                                                           slack_onboarding#status
 #                          slack_onboarding GET    /slack(.:format)                                                                                  slack_onboarding#show
 #                                           POST   /slack(.:format)                                                                                  slack_onboarding#create
 #                                           GET    /.well-known/*path                                                                                well_known#show
