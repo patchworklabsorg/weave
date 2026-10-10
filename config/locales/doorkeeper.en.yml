@@ -25,6 +25,8 @@ en:
       groups: 'See which of your Weave groups apply to this app'
       roles: 'See your roles in this app'
       directory: 'Look up users of this app (app tokens only)'
+      quilt: 'Call the Quilt patch API (app tokens only)'
+      introspect: 'Check the app tokens of other apps (app tokens only)'
 
     applications:
       confirmations:

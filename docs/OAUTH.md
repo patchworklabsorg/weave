@@ -76,6 +76,13 @@ The OAuth provider supports the following scopes:
 - `groups`: the user's groups that are linked to this app (`groups`)
 - `roles`: the user's roles in this app (`roles`)
 - `directory`: the directory API, for `client_credentials` tokens only (see "Directory API")
+- `quilt`: the Quilt patch API, for `client_credentials` tokens only (see "Resource servers")
+- `introspect`: introspect the `client_credentials` tokens of other apps (see "Resource servers")
+
+`directory`, `quilt` and `introspect` are app scopes. A user can't grant them:
+the authorization endpoint answers `invalid_scope` for each one. Any admin can
+allow `directory` and `quilt` on an app. Only a superadmin can add or remove
+`introspect`.
 
 The `profile` scope also includes `pronouns`, a non-standard claim (a free-text
 string such as `they/them`). It is in the ID token and the userinfo response.
@@ -320,6 +327,62 @@ Rules:
 - `?group=` works only for a group linked to the app. `?role=` works only for a role of the app. Other values give `404`.
 - Pass exactly one of `role` and `group`, or the API answers `400`.
 - A token with a user, a token without the `directory` scope, or a token of an app whose scopes do not list `directory` gives `403`.
+
+### Resource servers
+
+A resource server is an app that other apps call with their own Weave token.
+Quilt, the funding service, is one: Krater calls Quilt's patch API with a
+`client_credentials` token that has the `quilt` scope. Weave tokens are opaque,
+so the resource server checks each token at the introspection endpoint.
+
+An app may introspect its own tokens. To introspect the tokens of other apps,
+the resource server's app must be allowed the `introspect` scope. Even then,
+Weave shows it only tokens that have no user (`client_credentials` tokens). It
+gets `{"active": false}` for a user's token of another app.
+
+Setup, in `/admin/oauth_applications`:
+
+1. A superadmin adds `introspect` to the scopes of the resource server's app (Quilt).
+2. An admin adds the resource server's scope (`quilt`) to each app that calls it (Krater).
+
+```mermaid
+sequenceDiagram
+  participant K as Krater
+  participant W as Weave
+  participant Q as Quilt
+  K->>W: POST /oauth/token (client_credentials, scope=quilt)
+  W-->>K: access_token
+  K->>Q: request with Authorization: Bearer access_token
+  Q->>W: POST /oauth/introspect (Basic auth with Quilt's client ID and secret)
+  W-->>Q: {"active": true, "client_id": "<Krater uid>", "scope": "quilt", ...}
+  Q-->>K: response
+```
+
+The resource server sends the token with its own client credentials:
+
+```bash
+curl -u "$QUILT_CLIENT_ID:$QUILT_CLIENT_SECRET" -d token="$TOKEN" \
+  https://weave.patchworklabs.org/oauth/introspect
+```
+
+```json
+{
+  "active": true,
+  "client_id": "Krater's client ID",
+  "scope": "quilt",
+  "token_type": "Bearer",
+  "exp": 1791234567,
+  "iat": 1791227367
+}
+```
+
+Rules for the resource server:
+
+- Refuse the request unless `active` is `true`. An inactive, revoked, expired, unknown or hidden token gives only `{"active": false}`.
+- Refuse the request unless `scope` (a space-separated list) includes `quilt`.
+- Use `client_id` to find the calling app, for example the patch it belongs to. Keep this mapping in the resource server.
+- Keep a result for up to 60 seconds, keyed by a hash of the token, and never past `exp`. A revoked token can then work for up to 60 seconds.
+- Authenticate with HTTP Basic. A bearer token can introspect only tokens of its own app.
 
 ## Security Considerations
 

@@ -278,8 +278,6 @@ Doorkeeper.configure do
   # For more information go to
   # https://doorkeeper.gitbook.io/guides/ruby-on-rails/scopes
   #
-  # OAuth scopes are for user authorization flows, not API access
-  #
   # `openid` is what turns an authorization request into an OpenID Connect
   # request: doorkeeper-openid_connect only adds an `id_token` to the token
   # response when the granted scopes include it. It has to be registered here or
@@ -289,18 +287,26 @@ Doorkeeper.configure do
   #
   # Every scope listed here is published in `scopes_supported` on both discovery
   # documents, and each of the non-openid scopes maps to a claim block in
-  # config/initializers/doorkeeper_openid_connect.rb.
-  default_scopes  :profile
-  optional_scopes :openid, :email, :phone, :admin, :slack, :groups, :roles, :directory
+  # config/initializers/doorkeeper_openid_connect.rb. The exceptions are the
+  # app scopes below, which have no claims.
+  #
+  # App scopes are for an app's own `client_credentials` token, not for a user:
+  # - `directory`: call the directory API (Api::V1::Directory).
+  # - `quilt`: call Quilt's patch API. Quilt checks the token at introspection.
+  # - `introspect`: introspect the `client_credentials` tokens of other apps
+  #   (see `allow_token_introspection` below). Only a superadmin may allow it
+  #   on an app (see Admin::OauthApplicationsController).
+  user_scopes = %i[profile openid email phone admin slack groups roles]
+  app_scopes = %i[directory quilt introspect]
 
-  # Allows to restrict only certain scopes for grant_type.
-  # By default, all the scopes will be available for all the grant types.
-  #
-  # Keys to this hash should be the name of grant_type and
-  # values should be the array of scopes for that grant type.
-  # Note: scopes should be from configured_scopes (i.e. default or optional)
-  #
-  # scopes_by_grant_type password: [:write], client_credentials: [:update]
+  default_scopes :profile
+  optional_scopes(*(user_scopes - [:profile]), *app_scopes)
+
+  # A user can't consent to an app scope, so the authorization endpoint gives
+  # `invalid_scope` for one. The other grant types are not limited:
+  # `client_credentials` asks for app scopes, and a refresh keeps the scopes of
+  # its token.
+  scopes_by_grant_type authorization_code: user_scopes
 
   # Forbids creating/updating applications with arbitrary scopes that are
   # not in configuration, i.e. +default_scopes+ or +optional_scopes+.
@@ -585,6 +591,22 @@ Doorkeeper.configure do
   #
   # If you need to block the request at all, then configure your routes.rb or web-server
   # like nginx to forbid the request.
+  #
+  # Weave keeps Doorkeeper's default rule (an app introspects only its own
+  # tokens) and adds one case for resource servers such as Quilt: a client that
+  # authenticates with its credentials, and whose app is allowed the
+  # `introspect` scope, may introspect another app's token when that token has
+  # no user. A user's token stays private to the app it was issued to.
+  allow_token_introspection do |token, authorized_client, authorized_token|
+    if authorized_token
+      authorized_token.application == token&.application
+    elsif token&.application
+      authorized_client == token.application ||
+        (token.resource_owner_id.nil? && authorized_client&.scopes&.exists?("introspect"))
+    else
+      true
+    end
+  end
 
   # WWW-Authenticate Realm (default: "Doorkeeper").
   #
