@@ -217,11 +217,14 @@ class SlackService
       web_url: Rails.application.routes.url_helpers.slack_onboarding_url(**Rails.application.config.action_mailer.default_url_options)
     )
 
-    @client.chat_postMessage(
+    response = @client.chat_postMessage(
       channel: slack_user_id,
       text: "Please review and accept the Patchwork Labs Code of Conduct.",
       blocks: message[:blocks]
     )
+    # Remembered so that accepting anywhere (Slack or the web) replaces it.
+    User.find_by(slack_id: slack_user_id)&.remember_code_of_conduct_message!(channel: response["channel"], ts: response["ts"])
+    response
   end
 
   # Opens the code-of-conduct form from a button click. trigger_id comes from

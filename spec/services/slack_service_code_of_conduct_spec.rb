@@ -30,6 +30,15 @@ RSpec.describe SlackService do
       service.post_code_of_conduct("U1", title: "Hello", paragraphs: ["First paragraph"])
     end
 
+    it "remembers the DM, so accepting anywhere can replace it" do
+      user = create(:user, slack_id: "U1")
+      allow(client).to receive(:chat_postMessage).and_return({ "ok" => true, "channel" => "D1", "ts" => "1.2" })
+
+      service.post_code_of_conduct("U1")
+
+      expect(user.reload.slack_coc_messages).to eq([{ "channel" => "D1", "ts" => "1.2" }])
+    end
+
     it "uses the form button when asked" do
       expect(client).to receive(:chat_postMessage) do |args|
         button = args[:blocks].find { |block| block[:type] == "actions" }[:elements].first

@@ -89,6 +89,35 @@ RSpec.describe "Slack onboarding", type: :request do
     end
   end
 
+  describe "GET /slack/status" do
+    it "reports the current step, so the page can reload when it changes elsewhere" do
+      user.update!(slack_id: "U1", slack_membership: "member")
+      sign_in_via_magic_link(user)
+
+      get status_slack_onboarding_path
+
+      expect(response.parsed_body).to eq("step" => "accept_code_of_conduct")
+    end
+
+    it "makes the accept step check the status" do
+      user.update!(slack_id: "U1", slack_membership: "member")
+      sign_in_via_magic_link(user)
+
+      get slack_onboarding_path
+
+      expect(response.body).to include('data-controller="onboarding-status"', status_slack_onboarding_path)
+    end
+
+    it "does not check the status once the person is a full member" do
+      user.update!(slack_id: "U1", slack_membership: "member", slack_coc_accepted_at: 1.day.ago)
+      sign_in_via_magic_link(user)
+
+      get slack_onboarding_path
+
+      expect(response.body).not_to include("onboarding-status")
+    end
+  end
+
   describe "POST /slack" do
     before { sign_in_via_magic_link(user) }
 

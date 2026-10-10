@@ -359,6 +359,7 @@ Rails.application.routes.draw do
   # request or resend the invite.
   resource :slack_onboarding, path: "slack", only: [:show, :create], controller: "slack_onboarding" do
     post :accept_code_of_conduct, path: "code-of-conduct"
+    get :status
   end
 
   # Well-known routes for standard compliance

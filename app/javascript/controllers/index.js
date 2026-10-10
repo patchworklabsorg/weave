@@ -13,6 +13,9 @@ application.register("fingerprint", FingerprintController)
 import LoginFormController from "./login_form_controller"
 application.register("login-form", LoginFormController)
 
+import OnboardingStatusController from "./onboarding_status_controller"
+application.register("onboarding-status", OnboardingStatusController)
+
 import PasswordController from "./password_controller"
 application.register("password", PasswordController)
 

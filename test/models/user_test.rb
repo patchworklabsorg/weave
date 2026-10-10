@@ -29,6 +29,7 @@
 #  slack_birthday           :date
 #  slack_city               :string
 #  slack_coc_accepted_at    :datetime
+#  slack_coc_messages       :jsonb            not null
 #  slack_coc_requested_at   :datetime
 #  slack_cost_center        :string
 #  slack_country            :string

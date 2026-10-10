@@ -49,4 +49,27 @@ RSpec.describe SlackCodeOfConductAcceptedJob do
 
     described_class.perform_now("U123", message: { channel: "D1", ts: "1.2" })
   end
+
+  it "replaces every DM the user still has, wherever they accepted, and forgets them" do
+    user.update!(slack_membership: "member")
+    user.remember_code_of_conduct_message!(channel: "D1", ts: "1.1")
+    user.remember_code_of_conduct_message!(channel: "D1", ts: "1.2")
+    replaced = []
+    allow(service).to receive(:mark_code_of_conduct_accepted) { |**ref| replaced << ref }
+
+    described_class.perform_now("U123", message: { channel: "D1", ts: "1.2" })
+
+    expect(replaced).to eq([{ channel: "D1", ts: "1.1", already_member: true }, { channel: "D1", ts: "1.2", already_member: true }])
+    expect(user.reload.slack_coc_messages).to eq([])
+  end
+
+  it "keeps replacing the other DMs when one fails" do
+    user.update!(slack_membership: "member")
+    user.remember_code_of_conduct_message!(channel: "D1", ts: "1.1")
+    user.remember_code_of_conduct_message!(channel: "D1", ts: "1.2")
+    allow(service).to receive(:mark_code_of_conduct_accepted).with(hash_including(ts: "1.1")).and_raise(Slack::Web::Api::Errors::SlackError, "message_not_found")
+    expect(service).to receive(:mark_code_of_conduct_accepted).with(hash_including(ts: "1.2"))
+
+    described_class.perform_now("U123")
+  end
 end

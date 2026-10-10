@@ -8,9 +8,11 @@
 # A full member who joined before the code-of-conduct flow is already a member,
 # so only the acceptance is recorded for them.
 #
-# message is the Slack DM that asked for the acceptance, as { channel:, ts: }.
-# When it is given, the DM is replaced with a thank-you so its button can't be
-# used again.
+# Then every code-of-conduct DM the user still has (User#slack_coc_messages)
+# is replaced with a thank-you, wherever they accepted, so no live button is
+# left behind. message is the DM the acceptance came from, as
+# { channel:, ts: }. It is replaced too, which covers a Slack user with no
+# Weave account.
 class SlackCodeOfConductAcceptedJob < ApplicationJob
   queue_as :default
 
@@ -23,10 +25,16 @@ class SlackCodeOfConductAcceptedJob < ApplicationJob
     service = SlackService.new
     return unless service.configured?
 
-    already_member = user&.slack_member?
-    replace_message(service, message, already_member:) if message.present?
-    return if already_member
+    already_member = user&.slack_member? || false
+    promote(service, user, slack_user_id) unless already_member
+    replace_messages(service, user, message, already_member:)
+  rescue SlackService::ConfigurationError => e
+    Rails.logger.error "Slack not configured for promotion: #{e.message}"
+  end
 
+  private
+
+  def promote(service, user, slack_user_id)
     result = service.promote_to_member(slack_user_id)
     if result[:ok]
       user&.update_columns(slack_membership: "member", updated_at: Time.current)
@@ -34,16 +42,15 @@ class SlackCodeOfConductAcceptedJob < ApplicationJob
     else
       Rails.logger.error "Failed to promote #{slack_user_id} after CoC acceptance: #{result[:error]}"
     end
-  rescue SlackService::ConfigurationError => e
-    Rails.logger.error "Slack not configured for promotion: #{e.message}"
   end
 
-  private
-
-  def replace_message(service, message, already_member:)
-    service.mark_code_of_conduct_accepted(channel: message[:channel], ts: message[:ts], already_member:)
-  rescue => e
-    Rails.logger.error "Failed to update CoC DM #{message.inspect}: #{e.message}"
+  def replace_messages(service, user, message, already_member:)
+    messages = [*user&.take_code_of_conduct_messages!, message].compact.uniq
+    messages.each do |ref|
+      service.mark_code_of_conduct_accepted(channel: ref[:channel], ts: ref[:ts], already_member:)
+    rescue => e
+      Rails.logger.error "Failed to update CoC DM #{ref.inspect}: #{e.message}"
+    end
   end
 
 end
