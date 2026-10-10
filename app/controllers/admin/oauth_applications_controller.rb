@@ -22,7 +22,7 @@ class Admin::OauthApplicationsController < Admin::BaseController
   def create
     @application = Doorkeeper::Application.new(application_params)
 
-    if @application.save
+    if introspect_change_allowed? && @application.save
       flash[:notice] = "OAuth application was successfully created."
       redirect_to admin_oauth_application_path(@application)
     else
@@ -34,7 +34,9 @@ class Admin::OauthApplicationsController < Admin::BaseController
   end
 
   def update
-    if @application.update(application_params)
+    @application.assign_attributes(application_params)
+
+    if introspect_change_allowed? && @application.save
       redirect_to admin_oauth_application_path(@application), notice: "OAuth application was successfully updated."
     else
       render :edit, status: :unprocessable_entity
@@ -104,6 +106,18 @@ class Admin::OauthApplicationsController < Admin::BaseController
     return if current_user.superadmin?
 
     redirect_to admin_oauth_application_path(@application), alert: "Only a superadmin can change who can use an app."
+  end
+
+  # The `introspect` scope lets an app read the tokens of other apps, so only a
+  # superadmin may add or remove it. Other scopes stay open to any admin.
+  def introspect_change_allowed?
+    return true if current_user.superadmin?
+
+    before = Doorkeeper::OAuth::Scopes.from_string(@application.scopes_was.to_s).exists?("introspect")
+    return true if before == @application.scopes.exists?("introspect")
+
+    @application.errors.add(:base, "Only a superadmin can add or remove the introspect scope.")
+    false
   end
 
   def set_application
