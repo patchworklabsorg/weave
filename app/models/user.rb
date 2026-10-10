@@ -29,6 +29,7 @@
 #  slack_birthday           :date
 #  slack_city               :string
 #  slack_coc_accepted_at    :datetime
+#  slack_coc_messages       :jsonb            not null
 #  slack_coc_requested_at   :datetime
 #  slack_cost_center        :string
 #  slack_country            :string
@@ -501,6 +502,30 @@ class User < ApplicationRecord
   end
 
   def slack_onboarding_complete? = slack_onboarding_step == :member
+
+  # Remembers a code-of-conduct DM that has a live button, so it can be
+  # replaced once the user accepts (see SlackCodeOfConductAcceptedJob). Appends
+  # in SQL, so two DMs sent at the same time are both kept.
+  def remember_code_of_conduct_message!(channel:, ts:)
+    return if channel.blank? || ts.blank?
+
+    self.class.where(id: id).update_all( # rubocop:disable Rails/SkipsModelValidations
+      ["slack_coc_messages = slack_coc_messages || ?::jsonb", [{ channel: channel, ts: ts }].to_json]
+    )
+  end
+
+  # Returns the remembered DMs and forgets them. The row lock keeps a DM that
+  # is remembered at the same moment from being lost. (with_lock is not used:
+  # User#lock! means "lock the account".)
+  def take_code_of_conduct_messages!
+    messages = self.class.transaction do
+      rows = self.class.where(id: id)
+      taken = rows.lock.pick(:slack_coc_messages) || []
+      rows.update_all(slack_coc_messages: []) # rubocop:disable Rails/SkipsModelValidations
+      taken
+    end
+    messages.map { |message| message.symbolize_keys.slice(:channel, :ts) }
+  end
 
   # The membership a Slack user object (from users.info, users.lookupByEmail,
   # users.list or a team_join/user_change event) entitles its owner to. Guests

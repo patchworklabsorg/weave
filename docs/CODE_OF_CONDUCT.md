@@ -16,6 +16,8 @@ flowchart TD
 - The DM button accepts at once. When the Slack import saved a placeholder name (`NOTSET`, `Unknown`, `User`), the button opens a Slack form instead. The form has a required "I have read and accept" box, and name fields when the name is missing.
 - The email links to sign-in. After sign-in, `/` sends the member to `/slack`, which shows the same accept step and name fields.
 - The message text is in `config/locales/code_of_conduct_request.en.yml`.
+- Weave remembers every CoC DM it sends (`users.slack_coc_messages`). When the person accepts, in Slack or on `/slack`, `SlackCodeOfConductAcceptedJob` replaces all of them with a thank-you, so no live button is left.
+- While `/slack` waits on a step that can happen in Slack, it polls `GET /slack/status` every 5 seconds and reloads when the step changes.
 
 ## Runbook
 

@@ -14,7 +14,12 @@
   link_class = "text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2"
 %>
 
-<div class="min-h-full flex items-center justify-center px-4 py-12">
+<%# While the next step can happen in Slack, check now and then and reload
+    when it does. %>
+<%= tag.div class: "min-h-full flex items-center justify-center px-4 py-12",
+      data: (if current_user && %i[accept_invite accept_code_of_conduct awaiting_promotion].include?(@step)
+               { controller: "onboarding-status", onboarding_status_url_value: status_slack_onboarding_path, onboarding_status_step_value: @step }
+             end) do %>
   <div class="patch patch-bound patch-tilt-l w-full max-w-lg">
     <div class="quilt-binding"></div>
 
@@ -142,4 +147,4 @@
       <% end %>
     </div>
   </div>
-</div>
+<% end %>

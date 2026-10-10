@@ -25,6 +25,13 @@ class SlackOnboardingController < ApplicationController
     @step = current_user ? current_user.slack_onboarding_step : :sign_up
   end
 
+  # The current step, as JSON. The page polls it while it waits on something
+  # that can happen elsewhere (accepting in Slack, the promotion), and reloads
+  # when the step changes.
+  def status
+    render json: { step: current_user.slack_onboarding_step }
+  end
+
   # Sends the Slack invite, or sends it again.
   def create
     unless %i[request_invite accept_invite].include?(current_user.slack_onboarding_step)
