@@ -228,6 +228,7 @@
               data: { turbo_confirm: @user.code_of_conduct_exempt ? "#{@user.full_name} will lose access to apps until they accept. Continue?" : "Let #{@user.full_name} use apps without accepting the Code of Conduct?" } %>
         <% end %>
       </div>
+      <%= render "guardian_consent", user: @user %>
       <% restricted_apps = Doorkeeper::Application.where.not(access_policy: "everyone").order(:name) %>
       <% if restricted_apps.any? %>
         <ul class="space-y-2">

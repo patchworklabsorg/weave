@@ -80,6 +80,9 @@ class GuardianConsent < ApplicationRecord
   validates :guardian_email, presence: true
   validates_email_format_of :guardian_email, allow_blank: true
   validates :signed_name, presence: true, length: { maximum: 100 }, if: :granted?
+  # Offline consent has no link or signature in Weave, so the admin says where
+  # the record of it is.
+  validates :note, presence: true, if: :offline?
   validate :guardian_email_not_a_weave_account, on: :create
 
   aasm column: :status do
