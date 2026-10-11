@@ -202,4 +202,45 @@ RSpec.describe AppAccess do
       expect(described_class.token_usable?(token)).to be(false)
     end
   end
+
+  describe "guardian consent" do
+    let(:minor) { create(:user, :verified, :minor, :accepted_code_of_conduct) }
+
+    before { application.update!(access_policy: "everyone") }
+
+    it "refuses a member under 18 without a guardian's consent, even in an open app" do
+      decision = described_class.explain(minor, application)
+
+      expect(decision).not_to be_permitted
+      expect(decision.to_s).to eq("Under 18 without a parent or guardian's consent")
+    end
+
+    it "asks for guardian consent before the code of conduct" do
+      minor.update!(slack_coc_accepted_at: nil)
+
+      expect(described_class.explain(minor, application).reason).to eq(:guardian_consent)
+    end
+
+    it "lets the member in once a guardian consents" do
+      create(:guardian_consent, :granted, user: minor)
+
+      expect(described_class.permitted?(minor, application)).to be(true)
+    end
+
+    it "lets the member into an app that is opted out" do
+      application.update!(requires_guardian_consent: false)
+
+      expect(described_class.permitted?(minor, application)).to be(true)
+    end
+
+    it "stops a token once the consent is taken back" do
+      consent = create(:guardian_consent, :granted, user: minor)
+      token = Doorkeeper::AccessToken.create!(application:, resource_owner_id: minor.id, scopes: "openid")
+      expect(described_class.token_usable?(token)).to be(true)
+
+      consent.record_revoke!
+
+      expect(described_class.token_usable?(token)).to be(false)
+    end
+  end
 end

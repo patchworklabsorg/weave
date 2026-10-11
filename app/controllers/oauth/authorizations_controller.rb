@@ -28,7 +28,8 @@ module Oauth
   # The user sees a Weave page instead of a redirect to the client with
   # `error=access_denied`: the client can't grant access, and Weave can say who
   # to ask. A user who only lacks the code of conduct is sent to accept it, and
-  # comes back here afterwards (see SlackOnboardingController).
+  # comes back here afterwards (see SlackOnboardingController). A member under
+  # 18 without a guardian's consent is sent to ask for it.
   class AuthorizationsController < Doorkeeper::AuthorizationsController
     # Doorkeeper's controllers don't inherit from ApplicationController, so
     # consent given while an admin impersonates the user is recorded here.
@@ -51,6 +52,13 @@ module Oauth
       application = pre_auth.client.application
       decision = AppAccess.explain(current_resource_owner, application)
       return if decision.permitted?
+
+      # Consent comes from the guardian later, so there is no way back here to
+      # remember: the onboarding page shows where the request stands.
+      if decision.reason == :guardian_consent && request.get?
+        redirect_to slack_onboarding_path, alert: "A parent or guardian must give consent before you can use #{application.name}."
+        return
+      end
 
       if decision.reason == :code_of_conduct && request.get?
         session[:code_of_conduct_return_to] = request.fullpath

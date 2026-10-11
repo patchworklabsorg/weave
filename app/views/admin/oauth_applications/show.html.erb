@@ -190,6 +190,27 @@
       <% end %>
     </div>
 
+    <div class="flex flex-wrap justify-between items-center gap-4 mb-4 pb-3 border-b border-ink-soft/10">
+      <p class="text-sm text-ink-soft">
+        <% if @application.requires_guardian_consent %>
+          Members under 18 need a parent or guardian's consent before they can use this app.
+        <% else %>
+          This app is opted out: members under 18 can use it without a parent or guardian's consent.
+        <% end %>
+      </p>
+      <% if current_user.superadmin? %>
+        <% if @application.requires_guardian_consent %>
+          <%= button_to "Opt out of guardian consent", guardian_consent_admin_oauth_application_path(@application),
+              method: :patch, params: { required: false }, class: "btn-stitch-ghost",
+              data: { turbo_confirm: "Let members under 18 use #{@application.name} without a parent or guardian's consent?" } %>
+        <% else %>
+          <%= button_to "Require guardian consent", guardian_consent_admin_oauth_application_path(@application),
+              method: :patch, params: { required: true }, class: "btn-stitch-ghost",
+              data: { turbo_confirm: "Members under 18 without a parent or guardian's consent will lose access to #{@application.name}. Continue?" } %>
+        <% end %>
+      <% end %>
+    </div>
+
     <% if current_user.superadmin? %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <%= form_with scope: :access_grant, url: admin_oauth_application_access_grants_path(@application), local: true,

@@ -13,6 +13,10 @@
 # restricted. An admin can opt out an app (requires_code_of_conduct) or a user
 # (code_of_conduct_exempt).
 #
+# The same goes for a member under 18 without a parent or guardian's consent
+# (see GuardianConsent). An admin can opt out an app
+# (requires_guardian_consent), or record consent given on paper.
+#
 # Every place that hands out or honors a user's token asks this module:
 # the authorize endpoint, the token endpoint (code exchange and refresh),
 # introspection, and userinfo. Checking at consent alone is not enough,
@@ -29,6 +33,7 @@ module AppAccess
       when :role then "Holds the #{roles.map(&:name).to_sentence} role"
       when :no_user then "No user"
       when :code_of_conduct then "Has not accepted the Code of Conduct"
+      when :guardian_consent then "Under 18 without a parent or guardian's consent"
       else "No grant for this user or their groups"
       end
     end
@@ -38,6 +43,7 @@ module AppAccess
     def permitted?(user, application) = explain(user, application).permitted?
 
     def explain(user, application)
+      return decision(false, :guardian_consent) if guardian_consent_missing?(user, application)
       return decision(false, :code_of_conduct) if code_of_conduct_missing?(user, application)
       return decision(true, :open) unless restricted?(application)
       return decision(false, :no_user) if user.nil?
@@ -59,6 +65,10 @@ module AppAccess
     def code_of_conduct_missing?(user, application)
       user.present? && application.requires_code_of_conduct && !user.code_of_conduct_exempt &&
         user.slack_coc_accepted_at.nil?
+    end
+
+    def guardian_consent_missing?(user, application)
+      user.present? && application.requires_guardian_consent && user.guardian_consent_missing?
     end
 
     # Groups linked to an app by an access grant or a role assignment. These

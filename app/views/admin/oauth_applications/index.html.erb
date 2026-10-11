@@ -45,6 +45,9 @@
             <% unless application.requires_code_of_conduct %>
               <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-soft text-sky">CoC optional</span>
             <% end %>
+            <% unless application.requires_guardian_consent %>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-soft text-sky">Guardian consent optional</span>
+            <% end %>
           </td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-ink">
             <% if application.scopes.present? %>

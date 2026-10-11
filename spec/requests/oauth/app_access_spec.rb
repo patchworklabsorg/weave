@@ -89,6 +89,37 @@ RSpec.describe "OAuth access to restricted apps", type: :request do
     expect(response.body).to include("Authorization required")
   end
 
+  describe "the guardian consent requirement" do
+    before { user.update!(birthday: 15.years.ago.to_date) }
+
+    it "sends a member under 18 to ask a parent or guardian" do
+      sign_in_via_magic_link(user)
+
+      get oauth_authorization_path, params: authorization_params
+
+      expect(response).to redirect_to(slack_onboarding_path)
+      expect(flash[:alert]).to include("parent or guardian")
+    end
+
+    it "refuses the consent POST" do
+      sign_in_via_magic_link(user)
+
+      post oauth_authorization_path, params: authorization_params
+
+      expect(response).to have_http_status(:forbidden)
+      expect(response.body).to include("Ask a parent or guardian")
+    end
+
+    it "lets the member in once a guardian consents" do
+      create(:guardian_consent, :granted, user:)
+      sign_in_via_magic_link(user)
+
+      get oauth_authorization_path, params: authorization_params
+
+      expect(response).to have_http_status(:ok)
+    end
+  end
+
   describe "the code-of-conduct requirement" do
     before { user.update!(slack_coc_accepted_at: nil) }
 
