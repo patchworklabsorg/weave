@@ -362,6 +362,31 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_180100) do
     t.index ["slug"], name: "index_groups_on_slug", unique: true, where: "(deleted_at IS NULL)"
   end
 
+  create_table "guardian_consents", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "expires_at"
+    t.datetime "granted_at"
+    t.string "granted_ip"
+    t.string "granted_user_agent"
+    t.text "guardian_email_ciphertext"
+    t.text "guardian_name_ciphertext"
+    t.text "note"
+    t.bigint "recorded_by_id"
+    t.datetime "revoked_at"
+    t.bigint "revoked_by_id"
+    t.datetime "sent_at"
+    t.text "signed_name_ciphertext"
+    t.string "status", default: "pending", null: false
+    t.string "text_version"
+    t.string "token_digest"
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["recorded_by_id"], name: "index_guardian_consents_on_recorded_by_id"
+    t.index ["revoked_by_id"], name: "index_guardian_consents_on_revoked_by_id"
+    t.index ["token_digest"], name: "index_guardian_consents_on_token_digest", unique: true
+    t.index ["user_id"], name: "index_guardian_consents_on_user_id"
+  end
+
   create_table "impersonation_actions", force: :cascade do |t|
     t.string "controller_action"
     t.datetime "created_at", null: false
@@ -675,6 +700,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_180100) do
   add_foreign_key "group_memberships", "users"
   add_foreign_key "group_memberships", "users", column: "added_by_id", on_delete: :nullify
   add_foreign_key "groups", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "guardian_consents", "users"
+  add_foreign_key "guardian_consents", "users", column: "recorded_by_id", on_delete: :nullify
+  add_foreign_key "guardian_consents", "users", column: "revoked_by_id", on_delete: :nullify
   add_foreign_key "impersonation_actions", "impersonations", on_delete: :cascade
   add_foreign_key "impersonations", "users", column: "admin_id", on_delete: :nullify
   add_foreign_key "impersonations", "users", on_delete: :nullify

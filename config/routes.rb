@@ -36,6 +36,11 @@
 #                   status_slack_onboarding GET    /slack/status(.:format)                                                                           slack_onboarding#status
 #                          slack_onboarding GET    /slack(.:format)                                                                                  slack_onboarding#show
 #                                           POST   /slack(.:format)                                                                                  slack_onboarding#create
+#                  guardian_consent_request POST   /slack/guardian-consent(.:format)                                                                 guardian_consent_requests#create
+#           resend_guardian_consent_request POST   /slack/guardian-consent/resend(.:format)                                                          guardian_consent_requests#resend
+#                          guardian_consent GET    /guardian/:token(.:format)                                                                        guardian_consents#show
+#                                           POST   /guardian/:token(.:format)                                                                        guardian_consents#create
+#                                           DELETE /guardian/:token(.:format)                                                                        guardian_consents#destroy
 #                                           GET    /.well-known/*path                                                                                well_known#show
 #                                           GET    /security.txt(.:format)                                                                           redirect(301, /.well-known/security.txt)
 #                                    signup GET    /signup(.:format)                                                                                 users#new
@@ -363,6 +368,17 @@ Rails.application.routes.draw do
     post :accept_code_of_conduct, path: "code-of-conduct"
     get :status
   end
+
+  # A member under 18 asks a parent or guardian for consent, as a step of
+  # joining the Slack (see GuardianConsentFlow).
+  post "slack/guardian-consent", to: "guardian_consent_requests#create", as: :guardian_consent_request
+  post "slack/guardian-consent/resend", to: "guardian_consent_requests#resend", as: :resend_guardian_consent_request
+
+  # The page the parent or guardian opens from the email. The token is the
+  # proof, so no account is needed.
+  get "guardian/:token", to: "guardian_consents#show", as: :guardian_consent
+  post "guardian/:token", to: "guardian_consents#create"
+  delete "guardian/:token", to: "guardian_consents#destroy"
 
   # Well-known routes for standard compliance
   get ".well-known/*path", to: "well_known#show", format: false

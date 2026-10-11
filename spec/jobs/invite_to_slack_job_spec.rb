@@ -20,6 +20,23 @@ RSpec.describe InviteToSlackJob do
     expect(user.reload.slack_invited_at).to be_present
   end
 
+  it "doesn't invite a member under 18 until a guardian consents" do
+    user = create(:user, :verified, :minor)
+    expect(service).not_to receive(:invite_to_workspace)
+
+    described_class.perform_now(user.id)
+
+    expect(user.reload.slack_invited_at).to be_nil
+  end
+
+  it "invites a member under 18 once a guardian has consented" do
+    user = create(:user, :verified, :minor)
+    create(:guardian_consent, :granted, user:)
+    expect(service).to receive(:invite_to_workspace)
+
+    described_class.perform_now(user.id)
+  end
+
   it "doesn't invite someone who is already a full member" do
     user = create(:user, :verified, slack_id: "U1", slack_membership: "member")
     expect(service).not_to receive(:invite_to_workspace)

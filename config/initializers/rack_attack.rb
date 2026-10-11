@@ -63,6 +63,14 @@ class Rack::Attack
     end
   end
 
+  # Throttle the guardian consent page by IP. A wrong token answers 404, so
+  # this also limits guessing.
+  throttle("guardian_consent/ip", limit: 20, period: 10.minutes) do |req|
+    if req.path.start_with?("/guardian/")
+      req.ip
+    end
+  end
+
   # Throttle API requests
   # Limit to 100 requests per minute per IP for API endpoints
   throttle("api/ip", limit: 100, period: 1.minute) do |req|

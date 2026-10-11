@@ -108,6 +108,12 @@ FactoryBot.define do
       slack_coc_accepted_at { 1.day.ago }
     end
 
+    # Under 18, so they need a parent or guardian's consent (see
+    # GuardianConsent).
+    trait :minor do
+      birthday { 15.years.ago.to_date }
+    end
+
     trait :with_magic_link do
       transient do
         magic_link_token { SecureRandom.urlsafe_base64(32) }
