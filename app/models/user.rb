@@ -140,8 +140,10 @@ class User < ApplicationRecord
                             foreign_key: :created_by_id, dependent: :nullify, inverse_of: :created_by
 
   # Parent or guardian consent requests for a member under 18 (see
-  # GuardianConsent).
-  has_many :guardian_consents, dependent: :destroy
+  # GuardianConsent). They stay after the account is deleted: the database
+  # empties user_id, and PurgeGuardianConsentsJob removes them later.
+  has_many :guardian_consents, dependent: nil, inverse_of: :user
+  before_destroy :mark_guardian_consents_account_deleted
 
   # OAuth apps this user may use by a direct grant (see AppAccess).
   has_many :application_access_grants, as: :grantee, dependent: :destroy
@@ -693,6 +695,12 @@ class User < ApplicationRecord
 
   def generate_confirmation_token
     self.confirmation_token = SecureRandom.urlsafe_base64(32)
+  end
+
+  # Starts the retention clock (GuardianConsent::KEEP_AFTER_ACCOUNT_DELETION).
+  # The foreign key then empties user_id when the user row goes.
+  def mark_guardian_consents_account_deleted
+    guardian_consents.update_all(account_deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 
   private

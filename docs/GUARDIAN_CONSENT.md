@@ -35,6 +35,14 @@ sequenceDiagram
 - The requirement ends by itself on the member's 18th birthday.
 - The text is in `config/locales/guardian_consent.en.yml`. When the guardian page text changes, change `GuardianConsent::TEXT_VERSION` too.
 
+## Retention
+
+The privacy policy (`Weave::PRIVACY_POLICY_URL`) and the guardian page give these periods. If you change `GuardianConsent::KEEP_AFTER_ACCOUNT_DELETION` or `KEEP_UNANSWERED`, change the policy and the page text too.
+
+- A consent stays while the member has an account. When an admin deletes the account, Weave keeps the consent for 1 year (`account_deleted_at`, `user_id` empty), so there is proof of consent if a question comes later.
+- A request that the guardian did not answer, or that a newer request replaced, stays for 30 days after its link expires or it is replaced.
+- `PurgeGuardianConsentsJob` runs every day. It deletes these consents and their PaperTrail versions, because the versions hold copies of the encrypted guardian fields.
+
 ## Checking that the guardian is real
 
 An email link proves only that someone reads that inbox. A member could give a friend's address. Weave cannot stop that, so it makes it likely to be found:

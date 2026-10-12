@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_12_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_12_200100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -363,6 +363,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_190000) do
   end
 
   create_table "guardian_consents", force: :cascade do |t|
+    t.datetime "account_deleted_at"
     t.datetime "created_at", null: false
     t.datetime "expires_at"
     t.jsonb "flags", default: [], null: false
@@ -385,7 +386,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_190000) do
     t.string "text_version"
     t.string "token_digest"
     t.datetime "updated_at", null: false
-    t.bigint "user_id", null: false
+    t.bigint "user_id"
     t.text "verification_note"
     t.datetime "verified_at"
     t.bigint "verified_by_id"
@@ -711,7 +712,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_190000) do
   add_foreign_key "group_memberships", "users"
   add_foreign_key "group_memberships", "users", column: "added_by_id", on_delete: :nullify
   add_foreign_key "groups", "users", column: "created_by_id", on_delete: :nullify
-  add_foreign_key "guardian_consents", "users"
+  add_foreign_key "guardian_consents", "users", on_delete: :nullify
   add_foreign_key "guardian_consents", "users", column: "recorded_by_id", on_delete: :nullify
   add_foreign_key "guardian_consents", "users", column: "reviewed_by_id", on_delete: :nullify
   add_foreign_key "guardian_consents", "users", column: "revoked_by_id", on_delete: :nullify

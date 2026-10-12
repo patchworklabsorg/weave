@@ -6,6 +6,7 @@
 # Database name: primary
 #
 #  id                        :bigint           not null, primary key
+#  account_deleted_at        :datetime
 #  expires_at                :datetime
 #  flags                     :jsonb            not null
 #  granted_at                :datetime
@@ -30,7 +31,7 @@
 #  recorded_by_id            :bigint
 #  reviewed_by_id            :bigint
 #  revoked_by_id             :bigint
-#  user_id                   :bigint           not null
+#  user_id                   :bigint
 #  verified_by_id            :bigint
 #
 # Indexes
@@ -47,7 +48,7 @@
 #  fk_rails_...  (recorded_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (reviewed_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (revoked_by_id => users.id) ON DELETE => nullify
-#  fk_rails_...  (user_id => users.id)
+#  fk_rails_...  (user_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (verified_by_id => users.id) ON DELETE => nullify
 #
 require "rails_helper"
@@ -187,5 +188,49 @@ RSpec.describe GuardianConsent do
 
     raw = described_class.connection.select_one("SELECT guardian_email_ciphertext FROM guardian_consents WHERE id = #{consent.id}")
     expect(raw["guardian_email_ciphertext"]).not_to include("grace")
+  end
+
+  describe "retention" do
+    it "keeps the consent when the account is deleted, without the user" do
+      consent = create(:guardian_consent, :granted, user:)
+
+      user.destroy!
+
+      consent.reload
+      expect(consent.user_id).to be_nil
+      expect(consent.account_deleted_at).to be_within(1.minute).of(Time.current)
+      expect(consent.guardian_email).to be_present
+    end
+
+    it "does not find a consent by token after the account is deleted" do
+      consent = described_class.issue!(user, guardian_name: "Grace Hopper", guardian_email: "grace@example.org")
+
+      user.destroy!
+
+      expect(described_class.for_token(consent.token)).to be_nil
+    end
+
+    it "is purgeable 1 year after the account is deleted" do
+      kept = create(:guardian_consent, :granted, account_deleted_at: 11.months.ago)
+      old = create(:guardian_consent, :granted, account_deleted_at: 13.months.ago)
+      create(:guardian_consent, :granted, granted_at: 3.years.ago)
+
+      expect(described_class.purgeable).to contain_exactly(old)
+      expect(described_class.purgeable).not_to include(kept)
+    end
+
+    it "is purgeable 30 days after an unanswered link expires" do
+      create(:guardian_consent, expires_at: 20.days.ago)
+      old = create(:guardian_consent, expires_at: 31.days.ago)
+
+      expect(described_class.purgeable).to contain_exactly(old)
+    end
+
+    it "is purgeable 30 days after a newer request replaces it" do
+      create(:guardian_consent, status: "superseded", updated_at: 20.days.ago)
+      old = create(:guardian_consent, status: "superseded", updated_at: 31.days.ago)
+
+      expect(described_class.purgeable).to contain_exactly(old)
+    end
   end
 end

@@ -16,6 +16,7 @@
 # Database name: primary
 #
 #  id                        :bigint           not null, primary key
+#  account_deleted_at        :datetime
 #  expires_at                :datetime
 #  flags                     :jsonb            not null
 #  granted_at                :datetime
@@ -40,7 +41,7 @@
 #  recorded_by_id            :bigint
 #  reviewed_by_id            :bigint
 #  revoked_by_id             :bigint
-#  user_id                   :bigint           not null
+#  user_id                   :bigint
 #  verified_by_id            :bigint
 #
 # Indexes
@@ -57,7 +58,7 @@
 #  fk_rails_...  (recorded_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (reviewed_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (revoked_by_id => users.id) ON DELETE => nullify
-#  fk_rails_...  (user_id => users.id)
+#  fk_rails_...  (user_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (verified_by_id => users.id) ON DELETE => nullify
 #
 class GuardianConsent < ApplicationRecord
@@ -67,7 +68,7 @@ class GuardianConsent < ApplicationRecord
 
   # Change this when the consent text in config/locales/guardian_consent.en.yml
   # changes, so each grant records the text the guardian saw.
-  TEXT_VERSION = "2026-10-11"
+  TEXT_VERSION = "2026-10-12"
 
   # How long the guardian can use the link to consent. Revoking works for as
   # long as the consent stands.
@@ -75,10 +76,17 @@ class GuardianConsent < ApplicationRecord
   RESEND_COOLDOWN = 10.minutes
   TOKEN_BYTES = 32
 
+  # How long Weave keeps consents (see PurgeGuardianConsentsJob). The privacy
+  # policy and the guardian page give these periods, so change them together.
+  KEEP_AFTER_ACCOUNT_DELETION = 1.year
+  KEEP_UNANSWERED = 30.days
+
   has_paper_trail
   has_encrypted :guardian_name, :guardian_email, :signed_name
 
-  belongs_to :user
+  # Empty after the account is deleted: the consent stays until
+  # PurgeGuardianConsentsJob removes it.
+  belongs_to :user, optional: true
   belongs_to :revoked_by, class_name: "User", optional: true
   belongs_to :recorded_by, class_name: "User", optional: true
   belongs_to :reviewed_by, class_name: "User", optional: true
@@ -123,7 +131,15 @@ class GuardianConsent < ApplicationRecord
 
   # Granted consents with a flag that no admin has checked yet (see
   # GuardianConsentSignals).
-  scope :needs_review, -> { granted.where(reviewed_at: nil).where("jsonb_array_length(flags) > 0") }
+  scope :needs_review, -> { granted.where.not(user_id: nil).where(reviewed_at: nil).where("jsonb_array_length(flags) > 0") }
+
+  # Consents past their retention period: 1 year after the account is
+  # deleted, or 30 days after a request expires unanswered or is replaced.
+  scope :purgeable, lambda {
+    where(account_deleted_at: ...KEEP_AFTER_ACCOUNT_DELETION.ago)
+      .or(pending.where(expires_at: ...KEEP_UNANSWERED.ago))
+      .or(superseded.where(updated_at: ...KEEP_UNANSWERED.ago))
+  }
 
   class << self
     def digest_for(token) = OpenSSL::Digest::SHA256.hexdigest(token)
@@ -131,7 +147,7 @@ class GuardianConsent < ApplicationRecord
     def for_token(token)
       return nil if token.blank?
 
-      find_by(token_digest: digest_for(token))
+      where.not(user_id: nil).find_by(token_digest: digest_for(token))
     end
 
     # Starts a request for the user's guardian. Supersedes the pending one.

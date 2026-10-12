@@ -1,9 +1,8 @@
 # Text for a parent or guardian's consent for a member under 18 (see
 # GuardianConsent). The guardian reads the `page` text before they consent.
 #
-# DRAFT: the consent text needs review before launch. When the `page` text
-# changes, change GuardianConsent::TEXT_VERSION too, so each grant records the
-# text the guardian saw.
+# When the `page` text changes, change GuardianConsent::TEXT_VERSION too, so
+# each grant records the text the guardian saw.
 en:
   guardian_consent:
     form:
@@ -26,13 +25,17 @@ en:
       intro: "%{first_name} %{last_name} created a Patchwork Labs account and gave your name and email as their parent or guardian. Because %{first_name} is under 18, they need your consent before they can take part."
       what_title: "What Patchwork Labs is"
       what: "Patchwork Labs is a community where young people build and research projects together. Members talk in the Patchwork Labs Slack, use Patchwork Labs apps, and can ask for a budget for a project."
+      members: "Members are 13 or older, and some members are adults. In the Slack, members can send messages to all members, also in private messages."
       data_title: "What we keep"
       data: "We keep %{first_name}'s name, email address, birthday and profile. We also keep your name and email address, and the time you give consent. We use these only to run Patchwork Labs. We do not sell them."
+      data_check: "When you give consent, we also keep your IP address, your browser and an identifier for your device. We use these only to check that the consent is real. We encrypt your name, your email address and your signature."
+      retention: "We keep your consent while %{first_name} has an account, and for 1 year after the account is deleted. Then we delete it. If you do not give consent, we delete your name and email address 30 days after the link expires."
+      privacy_link: "Read our privacy policy"
       safety_title: "How we keep members safe"
       safety: "Every member accepts our Code of Conduct. Members can report a problem to the Patchwork Labs team at any time."
       code_of_conduct_link: "Read the Code of Conduct"
       revoke_info: "You can take your consent back at any time from this page. We send you a link to it by email."
-      check_info: "We may contact you to confirm that you gave this consent."
+      check_info: "We may contact you to confirm that you gave this consent. Before %{first_name} can get a budget for a project, we may ask you to sign a form and speak with us."
       confirm_label: "I am %{first_name}'s parent or legal guardian, and I give consent for them to join Patchwork Labs."
       signed_name: "Type your full name"
       signed_name_hint: "This is your signature."

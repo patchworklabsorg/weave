@@ -6,6 +6,7 @@
 # Database name: primary
 #
 #  id                        :bigint           not null, primary key
+#  account_deleted_at        :datetime
 #  expires_at                :datetime
 #  flags                     :jsonb            not null
 #  granted_at                :datetime
@@ -30,7 +31,7 @@
 #  recorded_by_id            :bigint
 #  reviewed_by_id            :bigint
 #  revoked_by_id             :bigint
-#  user_id                   :bigint           not null
+#  user_id                   :bigint
 #  verified_by_id            :bigint
 #
 # Indexes
@@ -47,7 +48,7 @@
 #  fk_rails_...  (recorded_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (reviewed_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (revoked_by_id => users.id) ON DELETE => nullify
-#  fk_rails_...  (user_id => users.id)
+#  fk_rails_...  (user_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (verified_by_id => users.id) ON DELETE => nullify
 #
 FactoryBot.define do

@@ -77,6 +77,14 @@ RSpec.describe "Guardian consent", type: :request do
       expect(response.body).to include("Consent for Ada to join Patchwork Labs", "I give consent")
     end
 
+    it "tells the guardian who the members are and what the consent records" do
+      get guardian_consent_path(token:)
+
+      expect(response.body).to include("some members are adults", "an identifier for your device",
+                                       "Before Ada can get a budget",
+                                       "1 year after the account is deleted", "https://patchworklabs.org/privacy")
+    end
+
     it "answers 404 for an unknown token" do
       get guardian_consent_path(token: "nope")
 
