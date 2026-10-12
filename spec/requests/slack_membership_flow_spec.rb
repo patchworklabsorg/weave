@@ -37,7 +37,7 @@ RSpec.describe "Slack membership flow", type: :request do
   end
 
   it "takes a signup through invite and code of conduct to full membership" do # rubocop:disable RSpec/ExampleLength, RSpec/MultipleExpectations
-    post signup_path, params: { user: { first_name: "Ada", last_name: "Lovelace", email: "ada@example.com" } }
+    post signup_path, params: { user: { first_name: "Ada", last_name: "Lovelace", email: "ada@example.com", birthday: "1990-12-10" } }
     user = User.find_by!(email: "ada@example.com")
     expect(slack_claims(user)).to eq("slack_member" => false)
 

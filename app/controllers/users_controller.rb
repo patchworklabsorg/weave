@@ -22,6 +22,7 @@ class UsersController < ApplicationController
       user_attrs[:password_confirmation] = random_password
 
       @user = User.new(user_attrs)
+      @user.signing_up = true
     rescue ActiveRecord::RecordInvalid => e
       @user = e.record
       render :new, status: :unprocessable_entity

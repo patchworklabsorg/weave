@@ -244,6 +244,14 @@ class User < ApplicationRecord
     new_record? || password.present?
   }
   validate :validate_phone_number, if: -> { phone_number.present? }
+  # Sign-up asks for a birthday and turns away people under MINIMUM_AGE.
+  # Accounts made another way (the Slack import, an admin) can have none: Weave
+  # asks for it at the next sign-in (see #slack_onboarding_step).
+  attr_accessor :signing_up
+
+  validates :birthday, presence: { message: "is required" }, if: :signing_up
+  validate :birthday_plausible, if: -> { birthday.present? && will_save_change_to_birthday? }
+  validate :old_enough_to_sign_up, if: -> { signing_up && birthday.present? }
   before_save :parse_phone_number
   # PWL{digit}{9 uppercase hex characters}, e.g. PWL5A1B2C3D4. Staging uses
   # SPWL instead (see Weave.p_id_prefix), and each deployment only accepts its
@@ -503,8 +511,12 @@ class User < ApplicationRecord
 
   # Members under 18 need a parent or guardian's consent (see
   # GuardianConsent). Age comes from birthday, which a member sets once. No
-  # birthday means no known age, so no consent is asked.
+  # birthday means no known age: Weave asks for it before anything else.
+  # Patchwork Labs is for people 13 and older.
   ADULT_AGE = 18
+  MINIMUM_AGE = 13
+
+  def under_minimum_age? = birthday.present? && birthday.after?(MINIMUM_AGE.years.ago.to_date)
 
   def minor? = birthday.present? && birthday.after?(ADULT_AGE.years.ago.to_date)
 
@@ -520,9 +532,12 @@ class User < ApplicationRecord
   #
   # Full members who joined before the code-of-conduct flow still have to
   # accept it. They are not demoted for that, so they skip :awaiting_promotion.
-  # A member under 18 starts with their guardian's consent: Weave sends no
-  # Slack invite before it (see InviteToSlackJob).
+  # Everyone starts with a birthday, and a member under 18 with their
+  # guardian's consent: Weave sends no Slack invite before them (see
+  # InviteToSlackJob).
   def slack_onboarding_step
+    return :add_birthday if birthday.nil?
+    return :under_minimum_age if under_minimum_age?
     return :guardian_consent if guardian_consent_missing?
     return slack_coc_accepted_at.present? ? :member : :accept_code_of_conduct if slack_member?
     return :awaiting_promotion if in_slack_workspace? && slack_coc_accepted_at.present?
@@ -703,6 +718,18 @@ class User < ApplicationRecord
   end
 
   private
+
+  def birthday_plausible
+    return if birthday.between?(Date.new(1900, 1, 1), Date.current)
+
+    errors.add(:birthday, "is not a real date of birth")
+  end
+
+  def old_enough_to_sign_up
+    return unless under_minimum_age?
+
+    errors.add(:birthday, "shows you are under #{MINIMUM_AGE}. You must be #{MINIMUM_AGE} or older to join Patchwork Labs.")
+  end
 
   def validate_phone_number
     return if Phonelib.parse(phone_number).valid?

@@ -89,6 +89,21 @@ RSpec.describe "OAuth access to restricted apps", type: :request do
     expect(response.body).to include("Authorization required")
   end
 
+  describe "a member without a birthday" do
+    it "is asked for it, then sent back to the app" do
+      user.update!(birthday: nil)
+      sign_in_via_magic_link(user)
+
+      get oauth_authorization_path, params: authorization_params
+      expect(response).to redirect_to(slack_onboarding_path)
+      authorize_path = URI.parse(request.url).request_uri
+
+      post birthday_path, params: { birthday: "1990-01-01" }
+
+      expect(response).to redirect_to(authorize_path)
+    end
+  end
+
   describe "the guardian consent requirement" do
     before { user.update!(birthday: 15.years.ago.to_date) }
 

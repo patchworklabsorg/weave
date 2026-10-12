@@ -1,6 +1,16 @@
 # Guardian consent
 
-A member under 18 needs consent from a parent or legal guardian before they join the Slack or use Patchwork Labs apps. Weave calculates the age from `users.birthday`. A member with no birthday is not asked.
+A member under 18 needs consent from a parent or legal guardian before they join the Slack or use Patchwork Labs apps. Weave calculates the age from `users.birthday`.
+
+## Birthday and minimum age
+
+Patchwork Labs is for people 13 and older (`User::MINIMUM_AGE`).
+
+- Sign-up requires a birthday and refuses people under 13.
+- Accounts made another way (the Slack import, an admin) can have no birthday. `/slack` asks for it before any other step, with the Slack profile birthday filled in when there is one. `/` sends signed-in members there.
+- Signing in to an app that requires guardian consent asks for the birthday first, then goes back to the app. Tokens issued before do not stop working, so members are asked at their next app sign-in.
+- A member sets the birthday once. Admins can correct it on the admin edit page.
+- A member who adds a birthday under 13 loses app access (`AppAccess`, no opt-out), gets no Slack invite, and the admins get `AdminMailer#under_minimum_age`. Weave does not delete the account.
 
 ## The flow
 
