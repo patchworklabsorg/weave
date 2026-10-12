@@ -16,6 +16,12 @@ module Weave
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 8.0
 
+    # Solid Queue writes to its own database, so a job enqueued inside a
+    # transaction on the primary database was visible to workers before that
+    # transaction committed. A worker could then run it before its records
+    # existed (ActiveJob::DeserializationError). Rails 8.1 defaults to this.
+    config.active_job.enqueue_after_transaction_commit = true
+
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.

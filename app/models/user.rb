@@ -440,13 +440,12 @@ class User < ApplicationRecord
     update!(email_confirmed_at: Time.current, confirmation_token: nil)
   end
 
+  # Only sets the token: no mail goes out yet. Members confirm their address by
+  # signing in with a magic link (see #confirm_email_from_magic_link!).
   def send_confirmation_email
     generate_confirmation_token
     self.confirmation_sent_at = Time.current
     save!
-
-    # Queue email job
-    ConfirmationEmailJob.perform_later(self)
     true
   rescue => e
     Rails.logger.error "Failed to send confirmation email for user #{email}: #{e.message}"
