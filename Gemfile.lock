@@ -104,7 +104,7 @@ GEM
       activesupport (>= 7.1)
       device_detector (>= 1)
       safely_block (>= 0.4)
-    annotaterb (4.20.0)
+    annotaterb (4.25.0)
       activerecord (>= 6.0.0)
       activesupport (>= 6.0.0)
     argon2-kdf (0.3.1)
@@ -118,7 +118,7 @@ GEM
     awesome_print (1.9.2)
     backport (1.2.0)
     base64 (0.3.0)
-    bcrypt (3.1.20)
+    bcrypt (3.1.22)
     bcrypt_pbkdf (1.1.1)
     benchmark (0.5.0)
     bigdecimal (4.1.3)
@@ -156,7 +156,7 @@ GEM
     chunky_png (1.4.0)
     concurrent-ruby (1.3.8)
     connection_pool (3.0.2)
-    console1984 (0.2.2)
+    console1984 (0.2.4)
       irb (~> 1.13)
       parser
       rails (>= 7.0)
@@ -199,7 +199,7 @@ GEM
     factory_bot_rails (6.5.1)
       factory_bot (~> 6.5)
       railties (>= 6.1.0)
-    faraday (2.14.0)
+    faraday (2.14.4)
       faraday-net_http (>= 2.0, < 3.5)
       json
       logger
@@ -218,14 +218,14 @@ GEM
     ffi (1.17.4-x86_64-linux-gnu)
     ffi (1.17.4-x86_64-linux-musl)
     fiddle (1.1.8)
-    flipper (1.3.6)
+    flipper (1.4.2)
       concurrent-ruby (< 2)
-    flipper-active_record (1.3.6)
+    flipper-active_record (1.4.2)
       activerecord (>= 4.2, < 9)
-      flipper (~> 1.3.6)
-    flipper-ui (1.3.6)
+      flipper (~> 1.4.2)
+    flipper-ui (1.4.2)
       erubi (>= 1.0.0, < 2.0.0)
-      flipper (~> 1.3.6)
+      flipper (~> 1.4.2)
       rack (>= 1.4, < 4)
       rack-protection (>= 1.5.3, < 5.0.0)
       rack-session (>= 1.0.2, < 3.0.0)
@@ -327,7 +327,7 @@ GEM
       net-imap
       net-pop
       net-smtp
-    mapkick-rb (0.2.0)
+    mapkick-rb (0.3.0)
     marcel (1.2.1)
     matrix (0.4.3)
     mini_magick (5.3.1)
@@ -496,9 +496,9 @@ GEM
       erb
       psych (>= 4.0.0)
       tsort
-    redis (5.4.1)
-      redis-client (>= 0.22.0)
-    redis-client (0.26.1)
+    redis (6.0.0)
+      redis-client (= 0.30.1)
+    redis-client (0.30.1)
       connection_pool
     regexp_parser (2.11.3)
     relaxed-rubocop (2.5)
