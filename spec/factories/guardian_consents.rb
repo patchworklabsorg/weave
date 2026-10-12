@@ -23,12 +23,15 @@
 #  status                    :string           default("pending"), not null
 #  text_version              :string
 #  token_digest              :string
+#  verification_note         :text
+#  verified_at               :datetime
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
 #  recorded_by_id            :bigint
 #  reviewed_by_id            :bigint
 #  revoked_by_id             :bigint
 #  user_id                   :bigint           not null
+#  verified_by_id            :bigint
 #
 # Indexes
 #
@@ -37,6 +40,7 @@
 #  index_guardian_consents_on_revoked_by_id   (revoked_by_id)
 #  index_guardian_consents_on_token_digest    (token_digest) UNIQUE
 #  index_guardian_consents_on_user_id         (user_id)
+#  index_guardian_consents_on_verified_by_id  (verified_by_id)
 #
 # Foreign Keys
 #
@@ -44,6 +48,7 @@
 #  fk_rails_...  (reviewed_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (revoked_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (user_id => users.id)
+#  fk_rails_...  (verified_by_id => users.id) ON DELETE => nullify
 #
 FactoryBot.define do
   factory :guardian_consent do

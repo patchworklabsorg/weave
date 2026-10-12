@@ -315,7 +315,8 @@ Each user has the same fields as the claims:
   "groups": ["krater-reviewers"],
   "roles": ["reviewer"],
   "active": true,
-  "minor": false
+  "minor": false,
+  "guardian_verified": false
 }
 ```
 
@@ -326,6 +327,7 @@ Rules:
 - `groups` and `roles` hold only the groups and roles linked to the calling app.
 - `active` is `false` when the user can no longer sign in.
 - `minor` is `true` when the user is under 18, from their birthday. It is `false` when Weave does not know the birthday yet. Weave asks for a missing birthday at the next sign-in. Only the directory sends this field. It is not a claim.
+- `guardian_verified` is `true` for a minor whose guardian a Weave admin verified with a signed form and a call or video check. The email consent alone does not set it. Ask for it before your app gives a minor money or other risk. It is `false` for adults.
 - `?group=` works only for a group linked to the app. `?role=` works only for a role of the app. Other values give `404`.
 - Pass exactly one of `role` and `group`, or the API answers `400`.
 - A token with a user, a token without the `directory` scope, or a token of an app whose scopes do not list `directory` gives `403`.

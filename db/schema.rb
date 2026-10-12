@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_12_183000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_12_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -386,11 +386,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_183000) do
     t.string "token_digest"
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
+    t.text "verification_note"
+    t.datetime "verified_at"
+    t.bigint "verified_by_id"
     t.index ["recorded_by_id"], name: "index_guardian_consents_on_recorded_by_id"
     t.index ["reviewed_by_id"], name: "index_guardian_consents_on_reviewed_by_id"
     t.index ["revoked_by_id"], name: "index_guardian_consents_on_revoked_by_id"
     t.index ["token_digest"], name: "index_guardian_consents_on_token_digest", unique: true
     t.index ["user_id"], name: "index_guardian_consents_on_user_id"
+    t.index ["verified_by_id"], name: "index_guardian_consents_on_verified_by_id"
   end
 
   create_table "impersonation_actions", force: :cascade do |t|
@@ -711,6 +715,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_183000) do
   add_foreign_key "guardian_consents", "users", column: "recorded_by_id", on_delete: :nullify
   add_foreign_key "guardian_consents", "users", column: "reviewed_by_id", on_delete: :nullify
   add_foreign_key "guardian_consents", "users", column: "revoked_by_id", on_delete: :nullify
+  add_foreign_key "guardian_consents", "users", column: "verified_by_id", on_delete: :nullify
   add_foreign_key "impersonation_actions", "impersonations", on_delete: :cascade
   add_foreign_key "impersonations", "users", column: "admin_id", on_delete: :nullify
   add_foreign_key "impersonations", "users", on_delete: :nullify

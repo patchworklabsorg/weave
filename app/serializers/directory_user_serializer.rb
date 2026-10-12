@@ -23,7 +23,10 @@ class DirectoryUserSerializer
       # Under 18, from the birthday. Krater asks for a stronger guardian check
       # before it gives a budget to a minor. False when the birthday is not
       # known yet (see User#slack_onboarding_step).
-      minor: @user.minor?
+      minor: @user.minor?,
+      # A Weave admin has a signed guardian form and spoke with the guardian.
+      # Apps that hand out money or other risk (Krater budgets) ask for it.
+      guardian_verified: @user.guardian_verified?
     }
   end
 

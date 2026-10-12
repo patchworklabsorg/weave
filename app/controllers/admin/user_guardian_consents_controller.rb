@@ -6,8 +6,8 @@
 class Admin::UserGuardianConsentsController < Admin::BaseController
   before_action :set_user
   before_action :ensure_can_manage_user
-  before_action :require_superadmin, only: [:create, :revoke]
-  before_action :set_consent, only: [:resend, :revoke]
+  before_action :require_superadmin, only: [:create, :revoke, :verify]
+  before_action :set_consent, only: [:resend, :revoke, :verify]
 
   # Consent the guardian gave outside Weave, for example on a paper form.
   def create
@@ -41,6 +41,19 @@ class Admin::UserGuardianConsentsController < Admin::BaseController
       redirect_to admin_user_path(@user), notice: "Revoked the guardian consent for #{@user.full_name}."
     else
       redirect_to admin_user_path(@user), alert: "This consent is not granted, so there is nothing to revoke."
+    end
+  end
+
+  # A signed guardian form and a call or video check with the guardian. Apps
+  # read it as `guardian_verified` (see GuardianConsent#verified?).
+  def verify
+    note = params[:note].to_s.strip
+    if note.blank?
+      redirect_to admin_user_path(@user), alert: "Say where the signed form is and how you spoke with the guardian."
+    elsif GuardianConsentFlow.verify(@consent, by: current_user, note:)
+      redirect_to admin_user_path(@user), notice: "Recorded a verified guardian for #{@user.full_name}."
+    else
+      redirect_to admin_user_path(@user), alert: "Only a granted consent that is not verified yet can be verified."
     end
   end
 

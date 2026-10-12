@@ -33,12 +33,15 @@
 #  status                    :string           default("pending"), not null
 #  text_version              :string
 #  token_digest              :string
+#  verification_note         :text
+#  verified_at               :datetime
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
 #  recorded_by_id            :bigint
 #  reviewed_by_id            :bigint
 #  revoked_by_id             :bigint
 #  user_id                   :bigint           not null
+#  verified_by_id            :bigint
 #
 # Indexes
 #
@@ -47,6 +50,7 @@
 #  index_guardian_consents_on_revoked_by_id   (revoked_by_id)
 #  index_guardian_consents_on_token_digest    (token_digest) UNIQUE
 #  index_guardian_consents_on_user_id         (user_id)
+#  index_guardian_consents_on_verified_by_id  (verified_by_id)
 #
 # Foreign Keys
 #
@@ -54,6 +58,7 @@
 #  fk_rails_...  (reviewed_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (revoked_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (user_id => users.id)
+#  fk_rails_...  (verified_by_id => users.id) ON DELETE => nullify
 #
 class GuardianConsent < ApplicationRecord
   include AASM
@@ -77,6 +82,7 @@ class GuardianConsent < ApplicationRecord
   belongs_to :revoked_by, class_name: "User", optional: true
   belongs_to :recorded_by, class_name: "User", optional: true
   belongs_to :reviewed_by, class_name: "User", optional: true
+  belongs_to :verified_by, class_name: "User", optional: true
 
   # Populated only on the instance returned by .issue! and #reissue!, so the
   # mailer can send what the digest can't reproduce.
@@ -177,6 +183,18 @@ class GuardianConsent < ApplicationRecord
 
   # Only the spot check: nothing looked wrong.
   def suspicious? = (flags - ["spot_check"]).any?
+
+  # A stronger check than the email link: an admin has a signed guardian form
+  # and spoke with the guardian. Apps that hand out money or other risk ask
+  # for it (the `guardian_verified` directory field). It belongs to this
+  # consent, so a revoke or a new guardian ends it.
+  def verified? = granted? && verified_at.present?
+
+  # Verifying covers the review too.
+  def record_verification!(by:, note:)
+    update!(verified_at: Time.current, verified_by: by, verification_note: note,
+            reviewed_at: reviewed_at || Time.current, reviewed_by: reviewed_by || by, review_note: review_note || note)
+  end
 
   # An admin contacted the guardian and confirmed the consent.
   def record_review!(by:, note:)
