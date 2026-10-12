@@ -68,6 +68,12 @@ class ApplicationController < ActionController::Base
     @current_user_session = (owner.user_sessions.find_by(session_token: session.id.to_s) if owner && session.id)
   end
 
+  # Closes the audit row that Admin::UsersController#impersonate opened.
+  def end_impersonation(reason)
+    impersonation_id = session.delete(:impersonation_id)
+    Impersonation.find_by(id: impersonation_id)&.end!(reason) if impersonation_id
+  end
+
   def impersonating?
     session[:admin_id].present?
   end
