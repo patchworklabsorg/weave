@@ -78,7 +78,7 @@ RSpec.describe CodeOfConductRequestJob do
 
     it "keeps going when one update fails" do
       allow(slack).to receive(:update_code_of_conduct).with(hash_including(ts: "1.2"))
-                                                       .and_raise(Slack::Web::Api::Errors::SlackError, "message_not_found")
+                                                      .and_raise(Slack::Web::Api::Errors::SlackError, "message_not_found")
 
       described_class.perform_now(user.id, refresh: true)
 
