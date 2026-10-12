@@ -9,9 +9,11 @@ en:
     subject: "Please accept the Patchwork Labs Code of Conduct"
     greeting: "Hi %{first_name},"
     update: |-
-      Here is a quick update on Patchwork Labs. We set up Weave, our new account system. Your Weave account is linked to your Slack account, and it is how you sign in to Patchwork Labs apps.
+      Here is a quick update on Patchwork Labs. We now run programs that we call patches. In a patch, you build and ship a project, and we support it with compute, grants, hardware or mentorship. Project Ganymede is our first patch: it gives students free compute and mentorship for their research.
 
-      New members now join the Slack through Weave, and they accept our Code of Conduct when they join. You joined before we added that step, so we ask you to accept it now. It takes a few seconds.
+      We also set up Weave, our new account system. Your Weave account is linked to your Slack account, and you use it to sign in to Patchwork apps.
+
+      New members accept our Code of Conduct when they join the Slack. You joined before we added that step, so we ask you to accept it now. Patchwork apps also ask for it before you sign in. It takes a few seconds.
     demoted: |-
       We asked you to accept our Code of Conduct, and we have not seen your acceptance yet. Your Slack account is now a guest account, so you can only see the Code of Conduct channel.
 
