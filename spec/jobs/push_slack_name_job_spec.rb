@@ -20,6 +20,23 @@ RSpec.describe PushSlackNameJob do
     described_class.perform_now(user.id)
   end
 
+  # A name like ":D" fails with invalid_name_specials on every attempt.
+  it "does not retry when Slack refuses the name" do
+    allow(slack).to receive(:update_slack_profile_name)
+      .and_raise(Slack::Web::Api::Errors::InvalidNameSpecials.new("invalid_name_specials"))
+
+    expect { described_class.perform_now(user.id) }.not_to raise_error
+    expect(slack).to have_received(:update_slack_profile_name).once
+    expect(described_class).not_to have_been_enqueued
+  end
+
+  it "still retries other Slack errors" do
+    allow(slack).to receive(:update_slack_profile_name)
+      .and_raise(Slack::Web::Api::Errors::SlackError.new("fatal_error"))
+
+    expect { described_class.perform_now(user.id) }.to have_enqueued_job(described_class)
+  end
+
   it "does nothing for a user who is not in Slack" do
     user.update!(slack_id: nil)
     expect(slack).not_to receive(:update_slack_profile_name)
