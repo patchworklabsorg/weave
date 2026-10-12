@@ -184,7 +184,7 @@ class ApplicationController < ActionController::Base
     current_user.user_sessions.find_by(session_token: session.id.to_s)
   end
 
-  helper_method :current_user, :impersonating?, :admin_user
+  helper_method :current_user, :current_user_session, :impersonating?, :admin_user
 
   # Track papertrail edits to specific users
   before_action :set_paper_trail_whodunnit

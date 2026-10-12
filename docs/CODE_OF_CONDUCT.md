@@ -16,6 +16,7 @@ flowchart TD
 - The DM button accepts at once. When the Slack import saved a placeholder name (`NOTSET`, `Unknown`, `User`), the button opens a Slack form instead. The form has a required "I have read and accept" box, and name fields when the name is missing.
 - The email links to sign-in. After sign-in, `/` sends the member to `/slack`, which shows the same accept step and name fields.
 - The message text is in `config/locales/code_of_conduct_request.en.yml`.
+- The Code of Conduct link is `SLACK_COC_URL` (or the `slack.coc_url` credential). Without it, Weave links to https://patchworklabs.org/conduct.
 - Weave remembers every CoC DM it sends (`users.slack_coc_messages`). When the person accepts, in Slack or on `/slack`, `SlackCodeOfConductAcceptedJob` replaces all of them with a thank-you, so no live button is left.
 - While `/slack` waits on a step that can happen in Slack, it polls `GET /slack/status` every 5 seconds and reloads when the step changes.
 
@@ -27,6 +28,7 @@ Run these in the production container.
 2. Preview the message: `bin/rails slack:coc:request DEADLINE=2026-11-01`.
 3. Send it: `bin/rails slack:coc:request SEND=1 DEADLINE=2026-11-01`.
 4. Optional: send a reminder: `bin/rails slack:coc:request SEND=1 REMIND=1 DEADLINE=2026-11-01`.
+   To fix the text or links of DMs that were already sent, without a new DM or email: `bin/rails slack:coc:refresh SEND=1 DEADLINE=2026-11-01`.
 5. After the deadline, preview the demotions: `bin/rails slack:coc:demote ASKED_BEFORE=2026-10-15`.
 6. Demote: `bin/rails slack:coc:demote CONFIRM=1 ASKED_BEFORE=2026-10-15`. Slack admins and owners cannot be demoted. They get a DM whose button opens the form with the box to check, and an email.
 

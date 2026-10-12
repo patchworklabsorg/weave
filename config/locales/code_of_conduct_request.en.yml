@@ -9,7 +9,7 @@ en:
     subject: "Please accept the Patchwork Labs Code of Conduct"
     greeting: "Hi %{first_name},"
     update: |-
-      Here is a quick update on Patchwork Labs. We now run programs that we call patches. In a patch, you build and ship a project, and we support it with compute, grants, hardware or mentorship. Project Ganymede is our first patch: it gives students free compute and mentorship for their research.
+      Here is a quick update on Patchwork Labs. We now run programs that we call patches. In a patch, you build and ship a project, and we support it with compute, grants or hardware. Project Ganymede is our first patch: it gives students free compute for their research.
 
       We also set up Weave, our new account system. Your Weave account is linked to your Slack account, and you use it to sign in to Patchwork apps.
 

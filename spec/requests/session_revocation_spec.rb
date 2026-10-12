@@ -15,6 +15,15 @@ RSpec.describe "Session revocation", type: :request do
     expect(response).to have_http_status(:ok)
   end
 
+  it "lists the sessions and marks the current one" do
+    sign_in_via_magic_link(user)
+
+    get profile_sessions_path
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Current")
+  end
+
   it "stops authenticating once the user is locked" do
     sign_in_via_magic_link(user)
 

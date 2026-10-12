@@ -11,15 +11,19 @@
 # The text is in config/locales/code_of_conduct_request.en.yml. Enqueued by
 # `bin/rails slack:coc:request`. Idempotent: a member who has accepted is
 # skipped, and so is one who was already asked, unless reminder is true.
+#
+# With refresh: true, the job sends nothing new. It rewrites the DMs that were
+# already sent (users.slack_coc_messages) with the current text and links.
 class CodeOfConductRequestJob < ApplicationJob
   queue_as :default
 
   # deadline is the date after which members who have not accepted move to
   # guest access. nil leaves the deadline out of the message.
-  def perform(user_id, deadline: nil, reminder: false)
+  def perform(user_id, deadline: nil, reminder: false, refresh: false)
     user = User.find_by(id: user_id)
     return unless user&.can_authenticate?
     return if user.slack_coc_accepted_at.present?
+    return refresh_slack_dms(user, deadline) if refresh
     return if user.slack_coc_requested_at.present? && !reminder
 
     send_slack_dm(user, deadline) if user.slack_id.present?
@@ -54,14 +58,26 @@ class CodeOfConductRequestJob < ApplicationJob
     service = SlackService.new
     return unless service.configured?
 
-    service.post_code_of_conduct(
-      user.slack_id,
-      title: self.class.slack_title(:update),
-      paragraphs: self.class.paragraphs(user, deadline:),
-      form: user.name_missing?
-    )
+    service.post_code_of_conduct(user.slack_id, **slack_message(user, deadline))
   rescue => e
     Rails.logger.error "Failed to DM the CoC request to #{user.slack_id}: #{e.message}"
+  end
+
+  # One failed update must not stop the others.
+  def refresh_slack_dms(user, deadline)
+    service = SlackService.new
+    return unless service.configured?
+
+    user.slack_coc_messages.each do |message|
+      service.update_code_of_conduct(channel: message["channel"], ts: message["ts"], slack_user_id: user.slack_id,
+                                     **slack_message(user, deadline))
+    rescue => e
+      Rails.logger.error "Failed to refresh the CoC DM #{message["ts"]} for #{user.slack_id}: #{e.message}"
+    end
+  end
+
+  def slack_message(user, deadline)
+    { title: self.class.slack_title(:update), paragraphs: self.class.paragraphs(user, deadline:), form: user.name_missing? }
   end
 
 end

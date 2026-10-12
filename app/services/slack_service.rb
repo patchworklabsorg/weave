@@ -200,31 +200,19 @@ class SlackService
   def post_code_of_conduct(slack_user_id, title: nil, paragraphs: nil, form: false)
     raise ConfigurationError, "Slack client not configured" unless @client
 
-    title ||= "Welcome to Patchwork Labs! 👋"
-    paragraphs ||= ["Before you get full access to the community, please read our Code of Conduct and accept it."]
-    button = if form
-               { text: "Review and accept", action_id: "open_coc_form", value: slack_user_id }
-             else
-               { text: "I accept the Code of Conduct", action_id: "accept_coc", value: slack_user_id }
-             end
-
-    message = CodeOfConductSlackViews.request(
-      title: title,
-      paragraphs: paragraphs,
-      action_text: I18n.t(form ? "code_of_conduct_form.slack_form_action" : "code_of_conduct_form.slack_action"),
-      button: button,
-      coc_url: self.class.code_of_conduct_url,
-      web_url: Rails.application.routes.url_helpers.slack_onboarding_url(**Rails.application.config.action_mailer.default_url_options)
-    )
-
-    response = @client.chat_postMessage(
-      channel: slack_user_id,
-      text: "Please review and accept the Patchwork Labs Code of Conduct.",
-      blocks: message[:blocks]
-    )
+    response = @client.chat_postMessage(channel: slack_user_id, **code_of_conduct_message(slack_user_id, title:, paragraphs:, form:))
     # Remembered so that accepting anywhere (Slack or the web) replaces it.
     User.find_by(slack_id: slack_user_id)&.remember_code_of_conduct_message!(channel: response["channel"], ts: response["ts"])
     response
+  end
+
+  # Rewrites a code-of-conduct DM that was already sent (channel and ts from
+  # users.slack_coc_messages) with the current text and links. Takes the same
+  # options as #post_code_of_conduct.
+  def update_code_of_conduct(channel:, ts:, slack_user_id:, title: nil, paragraphs: nil, form: false)
+    raise ConfigurationError, "Slack client not configured" unless @client
+
+    @client.chat_update(channel: channel, ts: ts, **code_of_conduct_message(slack_user_id, title:, paragraphs:, form:))
   end
 
   # Opens the code-of-conduct form from a button click. trigger_id comes from
@@ -272,8 +260,11 @@ class SlackService
     "https://#{subdomain}.slack.com" if subdomain.present?
   end
 
+  DEFAULT_CODE_OF_CONDUCT_URL = "https://patchworklabs.org/conduct"
+
+  # SLACK_COC_URL or the credential overrides the public page on the website.
   def self.code_of_conduct_url
-    ENV["SLACK_COC_URL"] || Rails.application.credentials.dig(:slack, :coc_url)
+    ENV["SLACK_COC_URL"].presence || Rails.application.credentials.dig(:slack, :coc_url).presence || DEFAULT_CODE_OF_CONDUCT_URL
   end
 
   # The email address of a Slack user, from users.info (needs users:read.email).
@@ -573,6 +564,28 @@ class SlackService
   end
 
   private
+
+  # The text and blocks of a code-of-conduct DM (see #post_code_of_conduct).
+  def code_of_conduct_message(slack_user_id, title:, paragraphs:, form:)
+    title ||= "Welcome to Patchwork Labs! 👋"
+    paragraphs ||= ["Before you get full access to the community, please read our Code of Conduct and accept it."]
+    button = if form
+               { text: "Review and accept", action_id: "open_coc_form", value: slack_user_id }
+             else
+               { text: "I accept the Code of Conduct", action_id: "accept_coc", value: slack_user_id }
+             end
+
+    message = CodeOfConductSlackViews.request(
+      title: title,
+      paragraphs: paragraphs,
+      action_text: I18n.t(form ? "code_of_conduct_form.slack_form_action" : "code_of_conduct_form.slack_action"),
+      button: button,
+      coc_url: self.class.code_of_conduct_url,
+      web_url: Rails.application.routes.url_helpers.slack_onboarding_url(**Rails.application.config.action_mailer.default_url_options)
+    )
+
+    { text: "Please review and accept the Patchwork Labs Code of Conduct.", blocks: message[:blocks] }
+  end
 
   def build_client
     return nil if token.blank?
