@@ -9,7 +9,7 @@ RSpec.describe "Signup domain blocklist", type: :request do
   before { allow(Weave).to receive(:signup_blocked_domains).and_return(["blocked.example"]) }
 
   def sign_up(email)
-    post signup_path, params: { user: { first_name: "Ada", last_name: "Lovelace", email: email } }
+    post signup_path, params: { user: { first_name: "Ada", last_name: "Lovelace", email: email, birthday: "1990-12-10" } }
   end
 
   it "refuses a signup on a blocked domain without naming the reason" do
