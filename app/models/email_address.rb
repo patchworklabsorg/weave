@@ -43,6 +43,7 @@ class EmailAddress < ApplicationRecord
   validate :email_not_taken_by_another_user
   # The primary row copies users.email, which User already checked.
   validate :email_domain_not_blocked, on: :create, unless: :primary?
+  validate :email_deliverable, on: :create, unless: :primary?, if: -> { EmailDeliverability.enabled? }
 
   scope :confirmed, -> { where.not(confirmed_at: nil) }
 
@@ -103,6 +104,12 @@ class EmailAddress < ApplicationRecord
 
   def email_domain_not_blocked
     errors.add(:email, User::SIGNUP_BLOCKED_MESSAGE) if Weave.signup_blocked?(email)
+  end
+
+  def email_deliverable
+    return if email.blank? || errors.include?(:email)
+
+    errors.add(:email, User::UNDELIVERABLE_MESSAGE) unless EmailDeliverability.deliverable?(email)
   end
 
   def ensure_not_primary

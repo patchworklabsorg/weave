@@ -179,6 +179,7 @@ class User < ApplicationRecord
   # Shown when an email is on a blocked domain (see Weave.signup_blocked?).
   # It does not say why, so it does not reveal the blocklist.
   SIGNUP_BLOCKED_MESSAGE = "can't be used with Weave"
+  UNDELIVERABLE_MESSAGE = "can't receive email. Check it for typos."
 
   # Set by the admin user form, so an admin can still create an account on a
   # blocked domain.
@@ -227,6 +228,7 @@ class User < ApplicationRecord
   normalizes :email, with: ->(email) { email.strip.downcase }
   validate :email_not_claimed_by_another_user
   validate :email_domain_not_blocked, on: :create, unless: :skip_signup_blocklist
+  validate :email_deliverable, on: :create, if: -> { EmailDeliverability.enabled? }
   normalizes :legal_first_name, :legal_last_name, with: ->(name) { name.strip.presence }
   validates :legal_first_name, :legal_last_name, length: { maximum: 100 }
   normalizes :pronouns, with: ->(pronouns) { pronouns.strip.presence }
@@ -729,6 +731,12 @@ class User < ApplicationRecord
 
   def email_domain_not_blocked
     errors.add(:email, SIGNUP_BLOCKED_MESSAGE) if Weave.signup_blocked?(email)
+  end
+
+  def email_deliverable
+    return if email.blank? || errors.include?(:email)
+
+    errors.add(:email, UNDELIVERABLE_MESSAGE) unless EmailDeliverability.deliverable?(email)
   end
 
   def create_primary_email_address
