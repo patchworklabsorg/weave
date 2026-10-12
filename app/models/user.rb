@@ -524,6 +524,10 @@ class User < ApplicationRecord
 
   def guardian_consent_missing? = minor? && !guardian_consent_granted?
 
+  # A minor whose guardian an admin verified with a signed form and a call
+  # (see GuardianConsent#verified?).
+  def guardian_verified? = minor? && guardian_consents.granted.where.not(verified_at: nil).exists?
+
   # The request that stands: pending or granted.
   def current_guardian_consent = guardian_consents.live.order(created_at: :desc).first
 

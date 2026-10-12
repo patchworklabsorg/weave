@@ -48,7 +48,7 @@ An email link proves only that someone reads that inbox. A member could give a f
 - A shared home IP is normal for a real parent, so the IP is not a flag.
 - A flagged consent stands, but waits in the review queue at `/admin/guardian_consents`. For any flag except `spot_check`, Weave emails the admins (`AdminMailer#guardian_consent_flagged`).
 - An admin contacts the guardian, then marks the consent as checked with a note, or a superadmin revokes it on the member's page.
-- Before Krater gives a budget to a minor, it needs a stronger check: a signed guardian form and a call. Krater reads the `minor` field from the directory API for this.
+- Some apps need more than the email link, for example before Krater gives a budget to a minor. A superadmin records a verified guardian on the member's admin page: a signed guardian form and a call or video check, with a required note. Apps read it as `guardian_verified` in the directory API (see `docs/OAUTH.md`). A revoke or a new guardian ends it, because it belongs to the consent.
 
 ## Revoking
 

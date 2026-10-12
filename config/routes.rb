@@ -88,6 +88,7 @@
 #                  admin_user_impersonation GET    /admin/users/:user_id/impersonations/:id(.:format)                                                admin/user_impersonations#show
 #        resend_admin_user_guardian_consent POST   /admin/users/:user_id/guardian_consents/:id/resend(.:format)                                      admin/user_guardian_consents#resend
 #        revoke_admin_user_guardian_consent PATCH  /admin/users/:user_id/guardian_consents/:id/revoke(.:format)                                      admin/user_guardian_consents#revoke
+#        verify_admin_user_guardian_consent PATCH  /admin/users/:user_id/guardian_consents/:id/verify(.:format)                                      admin/user_guardian_consents#verify
 #              admin_user_guardian_consents POST   /admin/users/:user_id/guardian_consents(.:format)                                                 admin/user_guardian_consents#create
 #                               admin_users GET    /admin/users(.:format)                                                                            admin/users#index
 #                                           POST   /admin/users(.:format)                                                                            admin/users#create
@@ -482,6 +483,7 @@ Rails.application.routes.draw do
           member do
             post :resend
             patch :revoke
+            patch :verify
           end
         end
       end

@@ -21,6 +21,29 @@
       <% end %>
     </p>
 
+    <% if current&.granted? %>
+      <p class="text-xs mt-1 text-ink-faint">
+        <% if current.verified? %>
+          Verified guardian: <%= current.verified_at.strftime("%b %-d, %Y") %> by <%= current.verified_by&.full_name || "a deleted user" %>. <%= current.verification_note %>
+        <% else %>
+          Not verified. Apps that ask for a verified guardian (for example Krater budgets) will refuse this member.
+        <% end %>
+      </p>
+      <% if !current.verified? && current_user.superadmin? && can_manage %>
+        <details class="mt-2">
+          <summary class="text-xs text-grape cursor-pointer">Record a verified guardian</summary>
+          <%= form_with url: verify_admin_user_guardian_consent_path(user, current), method: :patch, class: "mt-2 space-y-2" do |form| %>
+            <p class="text-xs text-ink-faint">You need a signed guardian form and a call or video check with the guardian.</p>
+            <%= form.text_area :note, required: true, rows: 2, placeholder: "Where is the signed form? How and when did you speak with the guardian?",
+                  aria: { label: "Where is the signed form, and how did you speak with the guardian?" },
+                  class: "w-full px-3 py-2 rounded-lg border-2 border-neutral-300 bg-paper text-sm" %>
+            <%= form.submit "Record verified guardian", class: "btn-stitch-ghost",
+                  data: { turbo_confirm: "Record that you have a signed form and spoke with #{current.guardian_name}?" } %>
+          <% end %>
+        </details>
+      <% end %>
+    <% end %>
+
     <% if current&.granted? && current.flags.any? %>
       <p class="text-xs mt-1 <%= current.reviewed_at ? 'text-ink-faint' : 'text-orchid' %>">
         <% if current.reviewed_at %>

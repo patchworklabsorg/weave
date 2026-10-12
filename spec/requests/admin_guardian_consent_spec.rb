@@ -101,4 +101,41 @@ RSpec.describe "Admin guardian consent", type: :request do
     expect(response).to have_http_status(:not_found)
     expect(other.reload).to be_granted
   end
+
+  describe "recording a verified guardian" do
+    let!(:consent) { create(:guardian_consent, :granted, user: member, flags: ["spot_check"]) }
+
+    it "lets a superadmin verify, which also counts as the review" do
+      sign_in_via_magic_link(superadmin)
+
+      patch verify_admin_user_guardian_consent_path(member, consent), params: { note: "Signed form in Drive, call on Oct 12" }
+
+      expect(consent.reload).to have_attributes(verified_by: superadmin, verification_note: "Signed form in Drive, call on Oct 12")
+      expect(consent).not_to be_needs_review
+      expect(member.reload.guardian_verified?).to be(true)
+    end
+
+    it "needs a note" do
+      sign_in_via_magic_link(superadmin)
+
+      patch verify_admin_user_guardian_consent_path(member, consent), params: { note: "" }
+
+      expect(consent.reload.verified_at).to be_nil
+    end
+
+    it "does not let a plain admin verify" do
+      sign_in_via_magic_link(admin)
+
+      patch verify_admin_user_guardian_consent_path(member, consent), params: { note: "Signed form" }
+
+      expect(consent.reload.verified_at).to be_nil
+    end
+
+    it "ends with a revoke" do
+      consent.update!(verified_at: 1.day.ago)
+      consent.record_revoke!
+
+      expect(member.reload.guardian_verified?).to be(false)
+    end
+  end
 end

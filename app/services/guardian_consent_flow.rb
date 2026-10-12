@@ -68,6 +68,14 @@ module GuardianConsentFlow
       true
     end
 
+    # An admin has a signed guardian form and spoke with the guardian.
+    def verify(consent, by:, note:)
+      return false unless consent.granted? && !consent.verified?
+
+      consent.record_verification!(by:, note:)
+      true
+    end
+
     # An admin contacted the guardian and confirmed the consent.
     def review(consent, by:, note:)
       return false unless consent.needs_review?

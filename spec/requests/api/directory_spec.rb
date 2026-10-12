@@ -35,8 +35,15 @@ RSpec.describe "Directory API", type: :request do
       expect(body).to eq(
         "sub" => reviewer.p_id, "name" => reviewer.full_name, "email" => reviewer.email,
         "email_verified" => true, "slack_id" => "U0REVIEW", "slack_member" => reviewer.slack_member?,
-        "groups" => ["krater-reviewers"], "roles" => ["reviewer"], "active" => true, "minor" => false
+        "groups" => ["krater-reviewers"], "roles" => ["reviewer"], "active" => true, "minor" => false, "guardian_verified" => false
       )
+    end
+
+    it "says when a Weave admin verified the guardian" do
+      reviewer.update!(birthday: 15.years.ago.to_date)
+      create(:guardian_consent, :granted, user: reviewer, verified_at: 1.day.ago)
+
+      expect(directory_get(api_v1_directory_user_path(reviewer.p_id))).to include("minor" => true, "guardian_verified" => true)
     end
 
     it "says when the user is under 18" do
