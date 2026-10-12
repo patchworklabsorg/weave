@@ -29,6 +29,8 @@ en:
       data_title: "What we keep"
       data: "We keep %{first_name}'s name, email address, birthday and profile. We also keep your name and email address, and the time you give consent. We use these only to run Patchwork Labs. We do not sell them."
       data_check: "When you give consent, we also keep your IP address, your browser and an identifier for your device. We use these only to check that the consent is real. We encrypt your name, your email address and your signature."
+      retention: "We keep your consent while %{first_name} has an account, and for 1 year after the account is deleted. Then we delete it. If you do not give consent, we delete your name and email address 30 days after the link expires."
+      privacy_link: "Read our privacy policy"
       safety_title: "How we keep members safe"
       safety: "Every member accepts our Code of Conduct. Members can report a problem to the Patchwork Labs team at any time."
       code_of_conduct_link: "Read the Code of Conduct"

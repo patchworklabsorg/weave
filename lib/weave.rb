@@ -13,6 +13,7 @@
 # specs can exercise it without mutating ENV.
 module Weave
   PRODUCTION_HOST = "weave.patchworklabs.org"
+  PRIVACY_POLICY_URL = "https://patchworklabs.org/privacy"
   STAGING = "staging"
 
   class << self

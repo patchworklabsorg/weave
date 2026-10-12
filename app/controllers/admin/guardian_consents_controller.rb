@@ -8,7 +8,7 @@ class Admin::GuardianConsentsController < Admin::BaseController
 
   def index
     @queue = GuardianConsent.needs_review.includes(:user).order(:granted_at)
-    @recent = GuardianConsent.where.not(reviewed_at: nil).includes(:user, :reviewed_by)
+    @recent = GuardianConsent.where.not(reviewed_at: nil).where.not(user_id: nil).includes(:user, :reviewed_by)
                              .order(reviewed_at: :desc).limit(RECENT_LIMIT)
   end
 

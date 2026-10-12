@@ -35,6 +35,11 @@
           <h2 class="font-semibold"><%= t("guardian_consent.page.data_title") %></h2>
           <p class="mt-1"><%= t("guardian_consent.page.data", first_name:) %></p>
           <p class="mt-1"><%= t("guardian_consent.page.data_check") %></p>
+          <p class="mt-1"><%= t("guardian_consent.page.retention", first_name:) %></p>
+          <p class="mt-1">
+            <%= link_to t("guardian_consent.page.privacy_link"), Weave::PRIVACY_POLICY_URL,
+                  target: "_blank", rel: "noopener noreferrer", class: link_class %>
+          </p>
         </div>
 
         <div>

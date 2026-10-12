@@ -81,7 +81,8 @@ RSpec.describe "Guardian consent", type: :request do
       get guardian_consent_path(token:)
 
       expect(response.body).to include("some members are adults", "an identifier for your device",
-                                       "Before Ada can get a budget")
+                                       "Before Ada can get a budget",
+                                       "1 year after the account is deleted", "https://patchworklabs.org/privacy")
     end
 
     it "answers 404 for an unknown token" do

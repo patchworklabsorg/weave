@@ -38,6 +38,12 @@ expire_group_memberships:
   class: ExpireGroupMembershipsJob
   schedule: every 15 minutes
 
+# Delete guardian consents past their retention period (see
+# GuardianConsent::KEEP_AFTER_ACCOUNT_DELETION and KEEP_UNANSWERED).
+purge_guardian_consents:
+  class: PurgeGuardianConsentsJob
+  schedule: every day at 4am
+
 # Repair drift in the system groups (staff, board, ...). User callbacks keep
 # them in sync; this catches changes that skipped callbacks.
 sync_system_groups:
