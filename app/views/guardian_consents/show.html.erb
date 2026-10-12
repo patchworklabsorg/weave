@@ -28,11 +28,13 @@
         <div>
           <h2 class="font-semibold"><%= t("guardian_consent.page.what_title") %></h2>
           <p class="mt-1"><%= t("guardian_consent.page.what") %></p>
+          <p class="mt-1"><%= t("guardian_consent.page.members") %></p>
         </div>
 
         <div>
           <h2 class="font-semibold"><%= t("guardian_consent.page.data_title") %></h2>
           <p class="mt-1"><%= t("guardian_consent.page.data", first_name:) %></p>
+          <p class="mt-1"><%= t("guardian_consent.page.data_check") %></p>
         </div>
 
         <div>
@@ -48,7 +50,7 @@
 
         <p><%= t("guardian_consent.page.revoke_info") %></p>
 
-        <p><%= t("guardian_consent.page.check_info") %></p>
+        <p><%= t("guardian_consent.page.check_info", first_name:) %></p>
 
         <%= form_with url: guardian_consent_path(token: params[:token]), method: :post, data: { controller: "fingerprint" },
               class: "patch border-2 border-grape bg-grape-soft/40 p-5 space-y-4" do |form| %>

@@ -67,7 +67,7 @@ class GuardianConsent < ApplicationRecord
 
   # Change this when the consent text in config/locales/guardian_consent.en.yml
   # changes, so each grant records the text the guardian saw.
-  TEXT_VERSION = "2026-10-11"
+  TEXT_VERSION = "2026-10-12"
 
   # How long the guardian can use the link to consent. Revoking works for as
   # long as the consent stands.
