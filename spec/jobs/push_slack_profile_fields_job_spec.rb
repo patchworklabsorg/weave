@@ -9,9 +9,16 @@ RSpec.describe PushSlackProfileFieldsJob do
 
   it "sends the user's current profile fields to Slack" do
     user = create(:user, slack_id: "U123", slack_cost_center: "CC-1")
-    expect(service).to receive(:push_profile_fields).with("U123", user)
+    expect(service).to receive(:push_profile_fields).with("U123", user, only_present: false)
 
     described_class.perform_now(user.id)
+  end
+
+  it "passes only_present through" do
+    user = create(:user, slack_id: "U123")
+    expect(service).to receive(:push_profile_fields).with("U123", user, only_present: true)
+
+    described_class.perform_now(user.id, only_present: true)
   end
 
   it "does nothing for a user who is not in Slack" do

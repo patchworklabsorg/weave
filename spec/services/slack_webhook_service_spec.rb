@@ -172,6 +172,21 @@ RSpec.describe SlackWebhookService do
       expect(user.slack_onboarding_step).to eq(:accept_code_of_conduct)
     end
 
+    # Without this the PWL ID waited for the next SlackSyncJob, up to 6 hours.
+    it "pushes the PWL ID and profile fields when the join links an existing account" do
+      user = create(:user, :verified, email: "link@example.com")
+
+      expect do
+        described_class.process_team_join("id" => "U610", "profile" => { "email" => "link@example.com" })
+      end.to have_enqueued_job(PushSlackProfileFieldsJob).with(user.id, only_present: true)
+    end
+
+    it "pushes the PWL ID for a user created from the join" do
+      expect do
+        described_class.process_team_join("id" => "U611", "profile" => { "email" => "fresh@example.com", "first_name" => "Ada", "last_name" => "L" })
+      end.to have_enqueued_job(PushSlackProfileFieldsJob).with(kind_of(Integer), only_present: true)
+    end
+
     it "makes someone who joins as a regular member a member" do
       user = create(:user, :verified, email: "full@example.com")
 
