@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 class Admin::OauthApplicationsController < Admin::BaseController
-  before_action :set_application, only: [:show, :edit, :update, :destroy, :regenerate_secret, :access_policy, :code_of_conduct]
-  before_action :require_superadmin, only: [:access_policy, :code_of_conduct]
+  before_action :set_application, only: [:show, :edit, :update, :destroy, :regenerate_secret, :access_policy, :code_of_conduct, :guardian_consent]
+  before_action :require_superadmin, only: [:access_policy, :code_of_conduct, :guardian_consent]
 
   def index
     @applications = Doorkeeper::Application.order(created_at: :desc)
@@ -98,6 +98,16 @@ class Admin::OauthApplicationsController < Admin::BaseController
     RevokeLostAppAccessJob.perform_later(application_id: @application.id) if required
     redirect_to admin_oauth_application_path(@application),
                 notice: required ? "This app now requires the Code of Conduct." : "This app no longer requires the Code of Conduct."
+  end
+
+  # Opts an app out of the guardian consent requirement for members under 18,
+  # or back in (see AppAccess). Superadmin only, like #code_of_conduct.
+  def guardian_consent
+    required = ActiveModel::Type::Boolean.new.cast(params.require(:required))
+    @application.update!(requires_guardian_consent: required)
+    RevokeLostAppAccessJob.perform_later(application_id: @application.id) if required
+    redirect_to admin_oauth_application_path(@application),
+                notice: required ? "Members under 18 now need guardian consent to use this app." : "Members under 18 can now use this app without guardian consent."
   end
 
   private

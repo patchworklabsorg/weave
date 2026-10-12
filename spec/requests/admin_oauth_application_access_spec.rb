@@ -137,6 +137,27 @@ RSpec.describe "Admin OAuth application access", type: :request do
     end
   end
 
+  describe "the guardian consent requirement" do
+    it "lets a superadmin opt an app out and back in" do
+      sign_in_via_magic_link(superadmin)
+
+      patch guardian_consent_admin_oauth_application_path(application), params: { required: false }
+      expect(application.reload.requires_guardian_consent).to be(false)
+
+      expect { patch guardian_consent_admin_oauth_application_path(application), params: { required: true } }
+        .to have_enqueued_job(RevokeLostAppAccessJob).with(application_id: application.id)
+      expect(application.reload.requires_guardian_consent).to be(true)
+    end
+
+    it "does not let a plain admin change it" do
+      sign_in_via_magic_link(admin)
+
+      patch guardian_consent_admin_oauth_application_path(application), params: { required: false }
+
+      expect(application.reload.requires_guardian_consent).to be(true)
+    end
+  end
+
   describe "the code-of-conduct exemption for one user" do
     it "lets a superadmin exempt a user and take the exemption away" do
       sign_in_via_magic_link(superadmin)

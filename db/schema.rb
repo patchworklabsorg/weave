@@ -465,6 +465,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_180100) do
     t.string "name", null: false
     t.text "redirect_uri", null: false
     t.boolean "requires_code_of_conduct", default: true, null: false
+    t.boolean "requires_guardian_consent", default: true, null: false
     t.string "scopes", default: "", null: false
     t.string "secret", null: false
     t.string "uid", null: false
