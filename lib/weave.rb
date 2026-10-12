@@ -53,6 +53,27 @@ module Weave
       Array(entries).flat_map { |entry| entry.to_s.split(",") }.map { |entry| entry.strip.downcase }.reject(&:empty?)
     end
 
+    # Email domains that may not sign up, from the `signup_blocked_domains`
+    # credential: a list (or a comma-separated string) of domains, returned
+    # downcased without a leading "@". The list lives in credentials and not in
+    # this public repository, so it stays private. Empty without the credential.
+    def signup_blocked_domains(credentials: Rails.application.credentials)
+      Array(credentials[:signup_blocked_domains])
+        .flat_map { |entry| entry.to_s.split(",") }
+        .map { |entry| entry.strip.downcase.delete_prefix("@") }
+        .reject(&:empty?)
+    end
+
+    # True when the address is on a blocked domain or one of its subdomains.
+    def signup_blocked?(email, credentials: Rails.application.credentials)
+      _, at, domain = email.to_s.strip.downcase.rpartition("@")
+      return false if at.empty? || domain.empty?
+
+      signup_blocked_domains(credentials: credentials).any? do |blocked|
+        domain == blocked || domain.end_with?(".#{blocked}")
+      end
+    end
+
     # Domain mail is sent from. It must be verified with the mail provider, and
     # the provider's API key may be restricted to it, so staging sets its own.
     def mail_domain(env = ENV)

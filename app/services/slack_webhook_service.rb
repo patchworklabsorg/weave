@@ -37,6 +37,9 @@ class SlackWebhookService
         # On first link Weave's pronouns win if it has any (the push sends them).
         user.apply_slack_pronouns!(slack_user_data.dig("profile", "pronouns"), just_linked: just_linked)
         Rails.logger.info "[SlackWebhookService] Updated existing user #{user.id} with Slack ID #{slack_id}"
+      elsif Weave.signup_blocked?(email)
+        Rails.logger.info "[SlackWebhookService] Not creating a user for Slack member #{slack_id}: email domain is blocked"
+        return
       else
         # Create new IDP user from Slack member
         user = create_user_from_slack_member(slack_user_data)

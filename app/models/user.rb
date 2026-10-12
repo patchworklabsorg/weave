@@ -176,6 +176,14 @@ class User < ApplicationRecord
   # Slack yet is not reverted by the old Slack value.
   PRONOUNS_MAX_LENGTH = 50
 
+  # Shown when an email is on a blocked domain (see Weave.signup_blocked?).
+  # It does not say why, so it does not reveal the blocklist.
+  SIGNUP_BLOCKED_MESSAGE = "can't be used with Weave"
+
+  # Set by the admin user form, so an admin can still create an account on a
+  # blocked domain.
+  attr_accessor :skip_signup_blocklist
+
   enum :role, {
     user: 0,
     admin: 1,
@@ -218,6 +226,7 @@ class User < ApplicationRecord
   validates :email, undisposable: { message: "Sorry, but we do not accept disposable email providers." }
   normalizes :email, with: ->(email) { email.strip.downcase }
   validate :email_not_claimed_by_another_user
+  validate :email_domain_not_blocked, on: :create, unless: :skip_signup_blocklist
   normalizes :legal_first_name, :legal_last_name, with: ->(name) { name.strip.presence }
   validates :legal_first_name, :legal_last_name, length: { maximum: 100 }
   normalizes :pronouns, with: ->(pronouns) { pronouns.strip.presence }
@@ -716,6 +725,10 @@ class User < ApplicationRecord
     claimed = EmailAddress.where(email: email)
     claimed = claimed.where.not(user_id: id) if id.present?
     errors.add(:email, "has already been taken") if claimed.exists?
+  end
+
+  def email_domain_not_blocked
+    errors.add(:email, SIGNUP_BLOCKED_MESSAGE) if Weave.signup_blocked?(email)
   end
 
   def create_primary_email_address

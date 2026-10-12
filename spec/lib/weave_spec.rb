@@ -82,6 +82,38 @@ RSpec.describe Weave do
     end
   end
 
+  describe ".signup_blocked_domains" do
+    it "is empty without the credential" do
+      expect(described_class.signup_blocked_domains(credentials: {})).to eq([])
+    end
+
+    it "trims, downcases and drops a leading @ from a list or a comma-separated string" do
+      expect(described_class.signup_blocked_domains(credentials: { signup_blocked_domains: [" @Blocked.Example", ""] }))
+        .to eq(["blocked.example"])
+      expect(described_class.signup_blocked_domains(credentials: { signup_blocked_domains: "a.example, @b.example,," }))
+        .to eq(["a.example", "b.example"])
+    end
+  end
+
+  describe ".signup_blocked?" do
+    let(:credentials) { { signup_blocked_domains: ["blocked.example"] } }
+
+    it "matches the domain and its subdomains, ignoring case" do
+      expect(described_class.signup_blocked?("ada@blocked.example", credentials: credentials)).to be(true)
+      expect(described_class.signup_blocked?(" Ada@Mail.Blocked.Example ", credentials: credentials)).to be(true)
+    end
+
+    it "does not match a different domain with the same ending" do
+      expect(described_class.signup_blocked?("ada@notblocked.example", credentials: credentials)).to be(false)
+      expect(described_class.signup_blocked?("blocked.example@other.example", credentials: credentials)).to be(false)
+    end
+
+    it "is false without an @ or without the credential" do
+      expect(described_class.signup_blocked?("blocked.example", credentials: credentials)).to be(false)
+      expect(described_class.signup_blocked?("ada@blocked.example", credentials: {})).to be(false)
+    end
+  end
+
   describe ".mail_domain, .mail_address and .mail_from" do
     it "default to the production host" do
       expect(described_class.mail_domain({})).to eq("weave.patchworklabs.org")

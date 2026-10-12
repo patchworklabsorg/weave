@@ -415,6 +415,8 @@ class SlackService
         changed ? synced_count += 1 : skipped_count += 1
         # On first link Weave's pronouns win if it has any (the push sends them).
         user.apply_slack_pronouns!(member.dig("profile", "pronouns"), just_linked: just_linked)
+      elsif Weave.signup_blocked?(email)
+        skipped_count += 1
       else
         # Create new user from Slack member
         create_user_from_slack_member(member)
