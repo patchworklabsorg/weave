@@ -1,0 +1,5 @@
+<%= t("guardian_consent.mailer.granted_subject") %>
+
+<%= t("guardian_consent.mailer.granted_body", first_name: @user.first_name) %>
+
+<%= t("guardian_consent.mailer.granted_action") %>: <%= @onboarding_url %>

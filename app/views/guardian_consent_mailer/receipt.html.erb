@@ -1,0 +1,13 @@
+<h2 style="margin: 0 0 16px 0; color: #2a2050; font-size: 20px; font-weight: 700;"><%= t("guardian_consent.mailer.receipt_subject", first_name: @user.first_name) %> 🧵</h2>
+
+<p style="margin: 0 0 16px 0; color: #2a2050;"><%= t("guardian_consent.mailer.receipt_body", first_name: @user.first_name) %></p>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 8px 0 24px 0;">
+  <tr>
+    <td style="border-radius: 8px; background-color: #6c3ec1;">
+      <a href="<%= @consent_url %>" style="display: inline-block; padding: 12px 28px; background-color: #6c3ec1; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 15px; font-family: 'Geist', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+        <%= t("guardian_consent.mailer.receipt_action") %>
+      </a>
+    </td>
+  </tr>
+</table>

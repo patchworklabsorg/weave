@@ -1,0 +1,69 @@
+# Text for a parent or guardian's consent for a member under 18 (see
+# GuardianConsent). The guardian reads the `page` text before they consent.
+#
+# DRAFT: the consent text needs review before launch. When the `page` text
+# changes, change GuardianConsent::TEXT_VERSION too, so each grant records the
+# text the guardian saw.
+en:
+  guardian_consent:
+    form:
+      title: "Ask a parent or guardian"
+      intro: "You are under 18, so a parent or legal guardian must give consent before you join the Slack or use Patchwork Labs apps. We will send them an email with a link."
+      guardian_name: "Their full name"
+      guardian_email: "Their email address"
+      guardian_email_hint: "Use their own address, not yours."
+      submit: "Send the request"
+      pending: "We sent a request to %{email}. When they give consent, this page moves on."
+      pending_hint: "Ask them to check their spam folder. The link works for 7 days."
+      resend: "Send it again"
+      change: "Ask a different person"
+      sent: "We sent the request to %{email}."
+      resent: "We sent the request again."
+      resend_wait: "We sent the request a few minutes ago. Try again in a few minutes."
+    page:
+      title: "Consent for %{first_name} to join Patchwork Labs"
+      intro: "%{first_name} %{last_name} created a Patchwork Labs account and gave your name and email as their parent or guardian. Because %{first_name} is under 18, they need your consent before they can take part."
+      what_title: "What Patchwork Labs is"
+      what: "Patchwork Labs is a community where young people build and research projects together. Members talk in the Patchwork Labs Slack, use Patchwork Labs apps, and can ask for a budget for a project."
+      data_title: "What we keep"
+      data: "We keep %{first_name}'s name, email address, birthday and profile. We also keep your name and email address, and the time you give consent. We use these only to run Patchwork Labs. We do not sell them."
+      safety_title: "How we keep members safe"
+      safety: "Every member accepts our Code of Conduct. Members can report a problem to the Patchwork Labs team at any time."
+      code_of_conduct_link: "Read the Code of Conduct"
+      revoke_info: "You can take your consent back at any time from this page. We send you a link to it by email."
+      confirm_label: "I am %{first_name}'s parent or legal guardian, and I give consent for them to join Patchwork Labs."
+      signed_name: "Type your full name"
+      signed_name_hint: "This is your signature."
+      submit: "I give consent"
+      confirm_error: "Confirm that you are the parent or legal guardian."
+      signed_name_error: "Type your full name."
+      self_error: "You are signed in as %{first_name}. Only a parent or guardian can give consent. Send them the link."
+      contact: "Questions? Email %{email}."
+    granted:
+      title: "Thank you"
+      body: "You gave consent for %{first_name} on %{date}. We sent you an email with a link to this page."
+      revoke_info: "If you take your consent back, %{first_name} can no longer use Patchwork Labs apps."
+      revoke: "Take back my consent"
+      revoke_confirm: "Take back your consent? %{first_name} will lose access to Patchwork Labs apps."
+    revoked:
+      title: "Consent taken back"
+      body: "You took back your consent for %{first_name}. They can no longer use Patchwork Labs apps. We told the Patchwork Labs team."
+    expired:
+      title: "This link has expired"
+      body: "Ask %{first_name} to send you a new request from their Weave account."
+    invalid:
+      title: "This link does not work"
+      body: "The link is not correct, or a newer request replaced it. Use the newest email from Patchwork Labs."
+    mailer:
+      request_subject: "%{first_name} asks for your consent to join Patchwork Labs"
+      request_body: "%{first_name} %{last_name} created a Patchwork Labs account and gave your name and email as their parent or guardian. They are under 18, so they need your consent before they can take part."
+      request_action: "Read about Patchwork Labs and give consent"
+      request_expiry: "The link works for 7 days. If you do not know %{first_name}, you can ignore this email."
+      receipt_subject: "You gave consent for %{first_name}"
+      receipt_body: "Thank you. You gave consent for %{first_name} to join Patchwork Labs. You can take your consent back at any time from this link:"
+      receipt_action: "Manage your consent"
+      granted_subject: "Your parent or guardian gave consent"
+      granted_body: "Hi %{first_name}, your parent or guardian gave consent. You can now join the Patchwork Labs Slack."
+      granted_action: "Join the Slack"
+      revoked_subject: "Your parent or guardian's consent has ended"
+      revoked_body: "Hi %{first_name}, the consent from your parent or guardian is no longer in place. You can no longer use Patchwork Labs apps. If you think this is a mistake, talk to them, or email %{email}."

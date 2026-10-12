@@ -2,9 +2,10 @@
 
 # Invites a member to the Patchwork Labs Slack workspace.
 #
-# Fires automatically once a member confirms their email, and can be re-run from
-# the admin UI (with resend: true). Idempotent: if the person is already in the
-# workspace it syncs their PWL ID instead of inviting again.
+# Fires automatically once a member confirms their email, and again once a
+# guardian consents for a member under 18. Can be re-run from the admin UI
+# (with resend: true). Idempotent: if the person is already in the workspace it
+# syncs their PWL ID instead of inviting again.
 class InviteToSlackJob < ApplicationJob
   queue_as :default
 
@@ -12,6 +13,9 @@ class InviteToSlackJob < ApplicationJob
     user = User.find_by(id: user_id)
     return unless user
     return if user.slack_member?
+    # A member under 18 joins the Slack only after a parent or guardian
+    # consents. GuardianConsentFlow runs this job again then.
+    return if user.guardian_consent_missing?
 
     service = SlackService.new
     unless service.configured?

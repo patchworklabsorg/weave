@@ -139,6 +139,10 @@ class User < ApplicationRecord
   has_many :created_groups, class_name: "Group",
                             foreign_key: :created_by_id, dependent: :nullify, inverse_of: :created_by
 
+  # Parent or guardian consent requests for a member under 18 (see
+  # GuardianConsent).
+  has_many :guardian_consents, dependent: :destroy
+
   # OAuth apps this user may use by a direct grant (see AppAccess).
   has_many :application_access_grants, as: :grantee, dependent: :destroy
   # OAuth app roles given to this user directly (see ApplicationRole).
@@ -497,12 +501,29 @@ class User < ApplicationRecord
   # sent the invite. They can still be a guest: see #slack_member?.
   def in_slack_workspace? = slack_id.present?
 
+  # Members under 18 need a parent or guardian's consent (see
+  # GuardianConsent). Age comes from birthday, which a member sets once. No
+  # birthday means no known age, so no consent is asked.
+  ADULT_AGE = 18
+
+  def minor? = birthday.present? && birthday.after?(ADULT_AGE.years.ago.to_date)
+
+  def guardian_consent_granted? = guardian_consents.granted.exists?
+
+  def guardian_consent_missing? = minor? && !guardian_consent_granted?
+
+  # The request that stands: pending or granted.
+  def current_guardian_consent = guardian_consents.live.order(created_at: :desc).first
+
   # Where this person is in joining the Slack. Drives the /slack onboarding
   # page. Each step is the next thing the person must do.
   #
   # Full members who joined before the code-of-conduct flow still have to
   # accept it. They are not demoted for that, so they skip :awaiting_promotion.
+  # A member under 18 starts with their guardian's consent: Weave sends no
+  # Slack invite before it (see InviteToSlackJob).
   def slack_onboarding_step
+    return :guardian_consent if guardian_consent_missing?
     return slack_coc_accepted_at.present? ? :member : :accept_code_of_conduct if slack_member?
     return :awaiting_promotion if in_slack_workspace? && slack_coc_accepted_at.present?
     return :accept_code_of_conduct if in_slack_workspace?

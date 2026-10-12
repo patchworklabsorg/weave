@@ -1,0 +1,7 @@
+Consent for <%= @user.first_name %>
+
+<%= t("guardian_consent.mailer.request_body", first_name: @user.first_name, last_name: @user.last_name) %>
+
+<%= t("guardian_consent.mailer.request_action") %>: <%= @consent_url %>
+
+<%= t("guardian_consent.mailer.request_expiry", first_name: @user.first_name) %>
