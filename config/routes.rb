@@ -85,6 +85,9 @@
 #                invite_to_slack_admin_user POST   /admin/users/:id/invite_to_slack(.:format)                                                        admin/users#invite_to_slack
 #      code_of_conduct_exemption_admin_user PATCH  /admin/users/:id/code_of_conduct_exemption(.:format)                                              admin/users#code_of_conduct_exemption
 #                  admin_user_impersonation GET    /admin/users/:user_id/impersonations/:id(.:format)                                                admin/user_impersonations#show
+#        resend_admin_user_guardian_consent POST   /admin/users/:user_id/guardian_consents/:id/resend(.:format)                                      admin/user_guardian_consents#resend
+#        revoke_admin_user_guardian_consent PATCH  /admin/users/:user_id/guardian_consents/:id/revoke(.:format)                                      admin/user_guardian_consents#revoke
+#              admin_user_guardian_consents POST   /admin/users/:user_id/guardian_consents(.:format)                                                 admin/user_guardian_consents#create
 #                               admin_users GET    /admin/users(.:format)                                                                            admin/users#index
 #                                           POST   /admin/users(.:format)                                                                            admin/users#create
 #                            new_admin_user GET    /admin/users/new(.:format)                                                                        admin/users#new
@@ -467,6 +470,13 @@ Rails.application.routes.draw do
           patch :code_of_conduct_exemption
         end
         resources :impersonations, controller: "user_impersonations", only: [:show]
+
+        resources :guardian_consents, controller: "user_guardian_consents", only: [:create] do
+          member do
+            post :resend
+            patch :revoke
+          end
+        end
       end
 
       resources :groups do
