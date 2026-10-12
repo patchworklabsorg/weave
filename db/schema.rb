@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_12_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_12_180100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -362,6 +362,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_170000) do
     t.index ["slug"], name: "index_groups_on_slug", unique: true, where: "(deleted_at IS NULL)"
   end
 
+  create_table "impersonation_actions", force: :cascade do |t|
+    t.string "controller_action"
+    t.datetime "created_at", null: false
+    t.string "http_method", null: false
+    t.bigint "impersonation_id", null: false
+    t.jsonb "params", default: {}, null: false
+    t.string "path", null: false
+    t.integer "status"
+    t.index ["impersonation_id"], name: "index_impersonation_actions_on_impersonation_id"
+  end
+
   create_table "impersonations", force: :cascade do |t|
     t.bigint "admin_id"
     t.datetime "created_at", null: false
@@ -642,10 +653,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_170000) do
   create_table "versions", force: :cascade do |t|
     t.datetime "created_at"
     t.string "event", null: false
+    t.bigint "impersonation_id"
     t.bigint "item_id", null: false
     t.string "item_type", null: false
     t.text "object"
     t.string "whodunnit"
+    t.index ["impersonation_id"], name: "index_versions_on_impersonation_id"
     t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
   end
 
@@ -662,6 +675,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_170000) do
   add_foreign_key "group_memberships", "users"
   add_foreign_key "group_memberships", "users", column: "added_by_id", on_delete: :nullify
   add_foreign_key "groups", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "impersonation_actions", "impersonations", on_delete: :cascade
   add_foreign_key "impersonations", "users", column: "admin_id", on_delete: :nullify
   add_foreign_key "impersonations", "users", on_delete: :nullify
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"

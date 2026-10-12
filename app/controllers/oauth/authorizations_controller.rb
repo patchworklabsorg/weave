@@ -30,6 +30,9 @@ module Oauth
   # to ask. A user who only lacks the code of conduct is sent to accept it, and
   # comes back here afterwards (see SlackOnboardingController).
   class AuthorizationsController < Doorkeeper::AuthorizationsController
+    # Doorkeeper's controllers don't inherit from ApplicationController, so
+    # consent given while an admin impersonates the user is recorded here.
+    include RecordsImpersonationActions
     include OauthClientRedirectOrigins
 
     before_action :require_app_access, only: [:new, :create] # rubocop:disable Rails/LexicallyScopedActionFilter -- both are defined by Doorkeeper::AuthorizationsController
