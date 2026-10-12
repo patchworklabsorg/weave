@@ -243,4 +243,11 @@ RSpec.describe AppAccess do
       expect(described_class.token_usable?(token)).to be(false)
     end
   end
+
+  it "refuses anyone under 13, with no opt-out" do
+    child = create(:user, :verified, :accepted_code_of_conduct, birthday: 12.years.ago.to_date)
+    application.update!(access_policy: "everyone", requires_guardian_consent: false)
+
+    expect(described_class.explain(child, application).reason).to eq(:under_minimum_age)
+  end
 end

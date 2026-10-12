@@ -5,7 +5,10 @@
   <% unless @user.slack_onboarding_complete? %>
     <div class="patch border-2 border-grape bg-grape-soft/40 p-5 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
       <div class="flex-1">
-        <% if @user.guardian_consent_missing? %>
+        <% if @user.birthday.nil? %>
+          <p class="font-semibold text-ink"><%= t("birthday.banner_title") %></p>
+          <p class="text-sm text-ink-soft mt-1"><%= t("birthday.banner_body") %></p>
+        <% elsif @user.guardian_consent_missing? %>
           <p class="font-semibold text-ink"><%= t("guardian_consent.form.title") %></p>
           <p class="text-sm text-ink-soft mt-1"><%= t("guardian_consent.form.intro") %></p>
         <% elsif @user.slack_member? %>

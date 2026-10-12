@@ -36,6 +36,7 @@
 #                   status_slack_onboarding GET    /slack/status(.:format)                                                                           slack_onboarding#status
 #                          slack_onboarding GET    /slack(.:format)                                                                                  slack_onboarding#show
 #                                           POST   /slack(.:format)                                                                                  slack_onboarding#create
+#                                  birthday POST   /slack/birthday(.:format)                                                                         birthdays#create
 #                  guardian_consent_request POST   /slack/guardian-consent(.:format)                                                                 guardian_consent_requests#create
 #           resend_guardian_consent_request POST   /slack/guardian-consent/resend(.:format)                                                          guardian_consent_requests#resend
 #                          guardian_consent GET    /guardian/:token(.:format)                                                                        guardian_consents#show
@@ -372,6 +373,10 @@ Rails.application.routes.draw do
     post :accept_code_of_conduct, path: "code-of-conduct"
     get :status
   end
+
+  # A member with no birthday on file adds it, as the first step of joining
+  # the Slack (see BirthdaysController).
+  post "slack/birthday", to: "birthdays#create", as: :birthday
 
   # A member under 18 asks a parent or guardian for consent, as a step of
   # joining the Slack (see GuardianConsentFlow).

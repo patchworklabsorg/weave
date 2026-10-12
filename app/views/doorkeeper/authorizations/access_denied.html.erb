@@ -14,7 +14,11 @@
         </p>
       </div>
 
-      <% if @decision&.reason == :guardian_consent %>
+      <% if @decision&.reason == :under_minimum_age %>
+        <p class="text-xs text-ink-faint text-center">
+          <%= t("birthday.under_minimum_age", email: Weave.mail_address) %>
+        </p>
+      <% elsif @decision&.reason == :guardian_consent %>
         <p class="text-xs text-ink-faint text-center">
           Members under 18 need consent from a parent or guardian before they can use Patchwork Labs apps.
         </p>

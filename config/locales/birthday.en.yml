@@ -1,0 +1,16 @@
+# Text for asking a member's birthday (see User#slack_onboarding_step and
+# BirthdaysController).
+en:
+  birthday:
+    hint: "We use your birthday to check your age. Members under 18 need consent from a parent or guardian. You can set it only once."
+    step_label: "Add your birthday"
+    banner_title: "Add your birthday"
+    banner_body: "We now ask every member for their birthday, to check their age. It takes a few seconds."
+    intro: "We now ask every member for their birthday. We use it to check your age: Patchwork Labs is for people 13 and older, and members under 18 need consent from a parent or guardian."
+    label: "Your birthday"
+    once: "You can set it only once. If you make a mistake, email %{email}."
+    submit: "Save my birthday"
+    saved: "Thanks. We saved your birthday."
+    invalid: "Enter your real date of birth."
+    under_minimum_age_title: "You must be 13 or older"
+    under_minimum_age: "Patchwork Labs is for people 13 and older, so you can't join the Slack or use Patchwork Labs apps yet. If your birthday is wrong, email %{email}."

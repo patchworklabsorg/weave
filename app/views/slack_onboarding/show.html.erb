@@ -4,6 +4,8 @@
 <%
   steps = [
     [:sign_up, "Create your Weave account"],
+    ([:add_birthday, t("birthday.step_label")] if @step == :add_birthday),
+    ([:under_minimum_age, t("birthday.under_minimum_age_title")] if @step == :under_minimum_age),
     ([:guardian_consent, "Get consent from a parent or guardian"] if current_user&.minor?),
     [:request_invite, "Get your Slack invite"],
     [:accept_invite, "Accept the invite from Slack"],
@@ -57,6 +59,25 @@
           <p class="text-sm text-ink-soft">
             Already have an account? <%= link_to "Sign in", login_path, class: link_class %>
           </p>
+
+        <% when :add_birthday %>
+          <p class="text-sm text-ink"><%= t("birthday.intro") %></p>
+          <%= form_with url: birthday_path, method: :post, class: "space-y-4 text-left" do |form| %>
+            <div>
+              <%= form.label :birthday, t("birthday.label"), class: "block text-sm font-medium text-ink" %>
+              <%= form.date_field :birthday, value: params[:birthday].presence || current_user.slack_birthday,
+                    required: true, max: Date.current, autocomplete: "bday", aria: { describedby: "birthday_hint" },
+                    class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors" %>
+              <p id="birthday_hint" class="mt-1 text-xs text-ink-faint"><%= t("birthday.once", email: Weave.mail_address) %></p>
+              <% if @form_errors&.key?(:birthday) %>
+                <p class="mt-1 text-sm text-orchid"><%= @form_errors[:birthday] %></p>
+              <% end %>
+            </div>
+            <%= form.submit t("birthday.submit"), class: "btn-stitch w-full justify-center" %>
+          <% end %>
+
+        <% when :under_minimum_age %>
+          <p class="text-sm text-ink"><%= t("birthday.under_minimum_age", email: Weave.mail_address) %></p>
 
         <% when :guardian_consent %>
           <% if consent&.pending? && params[:change].blank? && @form_errors.blank? %>

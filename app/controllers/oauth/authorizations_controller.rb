@@ -50,6 +50,16 @@ module Oauth
       return unless pre_auth.authorizable?
 
       application = pre_auth.client.application
+
+      # Weave can't check a member's age without a birthday. Ask for it, then
+      # come back here (see BirthdaysController). Tokens already issued keep
+      # working, so members are asked when they next sign in to an app.
+      if current_resource_owner.birthday.nil? && application.requires_guardian_consent && request.get?
+        session[:birthday_return_to] = request.fullpath
+        redirect_to slack_onboarding_path, alert: "Please add your birthday to continue to #{application.name}."
+        return
+      end
+
       decision = AppAccess.explain(current_resource_owner, application)
       return if decision.permitted?
 

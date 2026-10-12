@@ -81,6 +81,9 @@ FactoryBot.define do
     password_confirmation { "SecurePassword123!" }
     role { :user }
     status { "active" }
+    # An adult. Weave asks for a birthday before anything else when it is
+    # missing (see User#slack_onboarding_step).
+    birthday { 30.years.ago.to_date }
 
     trait :admin do
       role { :admin }

@@ -13,9 +13,10 @@ class InviteToSlackJob < ApplicationJob
     user = User.find_by(id: user_id)
     return unless user
     return if user.slack_member?
-    # A member under 18 joins the Slack only after a parent or guardian
-    # consents. GuardianConsentFlow runs this job again then.
-    return if user.guardian_consent_missing?
+    # Weave must know the member's age first. A member under 18 joins the
+    # Slack only after a parent or guardian consents: GuardianConsentFlow and
+    # BirthdaysController run this job again then.
+    return if user.birthday.nil? || user.under_minimum_age? || user.guardian_consent_missing?
 
     service = SlackService.new
     unless service.configured?

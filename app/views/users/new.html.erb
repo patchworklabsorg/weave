@@ -40,10 +40,10 @@
                 class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
           </div>
           <div class="md:col-span-2">
-            <%= form.label :birthday, "Birthday (optional)", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.date_field :birthday,
+            <%= form.label :birthday, class: "block text-sm font-medium text-ink mb-1" %>
+            <%= form.date_field :birthday, required: true, max: Date.current, autocomplete: "bday",
                 class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-            <p class="mt-1 text-xs text-ink-faint">Birthday can only be set once. You can add it later from your profile.</p>
+            <p class="mt-1 text-xs text-ink-faint"><%= t("birthday.hint") %></p>
           </div>
         </div>
       </div>
