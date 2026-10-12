@@ -114,6 +114,36 @@ namespace :slack do
       puts "Enqueued #{users.size} requests."
     end
 
+    # Rewrites the request DMs that were already sent with the current text
+    # and links. Sends no new DM and no email. Nothing changes without SEND=1.
+    # Pass the DEADLINE of the original request, so the text keeps it.
+    #
+    #   bin/rails slack:coc:refresh DEADLINE=2026-11-01          # preview
+    #   bin/rails slack:coc:refresh SEND=1 DEADLINE=2026-11-01
+    desc "Rewrite the code of conduct DMs already sent with the current text (SEND=1 to send)"
+    task refresh: :environment do
+      deadline = ENV["DEADLINE"].presence && Date.iso8601(ENV["DEADLINE"])
+      users = User.code_of_conduct_pending.where("jsonb_array_length(slack_coc_messages) > 0").select(&:can_authenticate?)
+
+      sample = users.first || User.new(first_name: "Ada", last_name: "Lovelace")
+      puts "New text for #{sample.email.presence || 'a sample member'}:"
+      puts "-" * 50
+      puts CodeOfConductRequestJob.paragraphs(sample, deadline:).join("\n\n")
+      puts "-" * 50
+      puts "#{users.size} members, #{users.sum { |user| user.slack_coc_messages.size }} DMs to rewrite."
+
+      unless ENV["SEND"] == "1"
+        puts "Preview only. Run again with SEND=1 to rewrite them."
+        next
+      end
+
+      # Space the jobs out to stay under Slack's chat.update rate limit.
+      users.each_with_index do |user, index|
+        CodeOfConductRequestJob.set(wait: (index * 2).seconds).perform_later(user.id, deadline: deadline, refresh: true)
+      end
+      puts "Enqueued #{users.size} refreshes."
+    end
+
     # Moves members who were asked and still have not accepted back to
     # single-channel guests. Nothing changes without CONFIRM=1.
     #

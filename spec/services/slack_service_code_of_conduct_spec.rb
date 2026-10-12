@@ -30,6 +30,19 @@ RSpec.describe SlackService do
       service.post_code_of_conduct("U1", title: "Hello", paragraphs: ["First paragraph"])
     end
 
+    it "rewrites a sent DM with the current links, and does not remember it twice" do
+      user = create(:user, slack_id: "U1")
+      expect(client).to receive(:chat_update) do |args|
+        expect(args).to include(channel: "D1", ts: "1.2")
+        expect(args[:blocks][2][:accessory][:url]).to eq("https://patchworklabs.org/coc")
+        expect(args[:blocks][5][:elements].first).to include(action_id: "open_coc_form", value: "U1")
+      end
+
+      service.update_code_of_conduct(channel: "D1", ts: "1.2", slack_user_id: "U1", title: "Hello", paragraphs: ["Hi"], form: true)
+
+      expect(user.reload.slack_coc_messages).to eq([])
+    end
+
     it "remembers the DM, so accepting anywhere can replace it" do
       user = create(:user, slack_id: "U1")
       allow(client).to receive(:chat_postMessage).and_return({ "ok" => true, "channel" => "D1", "ts" => "1.2" })
