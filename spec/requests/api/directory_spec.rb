@@ -35,8 +35,16 @@ RSpec.describe "Directory API", type: :request do
       expect(body).to eq(
         "sub" => reviewer.p_id, "name" => reviewer.full_name, "email" => reviewer.email,
         "email_verified" => true, "slack_id" => "U0REVIEW", "slack_member" => reviewer.slack_member?,
-        "groups" => ["krater-reviewers"], "roles" => ["reviewer"], "active" => true
+        "groups" => ["krater-reviewers"], "roles" => ["reviewer"], "active" => true, "minor" => false
       )
+    end
+
+    it "says when the user is under 18" do
+      reviewer.update!(birthday: 15.years.ago.to_date)
+      # Without consent the app may not serve them, so the directory hides them.
+      create(:guardian_consent, :granted, user: reviewer)
+
+      expect(directory_get(api_v1_directory_user_path(reviewer.p_id))).to include("minor" => true)
     end
 
     it "hides groups and roles that are not linked to the app" do
