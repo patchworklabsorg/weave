@@ -19,7 +19,11 @@ class DirectoryUserSerializer
       slack_member: @user.slack_member?,
       groups: AppAccess.group_slugs(@user, @application),
       roles: AppAccess.role_keys(@user, @application),
-      active: @user.can_authenticate?
+      active: @user.can_authenticate?,
+      # Under 18, from the birthday. Krater asks for a stronger guardian check
+      # before it gives a budget to a minor. False when the birthday is not
+      # known yet (see User#slack_onboarding_step).
+      minor: @user.minor?
     }
   end
 

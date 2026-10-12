@@ -314,7 +314,8 @@ Each user has the same fields as the claims:
   "slack_member": true,
   "groups": ["krater-reviewers"],
   "roles": ["reviewer"],
-  "active": true
+  "active": true,
+  "minor": false
 }
 ```
 
@@ -324,6 +325,7 @@ Rules:
 - A user that the app may not serve (see "Restricting an app to some users") gives `404`, the same as an unknown `sub`.
 - `groups` and `roles` hold only the groups and roles linked to the calling app.
 - `active` is `false` when the user can no longer sign in.
+- `minor` is `true` when the user is under 18, from their birthday. It is `false` when Weave does not know the birthday yet. Weave asks for a missing birthday at the next sign-in. Only the directory sends this field. It is not a claim.
 - `?group=` works only for a group linked to the app. `?role=` works only for a role of the app. Other values give `404`.
 - Pass exactly one of `role` and `group`, or the API answers `400`.
 - A token with a user, a token without the `directory` scope, or a token of an app whose scopes do not list `directory` gives `403`.
