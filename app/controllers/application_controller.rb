@@ -58,20 +58,14 @@ class ApplicationController < ActionController::Base
     preserved.each { |key, value| session[key] = value }
   end
 
+  # The user_sessions row behind this cookie. During impersonation it belongs
+  # to the admin, who is the one actually signed in (see SessionAuthenticator).
+  # Never creates a row: a cookie without one is not signed in.
   def current_user_session
     return @current_user_session if defined?(@current_user_session)
 
-    @current_user_session = if current_user && session.id
-                              # Try to find existing session first
-                              existing_session = current_user.user_sessions.find_by(session_token: session.id.to_s)
-
-                              # If no session exists, create one for existing logged-in users
-                              if existing_session.nil?
-                                create_session_for_existing_user
-                              else
-                                existing_session
-                              end
-                            end
+    owner = impersonating? ? admin_user : current_user
+    @current_user_session = (owner.user_sessions.find_by(session_token: session.id.to_s) if owner && session.id)
   end
 
   def impersonating?
@@ -125,26 +119,6 @@ class ApplicationController < ActionController::Base
 
   end
 
-  def sign_in(user:, fingerprint_info: {})
-    reset_session_preserving_oauth
-    session[:user_id] = user.id
-
-    # Create or update user session with fingerprint info
-    user_session = user.user_sessions.create!(
-      session_token: session.id.to_s,
-      expiration_at: 30.days.from_now,
-      fingerprint: fingerprint_info[:fingerprint],
-      device_info: fingerprint_info[:device_info],
-      os_info: fingerprint_info[:os_info],
-      timezone: fingerprint_info[:timezone],
-      ip: fingerprint_info[:ip] || request.remote_ip,
-      last_seen_at: Time.zone.now
-    )
-
-    ahoy.authenticate(user)
-    user_session
-  end
-
   def track_user_session
     return unless current_user_session
 
@@ -163,25 +137,6 @@ class ApplicationController < ActionController::Base
       session.update!(signed_out_at: Time.current, expiration_at: Time.current)
     end
     reset_session
-  end
-
-  def create_session_for_existing_user
-    return nil unless current_user && session.id
-
-    # Create a session record for users who were logged in before fingerprint tracking
-    current_user.user_sessions.create!(
-      session_token: session.id.to_s,
-      expiration_at: 30.days.from_now,
-      ip: request.remote_ip,
-      last_seen_at: Time.zone.now,
-      fingerprint: nil, # No fingerprint data available for existing sessions
-      device_info: request.user_agent,
-      os_info: nil,
-      timezone: nil
-    )
-  rescue ActiveRecord::RecordInvalid
-    # If creation fails (e.g., duplicate session_token), try to find existing
-    current_user.user_sessions.find_by(session_token: session.id.to_s)
   end
 
   helper_method :current_user, :current_user_session, :impersonating?, :admin_user
