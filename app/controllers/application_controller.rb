@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class ApplicationController < ActionController::Base
+  # First, so it wraps every other callback. See the concern.
+  include RecordsImpersonationActions
+
   before_action :authenticate_user!
   before_action :track_user_session
 
@@ -150,5 +153,17 @@ class ApplicationController < ActionController::Base
   # Track papertrail edits to specific users
   before_action :set_paper_trail_whodunnit
 
+  private
+
+  # While an admin impersonates a user, record changes are the admin's: the
+  # version names the admin and points to the impersonation, so the
+  # Impersonation row shows everything the admin did.
+  def user_for_paper_trail
+    impersonating? ? session[:admin_id] : current_user&.id
+  end
+
+  def info_for_paper_trail
+    impersonating? ? { impersonation_id: session[:impersonation_id] } : {}
+  end
 
 end

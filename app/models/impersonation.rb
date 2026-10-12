@@ -32,11 +32,18 @@
 # starts one on impersonate (or records a denied attempt), and it ends when the
 # admin stops impersonating or logs out. Only admins can see these rows, on the
 # admin user page. They are never shown to the impersonated user.
+#
+# It is the one place to see what the admin did: each request goes in
+# `actions`, and each record change in `versions`.
 class Impersonation < ApplicationRecord
   END_REASONS = %w[stopped logged_out].freeze
 
   belongs_to :admin, class_name: "User", optional: true
   belongs_to :user, optional: true
+  has_many :actions, class_name: "Impersonation::Action", dependent: :delete_all
+  # Every record change made during the impersonation (see
+  # ApplicationController#info_for_paper_trail).
+  has_many :versions, class_name: "PaperTrail::Version", inverse_of: false, dependent: nil
 
   validates :started_at, presence: true
   validates :end_reason, inclusion: { in: END_REASONS }, allow_nil: true

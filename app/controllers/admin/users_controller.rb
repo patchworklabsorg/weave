@@ -27,6 +27,7 @@ class Admin::UsersController < Admin::BaseController
 
   def show
     @impersonations = Impersonation.where(user: @user).includes(:admin).recent_first.limit(50)
+    @impersonation_action_counts = Impersonation::Action.where(impersonation: @impersonations).group(:impersonation_id).count
   end
 
   def new
