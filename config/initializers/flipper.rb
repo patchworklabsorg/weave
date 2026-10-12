@@ -1,49 +1,39 @@
 # frozen_string_literal: true
 
+require Rails.root.join("lib/feature_flags").to_s
+
 Rails.application.configure do
-  ## Memoization ensures that only one adapter call is made per feature per request.
-  ## For more info, see https://www.flippercloud.io/docs/optimization#memoization
-  # config.flipper.memoize = true
+  # Flipper memoizes and preloads every flag for each request by default, which
+  # suits the small number of flags here.
 
-  ## Flipper preloads all features before each request, which is recommended if:
-  ##   * you have a limited number of features (< 100?)
-  ##   * most of your requests depend on most of your features
-  ##   * you have limited gate data combined across all features (< 1k enabled gates, like individual actors, across all features)
-  ##
-  ## For more info, see https://www.flippercloud.io/docs/optimization#preloading
-  # config.flipper.preload = true
-
-  ## Warn or raise an error if an unknown feature is checked
-  ## Can be set to `:warn`, `:raise`, or `false`
-  config.flipper.strict = Rails.env.development? && :warn
-  config.flipper.strict = Rails.env.test? && :raise
-  config.flipper.strict = Rails.env.production? && :raise
-
-  ## Show Flipper checks in logs
-  # config.flipper.log = true
-
-  ## Reconfigure Flipper to use the Memory adapter and disable Cloud in tests
-  # config.flipper.test_help = true
-
-  ## The path that Flipper Cloud will use to sync features
-  # config.flipper.cloud_path = "_flipper"
-
-  ## The instrumenter that Flipper will use. Defaults to ActiveSupport::Notifications.
-  # config.flipper.instrumenter = ActiveSupport::Notifications
+  # Flipper calls FeatureFlags::STRICT for a flag that is not in the store. It
+  # raises in development and test for a flag that is not in FeatureFlags::FLAGS.
+  config.flipper.strict = FeatureFlags::STRICT
 end
 
 Flipper.configure do |config|
-  ## Configure other adapters that you want to use here:
-  ## See http://flippercloud.io/docs/adapters
-  # config.use Flipper::Adapters::ActiveSupportCacheStore, Rails.cache, expires_in: 5.minutes
+  config.use FeatureFlags::UserActorAdapter
 end
 
-## Register a group that can be used for enabling features.
-##
-##   Flipper.enable_group :my_feature, :admins
-##
-## See https://www.flippercloud.io/docs/features#enablement-group
+Flipper::UI.configure do |config|
+  config.descriptions_source = ->(keys) { FeatureFlags::FLAGS.transform_keys(&:to_s).slice(*keys) }
+  config.show_feature_description_in_list = true
+  config.actor_names_source = ->(actor_ids) { FeatureFlags::ActorNames.call(actor_ids) }
+  config.add_actor_placeholder = "an email, a #{Weave.p_id_prefix} id, a usr_ id, or a Slack id"
+  # The version check fetches www.flippercloud.io from the browser, which the
+  # Content Security Policy does not allow.
+  config.version_check_enabled = false
+end
+
+FeatureFlags::Groups.register_all
+
+# Create every flag in FeatureFlags::FLAGS, so the Flipper UI shows the full list.
 #
-# Flipper.register(:admins) do |actor|
-#  actor.respond_to?(:admin?) && actor.admin?
-# end
+# This also runs on the boot at the start of `rails db:migrate`. On a database
+# that is not migrated yet (CI, first-time setup) flipper_features does not
+# exist, and Flipper.add raises. The flags are created on the next boot.
+Rails.application.config.after_initialize do
+  FeatureFlags.add_all if ActiveRecord::Base.connection.data_source_exists?("flipper_features")
+rescue ActiveRecord::ConnectionNotEstablished, ActiveRecord::NoDatabaseError, ActiveRecord::StatementInvalid
+  # The database is not reachable or not created yet.
+end

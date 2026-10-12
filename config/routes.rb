@@ -541,7 +541,7 @@ Rails.application.routes.draw do
       # Mount engines under /admin path
       mount MissionControl::Jobs::Engine, at: "/jobs"
       mount Audits1984::Engine => "/console"
-      mount Flipper::UI.app(Flipper), at: "/flipper"
+      mount Flipper::UI.app(Flipper) { |builder| builder.use FeatureFlags::UserActorAdapter::UnknownActorRedirect }, at: "/flipper"
       mount Blazer::Engine, at: "/blazer"
     end
   end

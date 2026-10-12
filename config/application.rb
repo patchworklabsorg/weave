@@ -26,8 +26,9 @@ module Weave
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     # credentials_paths.rb and weave.rb are required by hand above, before
-    # Zeitwerk exists.
-    config.autoload_lib(ignore: %w[assets tasks credentials_paths.rb weave.rb])
+    # Zeitwerk exists. config/initializers/flipper.rb requires feature_flags by
+    # hand, because an initializer cannot use a reloadable constant.
+    config.autoload_lib(ignore: %w[assets tasks credentials_paths.rb weave.rb feature_flags.rb feature_flags])
 
     # Keep the credentials file and the key that opens it in lockstep; Rails
     # resolves them independently and will otherwise pair a per-environment
