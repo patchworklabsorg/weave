@@ -73,6 +73,10 @@ Rails.application.configure do
     reply_to: Weave.mail_address
   }
 
+  # Refuse signups whose email domain can't receive mail (example.com, *.test).
+  # It looks up DNS, so tests and development leave it off. See EmailDeliverability.
+  config.x.check_email_deliverability = true
+
   # Transactional email via Resend (API key set in config/initializers/resend.rb).
   config.action_mailer.delivery_method = :resend
 

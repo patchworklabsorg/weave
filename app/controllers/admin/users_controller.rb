@@ -35,6 +35,7 @@ class Admin::UsersController < Admin::BaseController
 
   def create
     @user = User.new(user_params)
+    @user.skip_signup_blocklist = true
     privileged_attributes_allowed = assign_privileged_attributes
 
     # New users sign in by magic link. The model requires a password, so give
