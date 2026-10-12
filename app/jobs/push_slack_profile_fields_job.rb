@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 # Pushes the Slack profile fields an admin edited in Weave (title, location,
-# organization, cost center, manager and so on) to the user's Slack profile.
+# organization, cost center, manager and so on) and the PWL ID to the user's
+# Slack profile. It also runs when a Weave member joins Slack (see
+# SlackWebhookService.process_team_join), so they get their PWL ID at once.
 # Reads the current values when it runs, so a burst of edits ends with Slack
 # holding the last ones. Blank values clear the field in Slack. Slack errors
 # and rate limits are retried.
@@ -16,11 +18,12 @@ class PushSlackProfileFieldsJob < ApplicationJob
   retry_on Slack::Web::Api::Errors::SlackError, Slack::Web::Api::Errors::ServerError,
            wait: :polynomially_longer, attempts: 5
 
-  def perform(user_id)
+  # only_present: see SlackService#push_profile_fields.
+  def perform(user_id, only_present: false)
     user = User.find_by(id: user_id)
     return if user&.slack_id.blank?
 
-    SlackService.new.push_profile_fields(user.slack_id, user)
+    SlackService.new.push_profile_fields(user.slack_id, user, only_present: only_present)
   end
 
 end

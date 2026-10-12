@@ -158,6 +158,39 @@ RSpec.describe SlackService do
       expect(pushed_profile(user)["fields"]).not_to have_key(field_id(described_class::MANAGER_FIELD))
     end
 
+    it "sends the PWL ID" do
+      user = create(:user)
+
+      expect(pushed_profile(user).dig("fields", field_id(described_class::PWL_ID_FIELD), "value")).to eq(user.p_id)
+    end
+
+    context "with only_present" do
+      def pushed_present_profile(user)
+        profile = nil
+        allow(user_client).to receive(:users_profile_set) { |args| profile = JSON.parse(args[:profile]) }
+        service_with(user_client).push_profile_fields("U802", user, only_present: true)
+        profile
+      end
+
+      it "sends only the PWL ID and the fields Weave has values for, never clearing one" do
+        user = create(:user, slack_city: "Boston", slack_title: nil, slack_cost_center: nil)
+
+        expect(pushed_present_profile(user)).to eq(
+          "fields" => {
+            field_id(described_class::SHARED_CUSTOM_FIELDS[:slack_city]) => { "value" => "Boston" },
+            field_id(described_class::PWL_ID_FIELD)                      => { "value" => user.p_id }
+          }
+        )
+      end
+
+      it "sends nothing when there is nothing to send" do
+        allow(user_client).to receive(:team_profile_get).and_return(team_profile(["City"]))
+        expect(user_client).not_to receive(:users_profile_set)
+
+        expect(service_with(user_client).push_profile_fields("U802", build(:user), only_present: true)).to be false
+      end
+    end
+
     it "raises Slack errors so the job can retry" do
       allow(user_client).to receive(:users_profile_set).and_raise(Slack::Web::Api::Errors::SlackError, "fatal_error")
 

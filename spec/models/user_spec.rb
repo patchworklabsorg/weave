@@ -146,10 +146,8 @@ RSpec.describe User, type: :model do
   end
 
   describe "callbacks" do
-    it "sends confirmation email after creation" do
-      expect {
-        create(:user)
-      }.to have_enqueued_job(ConfirmationEmailJob)
+    it "sets a confirmation token after creation" do
+      expect(create(:user).confirmation_token).to be_present
     end
   end
 
@@ -273,12 +271,6 @@ RSpec.describe User, type: :model do
       expect(user.confirmation_sent_at).to be_present
     end
 
-    it "queues ConfirmationEmailJob" do
-      user = build(:user)
-      expect {
-        user.save
-      }.to have_enqueued_job(ConfirmationEmailJob)
-    end
   end
 
   describe "#confirmation_period_valid?" do

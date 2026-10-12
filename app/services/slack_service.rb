@@ -415,6 +415,8 @@ class SlackService
         changed ? synced_count += 1 : skipped_count += 1
         # On first link Weave's pronouns win if it has any (the push sends them).
         user.apply_slack_pronouns!(member.dig("profile", "pronouns"), just_linked: just_linked)
+      elsif Weave.signup_blocked?(email)
+        skipped_count += 1
       else
         # Create new user from Slack member
         create_user_from_slack_member(member)
@@ -523,13 +525,18 @@ class SlackService
     raise
   end
 
-  # Push the profile fields Weave admins can edit to Slack. Every field is
-  # sent, and a blank value clears it in Slack. A manager with no Slack
-  # account is left out, because Slack cannot show it.
+  # Push the profile fields Weave admins can edit to Slack, with the PWL ID.
+  # Every field is sent, and a blank value clears it in Slack. A manager with
+  # no Slack account is left out, because Slack cannot show it.
+  #
+  # only_present: true sends only the fields Weave has a value for, so it
+  # never clears a field. It is for a member who has just joined Slack: their
+  # Slack profile is new, and they may already be filling it in.
   # Uses user token (requires users.profile:write scope)
-  # Returns false when there is nothing to do (no Slack ID or no user token).
-  # Slack errors are raised, so PushSlackProfileFieldsJob can retry them.
-  def push_profile_fields(slack_user_id, user)
+  # Returns false when there is nothing to do (no Slack ID, no user token, or
+  # nothing to send). Slack errors are raised, so PushSlackProfileFieldsJob
+  # can retry them.
+  def push_profile_fields(slack_user_id, user, only_present: false)
     return false if slack_user_id.blank?
 
     unless @user_client
@@ -550,11 +557,20 @@ class SlackService
         fields[manager_field_id] = { value: manager.slack_id }
       end
     end
+    # Slack never edits the PWL ID, so sending it can't overwrite a newer value.
+    if user.p_id.present? && (pwl_id_field_id = custom_field_id(PWL_ID_FIELD))
+      fields[pwl_id_field_id] = { value: user.p_id }
+    end
 
-    @user_client.users_profile_set(
-      user: slack_user_id,
-      profile: { title: user.slack_title.to_s, fields: fields }.to_json
-    )
+    profile = { title: user.slack_title.to_s, fields: fields }
+    if only_present
+      fields.reject! { |_field_id, field| field[:value].blank? }
+      profile.delete(:title) if profile[:title].blank?
+      profile.delete(:fields) if fields.empty?
+      return false if profile.empty?
+    end
+
+    @user_client.users_profile_set(user: slack_user_id, profile: profile.to_json)
 
     Rails.logger.info "Updated Slack profile fields for user #{slack_user_id}"
     true
