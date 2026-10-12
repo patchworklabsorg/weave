@@ -97,6 +97,8 @@
 #                                           PATCH  /admin/users/:id(.:format)                                                                        admin/users#update
 #                                           PUT    /admin/users/:id(.:format)                                                                        admin/users#update
 #                                           DELETE /admin/users/:id(.:format)                                                                        admin/users#destroy
+#             review_admin_guardian_consent PATCH  /admin/guardian_consents/:id/review(.:format)                                                     admin/guardian_consents#review
+#                   admin_guardian_consents GET    /admin/guardian_consents(.:format)                                                                admin/guardian_consents#index
 #                   admin_group_memberships POST   /admin/groups/:group_id/memberships(.:format)                                                     admin/group_memberships#create
 #                    admin_group_membership DELETE /admin/groups/:group_id/memberships/:id(.:format)                                                 admin/group_memberships#destroy
 #                              admin_groups GET    /admin/groups(.:format)                                                                           admin/groups#index
@@ -481,6 +483,14 @@ Rails.application.routes.draw do
             post :resend
             patch :revoke
           end
+        end
+      end
+
+      # Guardian consents with a flag, for an admin to check (see
+      # GuardianConsentSignals).
+      resources :guardian_consents, only: [:index] do
+        member do
+          patch :review
         end
       end
 

@@ -7,12 +7,16 @@
 #
 #  id                        :bigint           not null, primary key
 #  expires_at                :datetime
+#  flags                     :jsonb            not null
 #  granted_at                :datetime
+#  granted_fingerprint       :string
 #  granted_ip                :string
 #  granted_user_agent        :string
 #  guardian_email_ciphertext :text
 #  guardian_name_ciphertext  :text
 #  note                      :text
+#  review_note               :text
+#  reviewed_at               :datetime
 #  revoked_at                :datetime
 #  sent_at                   :datetime
 #  signed_name_ciphertext    :text
@@ -22,12 +26,14 @@
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
 #  recorded_by_id            :bigint
+#  reviewed_by_id            :bigint
 #  revoked_by_id             :bigint
 #  user_id                   :bigint           not null
 #
 # Indexes
 #
 #  index_guardian_consents_on_recorded_by_id  (recorded_by_id)
+#  index_guardian_consents_on_reviewed_by_id  (reviewed_by_id)
 #  index_guardian_consents_on_revoked_by_id   (revoked_by_id)
 #  index_guardian_consents_on_token_digest    (token_digest) UNIQUE
 #  index_guardian_consents_on_user_id         (user_id)
@@ -35,6 +41,7 @@
 # Foreign Keys
 #
 #  fk_rails_...  (recorded_by_id => users.id) ON DELETE => nullify
+#  fk_rails_...  (reviewed_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (revoked_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (user_id => users.id)
 #

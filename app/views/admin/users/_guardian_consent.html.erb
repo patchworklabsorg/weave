@@ -21,6 +21,17 @@
       <% end %>
     </p>
 
+    <% if current&.granted? && current.flags.any? %>
+      <p class="text-xs mt-1 <%= current.reviewed_at ? 'text-ink-faint' : 'text-orchid' %>">
+        <% if current.reviewed_at %>
+          Checked <%= current.reviewed_at.strftime("%b %-d, %Y") %> by <%= current.reviewed_by&.full_name || "a deleted user" %>: <%= current.review_note %>
+        <% else %>
+          Needs a check: <%= current.flags.map { |flag| GuardianConsentSignals.describe(flag) }.join(" ") %>
+          <%= link_to "Open the review queue", admin_guardian_consents_path, class: "underline" %>
+        <% end %>
+      </p>
+    <% end %>
+
     <div class="flex flex-wrap gap-2 mt-2">
       <% if current&.pending? && can_manage %>
         <%= button_to "Send the request again", resend_admin_user_guardian_consent_path(user, current),

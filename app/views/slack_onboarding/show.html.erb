@@ -92,6 +92,7 @@
             </p>
           <% else %>
             <p class="text-sm text-ink"><%= t("guardian_consent.form.intro") %></p>
+            <p class="text-sm text-ink-soft"><%= t("guardian_consent.form.honesty") %></p>
             <%= form_with url: guardian_consent_request_path, method: :post, class: "space-y-4 text-left" do |form| %>
               <% [[:guardian_name, :text_field], [:guardian_email, :email_field]].each do |field, input| %>
                 <div>

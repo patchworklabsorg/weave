@@ -48,8 +48,11 @@
 
         <p><%= t("guardian_consent.page.revoke_info") %></p>
 
-        <%= form_with url: guardian_consent_path(token: params[:token]), method: :post,
+        <p><%= t("guardian_consent.page.check_info") %></p>
+
+        <%= form_with url: guardian_consent_path(token: params[:token]), method: :post, data: { controller: "fingerprint" },
               class: "patch border-2 border-grape bg-grape-soft/40 p-5 space-y-4" do |form| %>
+          <%= hidden_field_tag :fingerprint, "", data: { fingerprint_target: "fingerprint" } %>
           <div>
             <label class="flex items-start gap-3">
               <%= check_box_tag :confirm, "1", params[:confirm] == "1", required: true,

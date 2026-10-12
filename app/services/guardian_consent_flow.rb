@@ -37,8 +37,10 @@ module GuardianConsentFlow
 
     # The guardian consents from the link. token is the raw token from the
     # link: the receipt email repeats it, so the guardian can revoke later.
-    def grant(consent, token:, signed_name:, ip:, user_agent:)
-      return false unless consent.record_grant!(signed_name:, ip:, user_agent:)
+    def grant(consent, token:, signed_name:, ip:, user_agent:, fingerprint: nil)
+      return false unless consent.record_grant!(signed_name:, ip:, user_agent:, fingerprint:)
+
+      flag(consent)
 
       GuardianConsentMailer.receipt(consent, token).deliver_later
       GuardianConsentMailer.granted(consent).deliver_later
@@ -66,7 +68,25 @@ module GuardianConsentFlow
       true
     end
 
+    # An admin contacted the guardian and confirmed the consent.
+    def review(consent, by:, note:)
+      return false unless consent.needs_review?
+
+      consent.record_review!(by:, note:)
+      true
+    end
+
     private
+
+    # Flags a consent for the admin review queue. The consent stands: an admin
+    # checks it, and revokes it if the guardian is not real.
+    def flag(consent)
+      flags = GuardianConsentSignals.for(consent)
+      return if flags.empty?
+
+      consent.update_columns(flags:) # rubocop:disable Rails/SkipsModelValidations
+      AdminMailer.guardian_consent_flagged(consent).deliver_later if consent.suspicious?
+    end
 
     # Consent was the only thing that held back the Slack invite (see
     # InviteToSlackJob). Members already in the workspace need none.
