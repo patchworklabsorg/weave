@@ -26,6 +26,7 @@ class Admin::UsersController < Admin::BaseController
   end
 
   def show
+    @impersonations = Impersonation.where(user: @user).includes(:admin).recent_first.limit(50)
   end
 
   def new
@@ -81,8 +82,10 @@ class Admin::UsersController < Admin::BaseController
 
     if @user.is_impersonatable?(current_user)
       Rails.logger.info "Impersonation allowed, setting session variables"
+      impersonation = Impersonation.start!(admin: current_user, user: @user, request: request)
       session[:admin_id] = current_user.id
       session[:user_id] = @user.id
+      session[:impersonation_id] = impersonation.id
       Rails.logger.info "Session set: admin_id=#{session[:admin_id]}, user_id=#{session[:user_id]}"
 
       # Clear the current_user cache to force reload
@@ -92,6 +95,7 @@ class Admin::UsersController < Admin::BaseController
       redirect_to root_path
     else
       Rails.logger.warn "Impersonation denied for user #{@user.id} by admin #{current_user.id}"
+      Impersonation.start!(admin: current_user, user: @user, request: request, denied: true)
       redirect_to admin_users_path, alert: "Cannot impersonate this user"
     end
   end
@@ -103,6 +107,7 @@ class Admin::UsersController < Admin::BaseController
       admin_user = User.find(session[:admin_id])
       Rails.logger.info "Found admin user: #{admin_user.full_name} (#{admin_user.id})"
 
+      end_impersonation("stopped")
       session[:user_id] = session[:admin_id]
       session.delete(:admin_id)
 
@@ -149,6 +154,7 @@ class Admin::UsersController < Admin::BaseController
   def ensure_can_impersonate
     return if current_user.superadmin? && current_user.can_impersonate?
 
+    Impersonation.start!(admin: current_user, user: @user, request: request, denied: true)
     redirect_to admin_users_path, alert: "You don't have permission to impersonate users"
   end
 

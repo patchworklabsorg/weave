@@ -201,6 +201,7 @@ class AuthController < ApplicationController
 
   def logout
     if session[:admin_id]
+      end_impersonation("logged_out")
       original_admin = User.find_by(id: session[:admin_id])
 
       # The admin who started impersonating was deleted in the meantime, so

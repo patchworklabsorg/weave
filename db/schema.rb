@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_10_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_12_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -362,6 +362,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_10_120000) do
     t.index ["slug"], name: "index_groups_on_slug", unique: true, where: "(deleted_at IS NULL)"
   end
 
+  create_table "impersonations", force: :cascade do |t|
+    t.bigint "admin_id"
+    t.datetime "created_at", null: false
+    t.boolean "denied", default: false, null: false
+    t.string "end_reason"
+    t.datetime "ended_at"
+    t.string "ip"
+    t.datetime "started_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "user_agent"
+    t.bigint "user_id"
+    t.index ["admin_id"], name: "index_impersonations_on_admin_id"
+    t.index ["user_id"], name: "index_impersonations_on_user_id"
+  end
+
   create_table "lockbox_audits", force: :cascade do |t|
     t.string "context"
     t.datetime "created_at"
@@ -647,6 +662,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_10_120000) do
   add_foreign_key "group_memberships", "users"
   add_foreign_key "group_memberships", "users", column: "added_by_id", on_delete: :nullify
   add_foreign_key "groups", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "impersonations", "users", column: "admin_id", on_delete: :nullify
+  add_foreign_key "impersonations", "users", on_delete: :nullify
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_grants", "users", column: "resource_owner_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"

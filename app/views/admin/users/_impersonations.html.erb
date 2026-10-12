@@ -1,0 +1,64 @@
+<%# Admin only: who signed in as this user. Never render this on user-facing pages. %>
+<div class="mt-8 patch" id="impersonations">
+  <div class="px-6 py-4 border-b-2 border-dashed border-ink-soft/30">
+    <h2 class="font-display text-lg font-bold text-ink">Impersonations</h2>
+    <p class="text-sm text-ink-faint">Admins who signed in as this user, or tried to. Only admins can see this.</p>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-ink-soft/20">
+      <thead class="bg-grape-soft">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Status</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Admin</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Started</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Duration</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Ended by</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">IP</th>
+        </tr>
+      </thead>
+      <tbody class="bg-paper divide-y divide-ink-soft/10">
+        <% if impersonations.any? %>
+          <% impersonations.each do |impersonation| %>
+            <tr>
+              <td class="px-4 py-4 whitespace-nowrap text-sm">
+                <% if impersonation.denied? %>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Denied</span>
+                <% elsif impersonation.active? %>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">Not ended</span>
+                <% else %>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-grape-soft text-ink-soft">Ended</span>
+                <% end %>
+              </td>
+              <td class="px-4 py-4 text-sm text-ink">
+                <% if impersonation.admin %>
+                  <%= link_to impersonation.admin.full_name, admin_user_path(impersonation.admin), class: "text-grape hover:underline" %>
+                  <div class="text-xs text-ink-faint"><%= impersonation.admin.email %></div>
+                <% else %>
+                  <span class="text-ink-faint">Deleted admin</span>
+                <% end %>
+              </td>
+              <td class="px-4 py-4 whitespace-nowrap text-sm text-ink-soft" title="<%= impersonation.started_at.iso8601 %>">
+                <%= time_ago_in_words(impersonation.started_at) %> ago
+              </td>
+              <td class="px-4 py-4 whitespace-nowrap text-sm text-ink-soft">
+                <%= impersonation.duration ? distance_of_time_in_words(impersonation.duration) : "—" %>
+              </td>
+              <td class="px-4 py-4 whitespace-nowrap text-sm text-ink-soft">
+                <%= { "stopped" => "Stop impersonating", "logged_out" => "Log out" }.fetch(impersonation.end_reason, "—") %>
+              </td>
+              <td class="px-4 py-4 whitespace-nowrap text-sm font-mono text-ink-soft">
+                <%= impersonation.ip || "Unknown" %>
+              </td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr>
+            <td colspan="6" class="px-4 py-8 text-center text-sm text-ink-faint">
+              No admin has impersonated this user.
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
