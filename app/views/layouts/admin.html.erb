@@ -394,6 +394,12 @@
               <% end %>
             </li>
             <li class="admin-nav-item">
+              <%= link_to admin_guardian_consents_path,
+                  class: "admin-nav-link #{controller_name == 'guardian_consents' ? 'active' : ''}" do %>
+                Consents
+              <% end %>
+            </li>
+            <li class="admin-nav-item">
               <%= link_to admin_oauth_applications_path,
                   class: "admin-nav-link #{controller_name == 'oauth_applications' ? 'active' : ''}" do %>
                 OAuth Apps

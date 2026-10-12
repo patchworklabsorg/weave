@@ -35,6 +35,21 @@ sequenceDiagram
 - The requirement ends by itself on the member's 18th birthday.
 - The text is in `config/locales/guardian_consent.en.yml`. When the guardian page text changes, change `GuardianConsent::TEXT_VERSION` too.
 
+## Checking that the guardian is real
+
+An email link proves only that someone reads that inbox. A member could give a friend's address. Weave cannot stop that, so it makes it likely to be found:
+
+- The member form and the guardian page say that Patchwork Labs checks some consents by contacting the guardian, and that false details break the Code of Conduct.
+- When the guardian consents, `GuardianConsentSignals` sets flags:
+  - `same_device`: the guardian page ran in a browser the member signed in with (FingerprintJS).
+  - `quick_grant`: consent came within 5 minutes of the request.
+  - `member_name`: the guardian's name is the member's own name.
+  - `spot_check`: a random 10% of consents with no other flag.
+- A shared home IP is normal for a real parent, so the IP is not a flag.
+- A flagged consent stands, but waits in the review queue at `/admin/guardian_consents`. For any flag except `spot_check`, Weave emails the admins (`AdminMailer#guardian_consent_flagged`).
+- An admin contacts the guardian, then marks the consent as checked with a note, or a superadmin revokes it on the member's page.
+- Before Krater gives a budget to a minor, it needs a stronger check: a signed guardian form and a call. Krater reads the `minor` field from the directory API for this.
+
 ## Revoking
 
 The guardian can take the consent back from the link in the receipt. A superadmin can revoke it from the user's admin page. Weave then:

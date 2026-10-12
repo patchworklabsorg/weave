@@ -1,0 +1,9 @@
+The guardian consent for <%= @user.full_name %> (<%= @user.p_id %>) needs a check.
+
+<% @consent.flags.each do |flag| %>
+- <%= GuardianConsentSignals.describe(flag) %>
+<% end %>
+
+Contact the guardian to confirm, then mark the consent as checked, or revoke it.
+
+<%= @queue_url %>

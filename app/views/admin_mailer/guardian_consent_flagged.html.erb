@@ -1,0 +1,11 @@
+<p style="margin: 0 0 16px 0; color: #2a2050;">The guardian consent for <strong><%= @user.full_name %></strong> (<%= @user.p_id %>) needs a check.</p>
+
+<ul style="margin: 0 0 16px 0; color: #2a2050;">
+  <% @consent.flags.each do |flag| %>
+    <li><%= GuardianConsentSignals.describe(flag) %></li>
+  <% end %>
+</ul>
+
+<p style="margin: 0 0 16px 0; color: #2a2050;">Contact the guardian to confirm, then mark the consent as checked, or revoke it.</p>
+
+<p style="margin: 0 0 16px 0; color: #2a2050;"><a href="<%= @queue_url %>" style="color: #6c3ec1;">Open the review queue</a></p>

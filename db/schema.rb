@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_12_180100) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_12_183000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -365,13 +365,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_180100) do
   create_table "guardian_consents", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "expires_at"
+    t.jsonb "flags", default: [], null: false
     t.datetime "granted_at"
+    t.string "granted_fingerprint"
     t.string "granted_ip"
     t.string "granted_user_agent"
     t.text "guardian_email_ciphertext"
     t.text "guardian_name_ciphertext"
     t.text "note"
     t.bigint "recorded_by_id"
+    t.text "review_note"
+    t.datetime "reviewed_at"
+    t.bigint "reviewed_by_id"
     t.datetime "revoked_at"
     t.bigint "revoked_by_id"
     t.datetime "sent_at"
@@ -382,6 +387,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_180100) do
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.index ["recorded_by_id"], name: "index_guardian_consents_on_recorded_by_id"
+    t.index ["reviewed_by_id"], name: "index_guardian_consents_on_reviewed_by_id"
     t.index ["revoked_by_id"], name: "index_guardian_consents_on_revoked_by_id"
     t.index ["token_digest"], name: "index_guardian_consents_on_token_digest", unique: true
     t.index ["user_id"], name: "index_guardian_consents_on_user_id"
@@ -703,6 +709,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_180100) do
   add_foreign_key "groups", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "guardian_consents", "users"
   add_foreign_key "guardian_consents", "users", column: "recorded_by_id", on_delete: :nullify
+  add_foreign_key "guardian_consents", "users", column: "reviewed_by_id", on_delete: :nullify
   add_foreign_key "guardian_consents", "users", column: "revoked_by_id", on_delete: :nullify
   add_foreign_key "impersonation_actions", "impersonations", on_delete: :cascade
   add_foreign_key "impersonations", "users", column: "admin_id", on_delete: :nullify

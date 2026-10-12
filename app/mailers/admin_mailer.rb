@@ -24,6 +24,16 @@ class AdminMailer < ApplicationMailer
     mail(subject: "[IDP Alert] Member under #{User::MINIMUM_AGE}: #{@user.full_name}")
   end
 
+  # A guardian consent with a sign that the guardian may not be real (see
+  # GuardianConsentSignals). It waits in the admin review queue.
+  def guardian_consent_flagged(consent)
+    @user = consent.user
+    @consent = consent
+    @queue_url = admin_guardian_consents_url
+
+    mail(subject: "[IDP Alert] Check the guardian consent for #{@user.full_name}")
+  end
+
   # A guardian took back consent for a member under 18 (see
   # GuardianConsentFlow). Weave removes app access, but the Slack account
   # stays as it is, so an admin decides what happens there.

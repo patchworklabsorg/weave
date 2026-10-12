@@ -26,7 +26,8 @@ class GuardianConsentsController < ApplicationController
     return render_state(status: :unprocessable_content) if @form_errors.any?
 
     GuardianConsentFlow.grant(@consent, token: params[:token], signed_name: params[:signed_name].to_s.strip.truncate(100),
-                                        ip: request.remote_ip, user_agent: request.user_agent)
+                                        ip: request.remote_ip, user_agent: request.user_agent,
+                                        fingerprint: params[:fingerprint])
     redirect_to guardian_consent_path(token: params[:token])
   end
 

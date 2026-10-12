@@ -17,12 +17,16 @@
 #
 #  id                        :bigint           not null, primary key
 #  expires_at                :datetime
+#  flags                     :jsonb            not null
 #  granted_at                :datetime
+#  granted_fingerprint       :string
 #  granted_ip                :string
 #  granted_user_agent        :string
 #  guardian_email_ciphertext :text
 #  guardian_name_ciphertext  :text
 #  note                      :text
+#  review_note               :text
+#  reviewed_at               :datetime
 #  revoked_at                :datetime
 #  sent_at                   :datetime
 #  signed_name_ciphertext    :text
@@ -32,12 +36,14 @@
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
 #  recorded_by_id            :bigint
+#  reviewed_by_id            :bigint
 #  revoked_by_id             :bigint
 #  user_id                   :bigint           not null
 #
 # Indexes
 #
 #  index_guardian_consents_on_recorded_by_id  (recorded_by_id)
+#  index_guardian_consents_on_reviewed_by_id  (reviewed_by_id)
 #  index_guardian_consents_on_revoked_by_id   (revoked_by_id)
 #  index_guardian_consents_on_token_digest    (token_digest) UNIQUE
 #  index_guardian_consents_on_user_id         (user_id)
@@ -45,6 +51,7 @@
 # Foreign Keys
 #
 #  fk_rails_...  (recorded_by_id => users.id) ON DELETE => nullify
+#  fk_rails_...  (reviewed_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (revoked_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (user_id => users.id)
 #
@@ -69,6 +76,7 @@ class GuardianConsent < ApplicationRecord
   belongs_to :user
   belongs_to :revoked_by, class_name: "User", optional: true
   belongs_to :recorded_by, class_name: "User", optional: true
+  belongs_to :reviewed_by, class_name: "User", optional: true
 
   # Populated only on the instance returned by .issue! and #reissue!, so the
   # mailer can send what the digest can't reproduce.
@@ -106,6 +114,10 @@ class GuardianConsent < ApplicationRecord
 
   # Pending or granted: the request that stands.
   scope :live, -> { where(status: %w[pending granted]) }
+
+  # Granted consents with a flag that no admin has checked yet (see
+  # GuardianConsentSignals).
+  scope :needs_review, -> { granted.where(reviewed_at: nil).where("jsonb_array_length(flags) > 0") }
 
   class << self
     def digest_for(token) = OpenSSL::Digest::SHA256.hexdigest(token)
@@ -161,13 +173,24 @@ class GuardianConsent < ApplicationRecord
 
   def offline? = recorded_by_id.present?
 
+  def needs_review? = granted? && reviewed_at.nil? && flags.any?
+
+  # Only the spot check: nothing looked wrong.
+  def suspicious? = (flags - ["spot_check"]).any?
+
+  # An admin contacted the guardian and confirmed the consent.
+  def record_review!(by:, note:)
+    update!(reviewed_at: Time.current, reviewed_by: by, review_note: note)
+  end
+
   # The row lock stops a double submit, or a grant racing a revoke, from
   # writing twice. Returns false when the consent was no longer pending.
-  def record_grant!(signed_name:, ip:, user_agent:)
+  def record_grant!(signed_name:, ip:, user_agent:, fingerprint: nil)
     with_lock do
       return false unless pending?
 
       self.signed_name = signed_name
+      self.granted_fingerprint = fingerprint.to_s.first(255).presence
       self.granted_at = Time.current
       self.granted_ip = ip
       self.granted_user_agent = user_agent.to_s.truncate(255)

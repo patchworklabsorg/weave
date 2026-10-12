@@ -97,6 +97,8 @@
 #                                           PATCH  /admin/users/:id(.:format)                                                                        admin/users#update
 #                                           PUT    /admin/users/:id(.:format)                                                                        admin/users#update
 #                                           DELETE /admin/users/:id(.:format)                                                                        admin/users#destroy
+#             review_admin_guardian_consent PATCH  /admin/guardian_consents/:id/review(.:format)                                                     admin/guardian_consents#review
+#                   admin_guardian_consents GET    /admin/guardian_consents(.:format)                                                                admin/guardian_consents#index
 #                   admin_group_memberships POST   /admin/groups/:group_id/memberships(.:format)                                                     admin/group_memberships#create
 #                    admin_group_membership DELETE /admin/groups/:group_id/memberships/:id(.:format)                                                 admin/group_memberships#destroy
 #                              admin_groups GET    /admin/groups(.:format)                                                                           admin/groups#index
@@ -164,7 +166,6 @@
 #                              admin_blazer        /admin/blazer                                                                                     Blazer::Engine
 #                                     admin GET    /admin(.:format)                                                                                  redirect(301, /login)
 #                                           GET    /admin/*path(.:format)                                                                            redirect(301, /login)
-#                         letter_opener_web        /letter_opener                                                                                    LetterOpenerWeb::Engine
 #                             api_v1_health GET    /api/v1/health(.:format)                                                                          api/v1/health#index
 #                    api_v1_directory_users GET    /api/v1/directory/users(.:format)                                                                 api/v1/directory/users#index
 #                     api_v1_directory_user GET    /api/v1/directory/users/:sub(.:format)                                                            api/v1/directory/users#show
@@ -196,7 +197,6 @@
 #                        rails_disk_service GET    /rails/active_storage/disk/:encoded_key/*filename(.:format)                                       active_storage/disk#show
 #                 update_rails_disk_service PUT    /rails/active_storage/disk/:encoded_token(.:format)                                               active_storage/disk#update
 #                      rails_direct_uploads POST   /rails/active_storage/direct_uploads(.:format)                                                    active_storage/direct_uploads#create
-#                          actual_db_schema        /rails                                                                                            ActualDbSchema::Engine
 #
 # Routes for OkComputer::Engine:
 #            Prefix Verb        URI Pattern       Controller#Action
@@ -273,29 +273,6 @@
 #                   PUT    /dashboards/:id(.:format)         blazer/dashboards#update
 #                   DELETE /dashboards/:id(.:format)         blazer/dashboards#destroy
 #              root GET    /                                 blazer/queries#home
-#
-# Routes for LetterOpenerWeb::Engine:
-#        Prefix Verb URI Pattern                      Controller#Action
-#       letters GET  /                                letter_opener_web/letters#index
-# clear_letters POST /clear(.:format)                 letter_opener_web/letters#clear
-#        letter GET  /:id(/:style)(.:format)          letter_opener_web/letters#show
-# delete_letter POST /:id/delete(.:format)            letter_opener_web/letters#destroy
-#               GET  /:id/attachments/:file(.:format) letter_opener_web/letters#attachment {file: /[^\/]+/}
-#
-# Routes for ActualDbSchema::Engine:
-#                          Prefix Verb URI Pattern                                Controller#Action
-#              rollback_migration POST /migrations/:id/rollback(.:format)         actual_db_schema/migrations#rollback
-#               migrate_migration POST /migrations/:id/migrate(.:format)          actual_db_schema/migrations#migrate
-#                      migrations GET  /migrations(.:format)                      actual_db_schema/migrations#index
-#                       migration GET  /migrations/:id(.:format)                  actual_db_schema/migrations#show
-#      rollback_phantom_migration POST /phantom_migrations/:id/rollback(.:format) actual_db_schema/phantom_migrations#rollback
-# rollback_all_phantom_migrations POST /phantom_migrations/rollback_all(.:format) actual_db_schema/phantom_migrations#rollback_all
-#              phantom_migrations GET  /phantom_migrations(.:format)              actual_db_schema/phantom_migrations#index
-#               phantom_migration GET  /phantom_migrations/:id(.:format)          actual_db_schema/phantom_migrations#show
-#           delete_broken_version POST /broken_versions/:id/delete(.:format)      actual_db_schema/broken_versions#delete
-#      delete_all_broken_versions POST /broken_versions/delete_all(.:format)      actual_db_schema/broken_versions#delete_all
-#                 broken_versions GET  /broken_versions(.:format)                 actual_db_schema/broken_versions#index
-#                          schema GET  /schema(.:format)                          actual_db_schema/schema#index
 
 require_relative "../lib/admin_constraint"
 
@@ -481,6 +458,14 @@ Rails.application.routes.draw do
             post :resend
             patch :revoke
           end
+        end
+      end
+
+      # Guardian consents with a flag, for an admin to check (see
+      # GuardianConsentSignals).
+      resources :guardian_consents, only: [:index] do
+        member do
+          patch :review
         end
       end
 
