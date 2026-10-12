@@ -43,6 +43,11 @@ class SlackWebhookService
         Rails.logger.info "[SlackWebhookService] Created new user #{user.id} from Slack member #{slack_id}"
       end
 
+      # Send the PWL ID, and any profile fields Weave holds, now. Otherwise they
+      # wait for the next SlackSyncJob, up to 6 hours. Names are not sent: they
+      # go after the code of conduct is accepted (see CodeOfConductAcceptance).
+      PushSlackProfileFieldsJob.perform_later(user.id, only_present: true)
+
       # New joiners come in as single-channel guests; DM them the code of conduct
       # so they can accept it and be promoted to full member.
       send_code_of_conduct(user)
