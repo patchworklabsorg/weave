@@ -103,6 +103,14 @@ RSpec.describe Weave do
       expect(described_class.signup_blocked?(" Ada@Mail.Blocked.Example ", credentials: credentials)).to be(true)
     end
 
+    # Reserved names (RFC 2606) are entered as bare labels: "test" blocks *.test.
+    it "lets an entry without a dot block a whole top-level domain" do
+      credentials = { signup_blocked_domains: ["test"] }
+
+      expect(described_class.signup_blocked?("ada@foo.test", credentials: credentials)).to be(true)
+      expect(described_class.signup_blocked?("ada@test.com", credentials: credentials)).to be(false)
+    end
+
     it "does not match a different domain with the same ending" do
       expect(described_class.signup_blocked?("ada@notblocked.example", credentials: credentials)).to be(false)
       expect(described_class.signup_blocked?("blocked.example@other.example", credentials: credentials)).to be(false)
