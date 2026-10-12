@@ -422,10 +422,10 @@
                   <% end %>
                 </td>
                 <td class="px-4 py-4 text-sm text-ink">
-                  <%= session.device_info || 'Legacy Session' %>
+                  <%= session.device_info || 'Unknown' %>
                 </td>
                 <td class="px-4 py-4 text-sm text-ink-soft">
-                  <%= session.os_info || 'Legacy Session' %>
+                  <%= session.os_info || 'Unknown' %>
                 </td>
                 <td class="px-4 py-4 text-sm text-ink-soft">
                   <div>
@@ -458,7 +458,7 @@
                       <%= session.fingerprint %>
                     </span>
                   <% else %>
-                    <span class="text-ink-faint">Legacy Session</span>
+                    <span class="text-ink-faint">Unknown</span>
                   <% end %>
                 </td>
               </tr>
