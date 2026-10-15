@@ -1,4 +1,9 @@
-<div id="login_form" class="absolute inset-0 flex items-center justify-center p-6">
+<%# passkey-sign-in wraps both forms: the email field offers passkeys as
+    autofill, and the passkey form below the card posts the signed challenge.
+    Forms cannot nest, so that form sits outside the magic-link form. %>
+<div id="login_form" class="absolute inset-0 flex items-center justify-center p-6"
+     data-controller="passkey-sign-in"
+     data-passkey-sign-in-options-url-value="<%= passkey_sign_in_options_path %>">
 <%= form_with(model: user, url: "/login", data: { turbo: true }, local: true) do |f| %>
   <div class="patch patch-bound patch-tilt-l w-full max-w-md">
     <div class="quilt-binding"></div>
@@ -31,13 +36,31 @@
             class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint",
             placeholder: "you@example.com",
             required: true,
-            autofocus: true %>
+            autofocus: true,
+            autocomplete: "username webauthn" %>
         <p class="text-sm text-ink-faint mt-1">We'll email you a link for a password-free sign in.</p>
       </div>
 
       <div>
         <%= f.submit "Send magic link", class: "btn-stitch w-full" %>
       </div>
+
+      <%# Hidden until the passkey-sign-in controller finds that this browser
+          supports passkeys. %>
+      <div class="space-y-3" data-passkey-sign-in-target="section" hidden>
+        <div class="flex items-center gap-3 text-sm text-ink-faint">
+          <span class="h-px flex-1 bg-neutral-300"></span>
+          or
+          <span class="h-px flex-1 bg-neutral-300"></span>
+        </div>
+        <button type="button"
+                class="btn-stitch-ghost w-full disabled:opacity-50"
+                data-passkey-sign-in-target="button"
+                data-action="passkey-sign-in#signIn">
+          Sign in with a passkey
+        </button>
+      </div>
+      <p class="text-sm text-red-700 text-center" role="alert" data-passkey-sign-in-target="error" hidden></p>
 
       <div class="text-center">
         <p class="text-sm text-ink-soft">
@@ -46,5 +69,13 @@
       </div>
     </div>
   </div>
+<% end %>
+
+<%= form_with url: passkey_sign_in_path, method: :post, local: true,
+      data: { turbo: false, controller: "fingerprint", passkey_sign_in_target: "form" },
+      class: "hidden" do %>
+  <%= hidden_field_tag :credential, "", id: "passkey_credential", data: { passkey_sign_in_target: "credential" } %>
+  <%= hidden_field_tag :fingerprint, "", id: "passkey_fingerprint", data: { fingerprint_target: "fingerprint" } %>
+  <%= hidden_field_tag :timezone, "", id: "passkey_timezone", data: { fingerprint_target: "timezone" } %>
 <% end %>
 </div>

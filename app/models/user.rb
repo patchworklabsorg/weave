@@ -60,6 +60,7 @@
 #  p_id                     :string           not null
 #  slack_id                 :string
 #  slack_manager_id         :string
+#  webauthn_id              :string
 #
 # Indexes
 #
@@ -67,6 +68,7 @@
 #  index_users_on_email               (email) UNIQUE
 #  index_users_on_manager_id          (manager_id)
 #  index_users_on_p_id                (p_id) UNIQUE
+#  index_users_on_webauthn_id         (webauthn_id) UNIQUE
 #
 # Foreign Keys
 #
@@ -107,6 +109,7 @@ class User < ApplicationRecord
   has_many :visits, class_name: "Ahoy::Visit", dependent: :destroy
   has_many :user_sessions, class_name: "User::Session", dependent: :destroy
   has_many :magic_links, class_name: "User::MagicLink", dependent: :destroy
+  has_many :passkeys, class_name: "User::Passkey", dependent: :destroy
 
   # All email addresses belonging to this user. users.email stays the canonical
   # primary address and is mirrored into this table (is_primary flag).
@@ -359,6 +362,14 @@ class User < ApplicationRecord
   # column directly.)
   def can_authenticate?
     !locked? && status.to_s == "active"
+  end
+
+  # The WebAuthn user handle that this user's passkeys carry. It is random so
+  # that a passkey does not hold the email or the database id, and it is made
+  # the first time the user adds a passkey.
+  def ensure_webauthn_id!
+    update_column(:webauthn_id, WebAuthn.generate_user_id) if webauthn_id.blank? # rubocop:disable Rails/SkipsModelValidations
+    webauthn_id
   end
 
   def can_impersonate?

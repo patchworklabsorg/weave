@@ -49,4 +49,29 @@ class UserMailer < ApplicationMailer
     )
   end
 
+  # Sent when a passkey is added, so the member finds out if someone else with
+  # access to a signed-in browser added one.
+  def passkey_added(passkey)
+    @user = passkey.user
+    @passkey_name = passkey.display_name
+    @passkeys_url = passkeys_url
+
+    mail(
+      to: @user.email,
+      subject: env_subject("A passkey was added to your account")
+    )
+  end
+
+  # Takes the name, not the record: the passkey is deleted before this runs.
+  def passkey_removed(user, passkey_name)
+    @user = user
+    @passkey_name = passkey_name
+    @passkeys_url = passkeys_url
+
+    mail(
+      to: @user.email,
+      subject: env_subject("A passkey was removed from your account")
+    )
+  end
+
 end

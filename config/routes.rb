@@ -55,6 +55,8 @@
 #                          magic_link_login GET    /auth/magic_link/:token(.:format)                                                                 auth#magic_link_login
 #                        confirm_magic_link POST   /auth/magic_link/:token(.:format)                                                                 auth#confirm_magic_link
 #                      check_password_login POST   /auth/check_password_login(.:format)                                                              auth#check_password_login
+#                   passkey_sign_in_options POST   /auth/passkey/options(.:format)                                                                   auth#passkey_options
+#                           passkey_sign_in POST   /auth/passkey(.:format)                                                                           auth#passkey_login
 #                                    logout DELETE /logout(.:format)                                                                                 auth#logout
 #                                        me GET    /auth/me(.:format)                                                                                auth#me
 #                                   profile GET    /profile(.:format)                                                                                users#show
@@ -71,6 +73,10 @@
 #                           email_addresses POST   /profile/emails(.:format)                                                                         email_addresses#create
 #                             email_address DELETE /profile/emails/:id(.:format)                                                                     email_addresses#destroy
 #                     confirm_email_address GET    /emails/confirm/:token(.:format)                                                                  email_addresses#confirm
+#                          options_passkeys POST   /profile/passkeys/options(.:format)                                                               passkeys#options
+#                                  passkeys GET    /profile/passkeys(.:format)                                                                       passkeys#index
+#                                           POST   /profile/passkeys(.:format)                                                                       passkeys#create
+#                                   passkey DELETE /profile/passkeys/:id(.:format)                                                                   passkeys#destroy
 #                        user_profile_photo GET    /user/:p_id/pfp(.:format)                                                                         profile_photos#show
 #                               user_avatar GET    /user/:p_id/avatar/:variant(.:format)                                                             profile_photos#avatar
 #                        user_avatar_square GET    /user/:p_id/avatar/:variant/square(.:format)                                                      profile_photos#avatar_square
@@ -413,6 +419,8 @@ Rails.application.routes.draw do
   get "/auth/magic_link/:token", to: "auth#magic_link_login", as: :magic_link_login
   post "/auth/magic_link/:token", to: "auth#confirm_magic_link", as: :confirm_magic_link
   post "/auth/check_password_login", to: "auth#check_password_login", as: :check_password_login
+  post "/auth/passkey/options", to: "auth#passkey_options", as: :passkey_sign_in_options
+  post "/auth/passkey", to: "auth#passkey_login", as: :passkey_sign_in
   delete "/logout", to: "auth#logout", as: :logout
   get "/auth/me", to: "auth#me", as: :me
 
@@ -439,6 +447,13 @@ Rails.application.routes.draw do
     end
   end
   get "/emails/confirm/:token", to: "email_addresses#confirm", as: :confirm_email_address
+
+  # Passkeys for signing in without an email link (see PasskeysController).
+  scope "/profile" do
+    resources :passkeys, only: [:index, :create, :destroy] do
+      post :options, on: :collection
+    end
+  end
 
   # Profile photo routes (public, no auth required)
   get "/user/:p_id/pfp", to: "profile_photos#show", as: :user_profile_photo

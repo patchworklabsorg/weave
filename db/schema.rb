@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_12_200100) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_14_120100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -599,6 +599,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_200100) do
     t.index ["user_id"], name: "index_user_magic_links_on_user_id"
   end
 
+  create_table "user_passkeys", force: :cascade do |t|
+    t.datetime "compromised_at"
+    t.datetime "created_at", null: false
+    t.string "external_id", null: false
+    t.datetime "last_used_at"
+    t.string "nickname"
+    t.text "public_key", null: false
+    t.bigint "sign_count", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["external_id"], name: "index_user_passkeys_on_external_id", unique: true
+    t.index ["user_id"], name: "index_user_passkeys_on_user_id"
+  end
+
   create_table "user_seen_at_histories", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -681,10 +695,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_200100) do
     t.string "slack_website"
     t.enum "status", default: "active", null: false, enum_type: "status"
     t.datetime "updated_at", null: false
+    t.string "webauthn_id"
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["manager_id"], name: "index_users_on_manager_id"
     t.index ["p_id"], name: "index_users_on_p_id", unique: true
+    t.index ["webauthn_id"], name: "index_users_on_webauthn_id", unique: true
   end
 
   create_table "versions", force: :cascade do |t|
@@ -732,6 +748,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_200100) do
   add_foreign_key "service_webhooks", "users", column: "created_by_id"
   add_foreign_key "services", "users", column: "created_by_id"
   add_foreign_key "user_magic_links", "users"
+  add_foreign_key "user_passkeys", "users"
   add_foreign_key "user_sessions", "users"
   add_foreign_key "user_sessions", "users", column: "impersonated_by_id"
   add_foreign_key "users", "users", column: "manager_id"

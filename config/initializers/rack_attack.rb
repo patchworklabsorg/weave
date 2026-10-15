@@ -49,6 +49,15 @@ class Rack::Attack
 
   # Throttle signup attempts by IP
   # Limit to 5 signups per hour per IP
+  # Passkey sign-in has no email to key on, so limit it by IP. The login page
+  # asks for options once on load and again for the button, so this leaves
+  # room for a few tries.
+  throttle("passkeys/ip", limit: 20, period: 1.minute) do |req|
+    if req.post? && (req.path.start_with?("/auth/passkey") || req.path.start_with?("/profile/passkeys"))
+      req.ip
+    end
+  end
+
   throttle("signups/ip", limit: 5, period: 1.hour) do |req|
     if req.path == "/signup" && req.post?
       req.ip
