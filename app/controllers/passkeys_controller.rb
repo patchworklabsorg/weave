@@ -68,4 +68,5 @@ class PasskeysController < ApplicationController
   def find_passkey
     current_user.passkeys.find_by_public_param(params[:id])
   end
+
 end

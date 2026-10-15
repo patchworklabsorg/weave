@@ -9,7 +9,7 @@ RSpec.describe "Session cookie", type: :request do
 
   def session_cookie_header
     Array(response.headers["Set-Cookie"]).flat_map { |h| h.split("\n") }
-      .find { |c| c.start_with?("_weave_session=") }
+                                         .find { |c| c.start_with?("_weave_session=") }
   end
 
   def cookie_expiry

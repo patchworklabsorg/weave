@@ -20,6 +20,7 @@ class PasskeyAuthentication
       @reason = reason
       super("Passkey #{reason}")
     end
+
   end
 
   # The credential JSON that the browser sends is at most a few kilobytes.
@@ -104,7 +105,7 @@ class PasskeyAuthentication
       yield data.deep_stringify_keys
     rescue Failure
       raise
-    rescue StandardError => e
+    rescue => e
       # Bad input fails in many places inside the gem (Base64, CBOR, COSE), and
       # not all of them raise WebAuthn::Error.
       Rails.logger.info "Passkey credential could not be read: #{e.class.name}"
@@ -153,4 +154,5 @@ class PasskeyAuthentication
     end
 
   end
+
 end
