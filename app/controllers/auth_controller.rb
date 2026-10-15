@@ -257,7 +257,10 @@ class AuthController < ApplicationController
         format.json { render json: { message: "Returned to admin account", user: UserSerializer.render(original_admin) } }
       end
     else
-      session.delete(:user_id)
+      # Close the user_sessions row too. Deleting session[:user_id] alone left
+      # the row live, so a copy of the cookie taken before logout stayed
+      # signed in until the row expired.
+      sign_out
       respond_to do |format|
         format.html { redirect_to login_path, notice: "Logged out successfully" }
         format.json { render json: { message: "Logged out successfully" } }
