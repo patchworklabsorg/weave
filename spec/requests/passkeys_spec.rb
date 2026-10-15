@@ -13,27 +13,8 @@ RSpec.describe "Managing passkeys", type: :request do
     post passkeys_path, params: { credential: credential.to_json, nickname: nickname }
   end
 
-  context "when the flag is off for the user" do
+  context "when the user is signed in" do
     before { sign_in_via_magic_link(user) }
-
-    it "sends the user back to the profile" do
-      get passkeys_path
-
-      expect(response).to redirect_to(profile_path)
-    end
-
-    it "does not show the profile link" do
-      get profile_path
-
-      expect(response.body).not_to include(passkeys_path)
-    end
-  end
-
-  context "when the flag is on for the user" do
-    before do
-      Flipper.enable_actor(:passkeys, user)
-      sign_in_via_magic_link(user)
-    end
 
     it "links the page from the profile" do
       get profile_path
@@ -101,7 +82,6 @@ RSpec.describe "Managing passkeys", type: :request do
     let(:admin) { create(:user, :owner, :verified) }
 
     before do
-      Flipper.enable_actor(:passkeys, user)
       sign_in_via_magic_link(admin)
       post impersonate_admin_user_path(user)
     end

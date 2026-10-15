@@ -14,7 +14,6 @@ class PasskeysController < ApplicationController
     duplicate: "That passkey is already set up for Weave."
   }.freeze
 
-  before_action :require_passkeys_enabled
   before_action :refuse_while_impersonating, only: [:options, :create, :destroy]
 
   def index
@@ -55,12 +54,6 @@ class PasskeysController < ApplicationController
   end
 
   private
-
-  def require_passkeys_enabled
-    return if Flipper.enabled?(:passkeys, current_user)
-
-    redirect_to profile_path, alert: "Passkeys aren't available for your account yet."
-  end
 
   def refuse_while_impersonating
     return unless impersonating?

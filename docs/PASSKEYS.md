@@ -2,13 +2,13 @@
 
 Members can sign in with a passkey instead of an email link. A passkey is a WebAuthn credential that a device or a password manager keeps. Email links continue to work, so a member who loses a passkey can still sign in.
 
-## Rollout
+## Availability
 
-The `passkeys` Flipper flag controls the rollout.
+Passkeys are on for every member. There is no feature flag.
 
-- When the flag is on for a member (an actor gate), that member sees "Passkeys" on their profile and can add passkeys at `/profile/passkeys`.
-- When the flag is fully on, the sign-in page also shows the "Sign in with a passkey" button.
-- Passkey autofill on the email field and the sign-in endpoints work for every member who has a passkey, whatever the flag state.
+- Each member can add passkeys at `/profile/passkeys`. The profile page links to it.
+- The sign-in page shows the "Sign in with a passkey" button when the browser supports passkeys.
+- The email field offers saved passkeys as autofill.
 
 ## Sign-in
 

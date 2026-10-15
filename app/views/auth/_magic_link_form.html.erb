@@ -45,23 +45,21 @@
         <%= f.submit "Send magic link", class: "btn-stitch w-full" %>
       </div>
 
-      <%# The button is shown only when the passkeys flag is fully on. Passkey
-          autofill on the email field works for everyone who has a passkey. %>
-      <% if Flipper.enabled?(:passkeys) %>
-        <div class="space-y-3" data-passkey-sign-in-target="section" hidden>
-          <div class="flex items-center gap-3 text-sm text-ink-faint">
-            <span class="h-px flex-1 bg-neutral-300"></span>
-            or
-            <span class="h-px flex-1 bg-neutral-300"></span>
-          </div>
-          <button type="button"
-                  class="btn-stitch-ghost w-full disabled:opacity-50"
-                  data-passkey-sign-in-target="button"
-                  data-action="passkey-sign-in#signIn">
-            Sign in with a passkey
-          </button>
+      <%# Hidden until the passkey-sign-in controller finds that this browser
+          supports passkeys. %>
+      <div class="space-y-3" data-passkey-sign-in-target="section" hidden>
+        <div class="flex items-center gap-3 text-sm text-ink-faint">
+          <span class="h-px flex-1 bg-neutral-300"></span>
+          or
+          <span class="h-px flex-1 bg-neutral-300"></span>
         </div>
-      <% end %>
+        <button type="button"
+                class="btn-stitch-ghost w-full disabled:opacity-50"
+                data-passkey-sign-in-target="button"
+                data-action="passkey-sign-in#signIn">
+          Sign in with a passkey
+        </button>
+      </div>
       <p class="text-sm text-red-700 text-center" role="alert" data-passkey-sign-in-target="error" hidden></p>
 
       <div class="text-center">

@@ -107,12 +107,9 @@ RSpec.describe "Passkey sign-in", type: :request do
       expect(response.body).to include(passkey_sign_in_path)
     end
 
-    it "shows the passkey button only when the flag is fully on" do
+    it "shows the passkey button" do
       get login_path
-      expect(response.body).not_to include("Sign in with a passkey")
 
-      Flipper.enable(:passkeys)
-      get login_path
       expect(response.body).to include("Sign in with a passkey")
     end
   end
