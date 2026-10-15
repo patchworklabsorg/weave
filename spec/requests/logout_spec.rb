@@ -31,6 +31,17 @@ RSpec.describe "Logging out", type: :request do
     expect(response).to redirect_to("/login")
   end
 
+  it "logs out a user whose email is not verified" do
+    sign_in_via_magic_link(user)
+    user.update!(email_confirmed_at: nil)
+
+    delete logout_path
+
+    expect(response).to redirect_to(login_path)
+    expect(session[:user_id]).to be_nil
+    expect(user.user_sessions.sole.signed_out_at).to be_present
+  end
+
   it "leaves the user's other sessions signed in" do
     other = user.user_sessions.create!(session_token: "other-device", expiration_at: 30.days.from_now)
     sign_in_via_magic_link(user)

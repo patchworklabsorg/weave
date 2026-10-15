@@ -12,7 +12,10 @@ class AuthController < ApplicationController
   content_security_policy do |policy|
     policy.form_action(:self, *pending_oauth_client_origins)
   end
-  skip_before_action :authenticate_user!, only: [:login, :new_session, :password_login, :oauth_login, :send_magic_link, :magic_link_login, :confirm_magic_link, :check_password_login, :passkey_options, :passkey_login]
+  skip_before_action :authenticate_user!, only: [:login, :new_session, :password_login, :oauth_login, :send_magic_link, :magic_link_login, :confirm_magic_link, :check_password_login, :passkey_options, :passkey_login, :logout]
+  # A user with an unverified email must still be able to log out. Under
+  # authenticate_user! the logout went to the email confirmation page instead.
+  before_action :authenticate_user_without_email_verification!, only: [:logout]
 
   layout "sessions", only: [:new_session, :password_login, :oauth_login, :magic_link_login]
 
