@@ -78,11 +78,13 @@
       <div>
         <dt class="text-sm font-medium text-ink-faint">Client ID</dt>
         <dd class="mt-1">
-          <div class="flex items-center space-x-2">
+          <div class="flex items-center space-x-2" data-controller="clipboard" data-clipboard-text-value="<%= @application.uid %>">
             <code class="text-sm font-mono bg-grape-soft text-ink px-2 py-1 rounded flex-1 overflow-x-auto">
               <%= @application.uid %>
             </code>
-            <button onclick="navigator.clipboard.writeText('<%= @application.uid %>')"
+            <button type="button"
+                    data-action="clipboard#copy"
+                    data-clipboard-target="button"
                     class="text-sm text-ink-soft hover:text-ink"
                     title="Copy to clipboard">
               📋
@@ -95,23 +97,27 @@
         <div>
           <dt class="text-sm font-medium text-ink-faint">Client Secret</dt>
           <dd class="mt-1">
-            <div class="flex items-center space-x-2">
-              <code class="text-sm font-mono bg-grape-soft text-ink px-2 py-1 rounded flex-1 overflow-x-auto" id="client-secret">
-                <%= "•" * 20 %>
-              </code>
-              <button onclick="toggleSecret()"
+            <div class="flex items-center space-x-2"
+                 data-controller="reveal clipboard"
+                 data-reveal-secret-value="<%= @application.secret %>"
+                 data-reveal-mask-value="<%= "•" * 20 %>"
+                 data-clipboard-text-value="<%= @application.secret %>">
+              <code class="text-sm font-mono bg-grape-soft text-ink px-2 py-1 rounded flex-1 overflow-x-auto" data-reveal-target="output"><%= "•" * 20 %></code>
+              <button type="button"
+                      data-action="reveal#toggle"
+                      data-reveal-target="toggle"
                       class="text-sm text-ink-soft hover:text-ink"
-                      title="Show/Hide secret"
-                      id="secret-toggle">
+                      title="Show/Hide secret">
                 👁️
               </button>
-              <button onclick="navigator.clipboard.writeText('<%= @application.secret %>')"
+              <button type="button"
+                      data-action="clipboard#copy"
+                      data-clipboard-target="button"
                       class="text-sm text-ink-soft hover:text-ink"
                       title="Copy to clipboard">
                 📋
               </button>
             </div>
-            <div class="hidden" id="secret-value"><%= @application.secret %></div>
           </dd>
         </div>
       <% end %>
@@ -340,11 +346,13 @@
 
     <div class="space-y-2">
       <% @application.redirect_uri.split("\n").each do |uri| %>
-        <div class="flex items-center space-x-2">
+        <div class="flex items-center space-x-2" data-controller="clipboard" data-clipboard-text-value="<%= uri.strip %>">
           <code class="text-sm font-mono bg-grape-soft text-ink px-2 py-1 rounded flex-1">
             <%= uri.strip %>
           </code>
-          <button onclick="navigator.clipboard.writeText('<%= uri.strip %>')"
+          <button type="button"
+                  data-action="clipboard#copy"
+                  data-clipboard-target="button"
                   class="text-sm text-ink-soft hover:text-ink"
                   title="Copy to clipboard">
             📋
@@ -387,22 +395,3 @@ Authorization: Bearer ACCESS_TOKEN
   </div>
 </div>
 
-<script nonce="<%= content_security_policy_nonce %>">
-  let secretVisible = false;
-
-  function toggleSecret() {
-    const secretElement = document.getElementById('client-secret');
-    const secretValue = document.getElementById('secret-value').textContent;
-    const toggle = document.getElementById('secret-toggle');
-
-    if (secretVisible) {
-      secretElement.textContent = '<%= "•" * 20 %>';
-      toggle.textContent = '👁️';
-      secretVisible = false;
-    } else {
-      secretElement.textContent = secretValue;
-      toggle.textContent = '🙈';
-      secretVisible = true;
-    }
-  }
-</script>

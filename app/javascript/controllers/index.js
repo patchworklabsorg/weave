@@ -4,6 +4,9 @@
 
 import { application } from "./application"
 
+import ClipboardController from "./clipboard_controller"
+application.register("clipboard", ClipboardController)
+
 import CountdownController from "./countdown_controller"
 application.register("countdown", CountdownController)
 
@@ -24,6 +27,9 @@ application.register("passkey-sign-in", PasskeySignInController)
 
 import PasswordController from "./password_controller"
 application.register("password", PasswordController)
+
+import RevealController from "./reveal_controller"
+application.register("reveal", RevealController)
 
 import SearchController from "./search_controller"
 application.register("search", SearchController)
