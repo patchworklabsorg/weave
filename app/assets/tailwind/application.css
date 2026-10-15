@@ -385,3 +385,38 @@
     radial-gradient(circle at 73% 63%, var(--color-sky) 0 22%, transparent 23%),
     radial-gradient(circle at 50% 50%, var(--color-teal) 0 20%, transparent 21%);
 }
+
+/* Staging marker: a yellow and black hazard-stripe frame around the viewport and a
+   STAGING tab. Both are fixed, ignore the pointer, take no space and do not animate. */
+.staging-frame {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  box-sizing: border-box;
+  padding: 8px;
+  pointer-events: none;
+  background: repeating-linear-gradient(45deg, #facc15 0 12px, #111 12px 24px);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+
+.staging-tab {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  z-index: 61;
+  transform: translateX(-50%);
+  pointer-events: none;
+  user-select: none;
+  padding: 2px 16px 4px;
+  border: 2px solid #111;
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+  background: #facc15;
+  color: #000;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
