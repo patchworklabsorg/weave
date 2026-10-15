@@ -16,10 +16,9 @@ RSpec.describe FeatureFlags do
 
     it "only logs in production" do
       allow(Rails.env).to receive(:production?).and_return(true)
-      allow(Rails.logger).to receive(:warn)
+      expect(Rails.logger).to receive(:warn).with(/"not_a_flag" is not in FeatureFlags::FLAGS/)
 
       expect(Flipper.enabled?(:not_a_flag)).to be(false)
-      expect(Rails.logger).to have_received(:warn).with(/"not_a_flag" is not in FeatureFlags::FLAGS/)
     end
   end
 

@@ -24,7 +24,7 @@ module FeatureFlags
       user = UserLookup.call(thing.value)
       unless user
         raise UnknownActor,
-          "#{thing.value.inspect} matches no user. Enter an email, a #{Weave.p_id_prefix} id, a usr_ id, or a Slack id."
+              "#{thing.value.inspect} matches no user. Enter an email, a #{Weave.p_id_prefix} id, a usr_ id, or a Slack id."
       end
 
       super(feature, gate, Flipper::Types::Actor.new(user))
@@ -52,6 +52,8 @@ module FeatureFlags
         request = Rack::Request.new(env)
         [302, { "location" => "#{request.script_name}#{request.path_info}?#{Rack::Utils.build_query("error" => e.message)}" }, []]
       end
+
     end
+
   end
 end

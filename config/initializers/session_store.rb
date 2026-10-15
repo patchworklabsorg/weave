@@ -15,5 +15,5 @@
 #
 # The key is the Rails default for this app, so existing cookies stay valid.
 Rails.application.config.session_store :cookie_store,
-  key: "_weave_session",
-  expire_after: 30.days.to_i
+                                       key: "_weave_session",
+                                       expire_after: 30.days.to_i

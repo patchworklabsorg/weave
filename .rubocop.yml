@@ -194,3 +194,11 @@ Rails/Validation:
 
 Rails/UniqueValidationWithoutIndex:
   Enabled: false
+
+# find_by_public_param and find_by_public_id are our own lookups from
+# PublicParamLookup. They are not Rails dynamic finders.
+Rails/DynamicFindBy:
+  AllowedMethods:
+    - find_by_public_param
+    - find_by_public_param!
+    - find_by_public_id
