@@ -226,6 +226,8 @@
 #  application_recurring_task GET    /applications/:application_id/recurring_tasks/:id(.:format)    mission_control/jobs/recurring_tasks#show
 #                             PATCH  /applications/:application_id/recurring_tasks/:id(.:format)    mission_control/jobs/recurring_tasks#update
 #                             PUT    /applications/:application_id/recurring_tasks/:id(.:format)    mission_control/jobs/recurring_tasks#update
+#         application_batches GET    /applications/:application_id/batches(.:format)                mission_control/jobs/batches#index
+#           application_batch GET    /applications/:application_id/batches/:id(.:format)            mission_control/jobs/batches#show
 #                      queues GET    /queues(.:format)                                              mission_control/jobs/queues#index
 #                       queue GET    /queues/:id(.:format)                                          mission_control/jobs/queues#show
 #                         job GET    /jobs/:id(.:format)                                            mission_control/jobs/jobs#show
