@@ -45,7 +45,7 @@ class ServiceSerializer
 
   def base_attributes
     {
-      id: @service.id,
+      id: @service.public_id,
       name: @service.name,
       description: @service.description,
       status: @service.status,

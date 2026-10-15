@@ -66,8 +66,6 @@ class PasskeysController < ApplicationController
   end
 
   def find_passkey
-    current_user.passkeys.find_by(id: User::Passkey.find(params[:id].to_s).id)
-  rescue ActiveRecord::RecordNotFound
-    nil
+    current_user.passkeys.find_by_public_param(params[:id])
   end
 end

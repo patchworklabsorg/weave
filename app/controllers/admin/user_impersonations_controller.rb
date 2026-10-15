@@ -9,7 +9,7 @@ class Admin::UserImpersonationsController < Admin::BaseController
   before_action :ensure_can_view_user
 
   def show
-    @impersonation = Impersonation.where(user: @user).includes(:admin).find(params[:id])
+    @impersonation = Impersonation.where(user: @user).includes(:admin).find_by_public_param!(params[:id])
     @actions = @impersonation.actions.chronological
     @versions = @impersonation.versions.order(:created_at, :id)
   end

@@ -223,7 +223,7 @@
             class: "flex items-end gap-2" do |form| %>
           <div class="flex-1">
             <%= form.label :group_id, "Add a group", class: "block text-sm font-medium text-ink" %>
-            <%= form.select :group_id, @grantable_groups.map { |group| [group.name, group.id] },
+            <%= form.select :group_id, @grantable_groups.map { |group| [group.name, group.public_id] },
                 { include_blank: "Choose a group" }, required: true, class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
           </div>
           <%= form.submit "Add", class: "btn-stitch" %>
@@ -298,7 +298,7 @@
                     class: "flex items-end gap-2" do |form| %>
                   <div class="flex-1">
                     <%= form.label :group_id, "Give to a group", class: "block text-sm font-medium text-ink", for: "role_#{role.id}_group_id" %>
-                    <%= form.select :group_id, @groups.map { |group| [group.name, group.id] },
+                    <%= form.select :group_id, @groups.map { |group| [group.name, group.public_id] },
                         { include_blank: "Choose a group" }, required: true, id: "role_#{role.id}_group_id", class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
                   </div>
                   <%= form.submit "Add", class: "btn-stitch" %>

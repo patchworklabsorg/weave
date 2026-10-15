@@ -65,7 +65,7 @@ class Admin::UserGuardianConsentsController < Admin::BaseController
 
   def set_consent
     # GuardianConsent.find reads the public id; a relation's find would not.
-    @consent = GuardianConsent.find(params[:id])
+    @consent = GuardianConsent.find_by_public_param!(params[:id])
     raise ActiveRecord::RecordNotFound unless @consent.user_id == @user.id
   end
 

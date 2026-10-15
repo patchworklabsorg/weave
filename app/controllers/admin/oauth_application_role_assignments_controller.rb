@@ -20,7 +20,7 @@ class Admin::OauthApplicationRoleAssignmentsController < Admin::BaseController
   end
 
   def destroy
-    assignment = @role.assignments.find(params[:id])
+    assignment = @role.assignments.find_by_public_param!(params[:id])
     assignment.destroy!
     redirect_back_to_roles(notice: "#{assignee_label(assignment.assignee)} no longer has the #{@role.name} role.")
   end
@@ -28,8 +28,8 @@ class Admin::OauthApplicationRoleAssignmentsController < Admin::BaseController
   private
 
   def set_role
-    @application = Doorkeeper::Application.find(params[:oauth_application_id])
-    @role = ApplicationRole.for_application(@application).find(params[:role_id])
+    @application = Doorkeeper::Application.find_by_public_param!(params[:oauth_application_id])
+    @role = ApplicationRole.for_application(@application).find_by_public_param!(params[:role_id])
   end
 
   def require_superadmin
@@ -44,7 +44,7 @@ class Admin::OauthApplicationRoleAssignmentsController < Admin::BaseController
 
   def find_assignee
     if assignment_params[:group_id].present?
-      Group.find_by(id: assignment_params[:group_id])
+      Group.find_by_public_id(assignment_params[:group_id].to_s)
     elsif assignment_params[:email].present?
       User.find_for_any_email(assignment_params[:email])
     end

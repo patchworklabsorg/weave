@@ -46,7 +46,7 @@ class AddressSerializer
 
   def as_json
     {
-      id: @address.id,
+      id: @address.public_id,
       address_type: @address.address_type,
       street_address: @address.street_address,
       street_address_2: @address.street_address_2,

@@ -36,6 +36,9 @@
 # It is the one place to see what the admin did: each request goes in
 # `actions`, and each record change in `versions`.
 class Impersonation < ApplicationRecord
+  include EncodedIds::HashidIdentifiable
+  set_public_id_prefix :imp
+
   END_REASONS = %w[stopped logged_out].freeze
 
   belongs_to :admin, class_name: "User", optional: true

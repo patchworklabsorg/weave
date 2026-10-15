@@ -68,11 +68,11 @@ class Admin::ServiceKeysController < Admin::BaseController
   private
 
   def set_service
-    @service = Service.find(params[:service_id])
+    @service = Service.find_by_public_param!(params[:service_id])
   end
 
   def set_key
-    @key = @service.keys.find(params[:id])
+    @key = @service.keys.find_by_public_param!(params[:id])
   end
 
   def key_params
