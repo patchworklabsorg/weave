@@ -10,6 +10,7 @@
 </div>
 
 <div class="patch overflow-hidden">
+  <div class="overflow-x-auto">
   <table class="min-w-full divide-y divide-ink-soft/20">
     <thead>
       <tr>
@@ -24,17 +25,17 @@
     <tbody class="divide-y divide-ink-soft/10">
       <% @applications.each do |application| %>
         <tr>
-          <td class="px-6 py-4 whitespace-nowrap">
+          <td class="px-6 py-4">
             <div class="text-sm font-medium text-ink">
-              <%= link_to application.name, admin_oauth_application_path(application), class: "hover:text-grape" %>
+              <%= link_to application.name, admin_oauth_application_path(application), class: "hover:text-grape underline-offset-2 hover:underline" %>
             </div>
           </td>
-          <td class="px-6 py-4 whitespace-nowrap">
-            <div class="text-sm font-mono text-ink">
+          <td class="px-6 py-4">
+            <div class="text-sm font-mono text-ink break-all">
               <%= application.uid %>
             </div>
           </td>
-          <td class="px-6 py-4 whitespace-nowrap">
+          <td class="px-6 py-4 space-y-1">
             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
               <%= application.confidential? ? 'bg-sky-soft text-sky' : 'bg-grape-soft text-ink-soft' %>">
               <%= application.confidential? ? 'Confidential' : 'Public' %>
@@ -49,9 +50,13 @@
               <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-soft text-sky">Guardian consent optional</span>
             <% end %>
           </td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-ink">
+          <td class="px-6 py-4 text-sm text-ink min-w-48">
             <% if application.scopes.present? %>
-              <%= application.scopes %>
+              <ul class="flex flex-wrap gap-1" aria-label="Scopes">
+                <% application.scopes.all.each do |scope| %>
+                  <li class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-soft text-teal"><%= scope %></li>
+                <% end %>
+              </ul>
             <% else %>
               <span class="text-ink-faint">Default</span>
             <% end %>
@@ -74,6 +79,7 @@
       <% end %>
     </tbody>
   </table>
+  </div>
 
   <% if @applications.empty? %>
     <div class="text-center py-12">
