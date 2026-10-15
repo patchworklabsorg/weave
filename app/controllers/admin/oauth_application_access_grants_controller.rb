@@ -20,7 +20,7 @@ class Admin::OauthApplicationAccessGrantsController < Admin::BaseController
   end
 
   def destroy
-    grant = ApplicationAccessGrant.for_application(@application).find(params[:id])
+    grant = ApplicationAccessGrant.for_application(@application).find_by_public_param!(params[:id])
     grant.destroy!
     redirect_to admin_oauth_application_path(@application),
                 notice: "Access for #{grantee_label(grant.grantee)} was removed."
@@ -29,7 +29,7 @@ class Admin::OauthApplicationAccessGrantsController < Admin::BaseController
   private
 
   def set_application
-    @application = Doorkeeper::Application.find(params[:oauth_application_id])
+    @application = Doorkeeper::Application.find_by_public_param!(params[:oauth_application_id])
   end
 
   def require_superadmin
@@ -44,7 +44,7 @@ class Admin::OauthApplicationAccessGrantsController < Admin::BaseController
 
   def find_grantee
     if grant_params[:group_id].present?
-      Group.find_by(id: grant_params[:group_id])
+      Group.find_by_public_id(grant_params[:group_id].to_s)
     elsif grant_params[:email].present?
       User.find_for_any_email(grant_params[:email])
     end

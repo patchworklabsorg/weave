@@ -7,7 +7,7 @@ class ServiceKeyUsageSerializer
 
   def as_json
     {
-      id: @usage.id,
+      id: @usage.public_id,
       request_path: @usage.request_path,
       request_method: @usage.request_method,
       response_code: @usage.response_code,

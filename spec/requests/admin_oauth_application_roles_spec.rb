@@ -58,7 +58,7 @@ RSpec.describe "Admin OAuth application roles", type: :request do
     it "gives a role to a user by email and to a group" do
       group = create(:group, name: "Krater Reviewers")
       post admin_oauth_application_role_assignments_path(application, role), params: { assignment: { email: member.email } }
-      post admin_oauth_application_role_assignments_path(application, role), params: { assignment: { group_id: group.id } }
+      post admin_oauth_application_role_assignments_path(application, role), params: { assignment: { group_id: group.public_id } }
 
       expect(role.assignments.map(&:assignee)).to contain_exactly(member, group)
     end

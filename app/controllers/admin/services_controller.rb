@@ -61,7 +61,7 @@ class Admin::ServicesController < Admin::BaseController
   private
 
   def set_service
-    @service = Service.find(params[:id])
+    @service = Service.find_by_public_param!(params[:id])
   end
 
   def service_params

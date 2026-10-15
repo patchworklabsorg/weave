@@ -17,7 +17,7 @@ class Admin::OauthApplicationRolesController < Admin::BaseController
   end
 
   def destroy
-    role = ApplicationRole.for_application(@application).find(params[:id])
+    role = ApplicationRole.for_application(@application).find_by_public_param!(params[:id])
     role.destroy!
     redirect_to admin_oauth_application_path(@application, anchor: "roles"), notice: "The #{role.name} role was deleted."
   end
@@ -25,7 +25,7 @@ class Admin::OauthApplicationRolesController < Admin::BaseController
   private
 
   def set_application
-    @application = Doorkeeper::Application.find(params[:oauth_application_id])
+    @application = Doorkeeper::Application.find_by_public_param!(params[:oauth_application_id])
   end
 
   def require_superadmin

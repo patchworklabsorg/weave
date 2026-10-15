@@ -60,7 +60,7 @@ class UsersController < ApplicationController
 
   # Revoke a single session belonging to the current user.
   def destroy_session
-    user_session = current_user.user_sessions.find_by(id: resolve_session_id(params[:id]))
+    user_session = current_user.user_sessions.find_by_public_param(params[:id])
 
     if user_session.nil?
       redirect_to profile_sessions_path, alert: "Session not found."
@@ -115,13 +115,6 @@ class UsersController < ApplicationController
 
   private
 
-  # Sessions are addressed by their encoded public id (or hashid) in URLs.
-  # Resolve that back to the primary key so we can scope to the current user.
-  def resolve_session_id(param)
-    User::Session.find(param.to_s).id
-  rescue ActiveRecord::RecordNotFound
-    nil
-  end
 
   def sanitized_user_params
     # Non-admins cannot set passwords - they use magic links only

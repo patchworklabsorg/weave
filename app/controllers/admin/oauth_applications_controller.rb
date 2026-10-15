@@ -130,8 +130,9 @@ class Admin::OauthApplicationsController < Admin::BaseController
     false
   end
 
+  # Finds the app by its public id only. A numeric database id is a 404.
   def set_application
-    @application = Doorkeeper::Application.find(params[:id])
+    @application = Doorkeeper::Application.find_by_public_param!(params[:id])
   end
 
   def application_params

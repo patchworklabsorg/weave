@@ -97,7 +97,7 @@ class UserSerializer
   # it by law, and exposing it here could deadname someone.
   def base_attributes
     {
-      id: @user.id,
+      id: @user.p_id,
       p_id: @user.p_id,
       email: @user.email,
       first_name: @user.first_name,

@@ -20,7 +20,7 @@ class ServiceWebhookSerializer
 
   def base_attributes
     {
-      id: @webhook.id,
+      id: @webhook.public_id,
       url: @webhook.url,
       event_type: @webhook.event_type,
       status: @webhook.status,

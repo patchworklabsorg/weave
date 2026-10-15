@@ -26,7 +26,7 @@ class Admin::GroupMembershipsController < Admin::BaseController
   end
 
   def destroy
-    membership = @group.memberships.find(params[:id])
+    membership = @group.memberships.find_by_public_param!(params[:id])
     membership.destroy!
     redirect_to admin_group_path(@group), notice: "#{membership.user.full_name} was removed from #{@group.name}."
   end

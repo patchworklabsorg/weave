@@ -82,13 +82,7 @@ class EmailAddressesController < ApplicationController
   # Email addresses are addressed by their encoded public id in URLs. Resolve
   # that back to the primary key so we can scope to the current user.
   def find_email_address
-    current_user.email_addresses.find_by(id: resolve_email_address_id(params[:id]))
-  end
-
-  def resolve_email_address_id(param)
-    EmailAddress.find(param.to_s).id
-  rescue ActiveRecord::RecordNotFound
-    nil
+    current_user.email_addresses.find_by_public_param(params[:id])
   end
 
   def email_address_params

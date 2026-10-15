@@ -65,7 +65,7 @@ RSpec.describe "Admin OAuth application access", type: :request do
     end
 
     it "grants a group and a user, and records who did it" do
-      post admin_oauth_application_access_grants_path(application), params: { access_grant: { group_id: group.id } }
+      post admin_oauth_application_access_grants_path(application), params: { access_grant: { group_id: group.public_id } }
       post admin_oauth_application_access_grants_path(application), params: { access_grant: { email: member.email } }
 
       grants = ApplicationAccessGrant.for_application(application)
@@ -76,7 +76,7 @@ RSpec.describe "Admin OAuth application access", type: :request do
     it "does not grant the same group twice" do
       ApplicationAccessGrant.create!(application: application, grantee: group)
 
-      post admin_oauth_application_access_grants_path(application), params: { access_grant: { group_id: group.id } }
+      post admin_oauth_application_access_grants_path(application), params: { access_grant: { group_id: group.public_id } }
 
       expect(flash[:alert]).to include("already has access")
     end

@@ -13,7 +13,7 @@ class Admin::GuardianConsentsController < Admin::BaseController
   end
 
   def review
-    consent = GuardianConsent.find(params[:id])
+    consent = GuardianConsent.find_by_public_param!(params[:id])
     unless UserAdminPermissions.new(current_user, consent.user).manage?
       redirect_to admin_guardian_consents_path, alert: "You can only check consents for users below your own access level"
       return
