@@ -9,7 +9,9 @@ module FeatureFlags
   # Every flag that the app checks, with a description for the Flipper UI. Add a
   # flag here before you call Flipper.enabled? for it. The initializer creates
   # each flag at boot, disabled, so the UI shows it before anyone turns it on.
-  FLAGS = {}.freeze
+  FLAGS = {
+    passkeys: "Members can add passkeys from their profile. Fully on, the sign-in page also shows the passkey button."
+  }.freeze
 
   # The strict handler for Flipper. Flipper calls it when code checks a flag that
   # is not in the store yet. A flag that is not in FLAGS raises in development and

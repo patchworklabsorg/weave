@@ -16,6 +16,12 @@ application.register("login-form", LoginFormController)
 import OnboardingStatusController from "./onboarding_status_controller"
 application.register("onboarding-status", OnboardingStatusController)
 
+import PasskeyRegisterController from "./passkey_register_controller"
+application.register("passkey-register", PasskeyRegisterController)
+
+import PasskeySignInController from "./passkey_sign_in_controller"
+application.register("passkey-sign-in", PasskeySignInController)
+
 import PasswordController from "./password_controller"
 application.register("password", PasswordController)
 

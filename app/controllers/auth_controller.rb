@@ -2,6 +2,7 @@
 
 class AuthController < ApplicationController
   include OauthClientRedirectOrigins
+  include PasskeyChallenges
 
   # Signing in while an OAuth authorization is pending ends in a redirect chain
   # (login → /oauth/authorize → the client's redirect_uri) when the user already
@@ -11,7 +12,7 @@ class AuthController < ApplicationController
   content_security_policy do |policy|
     policy.form_action(:self, *pending_oauth_client_origins)
   end
-  skip_before_action :authenticate_user!, only: [:login, :new_session, :password_login, :oauth_login, :send_magic_link, :magic_link_login, :confirm_magic_link, :check_password_login]
+  skip_before_action :authenticate_user!, only: [:login, :new_session, :password_login, :oauth_login, :send_magic_link, :magic_link_login, :confirm_magic_link, :check_password_login, :passkey_options, :passkey_login]
 
   layout "sessions", only: [:new_session, :password_login, :oauth_login, :magic_link_login]
 
@@ -24,6 +25,14 @@ class AuthController < ApplicationController
     used: "That sign-in link has already been used. Request a new one below.",
     expired: "That sign-in link has expired. Request a new one below.",
     inactive: "This account can't sign in right now. Contact an administrator for help."
+  }.freeze
+
+  PASSKEY_ERRORS = {
+    expired: "The passkey request timed out. Try again.",
+    invalid: "We couldn't verify that passkey. Try again, or sign in with an email link.",
+    unknown: "That passkey isn't set up for Weave. Sign in with an email link, then add it from your profile.",
+    compromised: "That passkey is turned off because it may have been copied. Sign in with an email link, then remove it from your profile.",
+    inactive: MAGIC_LINK_ERRORS[:inactive]
   }.freeze
 
   def new_session
@@ -188,6 +197,32 @@ class AuthController < ApplicationController
     complete_login(link.user)
   end
 
+
+  # Step one of passkey sign-in: a challenge for the browser to have a passkey
+  # sign. The login page asks for one when it loads (for passkey autofill) and
+  # again when the "Sign in with a passkey" button is pressed.
+  def passkey_options
+    options = PasskeyAuthentication.sign_in_options
+    store_passkey_challenge(:sign_in, options.challenge)
+    render json: options
+  end
+
+  # Step two: the signed challenge. A verified passkey is a full sign-in, so
+  # this ends like a magic link does, including the return to a pending OAuth
+  # authorization.
+  def passkey_login
+    passkey = PasskeyAuthentication.authenticate!(
+      credential: params[:credential].to_s,
+      challenge: take_passkey_challenge(:sign_in)
+    )
+    complete_login(passkey.user)
+  rescue PasskeyAuthentication::Failure => e
+    message = PASSKEY_ERRORS.fetch(e.reason)
+    respond_to do |format|
+      format.html { redirect_to login_path, alert: message }
+      format.json { render json: { error: message }, status: :unauthorized }
+    end
+  end
 
   # Called by the login form JS to decide whether to show the password field.
   # Admins authenticate with a password; everyone else uses magic links.

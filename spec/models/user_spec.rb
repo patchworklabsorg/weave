@@ -60,6 +60,7 @@
 #  p_id                     :string           not null
 #  slack_id                 :string
 #  slack_manager_id         :string
+#  webauthn_id              :string
 #
 # Indexes
 #
@@ -67,6 +68,7 @@
 #  index_users_on_email               (email) UNIQUE
 #  index_users_on_manager_id          (manager_id)
 #  index_users_on_p_id                (p_id) UNIQUE
+#  index_users_on_webauthn_id         (webauthn_id) UNIQUE
 #
 # Foreign Keys
 #
