@@ -10,14 +10,14 @@ RSpec.describe "Staging badge", type: :request do
 
     get login_path
 
-    expect(response.body).to include(">\n    Staging\n  </div>")
-    expect(response.body).to include("border-amber-500")
+    expect(response.body).to include(">Staging</div>")
+    expect(response.body).to include("staging-frame")
   end
 
   it "is not shown otherwise" do
     get login_path
 
     expect(response.body).not_to include("Staging")
-    expect(response.body).not_to include("border-amber-500")
+    expect(response.body).not_to include("staging-frame")
   end
 end
