@@ -18,6 +18,12 @@ RSpec.describe NudgeStuckSlackGuestsJob do
       .to have_enqueued_job(CodeOfConductRequestJob).with(stuck.id, reason: :onboarding)
   end
 
+  it "does nothing when Slack is not configured" do
+    allow(slack).to receive(:configured?).and_return(false)
+
+    expect { described_class.perform_now }.not_to have_enqueued_job(CodeOfConductRequestJob)
+  end
+
   it "skips a guest who left the Slack" do
     allow(slack).to receive(:active_guest?).with("U1").and_return(false)
 
