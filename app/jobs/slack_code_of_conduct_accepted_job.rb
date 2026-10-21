@@ -3,7 +3,8 @@
 # Runs when someone accepts the code of conduct: with the button in their Slack
 # DM, with the Slack form, or on the /slack onboarding page. Records the
 # acceptance, promotes a single-channel guest to full workspace member, and
-# marks them a member in Weave once Slack confirms the promotion.
+# marks them a member in Weave once Slack confirms the promotion. Then
+# JoinSlackChannelsJob adds them to the member channels.
 #
 # A full member who joined before the code-of-conduct flow is already a member,
 # so only the acceptance is recorded for them.
@@ -38,6 +39,7 @@ class SlackCodeOfConductAcceptedJob < ApplicationJob
     result = service.promote_to_member(slack_user_id)
     if result[:ok]
       user&.update_columns(slack_membership: "member", updated_at: Time.current)
+      JoinSlackChannelsJob.perform_later(slack_user_id)
       Rails.logger.info "Promoted #{slack_user_id} to full member after CoC acceptance"
     else
       Rails.logger.error "Failed to promote #{slack_user_id} after CoC acceptance: #{result[:error]}"

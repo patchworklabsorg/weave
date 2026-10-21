@@ -22,6 +22,18 @@ RSpec.describe SlackCodeOfConductAcceptedJob do
     expect { described_class.perform_now("U123") }.to change { user.reload.slack_membership }.from("pending").to("member")
   end
 
+  it "adds the new member to the member channels" do
+    allow(service).to receive(:promote_to_member).and_return({ ok: true })
+
+    expect { described_class.perform_now("U123") }.to have_enqueued_job(JoinSlackChannelsJob).with("U123")
+  end
+
+  it "adds no channels when promotion fails" do
+    allow(service).to receive(:promote_to_member).and_return({ ok: false, error: "user_not_found" })
+
+    expect { described_class.perform_now("U123") }.not_to have_enqueued_job(JoinSlackChannelsJob)
+  end
+
   it "does nothing without a Slack user id" do
     expect(service).not_to receive(:promote_to_member)
     described_class.perform_now(nil)

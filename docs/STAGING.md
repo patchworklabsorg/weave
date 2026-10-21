@@ -72,7 +72,7 @@ slack:                  # the staging Slack test workspace and app
   workspace_subdomain:
   coc_channel:
   coc_url:
-  default_channels:
+  default_channels:     # channel ids a new member joins; production uses SlackService::DEFAULT_CHANNELS
 ```
 
 ## Mail allowlist

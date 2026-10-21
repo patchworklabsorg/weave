@@ -5,6 +5,20 @@ class SlackService
   class ConfigurationError < SlackError; end
   class ApiError < SlackError; end
 
+  # The production workspace channels that a guest joins when they accept the
+  # code of conduct (see #add_to_channels and #member_channels).
+  DEFAULT_CHANNELS = {
+    "announcements"    => "C079ZT2Q6KA",
+    "introductions"    => "C08LQ0XP24S",
+    "lounge"           => "C07934XU57Z",
+    "patchwork"        => "C08L704H9D5",
+    "directory"        => "C08LQ27BVJ7",
+    "identity-help"    => "C0BJFCXTH0X",
+    "coworking-call"   => "C081H031MEG",
+    "code"             => "C07F5PK5QE7",
+    "thing-of-the-day" => "C09CS4NQ8Q5"
+  }.freeze
+
   # Standard Slack profile keys, read from users.list and users.profile.get.
   STANDARD_PROFILE_FIELDS = {
     slack_display_name: "display_name",
@@ -152,6 +166,31 @@ class SlackService
   rescue Faraday::Error => e
     Rails.logger.error "Slack promote request error for #{slack_user_id}: #{e.message}"
     { ok: false, error: "request_failed", raw: nil }
+  end
+
+  # Add a new full member to channels (default: #member_channels). Slack's
+  # promotion adds them to no channels, so a guest who accepts the code of
+  # conduct would otherwise still see only #start-here. Uses the same admin
+  # session as #promote_to_member. A channel the user is already in counts as
+  # done. Returns the channels that failed, as { channel_id => error }.
+  def add_to_channels(slack_user_id, channels = member_channels)
+    channels.each_with_object({}) do |channel, failed|
+      body = admin_api_post("conversations.invite", {
+                              "channel"   => channel,
+                              "users"     => slack_user_id,
+                              "_x_reason" => "invite-members-to-channel"
+                            })
+      next if body["ok"] || body["error"] == "already_in_channel"
+
+      failed[channel] = body["error"]
+    # Faraday errors, and JSON::ParserError for a non-JSON answer (a 429 or a
+    # login page). One channel must not stop the others.
+    rescue => e
+      failed[channel] = "request_failed"
+      Rails.logger.error "Slack channel invite request error for #{slack_user_id} in #{channel}: #{e.message}"
+    end.tap do |failed|
+      Rails.logger.error "Slack channel invites failed for #{slack_user_id}: #{failed.inspect}" if failed.any?
+    end
   end
 
   # Move a full member back to a single-channel guest in the code-of-conduct
@@ -641,6 +680,21 @@ class SlackService
   def default_channels
     channels = ENV["SLACK_DEFAULT_CHANNELS"] || Rails.application.credentials.dig(:slack, :default_channels)
     channels&.split(",")&.map(&:strip) || []
+  end
+
+  # The channels a new full member joins (see #add_to_channels). Production
+  # uses DEFAULT_CHANNELS. Staging uses a test workspace with other channel
+  # ids, so it reads slack.default_channels from its credentials. Development
+  # and test join none, so a local Slack setup never touches production
+  # channels.
+  def member_channels
+    if Weave.staging?
+      default_channels
+    elsif Rails.env.production?
+      DEFAULT_CHANNELS.values
+    else
+      []
+    end
   end
 
   # Browser session credentials for the undocumented invite/promote endpoints,
