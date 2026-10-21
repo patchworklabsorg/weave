@@ -23,7 +23,7 @@ class Admin::ServicesController < Admin::BaseController
     if @service.save
       redirect_to [:admin, @service], notice: "Service was successfully created."
     else
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   end
 
@@ -34,7 +34,7 @@ class Admin::ServicesController < Admin::BaseController
     if @service.update(service_params)
       redirect_to [:admin, @service], notice: "Service was successfully updated."
     else
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     end
   end
 

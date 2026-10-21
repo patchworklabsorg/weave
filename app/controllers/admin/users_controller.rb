@@ -50,7 +50,7 @@ class Admin::UsersController < Admin::BaseController
     if privileged_attributes_allowed && @user.save
       redirect_to admin_users_path, notice: "User was successfully created."
     else
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   end
 
@@ -66,7 +66,7 @@ class Admin::UsersController < Admin::BaseController
       PushSlackProfileFieldsJob.perform_later(@user.id) if @user.slack_profile_fields_need_push?
       redirect_to admin_user_path(@user), notice: "User was successfully updated."
     else
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     end
   end
 

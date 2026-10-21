@@ -21,19 +21,20 @@ RSpec.feature "User birthday management", type: :feature do
   scenario "User views birthday label on profile page" do
     user.update!(birthday: Date.parse("1990-01-15"))
     visit profile_path
-    expect(page).to have_content("Birthday")
+    expect(page).to have_text("Birthday")
   end
 
   scenario "User sees formatted birthday date" do
     user.update!(birthday: Date.parse("1990-01-15"))
     visit profile_path
     # The profile page shows the month and day only (no year).
-    expect(page).to have_content("January 15")
+    expect(page).to have_text("January 15")
   end
 
   scenario "User does not see birthday section when no birthday is set" do
     visit profile_path
-    expect(page).not_to have_content("Birthday")
+    expect(page).to have_current_path(profile_path)
+    expect(page).to have_no_text("Birthday")
   end
 
   scenario "User sees birthday field when no birthday is set" do
@@ -43,24 +44,25 @@ RSpec.feature "User birthday management", type: :feature do
 
   scenario "User sees birthday warning message" do
     visit edit_profile_path
-    expect(page).to have_content("Birthday can only be set once")
+    expect(page).to have_text("Birthday can only be set once")
   end
 
   scenario "User cannot edit birthday field once set" do
     user.update!(birthday: Date.parse("1990-01-15"))
     visit edit_profile_path
-    expect(page).not_to have_field("Birthday")
+    expect(page).to have_current_path(edit_profile_path)
+    expect(page).to have_no_field("Birthday")
   end
 
   scenario "User sees birthday value when set" do
     user.update!(birthday: Date.parse("1990-01-15"))
     visit edit_profile_path
-    expect(page).to have_content("January 15, 1990")
+    expect(page).to have_text("January 15, 1990")
   end
 
   scenario "User sees birthday cannot be changed message" do
     user.update!(birthday: Date.parse("1990-01-15"))
     visit edit_profile_path
-    expect(page).to have_content("Birthday cannot be changed")
+    expect(page).to have_text("Birthday cannot be changed")
   end
 end

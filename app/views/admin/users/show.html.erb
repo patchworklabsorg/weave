@@ -370,6 +370,7 @@
         <p class="text-sm text-ink-faint">Geographic locations of this user's login sessions</p>
       </div>
       <div class="px-6 py-4">
+        <% content_for :head, javascript_include_tag("mapkick.bundle") %>
         <%= js_map session_map_data, height: "400px", zoom: 2 %>
         <div class="mt-4 flex space-x-6 text-sm">
           <div class="flex items-center">

@@ -43,29 +43,29 @@ RSpec.feature "Admin birthday management", type: :feature do
   scenario "Admin views user birthday on user show page" do
     user_with_birthday.update!(birthday: Date.parse("1990-01-15"))
     visit admin_user_path(user_with_birthday)
-    expect(page).to have_content("Birthday")
+    expect(page).to have_text("Birthday")
   end
 
   scenario "Admin sees formatted birthday date" do
     user_with_birthday.update!(birthday: Date.parse("1990-01-15"))
     visit admin_user_path(user_with_birthday)
-    expect(page).to have_content("January 15, 1990")
+    expect(page).to have_text("January 15, 1990")
   end
 
   scenario "Admin sees birthday banner message" do
     visit admin_user_path(user_with_birthday)
-    expect(page).to have_content("Happy Birthday!")
+    expect(page).to have_text("Happy Birthday!")
   end
 
   scenario "Admin sees personalized birthday message" do
     visit admin_user_path(user_with_birthday)
-    expect(page).to have_content("It's John's birthday today!")
+    expect(page).to have_text("It's John's birthday today!")
   end
 
   scenario "Admin does not see birthday banner for users without birthdays" do
     visit admin_user_path(user_without_birthday)
-
-    expect(page).not_to have_content("Happy Birthday!")
+    expect(page).to have_current_path(admin_user_path(user_without_birthday))
+    expect(page).to have_no_text("Happy Birthday!")
   end
 
   scenario "Admin can edit user information including birthday" do

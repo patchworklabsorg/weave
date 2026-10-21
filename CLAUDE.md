@@ -120,7 +120,6 @@ After migrations, always run: `bundle exec annotaterb models`
 - Sensitive data encrypted with Lockbox
 - Rate limiting via Rack::Attack (configured in `config/initializers/rack_attack.rb`)
 - OAuth redirect URIs are strictly validated
-- CORS configured per-environment in `config/initializers/cors.rb`
 
 ### Feature Flags
 Use Flipper for feature rollouts. Check flags with:
@@ -166,7 +165,7 @@ UI components use the defined color palette:
 - **Near-Black** (#18181A): Primary text, grounding elements
 
 ## Deployment
-Production runs as Docker containers on the `alastor` NixOS host, not Kamal. Ignore `config/deploy.yml` and `.kamal/`: they are unused leftovers. Thruster handles HTTP acceleration inside the image.
+Production runs as Docker containers on the `alastor` NixOS host. The image is built on Ruby Alpine (`Dockerfile`). Thruster handles HTTP acceleration inside the image.
 
 - The infra repo (`~/dev/infra`, module `modules/weave/default.nix`) defines the containers. Deploy infra changes with `deploy .#alastor --remote-build --skip-checks`.
 - Production deploys are manual: `bin/deploy-local` (primary) or `gh workflow run deploy.yml` (fallback). A push to `main` does not deploy production.

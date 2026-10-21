@@ -428,12 +428,12 @@ class AuthController < ApplicationController
         render turbo_stream: [
           turbo_stream.update("flash", partial: "shared/flash"),
           turbo_stream.update("login_form", partial: "auth/login_form", locals: { user: @user })
-        ], status: :unprocessable_entity
+        ], status: :unprocessable_content
       end
       format.html do
         flash.now[:alert] = message
         @user = User.new(email: email)
-        render :new_session, status: :unprocessable_entity
+        render :new_session, status: :unprocessable_content
       end
       format.json { render json: { error: message }, status: :unauthorized }
     end
