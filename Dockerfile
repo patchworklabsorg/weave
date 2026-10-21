@@ -18,8 +18,9 @@ LABEL org.opencontainers.image.source="https://github.com/patchworklabsorg/weave
 WORKDIR /rails
 
 # Runtime packages only. jemalloc replaces the musl allocator, which is slow
-# for Ruby. tzdata gives TZInfo its zone files.
-RUN apk add --no-cache jemalloc tzdata
+# for Ruby. tzdata gives TZInfo its zone files. argon2-libs replaces the glibc
+# libargon2 that the argon2-kdf gem vendors (see config/initializers/lockbox.rb).
+RUN apk add --no-cache argon2-libs jemalloc tzdata
 
 ENV RAILS_ENV=production \
     BUNDLE_DEPLOYMENT=1 \
@@ -51,7 +52,9 @@ COPY . .
 # The Tailwind binary (about 100 MB) is only needed for assets:precompile.
 # The precompile boot also writes a dummy local secret and a bootsnap cache
 # of every loaded gem, so remove tmp/ and cache only app/ and lib/.
+# The blind index call stops the build if libargon2 does not load on musl.
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile && \
+    SECRET_KEY_BASE_DUMMY=1 ./bin/rails runner 'BlindIndex.generate_bidx("check", key: "0" * 64)' && \
     rm -rf node_modules app/assets/builds/*.map "${BUNDLE_PATH}"/ruby/*/gems/tailwindcss-ruby-*/exe \
       tmp/cache tmp/local_secret.txt && \
     bundle exec bootsnap precompile app/ lib/
