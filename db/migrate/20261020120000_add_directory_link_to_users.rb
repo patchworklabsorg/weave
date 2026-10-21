@@ -7,9 +7,12 @@
 # docs/ACTIVE_DIRECTORY.md.
 class AddDirectoryLinkToUsers < ActiveRecord::Migration[8.1]
   def change
-    change_table :users, bulk: true do |t|
-      t.datetime :directory_linked_at
-      t.string :directory_object_guid
+    # Two nullable columns with no default: no table rewrite, no backfill.
+    safety_assured do
+      change_table :users, bulk: true do |t|
+        t.datetime :directory_linked_at
+        t.string :directory_object_guid
+      end
     end
   end
 
