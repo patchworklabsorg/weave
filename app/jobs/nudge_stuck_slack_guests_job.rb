@@ -5,39 +5,56 @@
 # never pressed the button, so they can't see the other channels.
 #
 # Each guest gets one reminder, as a Slack DM and an email (see
-# CodeOfConductRequestJob, reason :onboarding), WAIT after they joined. The
-# request sets slack_coc_requested_at, so a later run skips them.
+# CodeOfConductRequestJob, reason :onboarding). The request sets
+# slack_coc_requested_at, so a later run skips them.
 #
-# Runs daily from config/recurring.yml. Does nothing until the
-# start_here_nudge Flipper flag is on.
+# The daily run (config/recurring.yml) covers guests who joined between WAIT
+# and WINDOW ago. slack_joined_at is only approximate (the Slack sync sets it
+# from the profile's `updated` time), so the window keeps the daily run from
+# reaching old accounts. To remind older guests once, preview and run by hand:
+#
+#   NudgeStuckSlackGuestsJob.candidates(since: nil).count
+#   NudgeStuckSlackGuestsJob.perform_now(since: nil)
+#
+# Does nothing until the start_here_nudge Flipper flag is on.
 class NudgeStuckSlackGuestsJob < ApplicationJob
   queue_as :low
 
   WAIT = 2.days
+  WINDOW = 14.days
+  # Spaces the DMs out to stay under Slack's chat.postMessage rate limit, like
+  # the slack:coc rake tasks.
+  SPACING = 2.seconds
 
-  def perform
+  def perform(since: WINDOW.ago)
     return unless Flipper.enabled?(:start_here_nudge)
 
     service = SlackService.new
     return unless service.configured?
 
-    self.class.candidates.find_each do |user|
+    index = 0
+    self.class.candidates(since:).find_each do |user|
+      # Weave can't send these people to the accept step yet (see
+      # User#slack_onboarding_step), so a reminder would not help.
+      next if user.guardian_consent_missing?
       # A deleted Slack account is also `pending` in Weave. Don't email
       # someone who left.
       next unless service.active_guest?(user.slack_id)
 
-      CodeOfConductRequestJob.perform_later(user.id, reason: :onboarding)
+      CodeOfConductRequestJob.set(wait: index * SPACING).perform_later(user.id, reason: :onboarding)
+      index += 1
     rescue Slack::Web::Api::Errors::SlackError => e
       Rails.logger.error "Failed to check Slack guest #{user.slack_id}: #{e.message}"
     end
   end
 
-  # A missing slack_joined_at means an old account, so it counts as joined
-  # long ago.
-  def self.candidates
-    User.where(status: "active", locked_at: nil).merge(User.stuck_in_start_here)
-        .where(slack_coc_requested_at: nil)
-        .where("users.slack_joined_at IS NULL OR users.slack_joined_at <= ?", WAIT.ago)
+  # since: nil drops the lower bound on slack_joined_at.
+  def self.candidates(since: WINDOW.ago)
+    scope = User.where(status: "active", locked_at: nil).merge(User.stuck_in_start_here)
+                .where(slack_coc_requested_at: nil)
+                .where(birthday: ..User::MINIMUM_AGE.years.ago.to_date)
+                .where(slack_joined_at: ..WAIT.ago)
+    since ? scope.where(slack_joined_at: since..) : scope
   end
 
 end

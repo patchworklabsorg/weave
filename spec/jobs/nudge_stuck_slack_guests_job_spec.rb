@@ -45,10 +45,41 @@ RSpec.describe NudgeStuckSlackGuestsJob do
     expect(nudged).to be_empty
   end
 
-  it "counts a guest with no join time as joined long ago" do
+  it "skips a guest with no join time" do
     stuck.update!(slack_joined_at: nil)
 
-    expect(nudged).to eq([stuck])
+    expect(nudged).to be_empty
+  end
+
+  it "leaves out guests who joined over two weeks ago, unless asked" do
+    stuck.update!(slack_joined_at: 3.weeks.ago)
+
+    expect(nudged).to be_empty
+    expect(described_class.candidates(since: nil)).to eq([stuck])
+  end
+
+  it "skips a guest with no birthday or under the minimum age" do
+    stuck.update_columns(birthday: nil) # rubocop:disable Rails/SkipsModelValidations
+    expect(nudged).to be_empty
+
+    stuck.update_columns(birthday: 12.years.ago.to_date) # rubocop:disable Rails/SkipsModelValidations
+    expect(nudged).to be_empty
+  end
+
+  it "skips a minor whose guardian has not consented" do
+    stuck.update_columns(birthday: 15.years.ago.to_date) # rubocop:disable Rails/SkipsModelValidations
+
+    expect { described_class.perform_now }.not_to have_enqueued_job(CodeOfConductRequestJob)
+  end
+
+  it "spaces out the reminders" do
+    create(:user, :verified, slack_id: "U9", slack_joined_at: 3.days.ago)
+
+    freeze_time do
+      expect { described_class.perform_now }
+        .to have_enqueued_job(CodeOfConductRequestJob).at(Time.current).once
+        .and have_enqueued_job(CodeOfConductRequestJob).at(2.seconds.from_now).once
+    end
   end
 
   it "reminds a guest only once" do
