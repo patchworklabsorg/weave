@@ -12,7 +12,9 @@ RSpec.describe ConsoleAccess::Approval do
   end
 
   it "shows the code and the approval page, then returns the approver" do
-    approver = approval { it.approve!(by: superadmin) }.await!
+    approver = nil
+    expect { approver = approval { it.approve!(by: superadmin) }.await! }
+      .to have_enqueued_mail(ConsoleAccessMailer, :opened)
 
     expect(approver).to eq(superadmin)
     expect(output.string).to include("#{Weave.url}/admin/console_access")

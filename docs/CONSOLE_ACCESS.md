@@ -34,7 +34,9 @@ sequenceDiagram
 ## Rules
 
 - Only a superadmin can approve. An admin who impersonates a member cannot approve.
-- A code expires after 10 minutes. One approval opens one console.
+- A code expires after 10 minutes. One approval opens one console. A console must claim an approval within 10 minutes.
+- Weave records the approver's IP address.
+- When a console opens, Weave sends an email to the approver. If you get this email for a console that you did not start, tell the other superadmins.
 - Weave stores only a SHA-256 digest of the code.
 - The Console1984 username is the approver's name and PWL id, for example `Ada Lovelace (PWL23E61E9BA2)`. The PWL id is also the `employeeID` of the person's AD account (see `docs/ACTIVE_DIRECTORY.md`).
 - Review the sessions at `/admin/console` (Audits1984).
@@ -54,8 +56,8 @@ In development, `bin/rails dbconsole` still starts psql.
 ## Limits
 
 - The approval proves who approved, not who types. The rule "approve only your own console" closes that gap.
-- A person with a shell on the host can still run `psql` in the database container, or `bin/rails runner`. Do not use them to read or change member data.
-- The table check in the SQL console reads the statement text. A person who builds SQL at run time (for example with `EXECUTE` in a `DO` block) can get past it. Console1984 has the same limit in the Rails console. The statement is still recorded before it runs.
+- A person with a shell on the host can still run `psql` in the database container, or `bin/rails runner`. Do not use them to read or change member data. `bin/rails runner` can also write a false approval into the database. The approval email goes to the person that it names, so that person sees it.
+- The consoles connect as the app's database role. In production that role is a superuser. So the table checks in the Rails console (Console1984) and in the SQL console only read the statement text, and a person can get past them, for example with a quoted identifier such as `U&"console1984\005fcommands"` or with SQL built at run time. Each statement is recorded before it runs, but a later statement can delete the record. To close this gap, the consoles must connect as a separate database role that has no rights on the audit tables. That needs a change in the infra repo.
 - Console1984 encrypts the recorded commands with Active Record encryption. The production and staging credentials must have the `active_record_encryption` keys.
 
 ## Code
@@ -64,3 +66,4 @@ In development, `bin/rails dbconsole` still starts psql.
 - `app/controllers/admin/console_access_controller.rb`: the approval page.
 - `lib/console_access/`: the wait for approval, the Console1984 username resolver, the SQL console and the `dbconsole` hook.
 - `config/initializers/console_access.rb`: sets the Console1984 username resolver.
+- `app/mailers/console_access_mailer.rb`: the email to the approver.

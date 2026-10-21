@@ -299,6 +299,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.datetime "expires_at", null: false
     t.bigint "decided_by_id"
     t.datetime "decided_at"
+    t.string "decided_ip"
     t.datetime "claimed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

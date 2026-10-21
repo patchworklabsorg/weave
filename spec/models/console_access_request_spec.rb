@@ -78,5 +78,18 @@ RSpec.describe ConsoleAccessRequest do
     it "returns nil before an approval" do
       expect(request.claim!).to be_nil
     end
+
+    it "returns nil for an approval that no console claimed in time" do
+      request.approve!(by: superadmin)
+
+      travel(ConsoleAccessRequest::EXPIRATION + 1.second) do
+        expect(request.claim!).to be_nil
+      end
+    end
+  end
+
+  # Console1984 protects the tables of its own models from console commands.
+  it "is a Console1984 model, so a console cannot change its own approval" do
+    expect(described_class.ancestors).to include(Console1984::Base)
   end
 end

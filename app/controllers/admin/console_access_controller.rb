@@ -24,12 +24,12 @@ class Admin::ConsoleAccessController < Admin::BaseController
   end
 
   def decide
-    request = ConsoleAccessRequest.find_pending_by_code(params[:code])
-    return redirect_to(admin_console_access_path, alert: no_request_message) unless request
+    console_request = ConsoleAccessRequest.find_pending_by_code(params[:code])
+    return redirect_to(admin_console_access_path, alert: no_request_message) unless console_request
 
-    if params[:decision] == "approve" && request.approve!(by: current_user)
+    if params[:decision] == "approve" && console_request.approve!(by: current_user, ip: request.remote_ip)
       redirect_to admin_console_access_path, notice: "Approved. The console opens in a few seconds."
-    elsif params[:decision] == "deny" && request.deny!(by: current_user)
+    elsif params[:decision] == "deny" && console_request.deny!(by: current_user, ip: request.remote_ip)
       redirect_to admin_console_access_path, notice: "Denied. The console stops."
     else
       redirect_to admin_console_access_path, alert: no_request_message

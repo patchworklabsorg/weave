@@ -9,6 +9,7 @@
 #  claimed_at    :datetime
 #  code_digest   :string           not null
 #  decided_at    :datetime
+#  decided_ip    :string
 #  expires_at    :datetime         not null
 #  host          :string
 #  kind          :string           not null
@@ -86,29 +87,31 @@ class ConsoleAccessRequest < Console1984::Base
 
   # Only a superadmin can approve, and only a pending request that has not
   # expired. Returns false otherwise.
-  def approve!(by:)
+  def approve!(by:, ip: nil)
     return false unless by&.superadmin?
 
-    decide!("approved", by)
+    decide!("approved", by, ip)
   end
 
-  def deny!(by:) = decide!("denied", by)
+  def deny!(by:, ip: nil) = decide!("denied", by, ip)
 
   # The console calls this when it sees the approval. It returns the approver
-  # once, so one approval opens one console.
+  # once, so one approval opens one console. An approval that no console
+  # claims within EXPIRATION stays unused.
   def claim!
     # One conditional UPDATE, so two consoles cannot claim the same approval.
-    claimed = self.class.where(id:, status: "approved", claimed_at: nil).update_all(claimed_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    claimed = self.class.where(id:, status: "approved", claimed_at: nil, decided_at: EXPIRATION.ago..)
+                  .update_all(claimed_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     claimed == 1 ? decided_by : nil
   end
 
   private
 
-  def decide!(new_status, by)
+  def decide!(new_status, by, ip)
     with_lock do
       return false unless pending? && !expired?
 
-      update!(status: new_status, decided_by: by, decided_at: Time.current)
+      update!(status: new_status, decided_by: by, decided_at: Time.current, decided_ip: ip)
     end
   end
 

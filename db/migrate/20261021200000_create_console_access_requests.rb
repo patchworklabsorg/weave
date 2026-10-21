@@ -12,6 +12,7 @@ class CreateConsoleAccessRequests < ActiveRecord::Migration[8.1]
       t.datetime :expires_at, null: false
       t.references :decided_by, foreign_key: { to_table: :users }
       t.datetime :decided_at
+      t.string :decided_ip
       t.datetime :claimed_at
 
       t.timestamps

@@ -2,10 +2,17 @@
 
 module ConsoleAccess
   # The Console1984 username resolver for `bin/rails console`. Console1984 asks
-  # it once, when a session starts in a protected environment.
+  # it when a session starts in a protected environment.
+  #
+  # Console1984::QueryAuditor also asks it, in every process, if Rails sends a
+  # "query.rails" event. Rails 8.1 does not, but outside a console this returns
+  # nil (Console1984 then writes "unknown") so a server never waits for an
+  # approval.
   class UsernameResolver
     def current
-      ConsoleAccess.username_for(Approval.new(kind: "console").await!)
+      return unless defined?(Rails::Console)
+
+      @current ||= ConsoleAccess.username_for(Approval.new(kind: "console").await!)
     rescue Error, Interrupt => e
       abort(e.message.presence || "Cancelled.")
     end

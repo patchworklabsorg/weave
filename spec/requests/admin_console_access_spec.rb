@@ -16,7 +16,7 @@ RSpec.describe "Admin console access", type: :request do
     post decide_admin_console_access_path, params: { code: console_request.code, decision: "approve" }
 
     expect(response).to redirect_to(admin_console_access_path)
-    expect(console_request.reload).to have_attributes(status: "approved", decided_by: superadmin)
+    expect(console_request.reload).to have_attributes(status: "approved", decided_by: superadmin, decided_ip: "127.0.0.1")
   end
 
   it "denies a request" do

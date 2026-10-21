@@ -31,7 +31,12 @@ module ConsoleAccess
         @sleeper.call(POLL_INTERVAL)
         ConsoleAccessRequest.uncached { request.reload }
         approver = request.claim!
-        return approver if approver
+        if approver
+          # The approver learns about every console opened under their name,
+          # so an approval forged in the database does not go unseen.
+          ConsoleAccessMailer.opened(request).deliver_later
+          return approver
+        end
         raise Error, "The console request was denied." if request.denied?
         raise Error, "The console request expired. Start the console again." if request.expired?
         raise Error, "The console request was already used." if request.approved?

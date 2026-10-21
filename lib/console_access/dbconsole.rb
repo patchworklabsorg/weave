@@ -9,7 +9,7 @@ module ConsoleAccess
   #
   # config/application.rb requires this file only when the dbconsole command
   # runs. Rails::DBConsole loads the application and then calls this adapter
-  # method, so the environment is not loaded yet when it is called.
+  # method. require_environment! makes sure that the initializers ran.
   module Dbconsole
     def dbconsole(config, options = {})
       return super unless ConsoleAccess.protected_environment?
