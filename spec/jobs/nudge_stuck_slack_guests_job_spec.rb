@@ -7,10 +7,7 @@ RSpec.describe NudgeStuckSlackGuestsJob do
 
   let(:slack) { instance_double(SlackService, configured?: true, active_guest?: true) }
 
-  before do
-    Flipper.enable(:start_here_nudge)
-    allow(SlackService).to receive(:new).and_return(slack)
-  end
+  before { allow(SlackService).to receive(:new).and_return(slack) }
 
   def nudged
     described_class.candidates.to_a
@@ -19,12 +16,6 @@ RSpec.describe NudgeStuckSlackGuestsJob do
   it "reminds a guest who joined over two days ago and never accepted" do
     expect { described_class.perform_now }
       .to have_enqueued_job(CodeOfConductRequestJob).with(stuck.id, reason: :onboarding)
-  end
-
-  it "does nothing while the flag is off" do
-    Flipper.disable(:start_here_nudge)
-
-    expect { described_class.perform_now }.not_to have_enqueued_job(CodeOfConductRequestJob)
   end
 
   it "skips a guest who left the Slack" do

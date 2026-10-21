@@ -15,8 +15,6 @@
 #
 #   NudgeStuckSlackGuestsJob.candidates(since: nil).count
 #   NudgeStuckSlackGuestsJob.perform_now(since: nil)
-#
-# Does nothing until the start_here_nudge Flipper flag is on.
 class NudgeStuckSlackGuestsJob < ApplicationJob
   queue_as :low
 
@@ -27,8 +25,6 @@ class NudgeStuckSlackGuestsJob < ApplicationJob
   SPACING = 2.seconds
 
   def perform(since: WINDOW.ago)
-    return unless Flipper.enabled?(:start_here_nudge)
-
     service = SlackService.new
     return unless service.configured?
 
