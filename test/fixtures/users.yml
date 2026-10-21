@@ -30,6 +30,8 @@
 #  password_digest          :string           not null
 #  phone_number             :string
 #  pronouns                 :string
+#  referral_source          :string
+#  referral_source_detail   :string
 #  role                     :integer          default("user"), not null
 #  session_duration_seconds :integer          default(2592000), not null
 #  slack_birthday           :date

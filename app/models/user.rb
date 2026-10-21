@@ -26,6 +26,8 @@
 #  password_digest          :string           not null
 #  phone_number             :string
 #  pronouns                 :string
+#  referral_source          :string
+#  referral_source_detail   :string
 #  role                     :integer          default("user"), not null
 #  session_duration_seconds :integer          default(2592000), not null
 #  slack_birthday           :date
@@ -191,6 +193,20 @@ class User < ApplicationRecord
   # It does not say why, so it does not reveal the blocklist.
   SIGNUP_BLOCKED_MESSAGE = "can't be used with Weave"
   UNDELIVERABLE_MESSAGE = "can't receive email. Check it for typos."
+
+  # "How did you hear about Patchwork?" on the signup form. Optional. The
+  # detail is free text, for example who referred them or which event.
+  REFERRAL_SOURCES = {
+    "friend"       => "A friend or member",
+    "school"       => "School or club",
+    "event"        => "An event or hackathon",
+    "social_media" => "Social media",
+    "search"       => "Search engine",
+    "other"        => "Other"
+  }.freeze
+  REFERRAL_SOURCE_DETAIL_MAX_LENGTH = 255
+  validates :referral_source, inclusion: { in: REFERRAL_SOURCES.keys }, allow_blank: true
+  validates :referral_source_detail, length: { maximum: REFERRAL_SOURCE_DETAIL_MAX_LENGTH }
 
   # Set by the admin user form, so an admin can still create an account on a
   # blocked domain.
