@@ -14,7 +14,8 @@ RSpec.describe "Slack membership flow", type: :request do
       find_user_by_email: nil,
       invite_to_workspace: { ok: true, already_member: false },
       post_code_of_conduct: true,
-      promote_to_member: { ok: true }
+      promote_to_member: { ok: true },
+      add_to_default_channels: {}
     )
   end
 
@@ -55,8 +56,9 @@ RSpec.describe "Slack membership flow", type: :request do
     expect(user.reload.slack_onboarding_step).to eq(:accept_code_of_conduct)
     expect(slack_claims(user)).to eq("slack_member" => false, "slack_id" => "U0ADA")
 
-    # They accept the code of conduct and are promoted.
+    # They accept the code of conduct, are promoted and join the default channels.
     expect(slack).to receive(:promote_to_member).with("U0ADA")
+    expect(slack).to receive(:add_to_default_channels).with("U0ADA")
     SlackCodeOfConductAcceptedJob.perform_now("U0ADA")
     expect(user.reload).to be_slack_member
     expect(slack_claims(user)).to eq("slack_member" => true, "slack_id" => "U0ADA")
