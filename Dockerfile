@@ -20,7 +20,9 @@ WORKDIR /rails
 # Runtime packages only. jemalloc replaces the musl allocator, which is slow
 # for Ruby. tzdata gives TZInfo its zone files. argon2-libs replaces the glibc
 # libargon2 that the argon2-kdf gem vendors (see config/initializers/lockbox.rb).
-RUN apk add --no-cache argon2-libs jemalloc tzdata
+# postgresql17-client gives bin/rails dbconsole its psql. Keep its major version
+# equal to the database image in the infra module (pgvector/pgvector:pg17).
+RUN apk add --no-cache argon2-libs jemalloc postgresql17-client tzdata
 
 ENV RAILS_ENV=production \
     BUNDLE_DEPLOYMENT=1 \
