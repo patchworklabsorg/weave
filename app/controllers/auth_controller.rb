@@ -88,18 +88,11 @@ class AuthController < ApplicationController
 
     user = User.find_for_any_email(email)
 
-    # Password login flow (from /login/pw) - ADMIN ONLY
+    # Password login flow (from /login/pw). Users with an Active Directory
+    # account check their AD password (see DirectoryPasswords). Everyone else
+    # keeps Weave's own password check, which is for admins only.
     if user_password.present?
-      if user&.authenticate(user_password)
-        # Only allow password login for admin users
-        if user.admin?
-          complete_login(user)
-        else
-          handle_login_error("Password login is only available for administrators. Please use the magic link.", email)
-        end
-      else
-        handle_login_error("Invalid email or password", email)
-      end
+      password_login_for(user, user_password, email)
       return
     end
 
@@ -228,11 +221,13 @@ class AuthController < ApplicationController
   end
 
   # Called by the login form JS to decide whether to show the password field.
-  # Admins authenticate with a password; everyone else uses magic links.
+  # Admins and users linked to Active Directory authenticate with a password;
+  # everyone else uses magic links. This reads only Weave's database: it
+  # never asks AD, so it can't be used to probe the directory.
   def check_password_login
     email = params[:email].to_s.strip.downcase
     user = User.find_for_any_email(email) if email.present?
-    password_enabled = user&.admin? || false
+    password_enabled = user.present? && (user.admin? || (DirectoryPasswords.enabled? && DirectoryPasswords.linked?(user)))
 
     render json: { password_login_enabled: password_enabled, password_required: password_enabled }
   end
@@ -311,6 +306,60 @@ class AuthController < ApplicationController
     redirect_to login_path, alert: MAGIC_LINK_ERRORS.fetch(reason)
   end
 
+  # Messages for password sign-in. Wrong password and an unknown email read
+  # the same, so the form does not reveal who has an account.
+  PASSWORD_ERRORS = {
+    invalid: "Invalid email or password",
+    locked: "Too many failed sign-in attempts. Wait 15 minutes, or sign in with an email link.",
+    throttled: "Too many failed sign-in attempts. Wait 15 minutes, or sign in with an email link.",
+    disabled: "This account can't sign in with a password. Contact an administrator for help.",
+    unlinked: "This account can't sign in with a password. Contact an administrator for help.",
+    unavailable: "Password sign-in is not available now. Sign in with an email link, or try again later.",
+    admin_only: "Password login is only available for administrators. Please use the magic link."
+  }.freeze
+
+  def password_login_for(user, password, email)
+    # Don't ask AD about accounts Weave would refuse anyway.
+    return handle_login_error(PASSWORD_ERRORS[:invalid], email) if user.nil? || !user.can_authenticate?
+
+    case DirectoryPasswords.sign_in(user, password)
+    when :authenticated
+      complete_login(user)
+    when :not_directory
+      local_password_login(user, password, email)
+    when :must_change_password
+      start_expired_password_change(user)
+    when :invalid then handle_login_error(PASSWORD_ERRORS[:invalid], email)
+    when :locked then handle_login_error(PASSWORD_ERRORS[:locked], email)
+    when :throttled then handle_login_error(PASSWORD_ERRORS[:throttled], email)
+    when :disabled then handle_login_error(PASSWORD_ERRORS[:disabled], email)
+    when :unlinked then handle_login_error(PASSWORD_ERRORS[:unlinked], email)
+    else handle_login_error(PASSWORD_ERRORS[:unavailable], email)
+    end
+  end
+
+  # Weave's own password, for users with no AD account. Admins only, as before.
+  def local_password_login(user, password, email)
+    if !user.authenticate(password)
+      handle_login_error(PASSWORD_ERRORS[:invalid], email)
+    elsif user.admin?
+      complete_login(user)
+    else
+      handle_login_error(PASSWORD_ERRORS[:admin_only], email)
+    end
+  end
+
+  # AD accepted the password but it expired or must change (AD 532 or 773).
+  # The user proves the old password again on the next page, so the session
+  # keeps only who it is and when, never the password.
+  def start_expired_password_change(user)
+    session[ExpiredPasswordsController::SESSION_KEY] = { "user_id" => user.id, "at" => Time.current.to_i }
+    respond_to do |format|
+      format.html { redirect_to expired_password_path, notice: "Your password has expired. Choose a new one to continue." }
+      format.json { render json: { error: "password_change_required", redirect_to: expired_password_path }, status: :unauthorized }
+    end
+  end
+
   def complete_login(user)
     # Rotate the session id before establishing the login (session fixation),
     # preserving any in-progress OAuth context across the reset.
@@ -326,6 +375,8 @@ class AuthController < ApplicationController
       last_seen_at: Time.zone.now,
       **session_device_attributes
     )
+
+    LinkDirectoryAccountJob.perform_later(user.id) if DirectoryPasswords.enabled? && !DirectoryPasswords.linked?(user)
 
     destination = post_login_destination
 
@@ -358,9 +409,15 @@ class AuthController < ApplicationController
   # The value comes out of the session and goes straight into redirect_to, so
   # only a local /oauth/authorize path is honoured — anything else is discarded
   # rather than turned into an open redirect.
+  #
+  # The change-password page (the Google "Change password URL") asks for a
+  # sign-in first and sets a flag, not a path, so it can't become an open
+  # redirect either.
   def post_login_destination
     return_to = session.delete(:oauth_return_to).to_s
-    return_to.start_with?("/oauth/authorize") ? return_to : root_path
+    return return_to if return_to.start_with?("/oauth/authorize")
+
+    session.delete(:return_to_password) ? password_path : root_path
   end
 
 

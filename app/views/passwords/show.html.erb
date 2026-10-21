@@ -1,0 +1,66 @@
+<% content_for :title, "Password" %>
+
+<div class="container mx-auto px-4 py-8 max-w-3xl">
+  <div class="flex justify-between items-center mb-6 gap-4">
+    <div>
+      <h1 class="font-display text-2xl font-bold text-ink">Password</h1>
+      <p class="text-ink-soft">
+        <% if @mode == :directory %>
+          Your password is for Weave and for every Patchwork service that signs in through Weave, such as Google.
+        <% else %>
+          Change the password you use to sign in to Weave.
+        <% end %>
+      </p>
+    </div>
+    <%= link_to "Profile", profile_path, class: "btn-stitch-ghost shrink-0" %>
+  </div>
+
+  <% if impersonating? %>
+    <div class="patch p-6">
+      <p class="text-sm text-ink-faint">You can't change a password while impersonating a user.</p>
+    </div>
+  <% elsif @mode == :directory || @mode == :local %>
+    <div class="patch p-6 mb-6">
+      <h2 class="font-display text-lg font-bold text-ink mb-2">Change your password</h2>
+      <p class="text-sm text-ink-soft mb-4">
+        <% if @mode == :directory %>
+          The Patchwork directory keeps your password. It must meet the password policy, and you can't use a recent password again.
+        <% else %>
+          Use at least 8 characters, with an uppercase letter, a lowercase letter, a number and a special character.
+        <% end %>
+      </p>
+      <%= form_with url: password_path, method: :patch, local: true, data: { turbo: false }, class: "space-y-4" do %>
+        <%= render "passwords/password_fields", ask_current: true %>
+        <%= submit_tag "Change password", class: "btn-stitch" %>
+      <% end %>
+    </div>
+
+    <% if @mode == :directory %>
+      <div class="patch p-6">
+        <h2 class="font-display text-lg font-bold text-ink mb-2">Forgot your password?</h2>
+        <% if @reset_allowed %>
+          <p class="text-sm text-ink-soft mb-4">You signed in a few minutes ago, so you can set a new password without the current one.</p>
+          <%= form_with url: password_path, method: :patch, local: true, data: { turbo: false }, class: "space-y-4" do %>
+            <%= render "passwords/password_fields", ask_current: false %>
+            <%= submit_tag "Set a new password", class: "btn-stitch" %>
+          <% end %>
+        <% else %>
+          <p class="text-sm text-ink-soft">
+            Sign out, then sign in again with an email link or a passkey. For 15 minutes after that, you can set a new password here without the current one.
+          </p>
+        <% end %>
+      </div>
+    <% end %>
+  <% elsif @mode == :unavailable %>
+    <div class="patch p-6">
+      <p class="text-sm text-ink">Weave can't reach the Patchwork directory now, so you can't change your password. Try again later.</p>
+    </div>
+  <% else %>
+    <div class="patch p-6">
+      <p class="text-sm text-ink">Your account has no password. You sign in with email links and passkeys.</p>
+      <div class="mt-4">
+        <%= link_to "Manage passkeys", passkeys_path, class: "btn-stitch-ghost" %>
+      </div>
+    </div>
+  <% end %>
+</div>

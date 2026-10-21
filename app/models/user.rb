@@ -11,6 +11,7 @@
 #  code_of_conduct_exempt   :boolean          default(FALSE), not null
 #  confirmation_sent_at     :datetime
 #  confirmation_token       :string
+#  directory_linked_at      :datetime
 #  email                    :string           not null
 #  email_confirmed_at       :datetime
 #  first_name               :string           not null
@@ -565,6 +566,27 @@ class User < ApplicationRecord
   end
 
   def slack_onboarding_complete? = slack_onboarding_step == :member
+
+  # Per-project onboarding (see Group#waives_code_of_conduct). People in a
+  # sponsored project, such as HackBoston, are in a project group that can
+  # waive the Patchwork code of conduct and the Patchwork Slack. Everyone else
+  # gets both. An admin can also exempt one person from the code of conduct.
+  def code_of_conduct_required?
+    return false if code_of_conduct_exempt
+
+    !groups.exists?(waives_code_of_conduct: true)
+  end
+
+  def slack_required? = !groups.exists?(waives_slack: true)
+
+  # True while the profile and the home page should send the person to the
+  # onboarding page. Birthday and guardian consent apply to everyone. The
+  # Slack steps apply only when the person's project requires Slack.
+  def onboarding_pending?
+    return true if birthday.nil? || under_minimum_age? || guardian_consent_missing?
+
+    slack_required? && !slack_onboarding_complete?
+  end
 
   # Remembers a code-of-conduct DM that has a live button, so it can be
   # replaced once the user accepts (see SlackCodeOfConductAcceptedJob). Appends

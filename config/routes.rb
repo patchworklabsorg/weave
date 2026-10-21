@@ -59,6 +59,10 @@
 #                           passkey_sign_in POST   /auth/passkey(.:format)                                                                           auth#passkey_login
 #                                    logout DELETE /logout(.:format)                                                                                 auth#logout
 #                                        me GET    /auth/me(.:format)                                                                                auth#me
+#                                  password GET    /password(.:format)                                                                               passwords#show
+#                                           PATCH  /password(.:format)                                                                               passwords#update
+#                          expired_password GET    /password/expired(.:format)                                                                       expired_passwords#show
+#                          password_expired PATCH  /password/expired(.:format)                                                                       expired_passwords#update
 #                                   profile GET    /profile(.:format)                                                                                users#show
 #                              edit_profile GET    /profile/edit(.:format)                                                                           users#edit
 #                          profile_sessions GET    /profile/sessions(.:format)                                                                       users#sessions
@@ -153,6 +157,7 @@
 #     access_policy_admin_oauth_application PATCH  /admin/oauth_applications/:id/access_policy(.:format)                                             admin/oauth_applications#access_policy
 #   code_of_conduct_admin_oauth_application PATCH  /admin/oauth_applications/:id/code_of_conduct(.:format)                                           admin/oauth_applications#code_of_conduct
 #  guardian_consent_admin_oauth_application PATCH  /admin/oauth_applications/:id/guardian_consent(.:format)                                          admin/oauth_applications#guardian_consent
+#     email_domains_admin_oauth_application PATCH  /admin/oauth_applications/:id/email_domains(.:format)                                             admin/oauth_applications#email_domains
 #     admin_oauth_application_access_grants POST   /admin/oauth_applications/:oauth_application_id/access_grants(.:format)                           admin/oauth_application_access_grants#create
 #      admin_oauth_application_access_grant DELETE /admin/oauth_applications/:oauth_application_id/access_grants/:id(.:format)                       admin/oauth_application_access_grants#destroy
 #  admin_oauth_application_role_assignments POST   /admin/oauth_applications/:oauth_application_id/roles/:role_id/assignments(.:format)              admin/oauth_application_role_assignments#create
@@ -424,6 +429,14 @@ Rails.application.routes.draw do
   delete "/logout", to: "auth#logout", as: :logout
   get "/auth/me", to: "auth#me", as: :me
 
+  # Change password. Google Workspace links to /password as the SSO profile's
+  # "Change password URL". /password/expired is for an AD password that
+  # expired or must change, before sign-in (see ExpiredPasswordsController).
+  get "/password", to: "passwords#show", as: :password
+  patch "/password", to: "passwords#update"
+  get "/password/expired", to: "expired_passwords#show", as: :expired_password
+  patch "/password/expired", to: "expired_passwords#update"
+
   # Profile management routes (requires authentication)
   get "/profile", to: "users#show", as: :profile
   get "/profile/edit", to: "users#edit", as: :edit_profile
@@ -545,6 +558,7 @@ Rails.application.routes.draw do
           patch :access_policy
           patch :code_of_conduct
           patch :guardian_consent
+          patch :email_domains
         end
 
         resources :access_grants, controller: "oauth_application_access_grants", only: [:create, :destroy]

@@ -60,7 +60,7 @@ class Admin::UsersController < Admin::BaseController
   def update
     @user.assign_attributes(user_params)
 
-    if assign_privileged_attributes && @user.save
+    if assign_privileged_attributes && @user.valid? && reset_directory_password && @user.save
       # Pushed from here, not a model callback, so the Slack sync's own
       # writes are not sent back to Slack.
       PushSlackProfileFieldsJob.perform_later(@user.id) if @user.slack_profile_fields_need_push?
@@ -225,11 +225,48 @@ class Admin::UsersController < Admin::BaseController
     if submitted[:password].present?
       return reject_privileged_change(:password, "can only be set by a superadmin or owner who outranks this user") unless permissions.change_password?
 
-      @user.password = submitted[:password].to_s
-      @user.password_confirmation = submitted[:password_confirmation].to_s
+      if @user.persisted? && directory_password_user?
+        # AD holds this user's password (see DirectoryPasswords). It goes to
+        # AD in #reset_directory_password, never to the Weave database.
+        unless submitted[:password].to_s == submitted[:password_confirmation].to_s
+          @user.errors.add(:password_confirmation, "doesn't match Password")
+          return false
+        end
+        @directory_password = submitted[:password].to_s
+      else
+        @user.password = submitted[:password].to_s
+        @user.password_confirmation = submitted[:password_confirmation].to_s
+      end
     end
 
     true
+  end
+
+  def directory_password_user?
+    DirectoryPasswords.directory_user?(@user)
+  rescue ActiveDirectory::Unavailable
+    # Fail closed: without AD, Weave can't tell whether the password lives
+    # there, so it sets neither (see #reset_directory_password).
+    @directory_unavailable = true
+    true
+  end
+
+  # An admin reset is a replace as the service account. Runs after the other
+  # fields validate and before they save, so an AD refusal saves nothing.
+  def reset_directory_password
+    if @directory_unavailable
+      @user.errors.add(:password, "was not changed: Weave can't reach Active Directory now")
+      return false
+    end
+    return true if @directory_password.nil?
+
+    status = DirectoryPasswords.reset(@user, @directory_password)
+    @directory_password = nil
+    return true if status == :ok
+
+    message = status == :policy_rejected ? "does not meet the Active Directory password policy" : "was not changed: Active Directory refused it (#{status})"
+    @user.errors.add(:password, message)
+    false
   end
 
   def reject_privileged_change(attribute, message)

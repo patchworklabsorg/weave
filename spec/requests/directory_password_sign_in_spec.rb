@@ -1,0 +1,188 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe "Password sign-in with Active Directory", type: :request do
+  let(:directory) { use_fake_directory }
+  let(:user) { create(:user, :verified) }
+
+  def sign_in_with_password(email, password)
+    post "/login", params: { user: { email: email, password: password } }
+  end
+
+  before { directory.add_user(user.p_id, password: "Ad-password-1") }
+
+  it "signs in a regular member with their AD password" do
+    expect { sign_in_with_password(user.email, "Ad-password-1") }.to change { user.user_sessions.count }.by(1)
+
+    expect(response).to have_http_status(:redirect)
+    expect(session[:user_id]).to eq(user.id)
+    expect(user.reload.directory_linked_at).to be_present
+  end
+
+  it "refuses the old Weave password once the user is linked" do
+    sign_in_with_password(user.email, "SecurePassword123!")
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.body).to include("Invalid email or password")
+    expect(session[:user_id]).to be_nil
+  end
+
+  it "uses the same message for an unknown email and a wrong password" do
+    sign_in_with_password("nobody@example.com", "whatever")
+    unknown = response.body[/Invalid email or password/]
+
+    sign_in_with_password(user.email, "wrong")
+
+    expect(unknown).to be_present
+    expect(response.body).to include(unknown)
+  end
+
+  it "does not ask AD about an account Weave has locked" do
+    user.update_column(:locked_at, Time.current) # rubocop:disable Rails/SkipsModelValidations
+
+    sign_in_with_password(user.email, "Ad-password-1")
+
+    expect(session[:user_id]).to be_nil
+    expect(directory.binds).to be_empty
+  end
+
+  it "tells a locked AD account to wait" do
+    directory.account(user.p_id).bind_error = "775"
+
+    sign_in_with_password(user.email, "Ad-password-1")
+
+    expect(response.body).to include("Too many failed sign-in attempts")
+    expect(session[:user_id]).to be_nil
+  end
+
+  it "tells a disabled or expired AD account to contact an administrator" do
+    directory.account(user.p_id).bind_error = "533"
+
+    sign_in_with_password(user.email, "Ad-password-1")
+
+    expect(response.body).to include("Contact an administrator")
+  end
+
+  it "says password sign-in is unavailable when no DC answers, and does not fall back to the Weave password" do
+    directory.down_hosts.push("loom.patchwork.internal", "spindle.patchwork.internal")
+
+    sign_in_with_password(user.email, "SecurePassword123!")
+
+    expect(response.body).to include("Password sign-in is not available now")
+    expect(session[:user_id]).to be_nil
+  end
+
+  describe "an expired password (AD 773 or 532)" do
+    before { directory.account(user.p_id).bind_error = "773" }
+
+    it "sends the user to choose a new password, and the change goes to AD" do
+      sign_in_with_password(user.email, "Ad-password-1")
+      expect(response).to redirect_to(expired_password_path)
+      expect(session[:user_id]).to be_nil
+
+      patch expired_password_path, params: { current_password: "Ad-password-1", password: "New-password-2", password_confirmation: "New-password-2" }
+
+      expect(response).to redirect_to(password_login_path)
+      expect(directory.account(user.p_id).password).to eq("New-password-2")
+      expect(directory.modifications.last[:operations].map(&:first)).to eq(%i[delete add])
+
+      sign_in_with_password(user.email, "New-password-2")
+      expect(session[:user_id]).to eq(user.id)
+    end
+
+    it "shows the AD policy refusal" do
+      sign_in_with_password(user.email, "Ad-password-1")
+      directory.modify_error = { code: 19, message: "0000052D: Constraint violation" }
+
+      patch expired_password_path, params: { current_password: "Ad-password-1", password: "short", password_confirmation: "short" }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to include("does not meet the Patchwork password policy")
+    end
+
+    it "refuses the page without a recent sign-in attempt" do
+      get expired_password_path
+
+      expect(response).to redirect_to(password_login_path)
+    end
+
+    it "expires the pending change after ten minutes" do
+      sign_in_with_password(user.email, "Ad-password-1")
+
+      travel 11.minutes do
+        get expired_password_path
+        expect(response).to redirect_to(password_login_path)
+      end
+    end
+  end
+
+  describe "rate limits" do
+    it "throttles password attempts for one email" do
+      5.times { sign_in_with_password(user.email, "wrong") }
+
+      sign_in_with_password(user.email, "Ad-password-1")
+
+      expect(response).to have_http_status(:too_many_requests)
+    end
+
+    it "stops binding for a user after five failures, even from a new IP" do
+      # Five failures that came in through other IPs and other app processes.
+      DirectoryPasswords::MAX_FAILURES.times { DirectoryPasswords.sign_in(user, "wrong") }
+
+      binds_before = directory.binds.size
+      post "/login", params: { user: { email: user.email, password: "Ad-password-1" } }, env: { "REMOTE_ADDR" => "10.0.0.99" }
+
+      expect(response.body).to include("Too many failed sign-in attempts")
+      expect(directory.binds.size).to eq(binds_before)
+    end
+  end
+
+  describe "users without an AD account" do
+    let(:admin) { create(:user, :admin, :verified) }
+
+    it "keeps Weave's own password sign-in for admins" do
+      sign_in_with_password(admin.email, "SecurePassword123!")
+
+      expect(session[:user_id]).to eq(admin.id)
+      expect(admin.reload.directory_linked_at).to be_nil
+    end
+
+    it "keeps password sign-in admin-only" do
+      member = create(:user, :verified)
+
+      sign_in_with_password(member.email, "SecurePassword123!")
+
+      expect(response.body).to include("only available for administrators")
+    end
+  end
+
+  describe "POST /auth/check_password_login" do
+    it "offers the password field to a linked user without asking AD" do
+      user.update_column(:directory_linked_at, Time.current) # rubocop:disable Rails/SkipsModelValidations
+      directory
+
+      post "/auth/check_password_login", params: { email: user.email }, as: :json
+
+      expect(response.parsed_body["password_login_enabled"]).to be(true)
+      expect(directory.binds).to be_empty
+    end
+
+    it "does not offer it to a member who is not linked yet" do
+      directory
+
+      post "/auth/check_password_login", params: { email: user.email }, as: :json
+
+      expect(response.parsed_body["password_login_enabled"]).to be(false)
+    end
+  end
+
+  it "links the user in the background after an email-link sign-in" do
+    directory
+    expect { sign_in_via_magic_link(user) }.to have_enqueued_job(LinkDirectoryAccountJob).with(user.id)
+
+    perform_enqueued_jobs { LinkDirectoryAccountJob.perform_later(user.id) }
+
+    expect(user.reload.directory_linked_at).to be_present
+  end
+end

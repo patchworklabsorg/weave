@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 class Admin::OauthApplicationsController < Admin::BaseController
-  before_action :set_application, only: [:show, :edit, :update, :destroy, :regenerate_secret, :access_policy, :code_of_conduct, :guardian_consent]
-  before_action :require_superadmin, only: [:access_policy, :code_of_conduct, :guardian_consent]
+  before_action :set_application, only: [:show, :edit, :update, :destroy, :regenerate_secret, :access_policy, :code_of_conduct, :guardian_consent, :email_domains]
+  before_action :require_superadmin, only: [:access_policy, :code_of_conduct, :guardian_consent, :email_domains]
 
   def index
     @applications = Doorkeeper::Application.order(created_at: :desc)
@@ -108,6 +108,22 @@ class Admin::OauthApplicationsController < Admin::BaseController
     RevokeLostAppAccessJob.perform_later(application_id: @application.id) if required
     redirect_to admin_oauth_application_path(@application),
                 notice: required ? "Members under 18 now need guardian consent to use this app." : "Members under 18 can now use this app without guardian consent."
+  end
+
+  # Sets the domains the app's `email` claim must come from (see
+  # AppAccess.email_for). Google Workspace needs this. Superadmin only: users
+  # without an address on these domains lose access.
+  def email_domains
+    domains = params[:email_domains].to_s.split(/[\s,]+/).map { |domain| domain.strip.downcase.delete_prefix("@") }.compact_blank.uniq
+    invalid = domains.grep_v(/\A[a-z0-9-]+(\.[a-z0-9-]+)+\z/)
+    if invalid.any?
+      return redirect_to(admin_oauth_application_path(@application), alert: "#{invalid.to_sentence} is not a domain.")
+    end
+
+    @application.update!(email_domains: domains)
+    RevokeLostAppAccessJob.perform_later(application_id: @application.id) if domains.any?
+    redirect_to admin_oauth_application_path(@application),
+                notice: domains.any? ? "The email claim now comes from #{domains.to_sentence}." : "The email claim is the primary address again."
   end
 
   private

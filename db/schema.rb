@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_14_120100) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_20_120200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -356,6 +356,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_120100) do
     t.string "name", null: false
     t.string "slug", null: false
     t.datetime "updated_at", null: false
+    t.boolean "waives_code_of_conduct", default: false, null: false
+    t.boolean "waives_slack", default: false, null: false
     t.index ["created_by_id"], name: "index_groups_on_created_by_id"
     t.index ["deleted_at"], name: "index_groups_on_deleted_at"
     t.index ["name"], name: "index_groups_on_name", unique: true, where: "(deleted_at IS NULL)"
@@ -473,6 +475,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_120100) do
     t.string "access_policy", default: "everyone", null: false
     t.boolean "confidential", default: true, null: false
     t.datetime "created_at", null: false
+    t.string "email_domains", default: [], null: false, array: true
     t.string "name", null: false
     t.text "redirect_uri", null: false
     t.boolean "requires_code_of_conduct", default: true, null: false
@@ -647,6 +650,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_120100) do
     t.datetime "confirmation_sent_at"
     t.string "confirmation_token"
     t.datetime "created_at", null: false
+    t.datetime "directory_linked_at"
     t.string "email", null: false
     t.datetime "email_confirmed_at"
     t.string "first_name", null: false

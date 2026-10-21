@@ -361,6 +361,9 @@ GEM
     net-imap (0.6.7)
       date
       net-protocol
+    net-ldap (0.21.0)
+      base64
+      ostruct
     net-pop (0.1.2)
       net-protocol
     net-protocol (0.4.0)
@@ -798,6 +801,7 @@ DEPENDENCIES
   lockbox
   mapkick-rb
   mission_control-jobs
+  net-ldap (~> 0.20)
   okcomputer
   overcommit
   paper_trail

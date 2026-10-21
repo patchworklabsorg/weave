@@ -10,10 +10,11 @@ class HomeController < ApplicationController
     # "you found the front door" splash (which is for anonymous visitors).
     # Joining the Slack (which includes accepting the code of conduct) is part
     # of becoming a member, so anyone who hasn't finished lands on the next
-    # step of that instead.
+    # step of that instead. A sponsored project can waive the Slack steps (see
+    # User#onboarding_pending?).
     return unless current_user
 
-    onboarding = current_user.email_verified? && !current_user.slack_onboarding_complete?
+    onboarding = current_user.email_verified? && current_user.onboarding_pending?
     redirect_to(onboarding ? slack_onboarding_path : profile_path)
   end
 

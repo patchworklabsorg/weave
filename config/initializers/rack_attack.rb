@@ -47,6 +47,30 @@ class Rack::Attack
     end
   end
 
+  # Password sign-in, on top of the limits above. A password attempt for a
+  # user with an AD account is an LDAP bind against the domain controllers,
+  # so these limits keep Weave from being a password-spraying tool against
+  # AD. DirectoryPasswords also stops binding for a user after 5 failures in
+  # 15 minutes, whatever the IP.
+  throttle("password_logins/email", limit: 5, period: 15.minutes) do |req|
+    if req.path == "/login" && req.post? && req.params.dig("user", "password").present?
+      req.params.dig("user", "email").to_s.strip.downcase.presence
+    end
+  end
+
+  throttle("password_logins/ip", limit: 20, period: 15.minutes) do |req|
+    if req.path == "/login" && req.post? && req.params.dig("user", "password").present?
+      req.ip
+    end
+  end
+
+  # Password changes check the current password against AD too.
+  throttle("password_changes/ip", limit: 10, period: 15.minutes) do |req|
+    if req.path.start_with?("/password") && (req.patch? || req.post? || req.put?)
+      req.ip
+    end
+  end
+
   # Throttle signup attempts by IP
   # Limit to 5 signups per hour per IP
   # Passkey sign-in has no email to key on, so limit it by IP. The login page

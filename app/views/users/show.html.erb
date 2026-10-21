@@ -2,7 +2,7 @@
 
 <div class="max-w-5xl mx-auto px-4 py-10">
 
-  <% unless @user.slack_onboarding_complete? %>
+  <% if @user.onboarding_pending? %>
     <div class="patch border-2 border-grape bg-grape-soft/40 p-5 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
       <div class="flex-1">
         <% if @user.birthday.nil? %>
@@ -66,6 +66,7 @@
         <% end %>
         <%= link_to "Sessions", profile_sessions_path, class: "btn-stitch-ghost text-sm" %>
         <%= link_to "Passkeys", passkeys_path, class: "btn-stitch-ghost text-sm" %>
+        <%= link_to "Password", password_path, class: "btn-stitch-ghost text-sm" %>
         <%= button_to "Sign out", logout_path, method: :delete, class: "btn-stitch-ghost text-sm", form_class: "inline-block" %>
       </div>
     </div>
