@@ -64,6 +64,12 @@
             <dd class="text-sm text-ink"><%= @user.birthday.strftime("%B %d, %Y") %></dd>
           </div>
         <% end %>
+        <% if @user.referral_source.present? || @user.referral_source_detail.present? %>
+          <div>
+            <dt class="text-sm font-medium text-ink-faint">Heard about Patchwork from</dt>
+            <dd class="text-sm text-ink"><%= [User::REFERRAL_SOURCES[@user.referral_source], @user.referral_source_detail].compact_blank.join(": ") %></dd>
+          </div>
+        <% end %>
         <div>
           <dt class="text-sm font-medium text-ink-faint">P_ID</dt>
           <dd class="text-sm text-ink flex items-center justify-between">

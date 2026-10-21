@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_120200) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -667,6 +667,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_120200) do
     t.string "password_digest", null: false
     t.string "phone_number"
     t.string "pronouns"
+    t.string "referral_source"
+    t.string "referral_source_detail"
     t.integer "role", default: 0, null: false
     t.integer "session_duration_seconds", default: 2592000, null: false
     t.date "slack_birthday"

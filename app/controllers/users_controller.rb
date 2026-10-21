@@ -13,7 +13,7 @@ class UsersController < ApplicationController
 
   def create
     begin
-      user_attrs = sanitized_user_params
+      user_attrs = sanitized_user_params.merge(referral_params)
 
       # Generate a random secure password for non-admin users
       # They will only use magic links to login
@@ -157,6 +157,11 @@ class UsersController < ApplicationController
     end
 
     sanitized
+  end
+
+  # Asked only at signup, so update does not permit these.
+  def referral_params
+    params.require(:user).permit(:referral_source, :referral_source_detail).to_h.symbolize_keys.transform_values { |value| value.to_s.strip.presence }
   end
 
   def user_params
