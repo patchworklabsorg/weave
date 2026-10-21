@@ -126,7 +126,6 @@ DATABASE_URL=postgres://user:password@localhost/patchwork-idp_development
 ### Database Setup
 
 The application uses PostgreSQL with the following features:
-- Full-text search (pg_search)
 - Soft deletions (acts_as_paranoid)
 - Change tracking (paper_trail)
 - Safe migrations (strong_migrations)

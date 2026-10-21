@@ -24,7 +24,7 @@ This is the Patchwork Labs Identity Provider (IDP), a comprehensive OAuth 2.0 au
 - **Security**: Rack::Attack (rate limiting), Lockbox (encryption), Brakeman (security scanning)
 - **Monitoring**: OkComputer (health checks), Ahoy (analytics), Audits1984 (audit logging)
 - **Admin Tools**: Flipper (feature flags), Blazer (BI dashboard), Mission Control (job monitoring)
-- **Data**: PaperTrail (versioning), ActsAsParanoid (soft deletes), PgSearch (full-text search)
+- **Data**: PaperTrail (versioning), ActsAsParanoid (soft deletes)
 
 ## Coding Standards & Conventions
 
