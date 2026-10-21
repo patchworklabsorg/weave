@@ -97,8 +97,11 @@ class ConsoleAccessRequest < Console1984::Base
 
   # The console calls this when it sees the approval. It returns the approver
   # once, so one approval opens one console. An approval that no console
-  # claims within EXPIRATION stays unused.
+  # claims within EXPIRATION stays unused. The approver must still be a
+  # superadmin, also when the approval was written into the database by hand.
   def claim!
+    return unless decided_by&.superadmin?
+
     # One conditional UPDATE, so two consoles cannot claim the same approval.
     claimed = self.class.where(id:, status: "approved", claimed_at: nil, decided_at: EXPIRATION.ago..)
                   .update_all(claimed_at: Time.current) # rubocop:disable Rails/SkipsModelValidations

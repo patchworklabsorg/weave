@@ -31,16 +31,24 @@ module ConsoleAccess
         @sleeper.call(POLL_INTERVAL)
         ConsoleAccessRequest.uncached { request.reload }
         approver = request.claim!
-        if approver
-          # The approver learns about every console opened under their name,
-          # so an approval forged in the database does not go unseen.
-          ConsoleAccessMailer.opened(request).deliver_later
-          return approver
-        end
+        return notify(request, approver) if approver
         raise Error, "The console request was denied." if request.denied?
         raise Error, "The console request expired. Start the console again." if request.expired?
-        raise Error, "The console request was already used." if request.approved?
+        raise Error, "The console request cannot be used. Start the console again." if request.approved?
       end
+    end
+
+    private
+
+    # The approver learns about every console opened under their name, so an
+    # approval written into the database by hand does not go unseen. The mail
+    # goes out now, not through the job queue, and the console stays closed
+    # if it cannot be sent.
+    def notify(request, approver)
+      ConsoleAccessMailer.opened(request).deliver_now
+      approver
+    rescue => e
+      raise Error, "Weave could not send the approval email (#{e.class}), so the console stays closed."
     end
 
   end

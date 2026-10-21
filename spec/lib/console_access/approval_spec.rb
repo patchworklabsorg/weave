@@ -14,11 +14,28 @@ RSpec.describe ConsoleAccess::Approval do
   it "shows the code and the approval page, then returns the approver" do
     approver = nil
     expect { approver = approval { it.approve!(by: superadmin) }.await! }
-      .to have_enqueued_mail(ConsoleAccessMailer, :opened)
+      .to change(ActionMailer::Base.deliveries, :count).by(1)
 
     expect(approver).to eq(superadmin)
+    expect(ActionMailer::Base.deliveries.last.to).to eq([superadmin.email])
     expect(output.string).to include("#{Weave.url}/admin/console_access")
     expect(output.string).to match(/[0-9A-Z]{4}-[0-9A-Z]{4}/)
+  end
+
+  it "stays closed when the approval email cannot be sent" do
+    allow(ConsoleAccessMailer).to receive(:opened).and_raise(StandardError, "SMTP is down")
+
+    expect { approval { it.approve!(by: superadmin) }.await! }.to raise_error(ConsoleAccess::Error, /could not send/)
+  end
+
+  it "stays closed when the approver is no longer a superadmin" do
+    request_approver = superadmin
+    expect do
+      approval do |request|
+        request.approve!(by: request_approver)
+        request_approver.update!(role: "admin")
+      end.await!
+    end.to raise_error(ConsoleAccess::Error, /cannot be used/)
   end
 
   it "stops when the request is denied" do
