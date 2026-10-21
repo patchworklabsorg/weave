@@ -15,6 +15,10 @@
 **/*.key
 **/*.pem
 
+# Ignore all local credential files. The image needs only the encrypted ones.
+/config/credentials/*
+!/config/credentials/*.yml.enc
+
 # Ignore all logfiles and tempfiles.
 /log/*
 /tmp/*
@@ -56,6 +60,10 @@
 /.claude
 /.worktrees
 /.agents
+/.playwright-mcp
+/.idea
+/.ruby-lsp
+/vendor/bundle
 
 # Ignore files the image does not need at runtime.
 /spec
@@ -63,3 +71,6 @@
 /docs
 /coverage
 /bin/deploy-local
+
+# Ignore macOS folder metadata.
+**/.DS_Store
