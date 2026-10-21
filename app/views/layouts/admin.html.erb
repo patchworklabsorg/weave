@@ -27,7 +27,7 @@
         @font-face in the compiled Tailwind stylesheet below — no external link. %>
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
-    <%= javascript_importmap_tags %>
+    <%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
 
     <style nonce="<%= content_security_policy_nonce %>">
       /* Glass surfaces ride on the quilt tokens (defined in the Tailwind
