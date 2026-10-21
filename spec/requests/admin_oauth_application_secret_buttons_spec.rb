@@ -47,9 +47,10 @@ RSpec.describe "Admin OAuth application secret buttons", type: :request do
       patch regenerate_secret_admin_oauth_application_path(application)
     end
 
-    it "renders the page with no-store and the reveal and copy buttons" do
+    it "renders the page with no-store, no Turbo cache, and the reveal and copy buttons" do
       expect(response).to have_http_status(:ok)
       expect(response.headers["Cache-Control"]).to include("no-store")
+      expect(response.body).to include('<meta name="turbo-cache-control" content="no-cache">')
       expect(response.body).to include('data-controller="reveal clipboard"')
       expect(response.body).to include('data-action="reveal#toggle"')
       expect(response.body).to include('data-action="clipboard#copy"')
@@ -67,6 +68,47 @@ RSpec.describe "Admin OAuth application secret buttons", type: :request do
       get admin_oauth_application_path(application)
 
       expect(response.body).not_to include(secret)
+    end
+  end
+
+  context "when a plain admin tries to regenerate the secret" do
+    before { sign_in_via_magic_link(admin) }
+
+    it "refuses, and the secret does not change" do
+      stored = application.secret
+      patch regenerate_secret_admin_oauth_application_path(application)
+
+      expect(response).to redirect_to(admin_oauth_application_path(application))
+      expect(flash[:alert]).to eq("Only a superadmin can regenerate a client secret.")
+      expect(application.reload.secret).to eq(stored)
+    end
+  end
+
+  context "when a superadmin regenerates the secret of a public app" do
+    let(:public_app) do
+      Doorkeeper::Application.create!(name: "Public", redirect_uri: "https://public.example.com/cb", scopes: "profile", confidential: false)
+    end
+
+    before { sign_in_via_magic_link(superadmin) }
+
+    it "refuses, because a public app has no secret" do
+      patch regenerate_secret_admin_oauth_application_path(public_app)
+
+      expect(response).to redirect_to(admin_oauth_application_path(public_app))
+      expect(flash[:alert]).to eq("A public app has no client secret.")
+    end
+  end
+
+  context "when a superadmin opens the app page" do
+    before do
+      sign_in_via_magic_link(superadmin)
+      get admin_oauth_application_path(application)
+    end
+
+    it "asks before it regenerates, through a Stimulus controller" do
+      expect(response.body).to include('data-controller="confirm-submit"')
+      expect(response.body).to include('data-action="submit-&gt;confirm-submit#submit"').or include('data-action="submit->confirm-submit#submit"')
+      expect(response.body).to include("data-confirm-submit-message-value=")
     end
   end
 

@@ -3,6 +3,9 @@
 class Admin::OauthApplicationsController < Admin::BaseController
   before_action :set_application, only: [:show, :edit, :update, :destroy, :regenerate_secret, :access_policy, :code_of_conduct, :guardian_consent, :email_domains]
   before_action :require_superadmin, only: [:access_policy, :code_of_conduct, :guardian_consent, :email_domains]
+  # The response holds a working client secret, which lets its holder act as
+  # the app (an `introspect` app included). Only a superadmin may get one.
+  before_action :require_superadmin_for_secret, only: [:regenerate_secret]
 
   def index
     @applications = Doorkeeper::Application.order(created_at: :desc)
@@ -49,6 +52,10 @@ class Admin::OauthApplicationsController < Admin::BaseController
   # this response; never redirect, and never show the stored value, which is
   # the hash and does not work as a secret.
   def regenerate_secret
+    unless @application.confidential?
+      return redirect_to(admin_oauth_application_path(@application), alert: "A public app has no client secret.")
+    end
+
     Rails.logger.info "Regenerating secret for application #{@application.id}"
     @application.renew_secret
 
@@ -135,6 +142,12 @@ class Admin::OauthApplicationsController < Admin::BaseController
     return if current_user.superadmin?
 
     redirect_to admin_oauth_application_path(@application), alert: "Only a superadmin can change who can use an app."
+  end
+
+  def require_superadmin_for_secret
+    return if current_user.superadmin?
+
+    redirect_to admin_oauth_application_path(@application), alert: "Only a superadmin can regenerate a client secret."
   end
 
   # The `introspect` scope lets an app read the tokens of other apps, so only a

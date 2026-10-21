@@ -1,3 +1,8 @@
+<% if @plaintext_secret.present? %>
+  <% content_for :head do %>
+    <meta name="turbo-cache-control" content="no-cache">
+  <% end %>
+<% end %>
 <% content_for :title, @application.name %>
 
 <div class="mb-6">
@@ -65,11 +70,12 @@
   <div class="patch p-6">
     <div class="flex justify-between items-center mb-4">
       <h3 class="font-display text-lg font-bold text-ink">Credentials</h3>
-      <% if current_user.superadmin? %>
-        <%= form_with url: regenerate_secret_admin_oauth_application_path(@application), method: :patch, local: true, data: { turbo: false }, class: "inline" do |form| %>
-          <%= form.submit "Regenerate Secret",
-              data: { confirm: "Are you sure? This will invalidate all existing tokens." },
-              class: "text-sm btn-stitch-ghost px-3 py-1" %>
+      <% if current_user.superadmin? && @application.confidential? %>
+        <%= form_with url: regenerate_secret_admin_oauth_application_path(@application), method: :patch, local: true,
+              data: { turbo: false, controller: "confirm-submit", action: "submit->confirm-submit#submit",
+                      confirm_submit_message_value: "Regenerate the client secret? The old secret stops working at once, and the app cannot sign users in until it has the new one." },
+              class: "inline" do |form| %>
+          <%= form.submit "Regenerate Secret", class: "text-sm btn-stitch-ghost px-3 py-1" %>
         <% end %>
       <% end %>
     </div>
@@ -119,7 +125,7 @@
                   📋
                 </button>
               </div>
-              <p class="mt-1 text-sm text-ink-soft">Copy it now. Weave stores only a hash, so this page cannot show it again.</p>
+              <p class="mt-1 text-sm text-ink-soft">Copy it now. Weave stores only a hash, so this page cannot show it again. Do not reload this page: that sends the form again.</p>
             <% else %>
               <p class="text-sm text-ink-soft">Hidden. Weave stores only a hash of the secret, so it cannot show it. To get a new one, regenerate it.</p>
             <% end %>
