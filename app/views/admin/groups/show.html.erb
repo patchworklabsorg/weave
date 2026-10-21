@@ -38,6 +38,14 @@
           <dd class="mt-1 text-sm text-ink"><%= @group.description %></dd>
         </div>
       <% end %>
+      <% if @group.waives_code_of_conduct || @group.waives_slack %>
+        <div>
+          <dt class="text-sm font-medium text-ink-faint">Sponsored project waivers</dt>
+          <dd class="mt-1 text-sm text-ink">
+            <%= [("Code of Conduct" if @group.waives_code_of_conduct), ("Slack" if @group.waives_slack)].compact.to_sentence %>
+          </dd>
+        </div>
+      <% end %>
       <div>
         <dt class="text-sm font-medium text-ink-faint">Created</dt>
         <dd class="mt-1 text-sm text-ink">

@@ -5,15 +5,17 @@
 # Table name: groups
 # Database name: primary
 #
-#  id            :bigint           not null, primary key
-#  deleted_at    :datetime
-#  description   :text
-#  kind          :string           default("manual"), not null
-#  name          :string           not null
-#  slug          :string           not null
-#  created_at    :datetime         not null
-#  updated_at    :datetime         not null
-#  created_by_id :bigint
+#  id                     :bigint           not null, primary key
+#  deleted_at             :datetime
+#  description            :text
+#  kind                   :string           default("manual"), not null
+#  name                   :string           not null
+#  slug                   :string           not null
+#  waives_code_of_conduct :boolean          default(FALSE), not null
+#  waives_slack           :boolean          default(FALSE), not null
+#  created_at             :datetime         not null
+#  updated_at             :datetime         not null
+#  created_by_id          :bigint
 #
 # Indexes
 #

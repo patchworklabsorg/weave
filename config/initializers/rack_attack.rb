@@ -20,29 +20,74 @@ class Rack::Attack
       ActiveSupport::Cache::MemoryStore.new
     end
 
+  ### Helpers ###
+
+  # True for /login and for /login with a format (/login.json): the route
+  # accepts both.
+  def self.login_post?(req)
+    req.post? && req.path.sub(/\.\w+\z/, "") == "/login"
+  end
+
+  # The sign-in fields, from form parameters or from a JSON body. Rack does
+  # not parse JSON, so without this a JSON request would skip the email and
+  # password rules.
+  def self.login_fields(req)
+    fields = req.params["user"]
+    if !fields.is_a?(Hash) && req.media_type == "application/json"
+      body = req.body.read
+      req.body.rewind
+      fields = begin
+        JSON.parse(body)["user"]
+      rescue JSON::ParserError, TypeError, NoMethodError
+        nil
+      end
+    end
+    fields.is_a?(Hash) ? fields : {}
+  end
+
+  def self.login_email(req) = login_fields(req)["email"].to_s.strip.downcase.presence
+
+  def self.password_login?(req) = login_post?(req) && login_fields(req)["password"].present?
+
   ### Throttle (Rate Limiting) Rules ###
 
   # Throttle login attempts by email address
   # Limit to 5 requests per 20 seconds per email
   throttle("logins/email", limit: 5, period: 20.seconds) do |req|
-    if req.path == "/login" && req.post?
-      # Return the email as the discriminator
-      req.params.dig("user", "email")&.downcase&.presence
-    end
+    # Return the email as the discriminator
+    login_email(req) if login_post?(req)
   end
 
   # Throttle magic link requests by email
   # Limit to 3 magic link requests per 5 minutes per email
   throttle("magic_links/email", limit: 3, period: 5.minutes) do |req|
-    if ["/login", "/auth/magic_link"].include?(req.path) && req.post?
-      req.params.dig("user", "email")&.downcase&.presence
+    if login_post?(req) || (req.post? && req.path.sub(/\.\w+\z/, "") == "/auth/magic_link")
+      login_email(req)
     end
   end
 
   # Throttle login attempts by IP address
   # Limit to 10 requests per minute per IP for any login endpoint
   throttle("logins/ip", limit: 10, period: 1.minute) do |req|
-    if req.path == "/login" && req.post?
+    req.ip if login_post?(req)
+  end
+
+  # Password sign-in, on top of the limits above. A password attempt for a
+  # user with an AD account is an LDAP bind against the domain controllers,
+  # so these limits keep Weave from being a password-spraying tool against
+  # AD. DirectoryPasswords also stops binding for a user after 5 failures in
+  # 15 minutes, whatever the IP.
+  throttle("password_logins/email", limit: 5, period: 15.minutes) do |req|
+    login_email(req) if password_login?(req)
+  end
+
+  throttle("password_logins/ip", limit: 20, period: 15.minutes) do |req|
+    req.ip if password_login?(req)
+  end
+
+  # Password changes check the current password against AD too.
+  throttle("password_changes/ip", limit: 10, period: 15.minutes) do |req|
+    if req.path.start_with?("/password") && (req.patch? || req.post? || req.put?)
       req.ip
     end
   end

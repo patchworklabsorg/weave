@@ -9,20 +9,30 @@
 #
 # The slug is the stable name that relying parties see, so it never changes
 # after the group is created. Renaming a group changes only its display name.
+#
+# A group can also stand for a sponsored project (for example HackBoston).
+# Such a project sets its own onboarding requirements: `waives_code_of_conduct`
+# and `waives_slack` turn off the Patchwork code of conduct gate and the
+# Patchwork Slack steps for every member of the group (see
+# User#code_of_conduct_required?). Only put the project's own people in such a
+# group. Members accept the code of conduct in Slack, so a group that waives
+# Slack must also waive the code of conduct.
 # == Schema Information
 #
 # Table name: groups
 # Database name: primary
 #
-#  id            :bigint           not null, primary key
-#  deleted_at    :datetime
-#  description   :text
-#  kind          :string           default("manual"), not null
-#  name          :string           not null
-#  slug          :string           not null
-#  created_at    :datetime         not null
-#  updated_at    :datetime         not null
-#  created_by_id :bigint
+#  id                     :bigint           not null, primary key
+#  deleted_at             :datetime
+#  description            :text
+#  kind                   :string           default("manual"), not null
+#  name                   :string           not null
+#  slug                   :string           not null
+#  waives_code_of_conduct :boolean          default(FALSE), not null
+#  waives_slack           :boolean          default(FALSE), not null
+#  created_at             :datetime         not null
+#  updated_at             :datetime         not null
+#  created_by_id          :bigint
 #
 # Indexes
 #
@@ -61,6 +71,10 @@ class Group < ApplicationRecord
   validate :slug_unique_among_live_groups
   validate :slug_unchanged, on: :update
   validate :slug_not_reserved, if: :manual?
+  validate :slack_waiver_includes_code_of_conduct
+
+  # Turning a waiver off can end app access for the members.
+  after_update_commit :revoke_lost_app_access, if: :waiver_removed?
 
   def to_param = slug
 
@@ -94,6 +108,23 @@ class Group < ApplicationRecord
   # exists, so a hand-made group can't take one and pick up synced members.
   def slug_not_reserved
     errors.add(:slug, "is reserved for a system group") if SystemGroups::SLUGS.include?(slug)
+  end
+
+  def slack_waiver_includes_code_of_conduct
+    return unless waives_slack && !waives_code_of_conduct
+
+    errors.add(:waives_slack, "needs the code of conduct waiver too: members accept the code of conduct in Slack")
+  end
+
+  def waiver_removed?
+    %w[waives_code_of_conduct waives_slack].any? do |attribute|
+      before, after = saved_changes[attribute]
+      before == true && after == false
+    end
+  end
+
+  def revoke_lost_app_access
+    memberships.pluck(:user_id).each { |user_id| RevokeLostAppAccessJob.perform_later(user_id: user_id) }
   end
 
   def slug_unchanged

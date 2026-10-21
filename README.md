@@ -19,7 +19,7 @@ accounts for resource access.
 ## What it does
 
 - **OAuth 2.0 / OIDC provider** — a full authorization server built on [Doorkeeper](https://github.com/doorkeeper-gem/doorkeeper): Authorization Code (with PKCE), Client Credentials, and Refresh Token grants, plus UserInfo, Introspection, Revocation, and RFC 8414 discovery.
-- **Passwordless auth** — magic-link sign-in by default, passkey sign-in (see [docs/PASSKEYS.md](docs/PASSKEYS.md)), and password login for staff accounts.
+- **Passwordless auth** — magic-link sign-in by default, passkey sign-in (see [docs/PASSKEYS.md](docs/PASSKEYS.md)), and password login for staff accounts. Users with a Patchwork Active Directory account sign in with their AD password, and Google Workspace can sign in through Weave (see [docs/ACTIVE_DIRECTORY.md](docs/ACTIVE_DIRECTORY.md)).
 - **Slack onboarding** — invites new members as single-channel guests, DMs them a code of conduct via a Slackbot flow, and promotes them to full members once accepted. Profiles sync bidirectionally.
 - **Member directory** — profiles, addresses, sessions, and a read-only account dashboard.
 - **Directory provisioning** — local Active Directory account provisioning for managing access to internal resources *(in progress)*.

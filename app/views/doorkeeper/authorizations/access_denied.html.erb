@@ -34,6 +34,14 @@
         <div class="text-center">
           <%= link_to "Accept the Code of Conduct", slack_onboarding_path, class: "btn-stitch" %>
         </div>
+      <% elsif @decision&.reason == :email_domain %>
+        <p class="text-xs text-ink-faint text-center">
+          <%= @application.name %> needs a confirmed address on <%= @application.email_domains.to_sentence(two_words_connector: " or ", last_word_connector: " or ") %> in your Weave account. Ask a Weave admin for help.
+        </p>
+
+        <div class="text-center">
+          <%= link_to "Go to your Weave account", root_path, class: "btn-stitch-ghost" %>
+        </div>
       <% else %>
         <p class="text-xs text-ink-faint text-center">
           Access to this app is limited to some people and groups. If you need it, ask a Weave admin to give you access.

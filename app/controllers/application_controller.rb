@@ -55,7 +55,8 @@ class ApplicationController < ActionController::Base
   def reset_session_preserving_oauth
     preserved = {
       oauth_client_id: session[:oauth_client_id],
-      oauth_return_to: session[:oauth_return_to]
+      oauth_return_to: session[:oauth_return_to],
+      return_to_password: session[:return_to_password]
     }.compact
     reset_session
     preserved.each { |key, value| session[key] = value }

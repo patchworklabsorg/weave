@@ -58,7 +58,7 @@ class Admin::GroupsController < Admin::BaseController
   end
 
   def group_params
-    params.require(:group).permit(:name, :slug, :description)
+    params.require(:group).permit(:name, :slug, :description, :waives_code_of_conduct, :waives_slack)
   end
 
   def require_superadmin

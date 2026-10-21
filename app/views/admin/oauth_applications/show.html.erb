@@ -217,6 +217,26 @@
       <% end %>
     </div>
 
+    <div class="flex flex-wrap justify-between items-end gap-4 mb-4 pb-3 border-b border-ink-soft/10">
+      <p class="text-sm text-ink-soft flex-1">
+        <% if AppAccess.email_domain_required?(@application) %>
+          The <code>email</code> claim is the user's confirmed address on <strong><%= @application.email_domains.to_sentence(two_words_connector: " or ", last_word_connector: " or ") %></strong>. Users without one can't use this app.
+        <% else %>
+          The <code>email</code> claim is the user's primary address. Set email domains for an app such as Google Workspace, which must get the user's address on its own domains.
+        <% end %>
+      </p>
+      <% if current_user.superadmin? %>
+        <%= form_with url: email_domains_admin_oauth_application_path(@application), method: :patch, local: true, class: "flex items-end gap-2" do |form| %>
+          <div>
+            <%= form.label :email_domains, "Email domains", class: "block text-sm font-medium text-ink" %>
+            <%= form.text_field :email_domains, value: @application.email_domains.join(", "), placeholder: "patchworklabs.org, hackboston.dev",
+                class: "mt-1 w-72 px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+          </div>
+          <%= form.submit "Save", class: "btn-stitch-ghost" %>
+        <% end %>
+      <% end %>
+    </div>
+
     <% if current_user.superadmin? %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <%= form_with scope: :access_grant, url: admin_oauth_application_access_grants_path(@application), local: true,

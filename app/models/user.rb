@@ -11,6 +11,8 @@
 #  code_of_conduct_exempt   :boolean          default(FALSE), not null
 #  confirmation_sent_at     :datetime
 #  confirmation_token       :string
+#  directory_linked_at      :datetime
+#  directory_object_guid    :string
 #  email                    :string           not null
 #  email_confirmed_at       :datetime
 #  first_name               :string           not null
@@ -211,8 +213,11 @@ class User < ApplicationRecord
   # Full Slack members who have not accepted the code of conduct. They joined
   # before the code-of-conduct flow, so nothing has asked them yet (see
   # CodeOfConductRequestJob). Exempt users are left out.
+  # Members of a project group that waives the code of conduct are left out
+  # too (see #code_of_conduct_required?).
   scope :code_of_conduct_pending, lambda {
-    slack_member.where(slack_coc_accepted_at: nil, code_of_conduct_exempt: false).where.not(slack_id: nil)
+    waived = Group::Membership.active.joins(:group).where(groups: { waives_code_of_conduct: true }).select(:user_id)
+    slack_member.where(slack_coc_accepted_at: nil, code_of_conduct_exempt: false).where.not(slack_id: nil).where.not(id: waived)
   }
 
   # Names the Slack import saves when a Slack profile has no name.
@@ -565,6 +570,27 @@ class User < ApplicationRecord
   end
 
   def slack_onboarding_complete? = slack_onboarding_step == :member
+
+  # Per-project onboarding (see Group#waives_code_of_conduct). People in a
+  # sponsored project, such as HackBoston, are in a project group that can
+  # waive the Patchwork code of conduct and the Patchwork Slack. Everyone else
+  # gets both. An admin can also exempt one person from the code of conduct.
+  def code_of_conduct_required?
+    return false if code_of_conduct_exempt
+
+    !groups.exists?(waives_code_of_conduct: true)
+  end
+
+  def slack_required? = !groups.exists?(waives_slack: true)
+
+  # True while the profile and the home page should send the person to the
+  # onboarding page. Birthday and guardian consent apply to everyone. The
+  # Slack steps apply only when the person's project requires Slack.
+  def onboarding_pending?
+    return true if birthday.nil? || under_minimum_age? || guardian_consent_missing?
+
+    slack_required? && !slack_onboarding_complete?
+  end
 
   # Remembers a code-of-conduct DM that has a live button, so it can be
   # replaced once the user accepts (see SlackCodeOfConductAcceptedJob). Appends

@@ -18,7 +18,9 @@ class DemoteForCodeOfConductJob < ApplicationJob
   def perform(user_id)
     user = User.find_by(id: user_id)
     return unless user&.slack_member? && user.slack_id.present?
-    return if user.slack_coc_accepted_at.present? || user.code_of_conduct_exempt
+    # code_of_conduct_required? covers exempt users and sponsored projects
+    # that waive the code of conduct (see Group#waives_code_of_conduct).
+    return if user.slack_coc_accepted_at.present? || !user.code_of_conduct_required?
 
     service = SlackService.new
     return unless service.configured?

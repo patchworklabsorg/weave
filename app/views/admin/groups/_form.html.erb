@@ -36,6 +36,21 @@
     <%= form.text_area :description, rows: 3, class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
   </div>
 
+  <fieldset class="space-y-3">
+    <legend class="block text-sm font-medium text-ink">Sponsored project</legend>
+    <p class="text-sm text-ink-faint">
+      Use these for a sponsored project, such as HackBoston. They apply to every member of this group. Do not use them for Patchwork members.
+    </p>
+    <label class="flex items-start gap-3 text-sm text-ink">
+      <%= form.check_box :waives_code_of_conduct, class: "mt-1" %>
+      <span>Members do not need to accept the Patchwork Code of Conduct to use apps.</span>
+    </label>
+    <label class="flex items-start gap-3 text-sm text-ink">
+      <%= form.check_box :waives_slack, class: "mt-1" %>
+      <span>Members do not need to join the Patchwork Slack. This needs the Code of Conduct waiver too.</span>
+    </label>
+  </fieldset>
+
   <div class="flex justify-end space-x-3">
     <%= link_to "Cancel", group.persisted? ? admin_group_path(group) : admin_groups_path, class: "btn-stitch-ghost" %>
     <%= form.submit group.persisted? ? "Save Group" : "Create Group", class: "btn-stitch" %>

@@ -119,7 +119,8 @@ class UsersController < ApplicationController
   def sanitized_user_params
     # Non-admins cannot set passwords - they use magic links only
     # Only permit password params for existing admin users updating their profile
-    password_fields = if current_user&.admin?
+    # Users whose password lives in Active Directory change it at /password.
+    password_fields = if current_user&.admin? && !DirectoryPasswords.linked?(current_user)
                         [:password, :password_confirmation]
                       else
                         []

@@ -150,12 +150,18 @@ Doorkeeper::OpenidConnect.configure do
       user.updated_at.to_i
     end
 
-    normal_claim :email, scope: :email, response: [:id_token, :user_info] do |user|
-      user.email
+    # An app with email_domains (Google Workspace) gets the user's confirmed
+    # address on one of those domains instead of the primary address, because
+    # Google matches the claim against the person's primary Google address.
+    # AppAccess refuses users without such an address, so it is never nil
+    # here for those apps. See AppAccess.email_for.
+    normal_claim :email, scope: :email, response: [:id_token, :user_info] do |user, _scopes, access_token|
+      AppAccess.email_for(user, access_token&.application)
     end
 
-    normal_claim :email_verified, scope: :email, response: [:id_token, :user_info] do |user|
-      user.email_verified?
+    normal_claim :email_verified, scope: :email, response: [:id_token, :user_info] do |user, _scopes, access_token|
+      application = access_token&.application
+      application && AppAccess.email_domain_required?(application) ? true : user.email_verified?
     end
 
     normal_claim :phone_number, scope: :phone, response: [:id_token, :user_info] do |user|
