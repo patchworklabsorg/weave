@@ -9,9 +9,7 @@ module FeatureFlags
   # Every flag that the app checks, with a description for the Flipper UI. Add a
   # flag here before you call Flipper.enabled? for it. The initializer creates
   # each flag at boot, disabled, so the UI shows it before anyone turns it on.
-  FLAGS = {
-    start_here_nudge: "Remind Slack guests stuck in #start-here to accept the code of conduct (NudgeStuckSlackGuestsJob)"
-  }.freeze
+  FLAGS = {}.freeze
 
   # The strict handler for Flipper. Flipper calls it when code checks a flag that
   # is not in the store yet. A flag that is not in FLAGS raises in development and
