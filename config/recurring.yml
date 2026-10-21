@@ -49,3 +49,9 @@ purge_guardian_consents:
 sync_system_groups:
   class: SyncSystemGroupsJob
   schedule: every hour
+
+# Remind Slack guests stuck in #start-here to accept the code of conduct.
+# Off until the start_here_nudge Flipper flag is on.
+nudge_stuck_slack_guests:
+  class: NudgeStuckSlackGuestsJob
+  schedule: every day at 3pm

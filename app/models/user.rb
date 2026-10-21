@@ -236,6 +236,13 @@ class User < ApplicationRecord
     slack_member.where(slack_coc_accepted_at: nil, code_of_conduct_exempt: false).where.not(slack_id: nil).where.not(id: waived)
   }
 
+  # Guests who joined the Slack but never accepted the code of conduct, so they
+  # only see #start-here (see NudgeStuckSlackGuestsJob).
+  scope :stuck_in_start_here, lambda {
+    waived = Group::Membership.active.joins(:group).where(groups: { waives_code_of_conduct: true }).select(:user_id)
+    slack_pending.where(slack_coc_accepted_at: nil, code_of_conduct_exempt: false).where.not(slack_id: nil).where.not(id: waived)
+  }
+
   # Names the Slack import saves when a Slack profile has no name.
   PLACEHOLDER_NAMES = %w[NOTSET Unknown User].freeze
   scope :name_missing, -> { where(first_name: PLACEHOLDER_NAMES).or(where(last_name: PLACEHOLDER_NAMES)) }

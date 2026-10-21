@@ -18,6 +18,15 @@ RSpec.describe CodeOfConductRequestJob do
     expect(user.reload.slack_coc_requested_at).to be_present
   end
 
+  it "sends the onboarding text to a new guest" do
+    user.update!(slack_membership: "pending")
+    expect(slack).to receive(:post_code_of_conduct)
+      .with("U1", title: "👋 One more step to join Patchwork Labs", paragraphs: include(a_string_including("#start-here")), form: false)
+
+    expect { described_class.perform_now(user.id, reason: :onboarding) }
+      .to have_enqueued_mail(UserMailer, :code_of_conduct_request).with(user, deadline: nil, reason: :onboarding)
+  end
+
   it "uses the form button when the name is missing" do
     user.update!(first_name: "NOTSET", last_name: "NOTSET")
     expect(slack).to receive(:post_code_of_conduct)
