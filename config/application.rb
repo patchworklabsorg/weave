@@ -22,6 +22,10 @@ module Weave
     # existed (ActiveJob::DeserializationError). Rails 8.1 defaults to this.
     config.active_job.enqueue_after_transaction_commit = true
 
+    # Weave makes no Active Storage image variants, and the image has no
+    # image_processing gem or libvips.
+    config.active_storage.variant_processor = :disabled
+
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.

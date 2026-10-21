@@ -56,3 +56,10 @@
 /.claude
 /.worktrees
 /.agents
+
+# Ignore files the image does not need at runtime.
+/spec
+/test
+/docs
+/coverage
+/bin/deploy-local
