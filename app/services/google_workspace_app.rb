@@ -6,8 +6,8 @@
 # Who has Google sign-in: the members of the `google-workspace` group. The
 # app is restricted (see AppAccess) and the group is its only access grant,
 # so a user outside the group gets the "You don't have access" page and
-# Google gets no code. A sponsored project's people can be in the group too;
-# their project group decides whether they need the code of conduct.
+# Google gets no code. The app does not require the code of conduct, for
+# anyone. Age and guardian consent rules still apply.
 #
 # Google matches the `email` claim against the person's primary Google
 # address, so the app has email_domains, and the claim is the user's
@@ -47,6 +47,10 @@ module GoogleWorkspaceApp
         scopes: SCOPES,
         confidential: true,
         access_policy: "restricted",
+        # Owner decision: Google needs no code of conduct, for anyone. Each
+        # run sets it again. Guardian consent is a separate per-app setting
+        # (requires_guardian_consent) and stays as it is.
+        requires_code_of_conduct: false,
         email_domains: domains.map { |domain| domain.to_s.strip.downcase.delete_prefix("@") }.compact_blank
       )
       application.save!

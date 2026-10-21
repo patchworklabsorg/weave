@@ -4,8 +4,9 @@ require "rails_helper"
 
 # Google Workspace as an OIDC client of Weave, with AD passwords. Covers who
 # has Google sign-in (the google-workspace group), the email claim (the
-# address on the Workspace domains), and per-project onboarding (a sponsored
-# project such as HackBoston needs no Patchwork Slack or code of conduct).
+# address on the Workspace domains), the Google app's own rule (no code of
+# conduct for anyone), and per-project onboarding (a sponsored project such as
+# HackBoston needs no Patchwork Slack or code of conduct for other apps).
 RSpec.describe "Google Workspace sign-in", type: :request do
   let(:setup) { GoogleWorkspaceApp.ensure!(redirect_uri: redirect_uri) }
   let(:directory) { use_fake_directory }
@@ -44,6 +45,8 @@ RSpec.describe "Google Workspace sign-in", type: :request do
   describe "the app" do
     it "is restricted to the google-workspace group, with the OIDC scopes Google uses" do
       expect(google_app.access_policy).to eq("restricted")
+      expect(google_app.requires_code_of_conduct).to be(false)
+      expect(google_app.requires_guardian_consent).to be(true)
       expect(google_app.scopes.to_s).to eq("openid email profile")
       expect(ApplicationAccessGrant.for_application(google_app).map(&:grantee)).to eq([google_group])
       expect(google_app.email_domains).to include("patchworklabs.org", "hackboston.dev", "hackathon.help")
@@ -57,6 +60,14 @@ RSpec.describe "Google Workspace sign-in", type: :request do
       expect(again.created).to be(false)
       expect(again.application.uid).to eq(uid)
       expect(ApplicationAccessGrant.for_application(google_app).count).to eq(1)
+    end
+
+    it "turns the code of conduct gate off again when the setup runs again" do
+      google_app.update!(requires_code_of_conduct: true)
+
+      GoogleWorkspaceApp.ensure!(redirect_uri: redirect_uri)
+
+      expect(google_app.reload.requires_code_of_conduct).to be(false)
     end
 
     it "keeps email domains that an admin changed when the setup runs again" do
@@ -116,9 +127,19 @@ RSpec.describe "Google Workspace sign-in", type: :request do
       directory.add_user(staff_user.p_id, password: "Staff-password-1")
     end
 
-    it "still needs the code of conduct for the Google app" do
+    it "uses the Google app without having accepted the code of conduct" do
+      expect(staff_user.slack_coc_accepted_at).to be_nil
+
       arrive_from_google_and_sign_in(staff_user, "Staff-password-1")
-      get oauth_authorization_path, params: authorization_params
+
+      expect(approve_and_exchange["email"]).to eq("grace@patchworklabs.org")
+    end
+
+    it "still needs the code of conduct for other apps" do
+      other = Doorkeeper::Application.create!(name: "Other", redirect_uri: "https://other.example.com/cb", scopes: "openid profile")
+      post "/login", params: { user: { email: staff_user.email, password: "Staff-password-1" } }
+
+      get oauth_authorization_path, params: { client_id: other.uid, redirect_uri: other.redirect_uri, response_type: "code", scope: "openid profile" }
 
       expect(response).to redirect_to(slack_onboarding_path)
       expect(flash[:alert]).to include("Code of Conduct")
@@ -131,13 +152,6 @@ RSpec.describe "Google Workspace sign-in", type: :request do
       expect(response).to redirect_to(slack_onboarding_path)
     end
 
-    it "uses the Google app once they accepted the code of conduct" do
-      staff_user.update!(slack_coc_accepted_at: 1.day.ago)
-
-      arrive_from_google_and_sign_in(staff_user, "Staff-password-1")
-
-      expect(approve_and_exchange["email"]).to eq("grace@patchworklabs.org")
-    end
   end
 
   describe "the email claim" do

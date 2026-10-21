@@ -131,7 +131,7 @@ sequenceDiagram
     W-->>B: sign in (password, email link or passkey)
     B->>W: POST /login
     W->>A: LDAPS bind
-    W->>W: AppAccess: google-workspace group, project gates, email domain
+    W->>W: AppAccess: google-workspace group, age and guardian consent, email domain
     W-->>B: redirect to Google with a code
     G->>W: POST /oauth/token
     W-->>G: id_token (sub = p_id, email = Workspace address)
@@ -139,7 +139,7 @@ sequenceDiagram
 
 ### Who has Google sign-in
 
-Membership of the `google-workspace` group decides it. The app is restricted, and that group is its only access grant (see `AppAccess`). This is the same rule Weave uses for every restricted app. An admin adds or removes people at `/admin/groups/google-workspace`. A person outside the group gets the "You don't have access" page. Google gets no code.
+Membership of the `google-workspace` group decides it. The app is restricted, and that group is its only access grant (see `AppAccess`). The Code of Conduct is not needed for Google. This is the same rule Weave uses for every restricted app. An admin adds or removes people at `/admin/groups/google-workspace`. A person outside the group gets the "You don't have access" page. Google gets no code.
 
 Not all Weave users get Google sign-in. Add only the people whose Google account is in an SSO OU or group.
 
@@ -157,7 +157,7 @@ bin/rails google_workspace:setup REDIRECT_URI=https://accounts.google.com/... EM
 
 The task is safe to run again. It keeps the client id and secret. It creates the `google-workspace` group if it does not exist. Without `EMAIL_DOMAINS`, an existing app keeps its email domains. A new app gets the three default domains. Read the client secret on the app's admin page. Do not put it in the repository.
 
-The app requires the Code of Conduct and guardian consent like any other app. A superadmin can change that on the app's admin page.
+The app does not require the Code of Conduct, for anyone (staff included). The task sets the existing per-app setting `requires_code_of_conduct` to false each time it runs. Guardian consent is a separate per-app setting (`requires_guardian_consent`). It stays on, so the age and guardian consent rules still apply to Google.
 
 ## Sponsored projects
 
@@ -254,7 +254,7 @@ Run each step on `weave-staging.patchworklabs.org` with test accounts only.
 15. A test user with no AD account: email links work, and admin password sign-in works with the Weave password.
 16. Google: a test user in the SSO OU and in the `google-workspace` group opens Gmail, signs in at Weave, and reaches the inbox. Google shows the right account.
 17. A user who is not in `google-workspace` gets "You don't have access" at Weave.
-18. A HackBoston test user (no Slack, no Code of Conduct, in the HackBoston group with both waivers, and in `google-workspace`) signs in to Google with the `hackboston.dev` address.
+18. A HackBoston test user (no Slack, no Code of Conduct, in the HackBoston group with both waivers, and in `google-workspace`) signs in to Google with the `hackboston.dev` address. A staff test user who has not accepted the Code of Conduct also signs in to Google.
 19. Google's "Change password" link opens `/password` on Weave.
 
 ## Code
