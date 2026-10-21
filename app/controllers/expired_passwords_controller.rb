@@ -54,7 +54,7 @@ class ExpiredPasswordsController < ApplicationController
 
   def render_problem(status)
     flash.now[:alert] = password_change_message(status)
-    render :show, status: :unprocessable_entity
+    render :show, status: :unprocessable_content
   end
 
 end

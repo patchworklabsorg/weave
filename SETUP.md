@@ -6,7 +6,7 @@ A comprehensive guide to set up the Patchwork Labs Identity Provider (IDP) appli
 
 Before you begin, ensure you have the following installed:
 
-- **Ruby**: Version 4.0.1 (specified in `.ruby-version`)
+- **Ruby**: Version 4.0.7 (specified in `.ruby-version`)
 - **Node.js**: For JavaScript dependencies
 - **Bun**: JavaScript runtime and package manager
 - **PostgreSQL**: Version 17 (or compatible)
@@ -135,7 +135,7 @@ The application uses PostgreSQL with the following features:
 
 This IDP application includes:
 - **Authentication**: WebAuthn, OAuth 2.0 provider (Doorkeeper)
-- **Security**: Rate limiting, CORS, encryption (Lockbox)
+- **Security**: Rate limiting, encryption (Lockbox)
 - **Background Jobs**: Solid Queue for job processing
 - **Caching**: Redis for session storage and caching
 - **Monitoring**: Health checks (okcomputer), analytics (ahoy_matey)
@@ -189,7 +189,7 @@ When running locally:
    - Check that Node.js version is compatible
 
 3. **Bundle Install Failures**
-   - Ensure Ruby version 4.0.1 is installed
+   - Ensure Ruby version 4.0.7 is installed
    - Check for system dependencies (libpq-dev, build-essential on Ubuntu)
 
 4. **Redis Connection Issues**
@@ -205,7 +205,7 @@ When running locally:
 ## Production Deployment
 
 This application is configured for deployment with:
-- **Kamal**: Docker container deployment
+- **Docker**: Ruby Alpine image, run as containers on the alastor NixOS host
 - **Thruster**: HTTP asset caching and acceleration
 - **Health Checks**: Available at `/up` endpoint
 

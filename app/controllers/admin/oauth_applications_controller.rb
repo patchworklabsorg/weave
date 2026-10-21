@@ -26,7 +26,7 @@ class Admin::OauthApplicationsController < Admin::BaseController
       flash[:notice] = "OAuth application was successfully created."
       redirect_to admin_oauth_application_path(@application)
     else
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   end
 
@@ -39,7 +39,7 @@ class Admin::OauthApplicationsController < Admin::BaseController
     if introspect_change_allowed? && @application.save
       redirect_to admin_oauth_application_path(@application), notice: "OAuth application was successfully updated."
     else
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     end
   end
 

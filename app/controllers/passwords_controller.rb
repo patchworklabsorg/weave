@@ -93,13 +93,13 @@ class PasswordsController < ApplicationController
       redirect_to password_path, notice: "Your password was changed."
     else
       flash.now[:alert] = current_user.errors.full_messages.to_sentence
-      render :show, status: :unprocessable_entity
+      render :show, status: :unprocessable_content
     end
   end
 
   def render_problem(status)
     flash.now[:alert] = password_change_message(status)
-    render :show, status: :unprocessable_entity
+    render :show, status: :unprocessable_content
   end
 
 end

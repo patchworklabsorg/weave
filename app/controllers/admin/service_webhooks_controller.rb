@@ -22,7 +22,7 @@ class Admin::ServiceWebhooksController < Admin::BaseController
     if @webhook.save
       redirect_to [:admin, @service, @webhook], notice: "Webhook was successfully created."
     else
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   end
 
@@ -33,7 +33,7 @@ class Admin::ServiceWebhooksController < Admin::BaseController
     if @webhook.update(webhook_params)
       redirect_to [:admin, @service, @webhook], notice: "Webhook was successfully updated."
     else
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     end
   end
 

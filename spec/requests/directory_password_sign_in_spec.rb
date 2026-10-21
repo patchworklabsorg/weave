@@ -23,7 +23,7 @@ RSpec.describe "Password sign-in with Active Directory", type: :request do
   it "refuses the old Weave password once the user is linked" do
     sign_in_with_password(user.email, "SecurePassword123!")
 
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
     expect(response.body).to include("Invalid email or password")
     expect(session[:user_id]).to be_nil
   end
@@ -98,7 +98,7 @@ RSpec.describe "Password sign-in with Active Directory", type: :request do
 
       patch expired_password_path, params: { current_password: "Ad-password-1", password: "short", password_confirmation: "short" }
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("does not meet the Patchwork password policy")
     end
 

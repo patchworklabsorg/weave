@@ -30,7 +30,7 @@ class Admin::ServiceKeysController < Admin::BaseController
       flash[:notice] = "API key was successfully created. Make sure to copy it now - you won't be able to see it again!"
       redirect_to [:admin, @service, @key]
     else
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   end
 
@@ -41,7 +41,7 @@ class Admin::ServiceKeysController < Admin::BaseController
     if @key.update(key_params)
       redirect_to [:admin, @service, @key], notice: "API key was successfully updated."
     else
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     end
   end
 

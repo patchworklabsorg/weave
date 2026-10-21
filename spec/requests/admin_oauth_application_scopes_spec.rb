@@ -34,7 +34,7 @@ RSpec.describe "Admin OAuth application scopes", type: :request do
     it "can't allow the introspect scope" do
       update_scopes("profile introspect")
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("Only a superadmin can add or remove the introspect scope.")
       expect(application.reload.scopes.to_a).to eq(["profile"])
     end
@@ -44,7 +44,7 @@ RSpec.describe "Admin OAuth application scopes", type: :request do
 
       update_scopes("profile")
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(application.reload.scopes.to_a).to contain_exactly("profile", "introspect")
     end
 
@@ -58,7 +58,7 @@ RSpec.describe "Admin OAuth application scopes", type: :request do
 
     it "can't create an app with the introspect scope" do
       expect { create_app("introspect") }.not_to change(Doorkeeper::Application, :count)
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 

@@ -8,7 +8,7 @@ This is the Patchwork Labs Identity Provider (IDP), a comprehensive OAuth 2.0 au
 
 ### Backend
 - **Framework**: Ruby on Rails 8.0.2
-- **Ruby Version**: 4.0.1 (see `.ruby-version`)
+- **Ruby Version**: 4.0.7 (see `.ruby-version`)
 - **Database**: PostgreSQL 17
 - **Cache/Queue**: Redis 7
 - **Background Jobs**: Solid Queue (database-backed Active Job)
@@ -21,7 +21,7 @@ This is the Patchwork Labs Identity Provider (IDP), a comprehensive OAuth 2.0 au
 
 ### Key Gems & Libraries
 - **Authentication**: Doorkeeper (OAuth 2.0), WebAuthn
-- **Security**: Rack::Attack (rate limiting), Rack::CORS, Lockbox (encryption), Brakeman (security scanning)
+- **Security**: Rack::Attack (rate limiting), Lockbox (encryption), Brakeman (security scanning)
 - **Monitoring**: OkComputer (health checks), Ahoy (analytics), Audits1984 (audit logging)
 - **Admin Tools**: Flipper (feature flags), Blazer (BI dashboard), Mission Control (job monitoring)
 - **Data**: PaperTrail (versioning), ActsAsParanoid (soft deletes), PgSearch (full-text search)
@@ -129,10 +129,9 @@ bundle exec annotaterb models   # Update model annotations
 
 ## Deployment
 
-- **Platform**: Docker with Kamal
+- **Platform**: Docker containers on the alastor NixOS host
 - **Asset Acceleration**: Thruster for HTTP caching and compression
 - **Health Check**: Available at `/up` endpoint
-- **Configuration**: See `.kamal/` directory
 
 ## OAuth 2.0 Provider
 
