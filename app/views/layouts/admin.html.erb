@@ -429,6 +429,14 @@
                 Console Audits
               <% end %>
             </li>
+            <% if current_user&.superadmin? %>
+              <li class="admin-nav-item">
+                <%= link_to admin_console_access_path,
+                    class: "admin-nav-link #{controller_name == 'console_access' ? 'active' : ''}" do %>
+                  Approve Console
+                <% end %>
+              </li>
+            <% end %>
 
           </ul>
         </nav>

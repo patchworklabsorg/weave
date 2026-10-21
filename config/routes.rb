@@ -567,6 +567,12 @@ Rails.application.routes.draw do
         end
       end
 
+      # A superadmin approves a production console. See docs/CONSOLE_ACCESS.md.
+      resource :console_access, only: [:show], controller: "console_access" do
+        post :lookup
+        post :decide
+      end
+
       # Mount engines under /admin path
       mount MissionControl::Jobs::Engine, at: "/jobs"
       mount Audits1984::Engine => "/console"

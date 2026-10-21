@@ -1,0 +1,66 @@
+# Console access
+
+Every production console names the person who uses it. A console waits until a superadmin approves it in Weave. Console1984 then records the session under that person. This applies to production and staging. The Patchwork standard for all apps is `console-access.md` in `patchworklabsorg/internal-docs`.
+
+## Open a console
+
+1. Start the console on the host:
+
+   ```bash
+   docker exec -it weave-web bin/rails console
+   docker exec -it weave-web bin/rails dbconsole
+   ```
+
+2. The console shows a code, for example `QBXN-S8VG`, and waits.
+3. Sign in to Weave as yourself. Open `/admin/console_access` and enter the code.
+4. Make sure that the page shows your console and host. Then click "Approve".
+5. The console asks why you need it. Write a real reason, for example "Fix the stuck signup for PWL5A1B2C3D4".
+
+Approve only a console that you started yourself. The approval names you, not the person who asked you.
+
+```mermaid
+sequenceDiagram
+  participant C as Console on the host
+  participant DB as Weave database
+  participant W as Weave admin page
+  C->>DB: open a request (code digest, host, 10 minute expiry)
+  C-->>C: show the code
+  W->>DB: superadmin enters the code and approves
+  C->>DB: claim the approval (once)
+  C->>DB: Console1984 session under "Name (PWL id)", with the reason
+  C->>DB: each command or SQL statement
+```
+
+## Rules
+
+- Only a superadmin can approve. An admin who impersonates a member cannot approve.
+- A code expires after 10 minutes. One approval opens one console.
+- Weave stores only a SHA-256 digest of the code.
+- The Console1984 username is the approver's name and PWL id, for example `Ada Lovelace (PWL23E61E9BA2)`. The PWL id is also the `employeeID` of the person's AD account (see `docs/ACTIVE_DIRECTORY.md`).
+- Review the sessions at `/admin/console` (Audits1984).
+
+## The SQL console
+
+In production and staging, `bin/rails dbconsole` does not start psql. It starts an audited SQL console:
+
+- End a statement with a semicolon.
+- `\dt` lists the tables. `\d TABLE` lists the columns of a table. `\q` or Ctrl-D quits.
+- Console1984 records each statement before it runs. A backslash command is recorded with the SQL that it runs.
+- The console refuses any statement that names the audit tables: the Console1984 tables, `console_access_requests` and `audits1984_audits`.
+- Use `--db queue` to open the Solid Queue database.
+
+In development, `bin/rails dbconsole` still starts psql.
+
+## Limits
+
+- The approval proves who approved, not who types. The rule "approve only your own console" closes that gap.
+- A person with a shell on the host can still run `psql` in the database container, or `bin/rails runner`. Do not use them to read or change member data.
+- The table check in the SQL console reads the statement text. A person who builds SQL at run time (for example with `EXECUTE` in a `DO` block) can get past it. Console1984 has the same limit in the Rails console. The statement is still recorded before it runs.
+- Console1984 encrypts the recorded commands with Active Record encryption. The production and staging credentials must have the `active_record_encryption` keys.
+
+## Code
+
+- `app/models/console_access_request.rb`: the request, the code and the approval.
+- `app/controllers/admin/console_access_controller.rb`: the approval page.
+- `lib/console_access/`: the wait for approval, the Console1984 username resolver, the SQL console and the `dbconsole` hook.
+- `config/initializers/console_access.rb`: sets the Console1984 username resolver.

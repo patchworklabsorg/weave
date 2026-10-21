@@ -63,4 +63,11 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
+
+  # Console1984 encrypts the commands it records with Active Record
+  # encryption. Production reads the keys from its credentials. These keys are
+  # for tests only and are not secret.
+  config.active_record.encryption.primary_key = "test-primary-key-not-a-secret-0000"
+  config.active_record.encryption.deterministic_key = "test-deterministic-key-not-a-secret"
+  config.active_record.encryption.key_derivation_salt = "test-key-derivation-salt-not-a-secret"
 end

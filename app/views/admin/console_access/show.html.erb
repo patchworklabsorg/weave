@@ -1,0 +1,48 @@
+<% content_for :title, "Console access" %>
+
+<div class="mb-6">
+  <h2 class="font-display text-2xl font-bold text-ink mb-4">Approve a console</h2>
+  <p class="text-ink-soft">
+    A production console (<code>bin/rails console</code> or <code>bin/rails dbconsole</code>) shows a code and waits.
+    Enter the code to approve the console as yourself. Approve only a console that you started.
+  </p>
+</div>
+
+<div class="patch p-6 mb-10">
+  <%= form_with url: lookup_admin_console_access_path, method: :post, class: "flex flex-col sm:flex-row gap-2" do |form| %>
+    <%= form.text_field :code, required: true, autocomplete: "off", autocapitalize: "characters", spellcheck: false,
+          placeholder: "ABCD-1234", aria: { label: "Console code" },
+          class: "flex-1 px-3 py-2 rounded-lg border-2 border-neutral-300 bg-paper text-sm font-mono uppercase" %>
+    <%= form.submit "Continue", class: "btn-stitch" %>
+  <% end %>
+</div>
+
+<% if @recent.any? %>
+  <h3 class="font-display text-lg font-bold text-ink mb-3">Recent requests</h3>
+  <div class="patch overflow-hidden">
+    <table class="min-w-full divide-y divide-ink-soft/20">
+      <thead>
+        <tr>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Console</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Host</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Status</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Decided by</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Requested</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-ink-soft/10">
+        <% @recent.each do |request| %>
+          <tr>
+            <td class="px-6 py-3 text-sm text-ink"><%= request.kind == "sql" ? "SQL" : "Rails" %></td>
+            <td class="px-6 py-3 text-sm text-ink font-mono"><%= request.host %></td>
+            <td class="px-6 py-3 text-sm text-ink">
+              <%= request.expired? ? "expired" : request.status %><%= " (opened)" if request.claimed_at %>
+            </td>
+            <td class="px-6 py-3 text-sm text-ink"><%= request.decided_by&.full_name %></td>
+            <td class="px-6 py-3 text-sm text-ink-faint"><%= request.created_at.strftime("%b %-d, %Y %H:%M") %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>

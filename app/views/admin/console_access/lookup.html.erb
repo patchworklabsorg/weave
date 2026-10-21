@@ -1,0 +1,31 @@
+<% content_for :title, "Console access" %>
+
+<div class="mb-6">
+  <h2 class="font-display text-2xl font-bold text-ink mb-4">Approve this console?</h2>
+  <p class="text-ink-soft">
+    Approve only if you started this console and it shows the code <code class="font-mono"><%= @code.upcase %></code>.
+    The console session is recorded under your name and PWL id.
+  </p>
+</div>
+
+<div class="patch p-6">
+  <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+    <div>
+      <dt class="text-ink-faint">Console</dt>
+      <dd class="text-ink font-semibold"><%= @console_request.kind == "sql" ? "SQL console (dbconsole)" : "Rails console" %></dd>
+    </div>
+    <div>
+      <dt class="text-ink-faint">Host</dt>
+      <dd class="text-ink font-mono"><%= @console_request.host %></dd>
+    </div>
+    <div>
+      <dt class="text-ink-faint">Requested</dt>
+      <dd class="text-ink"><%= @console_request.created_at.strftime("%b %-d, %Y %H:%M:%S") %></dd>
+    </div>
+  </dl>
+
+  <div class="mt-6 flex gap-2">
+    <%= button_to "Approve", decide_admin_console_access_path, params: { code: @code, decision: "approve" }, class: "btn-stitch" %>
+    <%= button_to "Deny", decide_admin_console_access_path, params: { code: @code, decision: "deny" }, class: "btn-stitch-ghost" %>
+  </div>
+</div>
