@@ -44,7 +44,7 @@ gem "lockbox"                            # Encryption
 gem "blind_index"                        # Encrypted search
 gem "geocoder"
 gem "countries", "~> 8.0" # ISO 3166 country codes
-gem "net-ldap", "~> 0.20"                # Active Directory password checks and changes (LDAPS)
+gem "net-ldap", "~> 0.20" # Active Directory password checks and changes (LDAPS)
 
 ###############################################################################
 # BACKGROUND PROCESSING & CACHING
