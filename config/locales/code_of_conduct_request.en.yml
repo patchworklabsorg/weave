@@ -20,11 +20,14 @@ en:
       Accept the Code of Conduct to get full access back right away.
     admin: |-
       You are a Slack admin, so your account stays a full member. As an admin, please accept the Code of Conduct now, so that everyone in the Slack has accepted it.
+    onboarding: |-
+      Welcome to the Patchwork Labs Slack! For now you can only see #start-here. To see the other channels, accept our Code of Conduct. It takes a few seconds.
     name_missing: "We also don't have your name yet. Please add it when you accept."
     deadline: "Please accept by %{deadline}. After that date, members who have not accepted move to guest access in the Slack until they accept."
     slack_titles:
       update: "📜 Please accept our Code of Conduct"
       demoted: "📜 Your Slack account is now a guest account"
       admin: "📜 Slack admins: please accept our Code of Conduct"
+      onboarding: "👋 One more step to join Patchwork Labs"
     email_action: "Sign in to Weave with %{email} to accept."
     sign_off: "Thanks for being part of Patchwork Labs!"
