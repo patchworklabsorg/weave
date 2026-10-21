@@ -172,6 +172,9 @@
 #                                           PATCH  /admin/oauth_applications/:id(.:format)                                                           admin/oauth_applications#update
 #                                           PUT    /admin/oauth_applications/:id(.:format)                                                           admin/oauth_applications#update
 #                                           DELETE /admin/oauth_applications/:id(.:format)                                                           admin/oauth_applications#destroy
+#               lookup_admin_console_access POST   /admin/console_access/lookup(.:format)                                                            admin/console_access#lookup
+#               decide_admin_console_access POST   /admin/console_access/decide(.:format)                                                            admin/console_access#decide
+#                      admin_console_access GET    /admin/console_access(.:format)                                                                   admin/console_access#show
 #                admin_mission_control_jobs        /admin/jobs                                                                                       MissionControl::Jobs::Engine
 #                          admin_audits1984        /admin/console                                                                                    Audits1984::Engine
 #                                                  /admin/flipper                                                                                    Flipper::UI

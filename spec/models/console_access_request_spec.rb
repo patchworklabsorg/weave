@@ -2,6 +2,33 @@
 
 require "rails_helper"
 
+# == Schema Information
+#
+# Table name: console_access_requests
+# Database name: primary
+#
+#  id            :bigint           not null, primary key
+#  claimed_at    :datetime
+#  code_digest   :string           not null
+#  decided_at    :datetime
+#  decided_ip    :string
+#  expires_at    :datetime         not null
+#  host          :string
+#  kind          :string           not null
+#  status        :string           default("pending"), not null
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#  decided_by_id :bigint
+#
+# Indexes
+#
+#  index_console_access_requests_on_code_digest    (code_digest) UNIQUE
+#  index_console_access_requests_on_decided_by_id  (decided_by_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (decided_by_id => users.id)
+#
 RSpec.describe ConsoleAccessRequest do
   let(:superadmin) { create(:user, :superadmin) }
 
