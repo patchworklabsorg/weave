@@ -5,7 +5,12 @@ require "rails_helper"
 RSpec.describe NudgeStuckSlackGuestsJob do
   let!(:stuck) { create(:user, :verified, slack_id: "U1", slack_joined_at: 3.days.ago) }
 
-  before { Flipper.enable(:start_here_nudge) }
+  let(:slack) { instance_double(SlackService, configured?: true, active_guest?: true) }
+
+  before do
+    Flipper.enable(:start_here_nudge)
+    allow(SlackService).to receive(:new).and_return(slack)
+  end
 
   def nudged
     described_class.candidates.to_a
@@ -20,6 +25,18 @@ RSpec.describe NudgeStuckSlackGuestsJob do
     Flipper.disable(:start_here_nudge)
 
     expect { described_class.perform_now }.not_to have_enqueued_job(CodeOfConductRequestJob)
+  end
+
+  it "skips a guest who left the Slack" do
+    allow(slack).to receive(:active_guest?).with("U1").and_return(false)
+
+    expect { described_class.perform_now }.not_to have_enqueued_job(CodeOfConductRequestJob)
+  end
+
+  it "skips a locked account" do
+    stuck.update!(locked_at: Time.current)
+
+    expect(nudged).to be_empty
   end
 
   it "waits two days after the guest joined" do

@@ -184,6 +184,17 @@ class SlackService
     user["is_admin"] || user["is_owner"] || user["is_primary_owner"] || false
   end
 
+  # True when the Slack account is still in the workspace as a guest. Weave
+  # also marks a deleted account `pending`, so this tells the two apart.
+  def active_guest?(slack_user_id)
+    raise ConfigurationError, "Slack client not configured" unless @client
+
+    user = @client.users_info(user: slack_user_id)["user"] || {}
+    !user["deleted"] && !!(user["is_restricted"] || user["is_ultra_restricted"])
+  rescue Slack::Web::Api::Errors::UserNotFound
+    false
+  end
+
   # DM someone the code of conduct with a button to accept it. Uses the bot
   # token (needs chat:write + im:write). Returns the Slack API response. The
   # blocks come from CodeOfConductSlackViews.request.
