@@ -9,10 +9,7 @@ class Admin::OauthApplicationsController < Admin::BaseController
   end
 
   def show
-    @access_grants = ApplicationAccessGrant.for_application(@application).includes(:grantee).order(:grantee_type, :created_at)
-    @grantable_groups = Group.where.not(id: @access_grants.select { |grant| grant.grantee_type == "Group" }.map(&:grantee_id)).order(:name)
-    @roles = ApplicationRole.for_application(@application).includes(assignments: :assignee).order(:key)
-    @groups = Group.order(:name)
+    load_show_data
   end
 
   def new
@@ -23,8 +20,7 @@ class Admin::OauthApplicationsController < Admin::BaseController
     @application = Doorkeeper::Application.new(application_params)
 
     if introspect_change_allowed? && @application.save
-      flash[:notice] = "OAuth application was successfully created."
-      redirect_to admin_oauth_application_path(@application)
+      show_secret_once("OAuth application was successfully created. Copy the client secret now: Weave shows it only once.")
     else
       render :new, status: :unprocessable_content
     end
@@ -48,32 +44,22 @@ class Admin::OauthApplicationsController < Admin::BaseController
     redirect_to admin_oauth_applications_path, notice: "OAuth application was successfully deleted."
   end
 
+  # Weave stores client secrets hashed (hash_application_secrets), so the
+  # plaintext exists only in memory right after it is generated. Render it in
+  # this response; never redirect, and never show the stored value, which is
+  # the hash and does not work as a secret.
   def regenerate_secret
     Rails.logger.info "Regenerating secret for application #{@application.id}"
+    @application.renew_secret
 
-    begin
-      # Use Doorkeeper's method to regenerate the secret if available
-      if @application.respond_to?(:renew_secret)
-        @application.renew_secret
-      else
-        # Fallback to manual generation
-        @application.secret = Doorkeeper::OAuth::Helpers::UniqueToken.generate
-      end
-
-      if @application.save
-        @application.reload # Ensure we have the fresh data
-        Rails.logger.info "Secret regenerated successfully for application #{@application.id}"
-        flash[:notice] = "Client secret has been regenerated. Please update your application with the new secret."
-      else
-        Rails.logger.error "Failed to save regenerated secret for application #{@application.id}: #{@application.errors.full_messages}"
-        flash[:alert] = "Failed to regenerate secret: #{@application.errors.full_messages.join(', ')}"
-      end
-    rescue => e
-      Rails.logger.error "Error regenerating secret for application #{@application.id}: #{e.message}"
-      flash[:alert] = "An error occurred while regenerating the secret."
+    if @application.save
+      Rails.logger.info "Secret regenerated for application #{@application.id}"
+      show_secret_once("Client secret regenerated. Copy it now: Weave shows it only once. Update the app with it.")
+    else
+      Rails.logger.error "Failed to save regenerated secret for application #{@application.id}: #{@application.errors.full_messages}"
+      redirect_to admin_oauth_application_path(@application),
+                  alert: "Failed to regenerate secret: #{@application.errors.full_messages.join(', ')}"
     end
-
-    redirect_to admin_oauth_application_path(@application)
   end
 
   # Opens an app to everyone or limits it to its access grants (see AppAccess).
@@ -127,6 +113,23 @@ class Admin::OauthApplicationsController < Admin::BaseController
   end
 
   private
+
+  # Renders the show page with the new plaintext secret. no-store keeps it
+  # out of the browser and proxy caches.
+  def show_secret_once(notice)
+    @plaintext_secret = @application.plaintext_secret if @application.confidential?
+    response.headers["Cache-Control"] = "no-store"
+    flash.now[:notice] = notice
+    load_show_data
+    render :show
+  end
+
+  def load_show_data
+    @access_grants = ApplicationAccessGrant.for_application(@application).includes(:grantee).order(:grantee_type, :created_at)
+    @grantable_groups = Group.where.not(id: @access_grants.select { |grant| grant.grantee_type == "Group" }.map(&:grantee_id)).order(:name)
+    @roles = ApplicationRole.for_application(@application).includes(assignments: :assignee).order(:key)
+    @groups = Group.order(:name)
+  end
 
   def require_superadmin
     return if current_user.superadmin?

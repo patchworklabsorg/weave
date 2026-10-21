@@ -66,7 +66,7 @@
     <div class="flex justify-between items-center mb-4">
       <h3 class="font-display text-lg font-bold text-ink">Credentials</h3>
       <% if current_user.superadmin? %>
-        <%= form_with url: regenerate_secret_admin_oauth_application_path(@application), method: :patch, local: true, class: "inline" do |form| %>
+        <%= form_with url: regenerate_secret_admin_oauth_application_path(@application), method: :patch, local: true, data: { turbo: false }, class: "inline" do |form| %>
           <%= form.submit "Regenerate Secret",
               data: { confirm: "Are you sure? This will invalidate all existing tokens." },
               class: "text-sm btn-stitch-ghost px-3 py-1" %>
@@ -97,27 +97,32 @@
         <div>
           <dt class="text-sm font-medium text-ink-faint">Client Secret</dt>
           <dd class="mt-1">
-            <div class="flex items-center space-x-2"
-                 data-controller="reveal clipboard"
-                 data-reveal-secret-value="<%= @application.secret %>"
-                 data-reveal-mask-value="<%= "•" * 20 %>"
-                 data-clipboard-text-value="<%= @application.secret %>">
-              <code class="text-sm font-mono bg-grape-soft text-ink px-2 py-1 rounded flex-1 overflow-x-auto" data-reveal-target="output"><%= "•" * 20 %></code>
-              <button type="button"
-                      data-action="reveal#toggle"
-                      data-reveal-target="toggle"
-                      class="text-sm text-ink-soft hover:text-ink"
-                      title="Show/Hide secret">
-                👁️
-              </button>
-              <button type="button"
-                      data-action="clipboard#copy"
-                      data-clipboard-target="button"
-                      class="text-sm text-ink-soft hover:text-ink"
-                      title="Copy to clipboard">
-                📋
-              </button>
-            </div>
+            <% if @plaintext_secret.present? %>
+              <div class="flex items-center space-x-2"
+                   data-controller="reveal clipboard"
+                   data-reveal-secret-value="<%= @plaintext_secret %>"
+                   data-reveal-mask-value="<%= "•" * 20 %>"
+                   data-clipboard-text-value="<%= @plaintext_secret %>">
+                <code class="text-sm font-mono bg-grape-soft text-ink px-2 py-1 rounded flex-1 overflow-x-auto" data-reveal-target="output"><%= "•" * 20 %></code>
+                <button type="button"
+                        data-action="reveal#toggle"
+                        data-reveal-target="toggle"
+                        class="text-sm text-ink-soft hover:text-ink"
+                        title="Show/Hide secret">
+                  👁️
+                </button>
+                <button type="button"
+                        data-action="clipboard#copy"
+                        data-clipboard-target="button"
+                        class="text-sm text-ink-soft hover:text-ink"
+                        title="Copy to clipboard">
+                  📋
+                </button>
+              </div>
+              <p class="mt-1 text-sm text-ink-soft">Copy it now. Weave stores only a hash, so this page cannot show it again.</p>
+            <% else %>
+              <p class="text-sm text-ink-soft">Hidden. Weave stores only a hash of the secret, so it cannot show it. To get a new one, regenerate it.</p>
+            <% end %>
           </dd>
         </div>
       <% end %>
@@ -414,4 +419,3 @@ Authorization: Bearer ACCESS_TOKEN
     </div>
   </div>
 </div>
-
