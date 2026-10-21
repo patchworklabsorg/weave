@@ -65,32 +65,31 @@ RSpec.describe CodeOfConductRequestJob do
     end
 
     it "rewrites every DM already sent, and sends no new DM or email" do
-      expect { described_class.perform_now(user.id, deadline: Date.new(2026, 11, 1), refresh: true) }
-        .not_to have_enqueued_mail(UserMailer, :code_of_conduct_request)
-
-      expect(slack).not_to have_received(:post_code_of_conduct)
+      expect(slack).not_to receive(:post_code_of_conduct)
       %w[1.2 3.4].each do |ts|
-        expect(slack).to have_received(:update_code_of_conduct)
+        expect(slack).to receive(:update_code_of_conduct)
           .with(channel: "D1", ts: ts, slack_user_id: "U1", title: anything,
                 paragraphs: include(a_string_including("November 1, 2026")), form: false)
       end
+
+      expect { described_class.perform_now(user.id, deadline: Date.new(2026, 11, 1), refresh: true) }
+        .not_to have_enqueued_mail(UserMailer, :code_of_conduct_request)
     end
 
     it "keeps going when one update fails" do
       allow(slack).to receive(:update_code_of_conduct).with(hash_including(ts: "1.2"))
                                                       .and_raise(Slack::Web::Api::Errors::SlackError, "message_not_found")
 
-      described_class.perform_now(user.id, refresh: true)
+      expect(slack).to receive(:update_code_of_conduct).with(hash_including(ts: "3.4"))
 
-      expect(slack).to have_received(:update_code_of_conduct).with(hash_including(ts: "3.4"))
+      described_class.perform_now(user.id, refresh: true)
     end
 
     it "leaves the DMs of someone who already accepted alone" do
       user.update!(slack_coc_accepted_at: 1.minute.ago)
+      expect(slack).not_to receive(:update_code_of_conduct)
 
       described_class.perform_now(user.id, refresh: true)
-
-      expect(slack).not_to have_received(:update_code_of_conduct)
     end
   end
 end

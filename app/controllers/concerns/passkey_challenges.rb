@@ -17,7 +17,7 @@ module PasskeyChallenges
 
   def store_passkey_challenge(purpose, challenge)
     session[passkey_challenge_key(purpose)] = {
-      "value" => challenge,
+      "value"      => challenge,
       "expires_at" => CHALLENGE_TTL.from_now.to_i
     }
   end
