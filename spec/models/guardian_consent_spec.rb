@@ -152,6 +152,13 @@ RSpec.describe GuardianConsent do
       expect(consent.record_grant!(signed_name: "Someone Else", ip: nil, user_agent: nil)).to be(false)
       expect(consent.reload.signed_name).to eq("Grace Hopper")
     end
+
+    it "returns false and does not raise when the record is not valid" do
+      consent.update_column(:guardian_email, "not an email") # rubocop:disable Rails/SkipsModelValidations
+
+      expect(consent.record_grant!(signed_name: "Grace Hopper", ip: nil, user_agent: nil)).to be(false)
+      expect(consent.reload).to be_pending
+    end
   end
 
   describe "#record_revoke!" do

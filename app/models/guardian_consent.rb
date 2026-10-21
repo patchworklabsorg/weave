@@ -107,7 +107,9 @@ class GuardianConsent < ApplicationRecord
   validates :note, presence: true, if: :offline?
   validate :guardian_email_not_a_weave_account, on: :create
 
-  aasm column: :status do
+  # whiny_persistence: false keeps the AASM 5 behavior: a bang event that
+  # fails validation returns false and does not raise. AASM 6 raises.
+  aasm column: :status, whiny_persistence: false do
     state :pending, initial: true
     state :granted
     state :revoked

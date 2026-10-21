@@ -151,6 +151,16 @@ RSpec.describe User, type: :model do
     it { is_expected.to have_one(:billing_address) }
   end
 
+  describe "status events" do
+    it "return false and do not raise when the record is not valid" do
+      user = create(:user)
+      user.email = ""
+
+      expect(user.suspend!).to be(false)
+      expect(user.reload).to be_active
+    end
+  end
+
   describe "callbacks" do
     it "sets a confirmation token after creation" do
       expect(create(:user).confirmation_token).to be_present
