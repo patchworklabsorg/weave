@@ -75,9 +75,9 @@ RSpec.describe ActiveDirectory::Config do
     built = []
     allow(Net::LDAP).to receive(:new) { |args| built << args }
 
-    ActiveDirectory::Client.new(config: settings).send(:build_ldap, "loom.patchwork.internal", { method: :simple })
+    ActiveDirectory::Client.new(config: settings).send(:build_ldap, "loom.patchwork.internal")
 
-    expect(built.first).to include(host: "loom.patchwork.internal", port: 636, connect_timeout: 3.0)
+    expect(built.first).to include(host: "loom.patchwork.internal", port: 636, connect_timeout: 3.0, auth: { method: :anonymous })
     expect(built.first[:encryption]).to eq(method: :simple_tls, tls_options: settings.tls_options)
   end
 

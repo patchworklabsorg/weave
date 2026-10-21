@@ -13,6 +13,7 @@ RSpec.describe ActiveDirectory::Client do
       expect(entry.dn).to eq(account.dn)
       expect(entry.employee_id).to eq("PWL1ABCDEF12")
       expect(entry.user_principal_name).to eq("ada lovelace@patchwork.internal")
+      expect(entry.object_guid).to eq(account.object_guid.unpack1("H*"))
       expect(directory.binds).to eq([["loom.patchwork.internal", FakeDirectory::SERVICE_DN]])
     end
 
@@ -78,7 +79,8 @@ RSpec.describe ActiveDirectory::Client do
           code: 49, message: "Invalid Credentials",
           error_message: "80090308: LdapErr: DSID-0C09044E, comment: AcceptSecurityContext error, data #{code}, v4563"
         ))
-        stub_client = described_class.new(config: directory.config, ldap_factory: ->(_host, _auth) { connection }, logger: Logger.new(nil))
+        allow(connection).to receive(:open).and_yield(connection)
+        stub_client = described_class.new(config: directory.config, ldap_factory: ->(_host) { connection }, logger: Logger.new(nil))
 
         expect(stub_client.authenticate(entry, "any-password")).to eq(status)
       end
@@ -107,21 +109,26 @@ RSpec.describe ActiveDirectory::Client do
       expect(directory.binds.map(&:first).uniq).to eq(["spindle.patchwork.internal"])
     end
 
-    it "uses spindle when loom times out" do
+    it "uses spindle when the connection to loom times out" do
       entry
-      directory.slow_hosts << "loom.patchwork.internal"
+      # net-ldap turns a single connect timeout into a plain Net::LDAP::Error.
+      directory.connect_errors["loom.patchwork.internal"] = Net::LDAP::Error.new("Operation timed out")
 
       expect(client.authenticate(entry, "Correct-horse-1")).to eq(:ok)
       expect(directory.binds.last).to eq(["spindle.patchwork.internal", account.dn])
     end
 
+    it "does not send the password to spindle when loom times out after the bind was sent" do
+      entry
+      directory.slow_hosts << "loom.patchwork.internal"
+
+      expect { client.authenticate(entry, "Correct-horse-1") }.to raise_error(ActiveDirectory::Unavailable, /during the operation/)
+      expect(directory.binds.map(&:first)).not_to include("spindle.patchwork.internal")
+    end
+
     it "uses spindle when the TLS handshake with loom fails" do
       entry
-      allow(directory).to receive(:call).and_wrap_original do |original, host, auth|
-        raise OpenSSL::SSL::SSLError, "certificate verify failed" if host == "loom.patchwork.internal"
-
-        original.call(host, auth)
-      end
+      directory.connect_errors["loom.patchwork.internal"] = OpenSSL::SSL::SSLError.new("certificate verify failed")
 
       expect(client.authenticate(entry, "Correct-horse-1")).to eq(:ok)
     end

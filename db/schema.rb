@@ -651,6 +651,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_120200) do
     t.string "confirmation_token"
     t.datetime "created_at", null: false
     t.datetime "directory_linked_at"
+    t.string "directory_object_guid"
     t.string "email", null: false
     t.datetime "email_confirmed_at"
     t.string "first_name", null: false

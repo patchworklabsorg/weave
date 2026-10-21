@@ -5,8 +5,9 @@ require "timeout"
 
 module ActiveDirectory
   # The account Weave found for a user: an AD user whose employeeID is the
-  # user's p_id.
-  Entry = Data.define(:dn, :user_principal_name, :employee_id)
+  # user's p_id. object_guid is the AD objectGUID as lowercase hex. It never
+  # changes for an object, so Weave pins the link to it.
+  Entry = Data.define(:dn, :user_principal_name, :employee_id, :object_guid)
 
   class Error < StandardError; end
 
@@ -23,10 +24,13 @@ module ActiveDirectory
   # result code.
   #
   # Every operation tries the hosts in order (loom, then spindle) and moves to
-  # the next host only on a transport problem: a refused or dropped
-  # connection, a timeout, or a TLS failure. An answer from a DC (for example
-  # "wrong password") is final, so a failed bind is never repeated on the
-  # second DC and does not count twice toward the AD lockout threshold.
+  # the next host only when it could not connect: a refused or unreachable
+  # host, a connect timeout, or a TLS failure. Nothing was sent to that DC
+  # yet. After the request is sent, any problem (an operation timeout, a
+  # dropped connection) is final and raises Unavailable, because the DC may
+  # already have counted a bad password or applied a change. An answer from a
+  # DC (for example "wrong password") is final too. So a password is never
+  # sent to two DCs, and one attempt counts once toward the AD lockout.
   class Client
     # AD puts a Win32 error in the bind diagnostic text: "... data 52e, v4563".
     BIND_ERRORS = {
@@ -46,16 +50,19 @@ module ActiveDirectory
     INSUFFICIENT_ACCESS = 50
     UNWILLING_TO_PERFORM = 53
 
+    # net-ldap turns most connect failures into a plain Net::LDAP::Error, so
+    # the class does not tell a connect failure from a failure after the bind
+    # was sent. #with_failover tracks that itself.
     TRANSPORT_ERRORS = [
       Net::LDAP::Error, SystemCallError, SocketError, IOError, OpenSSL::SSL::SSLError, Timeout::Error
     ].freeze
 
-    SEARCH_ATTRIBUTES = %w[distinguishedName userPrincipalName employeeID].freeze
+    SEARCH_ATTRIBUTES = %w[distinguishedName userPrincipalName employeeID objectGUID].freeze
 
     attr_reader :config
 
-    # ldap_factory builds a Net::LDAP-like object for one host. Tests pass a
-    # fake. Production uses #build_ldap.
+    # ldap_factory builds a Net::LDAP-like object for one host, with no
+    # credentials. Tests pass a fake. Production uses #build_ldap.
     def initialize(config: Config.current, ldap_factory: nil, logger: Rails.logger)
       @config = config
       @ldap_factory = ldap_factory || method(:build_ldap)
@@ -106,9 +113,8 @@ module ActiveDirectory
     def authenticate(entry, password)
       return :invalid_credentials if password.blank?
 
-      with_failover do |host|
-        ldap = @ldap_factory.call(host, { method: :simple, username: entry.dn, password: password })
-        if ldap.bind
+      with_failover do |ldap, _host|
+        if ldap.bind(method: :simple, username: entry.dn, password: password)
           :ok
         else
           bind_failure(ldap)
@@ -153,9 +159,8 @@ module ActiveDirectory
     end
 
     def with_service_connection
-      with_failover do |host|
-        ldap = @ldap_factory.call(host, { method: :simple, username: config.bind_dn, password: config.bind_password })
-        unless ldap.bind
+      with_failover do |ldap, host|
+        unless ldap.bind(method: :simple, username: config.bind_dn, password: config.bind_password)
           # A wrong or locked service account is a configuration problem. Do
           # not try the next DC: the same account would fail there too.
           @logger.error("[active_directory] service account bind failed on #{host}: #{describe(ldap)}")
@@ -171,22 +176,36 @@ module ActiveDirectory
 
       errors = []
       config.hosts.each do |host|
-        return Timeout.timeout(config.timeout) { yield host }
+        sent = false
+        return Timeout.timeout(config.timeout) do
+          # open connects (TCP, then TLS with verification) and sends an
+          # anonymous bind, which carries no secret. Only then does the
+          # block send the real bind.
+          @ldap_factory.call(host).open do |ldap|
+            sent = true
+            yield ldap, host
+          end
+        end
       rescue Unavailable
         raise
       rescue *TRANSPORT_ERRORS => e
-        @logger.warn("[active_directory] #{host}:#{config.port} failed: #{e.class}: #{e.message}")
+        if sent
+          @logger.error("[active_directory] #{host}:#{config.port} failed during the operation: #{e.class}: #{e.message}")
+          raise Unavailable, "#{host} failed during the operation (#{e.class})"
+        end
+
+        @logger.warn("[active_directory] could not connect to #{host}:#{config.port}: #{e.class}: #{e.message}")
         errors << "#{host}: #{e.class}"
       end
 
       raise Unavailable, "no domain controller answered (#{errors.join(', ')})"
     end
 
-    def build_ldap(host, auth)
+    def build_ldap(host)
       Net::LDAP.new(
         host: host,
         port: config.port,
-        auth: auth,
+        auth: { method: :anonymous },
         connect_timeout: config.connect_timeout,
         encryption: { method: :simple_tls, tls_options: config.tls_options }
       )
@@ -232,7 +251,8 @@ module ActiveDirectory
       Entry.new(
         dn: entry.dn.to_s,
         user_principal_name: first(entry, :userprincipalname),
-        employee_id: first(entry, :employeeid)
+        employee_id: first(entry, :employeeid),
+        object_guid: Array(entry[:objectguid]).first&.unpack1("H*")
       )
     end
 

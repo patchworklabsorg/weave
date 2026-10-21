@@ -307,12 +307,12 @@ class AuthController < ApplicationController
   end
 
   # Messages for password sign-in. Wrong password and an unknown email read
-  # the same, so the form does not reveal who has an account.
+  # the same, so the form does not reveal who has an account. A disabled or
+  # expired AD account reads the same too (see DirectoryPasswords).
   PASSWORD_ERRORS = {
     invalid: "Invalid email or password",
     locked: "Too many failed sign-in attempts. Wait 15 minutes, or sign in with an email link.",
     throttled: "Too many failed sign-in attempts. Wait 15 minutes, or sign in with an email link.",
-    disabled: "This account can't sign in with a password. Contact an administrator for help.",
     unlinked: "This account can't sign in with a password. Contact an administrator for help.",
     unavailable: "Password sign-in is not available now. Sign in with an email link, or try again later.",
     admin_only: "Password login is only available for administrators. Please use the magic link."
@@ -332,7 +332,6 @@ class AuthController < ApplicationController
     when :invalid then handle_login_error(PASSWORD_ERRORS[:invalid], email)
     when :locked then handle_login_error(PASSWORD_ERRORS[:locked], email)
     when :throttled then handle_login_error(PASSWORD_ERRORS[:throttled], email)
-    when :disabled then handle_login_error(PASSWORD_ERRORS[:disabled], email)
     when :unlinked then handle_login_error(PASSWORD_ERRORS[:unlinked], email)
     else handle_login_error(PASSWORD_ERRORS[:unavailable], email)
     end

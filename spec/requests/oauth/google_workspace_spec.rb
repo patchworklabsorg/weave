@@ -58,6 +58,15 @@ RSpec.describe "Google Workspace sign-in", type: :request do
       expect(again.application.uid).to eq(uid)
       expect(ApplicationAccessGrant.for_application(google_app).count).to eq(1)
     end
+
+    it "keeps email domains that an admin changed when the setup runs again" do
+      google_app.update!(email_domains: %w[patchworklabs.org])
+
+      GoogleWorkspaceApp.ensure!(redirect_uri: "https://accounts.google.com/new")
+
+      expect(google_app.reload.email_domains).to eq(%w[patchworklabs.org])
+      expect(google_app.redirect_uri).to eq("https://accounts.google.com/new")
+    end
   end
 
   describe "a HackBoston member with no Slack and no code of conduct" do

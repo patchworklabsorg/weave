@@ -42,7 +42,7 @@ RSpec.describe DirectoryPasswords do
     end
 
     {
-      "533" => :disabled, "701" => :disabled, "530" => :disabled,
+      "533" => :invalid, "701" => :invalid, "530" => :invalid, "531" => :invalid,
       "773" => :must_change_password, "532" => :must_change_password
     }.each do |code, status|
       it "answers #{status} for AD data #{code}" do
@@ -50,6 +50,72 @@ RSpec.describe DirectoryPasswords do
 
         expect(described_class.sign_in(user, "Ad-password-1")).to eq(status)
       end
+    end
+
+    it "counts answers that need the right password (a disabled account) toward the limit" do
+      directory.add_user(user.p_id, password: "Ad-password-1", bind_error: "533")
+      described_class::MAX_FAILURES.times { described_class.sign_in(user, "Ad-password-1") }
+
+      expect(described_class.sign_in(user, "Ad-password-1")).to eq(:throttled)
+    end
+
+    it "reserves each attempt before the bind, so more than the limit never reach AD" do
+      directory.add_user(user.p_id, password: "Ad-password-1")
+
+      results = Array.new(described_class::MAX_FAILURES + 3) { described_class.sign_in(user, "wrong") }
+
+      user_binds = directory.binds.count { |_host, username| username == directory.account(user.p_id).dn }
+      expect(user_binds).to eq(described_class::MAX_FAILURES)
+      expect(results.last).to eq(:throttled)
+    end
+
+    it "starts the window again at each attempt sent to AD (a sliding window)" do
+      directory.add_user(user.p_id, password: "Ad-password-1")
+      (described_class::MAX_FAILURES - 1).times { described_class.sign_in(user, "wrong") }
+
+      travel(10.minutes)
+      described_class.sign_in(user, "wrong")
+      travel(10.minutes)
+      expect(described_class.sign_in(user, "Ad-password-1")).to eq(:throttled)
+
+      travel(6.minutes)
+      expect(described_class.sign_in(user, "Ad-password-1")).to eq(:authenticated)
+    end
+
+    it "refuses an AD object other than the pinned one, even with the same employeeID" do
+      original = directory.add_user(user.p_id, password: "Ad-password-1")
+      described_class.sign_in(user, "Ad-password-1")
+      directory.accounts.delete(original)
+      directory.add_user(user.p_id, password: "Attacker-1", name: "Impostor")
+
+      expect(described_class.sign_in(user.reload, "Attacker-1")).to eq(:unlinked)
+      expect(described_class.reset(user, "Attacker-2")).to eq(:unlinked)
+    end
+
+    it "does not link an admin automatically" do
+      admin = create(:user, :admin, :verified)
+      directory.add_user(admin.p_id, password: "Attacker-1")
+
+      expect(described_class.sign_in(admin, "Attacker-1")).to eq(:not_directory)
+      expect(described_class.link(admin)).to be(false)
+      expect(admin.reload.directory_linked_at).to be_nil
+    end
+
+    it "links an admin when an operator asks" do
+      admin = create(:user, :admin, :verified)
+      account = directory.add_user(admin.p_id, password: "Admin-ad-1")
+
+      expect(described_class.link(admin, explicit: true)).to be(true)
+      expect(admin.reload.directory_object_guid).to eq(account.object_guid.unpack1("H*"))
+      expect(described_class.sign_in(admin, "Admin-ad-1")).to eq(:authenticated)
+    end
+
+    it "fails closed in production when the attempt store is not shared" do
+      allow(Rails.env).to receive(:production?).and_return(true)
+      allow(Rack::Attack.cache).to receive(:store).and_return(ActiveSupport::Cache::MemoryStore.new)
+      directory.add_user(user.p_id, password: "Ad-password-1")
+
+      expect(described_class.sign_in(user, "Ad-password-1")).to eq(:unavailable)
     end
 
     it "answers :locked for a locked AD account (775)" do
@@ -67,7 +133,7 @@ RSpec.describe DirectoryPasswords do
       expect(directory.binds.size).to eq(binds_before)
     end
 
-    it "lets binds through again after the window" do
+    it "lets binds through again after a quiet window" do
       directory.add_user(user.p_id, password: "Ad-password-1")
       described_class::MAX_FAILURES.times { described_class.sign_in(user, "wrong") }
 

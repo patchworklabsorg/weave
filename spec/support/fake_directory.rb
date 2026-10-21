@@ -14,9 +14,9 @@ class FakeDirectory
   SERVICE_PASSWORD = "service-secret"
   BASE_DN = "OU=Patchwork,DC=patchwork,DC=internal"
 
-  Account = Struct.new(:dn, :employee_id, :password, :bind_error, :upn, keyword_init: true)
+  Account = Struct.new(:dn, :employee_id, :password, :bind_error, :upn, :object_guid, keyword_init: true)
 
-  attr_reader :accounts, :binds, :modifications, :down_hosts, :slow_hosts
+  attr_reader :accounts, :binds, :modifications, :down_hosts, :slow_hosts, :connect_errors
   attr_accessor :modify_error, :service_password
 
   def initialize
@@ -25,6 +25,7 @@ class FakeDirectory
     @modifications = []
     @down_hosts = []
     @slow_hosts = []
+    @connect_errors = {}
     @modify_error = nil
     @service_password = SERVICE_PASSWORD
   end
@@ -33,7 +34,8 @@ class FakeDirectory
   # password, for example "533" (disabled) or "773" (must change).
   def add_user(employee_id, password:, ou: "OU=Users", bind_error: nil, name: employee_id)
     dn = "CN=#{name},#{ou},#{BASE_DN}"
-    account = Account.new(dn: dn, employee_id: employee_id, password: password, bind_error: bind_error, upn: "#{name.downcase}@patchwork.internal")
+    account = Account.new(dn: dn, employee_id: employee_id, password: password, bind_error: bind_error,
+                          upn: "#{name.downcase}@patchwork.internal", object_guid: SecureRandom.bytes(16))
     @accounts << account
     account
   end
@@ -41,11 +43,7 @@ class FakeDirectory
   def account(employee_id) = @accounts.find { |account| account.employee_id == employee_id }
 
   # The ldap_factory that ActiveDirectory::Client calls for each host.
-  def call(host, auth)
-    raise Errno::ECONNREFUSED, host if down_hosts.include?(host)
-
-    Connection.new(self, host, auth)
-  end
+  def call(host) = Connection.new(self, host)
 
   def config(env = {})
     ActiveDirectory::Config.new(
@@ -68,30 +66,37 @@ class FakeDirectory
   end
 
   class Connection
-    def initialize(directory, host, auth)
+    def initialize(directory, host)
       @directory = directory
       @host = host
-      @auth = auth
       @result = OpenStruct.new(code: 0, message: "Success", error_message: "")
     end
 
     attr_reader :host
 
-    def bind
+    # Like Net::LDAP#open: connect, then the anonymous bind, then the block.
+    def open
+      raise Errno::ECONNREFUSED, @host if @directory.down_hosts.include?(@host)
+      raise @directory.connect_errors[@host] if @directory.connect_errors.key?(@host)
+
+      yield self
+    end
+
+    def bind(auth)
       sleep 2 if @directory.slow_hosts.include?(@host)
-      @directory.binds << [@host, @auth[:username]]
+      @directory.binds << [@host, auth[:username]]
       @bound_as = nil
 
-      if @auth[:username] == SERVICE_DN
-        return succeed(:service) if @auth[:password] == @directory.service_password
+      if auth[:username] == SERVICE_DN
+        return succeed(:service) if auth[:password] == @directory.service_password
 
         return invalid_credentials("52e")
       end
 
-      account = @directory.accounts.find { |candidate| candidate.dn == @auth[:username] }
+      account = @directory.accounts.find { |candidate| candidate.dn == auth[:username] }
       return invalid_credentials("525") if account.nil?
       return invalid_credentials("775") if account.bind_error == "775"
-      return invalid_credentials("52e") unless account.password == @auth[:password]
+      return invalid_credentials("52e") unless account.password == auth[:password]
       return invalid_credentials(account.bind_error) if account.bind_error
 
       succeed(account)
@@ -107,6 +112,7 @@ class FakeDirectory
         entry = Net::LDAP::Entry.new(account.dn)
         entry[:employeeid] = account.employee_id
         entry[:userprincipalname] = account.upn
+        entry[:objectguid] = account.object_guid
         entry
       end
     end

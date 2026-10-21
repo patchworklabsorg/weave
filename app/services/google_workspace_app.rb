@@ -26,7 +26,9 @@ module GoogleWorkspaceApp
 
   # Creates the app and the group, or updates them. Safe to run more than
   # once: an existing app keeps its client id and secret.
-  def self.ensure!(redirect_uri:, email_domains: DEFAULT_EMAIL_DOMAINS)
+  # email_domains: nil keeps the domains of an existing app (an admin may
+  # have changed them), and gives a new app DEFAULT_EMAIL_DOMAINS.
+  def self.ensure!(redirect_uri:, email_domains: nil)
     raise ArgumentError, "redirect_uri must be an https URL from the Google Admin console" unless redirect_uri.to_s.start_with?("https://")
 
     Doorkeeper::Application.transaction do
@@ -38,14 +40,17 @@ module GoogleWorkspaceApp
 
       application = Doorkeeper::Application.find_or_initialize_by(name: NAME)
       created = application.new_record?
+      domains = email_domains || (created ? DEFAULT_EMAIL_DOMAINS : application.email_domains)
+      domains_before = application.email_domains
       application.assign_attributes(
         redirect_uri: redirect_uri,
         scopes: SCOPES,
         confidential: true,
         access_policy: "restricted",
-        email_domains: email_domains.map { |domain| domain.to_s.strip.downcase.delete_prefix("@") }.compact_blank
+        email_domains: domains.map { |domain| domain.to_s.strip.downcase.delete_prefix("@") }.compact_blank
       )
       application.save!
+      RevokeLostAppAccessJob.perform_later(application_id: application.id) if !created && application.email_domains != domains_before
 
       ApplicationAccessGrant.find_or_create_by!(application: application, grantee: group)
       Result.new(application:, group:, created:)

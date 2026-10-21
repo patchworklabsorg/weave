@@ -43,6 +43,14 @@ RSpec.describe DemoteForCodeOfConductJob do
     described_class.perform_now(user.id)
   end
 
+  it "skips a member of a sponsored project that waives the code of conduct" do
+    create(:group_membership, user: user, group: create(:group, waives_code_of_conduct: true))
+    expect(slack).not_to receive(:demote_to_guest)
+
+    described_class.perform_now(user.id)
+    expect(User.code_of_conduct_pending).not_to include(user)
+  end
+
   it "asks Slack admins and owners to accept through the form, without demoting them" do
     allow(slack).to receive(:workspace_admin?).with("U1").and_return(true)
     expect(slack).not_to receive(:demote_to_guest)

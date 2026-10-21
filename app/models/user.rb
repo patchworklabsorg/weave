@@ -12,6 +12,7 @@
 #  confirmation_sent_at     :datetime
 #  confirmation_token       :string
 #  directory_linked_at      :datetime
+#  directory_object_guid    :string
 #  email                    :string           not null
 #  email_confirmed_at       :datetime
 #  first_name               :string           not null
@@ -212,8 +213,11 @@ class User < ApplicationRecord
   # Full Slack members who have not accepted the code of conduct. They joined
   # before the code-of-conduct flow, so nothing has asked them yet (see
   # CodeOfConductRequestJob). Exempt users are left out.
+  # Members of a project group that waives the code of conduct are left out
+  # too (see #code_of_conduct_required?).
   scope :code_of_conduct_pending, lambda {
-    slack_member.where(slack_coc_accepted_at: nil, code_of_conduct_exempt: false).where.not(slack_id: nil)
+    waived = Group::Membership.active.joins(:group).where(groups: { waives_code_of_conduct: true }).select(:user_id)
+    slack_member.where(slack_coc_accepted_at: nil, code_of_conduct_exempt: false).where.not(slack_id: nil).where.not(id: waived)
   }
 
   # Names the Slack import saves when a Slack profile has no name.

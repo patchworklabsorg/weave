@@ -19,19 +19,26 @@ The feature is off by default. Turn it on in staging first.
 Weave searches for `(&(objectCategory=person)(objectClass=user)(employeeID=<p_id>))` under `OU=Patchwork,DC=patchwork,DC=internal`.
 
 - No result: the user has no AD account. Weave's own password flow applies.
-- One result: Weave records `users.directory_linked_at` and replaces the local password digest with a random value. From then on, only the AD password works.
+- One result: Weave records `users.directory_linked_at` and the AD `objectGUID` (`users.directory_object_guid`), and replaces the local password digest with a random value. From then on, only the AD password works.
 - More than one result: Weave refuses the sign-in (fail closed) and logs the error. Fix the duplicate `employeeID` in AD.
+
+The `p_id` is public: it is the OIDC `sub`. So write access to `employeeID` in AD is the same as the power to take over a Weave account. Weave limits this in two ways:
+
+- The link is pinned to the `objectGUID`. If a different AD object later has the same `employeeID` (for example after an account was deleted and made again), password sign-in, change and reset fail closed with "Contact an administrator". To accept the new object, an operator clears `directory_linked_at` and `directory_object_guid` in the console and links the user again.
+- Weave never links an admin, superadmin or owner automatically. An operator checks the AD account and runs `bin/rails active_directory:link_user P_ID=PWL... CONFIRM=1`. Until then, admins keep their Weave password.
+
+Give write access to `employeeID` only to the people who manage Weave accounts. Do not delegate it to sponsored-project OU operators.
 
 Weave links a user at these times:
 
 - At a password sign-in.
 - In the background after any other sign-in (`LinkDirectoryAccountJob`).
 - When the user opens `/password`.
-- When an operator runs `bin/rails active_directory:link`.
+- When an operator runs `bin/rails active_directory:link` (all users except admins) or `bin/rails active_directory:link_user` (one user, admins too).
 
 The sign-in page shows the password field only for admins and for linked users. It reads Weave's database only, so the page can not be used to ask AD about an email address. A user who is not linked yet can use `/login/pw`.
 
-If a linked user's AD account goes away, password sign-in stops with "Contact an administrator". To unlink the user, an operator sets `directory_linked_at` to `NULL` in the console. The user then signs in with an email link.
+If a linked user's AD account goes away, password sign-in stops with "Contact an administrator". To unlink the user, an operator sets `directory_linked_at` and `directory_object_guid` to `NULL` in the console. The user then signs in with an email link.
 
 ## Sign-in
 
@@ -59,15 +66,17 @@ sequenceDiagram
 | success | right password | signed in |
 | `52e`, `525` | wrong password, no such user | "Invalid email or password" |
 | `775` | account locked | "Too many failed sign-in attempts" |
-| `533`, `701`, `530`, `531` | disabled, expired, not permitted now | "Contact an administrator" |
+| `533`, `701`, `530`, `531` | disabled, expired, not permitted now | "Invalid email or password" |
 | `773`, `532` | must change password, password expired | the expired-password page |
 | no DC answers | network, TLS or service account problem | "Password sign-in is not available now" |
+
+AD sends `533`, `701`, `530` and `531` only when the password is right. Weave shows the same message as for a wrong password, so the page does not tell a guesser that a guess was right. The log keeps the real reason.
 
 Rules:
 
 - Weave never sends a bind with an empty password. AD treats it as an anonymous bind, which succeeds.
 - Weave does not bind for an account that Weave itself locked, suspended or deactivated.
-- Weave moves to the next DC only for a transport problem. It never repeats a failed password on the second DC, so one attempt counts once toward the AD lockout.
+- Each connection starts with TCP, TLS (with certificate and host name checks) and an anonymous bind, which carries no secret. Weave moves to the next DC only when that part fails. After Weave sends the real bind or a password change, any problem (for example an operation timeout) is final: Weave fails closed and does not try spindle. So a password goes to one DC only, and one attempt counts once toward the AD lockout.
 - When AD is on and does not answer, Weave fails closed. It never falls back to the Weave password.
 
 ### Limits
@@ -77,9 +86,14 @@ Weave must not become a tool for password spraying against AD. These limits appl
 - Rack::Attack: 5 password sign-ins in 15 minutes for each email, and 20 for each IP.
 - Rack::Attack: 10 password changes in 15 minutes for each IP.
 - The existing limits on `/login` (5 in 20 seconds for each email, 10 in 1 minute for each IP, 3 email links in 5 minutes) still apply.
-- `DirectoryPasswords`: after 5 failed binds for one user in 15 minutes, Weave sends no more binds for that user until the window ends. This limit counts across all IPs and app processes (the Rack::Attack Redis store).
+- The rules match `/login` with a format too (`/login.json`), and they read the email from a JSON body.
+- `DirectoryPasswords`: each password check for a linked user reserves one attempt before Weave sends it, with an atomic increment. Parallel requests can not pass the limit. Only a success clears the count. Every other answer counts, also the answers that need the right password (`533`, `701`, `773`) and a policy refusal on a change.
+- After 5 attempts, Weave sends nothing more for that user until 15 minutes pass with no attempt sent to AD. The window slides, like the AD lockout observation window.
+- The count is in the Rack::Attack store. In production that store must be Redis (`REDIS_CACHE_URL`). Without it, each process would count alone, so Weave refuses to use AD and password sign-in shows "not available".
 
-Set the AD lockout threshold higher than 5 (for example 10 in 15 minutes). Then Weave alone can not lock an AD account.
+Set the AD lockout policy like this: threshold higher than 5 (for example 10), and "Reset account lockout counter after" 15 minutes or less. AD then resets its counter before Weave resets its own, so the attempts that Weave sends can not reach the AD threshold. Attempts from other systems (VPN, Windows sign-in) add to the AD counter, and Weave can not see them.
+
+A person who keeps sending wrong passwords for one user can keep that user's password sign-in blocked in Weave. Email links and passkeys still work for that user.
 
 ### Expired password
 
@@ -141,7 +155,7 @@ Run this on the Weave host. Use the redirect URI from the Google SSO profile (se
 bin/rails google_workspace:setup REDIRECT_URI=https://accounts.google.com/... EMAIL_DOMAINS=patchworklabs.org,hackboston.dev,hackathon.help
 ```
 
-The task is safe to run again. It keeps the client id and secret. It creates the `google-workspace` group if it does not exist. Read the client secret on the app's admin page. Do not put it in the repository.
+The task is safe to run again. It keeps the client id and secret. It creates the `google-workspace` group if it does not exist. Without `EMAIL_DOMAINS`, an existing app keeps its email domains. A new app gets the three default domains. Read the client secret on the app's admin page. Do not put it in the repository.
 
 The app requires the Code of Conduct and guardian consent like any other app. A superadmin can change that on the app's admin page.
 
@@ -152,7 +166,7 @@ A sponsored project, such as HackBoston or hackathon.help, is a manual Weave gro
 - "Members do not need to accept the Patchwork Code of Conduct to use apps" (`waives_code_of_conduct`).
 - "Members do not need to join the Patchwork Slack" (`waives_slack`). Members accept the Code of Conduct in Slack, so this option needs the Code of Conduct waiver too.
 
-The options apply to every member of the group. Put only the project's own people in the group. A Patchwork member in no project group still gets every gate. The age and guardian consent rules apply to everyone.
+The options apply to every member of the group. Put only the project's own people in the group. A Patchwork member in no project group still gets every gate. The age and guardian consent rules apply to everyone. The Slack code-of-conduct tasks (`slack:coc:*` and `DemoteForCodeOfConductJob`) skip members of a group that waives the Code of Conduct.
 
 To put the people of an AD OU in the group:
 
@@ -190,7 +204,7 @@ Weave always verifies the DC certificate against `AD_CA_FILE` and checks the hos
 
 ### Infra (`jaspermayone/infra`, `modules/weave`)
 
-1. Add the staging values to `secrets/weave-staging-env.age`: `AD_ENABLED=true`, `AD_BIND_DN`, `AD_CA_FILE=/run/weave/ad-ca.pem`, `AD_BIND_PASSWORD_FILE=/run/weave/ad-bind-password`.
+1. Add the staging values to `secrets/weave-staging-env.age`: `AD_ENABLED=true`, `AD_BIND_DN`, `AD_CA_FILE=/run/weave/ad-ca.pem`, `AD_BIND_PASSWORD_FILE=/run/weave/ad-bind-password`. Make sure `REDIS_CACHE_URL` is set: Weave refuses to use AD without a shared attempt store.
 2. Add an agenix secret for the service account password. Mount it read-only into the staging container at the path above.
 3. Mount the Patchwork AD CS root and intermediate certificates (PEM) into the container at `AD_CA_FILE`.
 4. Make sure the container can resolve `loom.patchwork.internal` and `spindle.patchwork.internal` (DNS through the thimble VPN, or `extraHosts` with 10.100.90.10 and 10.100.90.11) and can reach TCP 636 on both.
@@ -199,12 +213,13 @@ Weave always verifies the DC certificate against `AD_CA_FILE` and checks the hos
 ### AD
 
 1. Create `svc-weave-ldap` in a service-account OU. Give it a long random password that does not expire.
-2. Give it read access to user objects under `OU=Patchwork`.
+2. Give it read access to user objects under `OU=Patchwork`, including `objectGUID` and `employeeID`.
 3. Delegate "Reset password" on the user OUs that Weave manages, and only those. Do not give it other rights.
 4. Keep the default "Change password" right for Everyone on user objects. Weave sends a self-service change (delete + add, with the old password) as the service account, also for a user who must change the password and can not bind. Staging step 5 checks this.
 5. Make sure each DC has an LDAPS certificate from the Patchwork AD CS with the DC's FQDN in the subject alternative name.
 6. Set `employeeID` to the Weave `p_id` on each AD user. Use the `SPWL…` ids for staging users.
-7. Set the lockout threshold above 5 (see Limits).
+7. Set the lockout threshold above 5 and the lockout counter reset to 15 minutes or less (see Limits).
+8. Do not let sponsored-project OU operators write `employeeID` (see "Linking a Weave user to AD").
 
 ### Google Admin console
 
@@ -225,7 +240,7 @@ Run each step on `weave-staging.patchworklabs.org` with test accounts only.
 1. `bin/rails active_directory:doctor` shows `usable: true`.
 2. A test AD user with `employeeID` = its `SPWL…` id signs in at `/login/pw` with the AD password. The user row gets `directory_linked_at`.
 3. A wrong password shows "Invalid email or password". The AD `badPwdCount` goes up by one only.
-4. Disable the AD user. Sign-in shows "Contact an administrator". Enable it again.
+4. Disable the AD user. Sign-in shows "Invalid email or password", and the log shows the disabled account. Enable it again.
 5. Set "User must change password at next logon". Sign-in goes to `/password/expired`. Change the password there. Sign in with the new password.
 6. On `/password`, enter a password that breaks the AD policy. The page shows the policy message.
 7. Change the password with the current password. Then try to change it back. AD history refuses it.
@@ -234,11 +249,13 @@ Run each step on `weave-staging.patchworklabs.org` with test accounts only.
 10. Stop LDAPS on loom (or block it). Sign-in still works through spindle. Block both: sign-in shows "not available", and email links still work.
 11. Point `AD_CA_FILE` at a wrong CA. Sign-in shows "not available" and the log shows a certificate error.
 12. Six wrong passwords in a row: the sixth gets "Too many failed sign-in attempts", and AD shows at most five failures from Weave.
-13. A test user with no AD account: email links work, and admin password sign-in works with the Weave password.
-14. Google: a test user in the SSO OU and in the `google-workspace` group opens Gmail, signs in at Weave, and reaches the inbox. Google shows the right account.
-15. A user who is not in `google-workspace` gets "You don't have access" at Weave.
-16. A HackBoston test user (no Slack, no Code of Conduct, in the HackBoston group with both waivers, and in `google-workspace`) signs in to Google with the `hackboston.dev` address.
-17. Google's "Change password" link opens `/password` on Weave.
+13. Delete the test AD user and make a new one with the same `employeeID`. Sign-in fails closed with "Contact an administrator".
+14. An admin test user with an AD account keeps the Weave password until `active_directory:link_user` links it.
+15. A test user with no AD account: email links work, and admin password sign-in works with the Weave password.
+16. Google: a test user in the SSO OU and in the `google-workspace` group opens Gmail, signs in at Weave, and reaches the inbox. Google shows the right account.
+17. A user who is not in `google-workspace` gets "You don't have access" at Weave.
+18. A HackBoston test user (no Slack, no Code of Conduct, in the HackBoston group with both waivers, and in `google-workspace`) signs in to Google with the `hackboston.dev` address.
+19. Google's "Change password" link opens `/password` on Weave.
 
 ## Code
 

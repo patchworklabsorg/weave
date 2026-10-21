@@ -15,7 +15,7 @@ namespace :active_directory do
     puts "missing:   #{config.missing.join(', ')}" if config.missing.any?
   end
 
-  desc "Link every Weave user who has an AD account (employeeID = p_id). Safe to run more than once."
+  desc "Link every non-admin Weave user who has an AD account (employeeID = p_id). Safe to run more than once."
   task link: :environment do
     abort "AD is off or not configured. Run active_directory:doctor." unless ActiveDirectory::Config.current.usable?
 
@@ -24,6 +24,21 @@ namespace :active_directory do
       linked += 1 if DirectoryPasswords.link(user)
     end
     puts "Linked #{linked} users. #{User.where.not(directory_linked_at: nil).count} users are linked in total."
+    puts "Admins are not linked here. Link each one with active_directory:link_user P_ID=..."
+  end
+
+  desc "Link one user, admins too, after you checked their AD account. P_ID=PWL..."
+  task link_user: :environment do
+    user = User.find_by(p_id: ENV.fetch("P_ID") { abort "Set P_ID." }) || abort("No such user.")
+    entry = DirectoryPasswords.client.find_employee(user.p_id) || abort("AD has no account with employeeID #{user.p_id}.")
+    puts "AD account: #{entry.dn} (objectGUID #{entry.object_guid})"
+    abort "Check that this is the right account, then run again with CONFIRM=1." unless ENV["CONFIRM"] == "1"
+
+    if DirectoryPasswords.link(user, explicit: true)
+      puts "Linked #{user.p_id}."
+    else
+      abort "Could not link #{user.p_id}. See the log."
+    end
   end
 
   desc "Add the Weave users of an AD OU to a project group. OU='OU=HackBoston,...' GROUP=hackboston [CONFIRM=1]"

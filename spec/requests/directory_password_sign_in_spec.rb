@@ -56,12 +56,13 @@ RSpec.describe "Password sign-in with Active Directory", type: :request do
     expect(session[:user_id]).to be_nil
   end
 
-  it "tells a disabled or expired AD account to contact an administrator" do
+  it "does not tell a guesser that the password of a disabled AD account is right" do
     directory.account(user.p_id).bind_error = "533"
 
     sign_in_with_password(user.email, "Ad-password-1")
 
-    expect(response.body).to include("Contact an administrator")
+    expect(response.body).to include("Invalid email or password")
+    expect(session[:user_id]).to be_nil
   end
 
   it "says password sign-in is unavailable when no DC answers, and does not fall back to the Weave password" do
@@ -122,6 +123,22 @@ RSpec.describe "Password sign-in with Active Directory", type: :request do
       5.times { sign_in_with_password(user.email, "wrong") }
 
       sign_in_with_password(user.email, "Ad-password-1")
+
+      expect(response).to have_http_status(:too_many_requests)
+    end
+
+    it "throttles password attempts sent to /login.json" do
+      5.times { post "/login.json", params: { user: { email: user.email, password: "wrong" } } }
+
+      post "/login.json", params: { user: { email: user.email, password: "Ad-password-1" } }
+
+      expect(response).to have_http_status(:too_many_requests)
+    end
+
+    it "throttles password attempts sent as a JSON body" do
+      5.times { post "/login", params: { user: { email: user.email, password: "wrong" } }.to_json, headers: { "CONTENT_TYPE" => "application/json" } }
+
+      post "/login", params: { user: { email: user.email, password: "Ad-password-1" } }.to_json, headers: { "CONTENT_TYPE" => "application/json" }
 
       expect(response).to have_http_status(:too_many_requests)
     end

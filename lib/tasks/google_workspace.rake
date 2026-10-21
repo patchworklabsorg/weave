@@ -5,7 +5,8 @@ namespace :google_workspace do
   desc "Create or update the Google Workspace OAuth app. REDIRECT_URI=<from the Google SSO profile> [EMAIL_DOMAINS=a.org,b.dev]"
   task setup: :environment do
     redirect_uri = ENV.fetch("REDIRECT_URI") { abort "Set REDIRECT_URI to the redirect URI that the Google SSO profile shows." }
-    domains = ENV["EMAIL_DOMAINS"].to_s.split(",").map(&:strip).compact_blank.presence || GoogleWorkspaceApp::DEFAULT_EMAIL_DOMAINS
+    # Without EMAIL_DOMAINS an existing app keeps its domains.
+    domains = ENV["EMAIL_DOMAINS"].to_s.split(",").map(&:strip).compact_blank.presence
 
     result = GoogleWorkspaceApp.ensure!(redirect_uri: redirect_uri, email_domains: domains)
     application = result.application
