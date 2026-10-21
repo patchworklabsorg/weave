@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe SlackCodeOfConductAcceptedJob do
   let!(:user) { create(:user, slack_id: "U123") }
-  let(:service) { instance_double(SlackService, configured?: true, add_to_default_channels: {}) }
+  let(:service) { instance_double(SlackService, configured?: true) }
 
   before { allow(SlackService).to receive(:new).and_return(service) }
 
@@ -22,18 +22,16 @@ RSpec.describe SlackCodeOfConductAcceptedJob do
     expect { described_class.perform_now("U123") }.to change { user.reload.slack_membership }.from("pending").to("member")
   end
 
-  it "adds the new member to the default channels" do
+  it "adds the new member to the member channels" do
     allow(service).to receive(:promote_to_member).and_return({ ok: true })
-    expect(service).to receive(:add_to_default_channels).with("U123")
 
-    described_class.perform_now("U123")
+    expect { described_class.perform_now("U123") }.to have_enqueued_job(JoinSlackChannelsJob).with("U123")
   end
 
   it "adds no channels when promotion fails" do
     allow(service).to receive(:promote_to_member).and_return({ ok: false, error: "user_not_found" })
-    expect(service).not_to receive(:add_to_default_channels)
 
-    described_class.perform_now("U123")
+    expect { described_class.perform_now("U123") }.not_to have_enqueued_job(JoinSlackChannelsJob)
   end
 
   it "does nothing without a Slack user id" do
