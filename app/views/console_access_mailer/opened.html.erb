@@ -1,8 +1,0 @@
-<p style="margin: 0 0 16px 0; color: #2a2050;">A <%= @console %> opened on <%= Weave.host %> under your name, <strong><%= @user.full_name %></strong> (<%= @user.p_id %>).</p>
-
-<p style="margin: 0 0 16px 0; color: #2a2050;">Host: <%= @console_request.host %><br>
-Approved: <%= @console_request.decided_at.utc.strftime("%Y-%m-%d %H:%M:%S UTC") %> from <%= @console_request.decided_ip || "an unknown address" %></p>
-
-<p style="margin: 0 0 16px 0; color: #2a2050;">If you did not approve this console, tell the other superadmins now.</p>
-
-<p style="margin: 0 0 16px 0; color: #2a2050;"><a href="<%= @audits_url %>" style="color: #6c3ec1;">Open the console audits</a></p>

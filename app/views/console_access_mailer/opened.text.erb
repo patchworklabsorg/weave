@@ -1,6 +1,0 @@
-A <%= @console %> opened on <%= Weave.host %> under your name, <%= @user.full_name %> (<%= @user.p_id %>).
-
-Host: <%= @console_request.host %>
-Approved: <%= @console_request.decided_at.utc.strftime("%Y-%m-%d %H:%M:%S UTC") %> from <%= @console_request.decided_ip || "an unknown address" %>
-
-If you did not approve this console, tell the other superadmins now. The session and its commands are at <%= @audits_url %>
