@@ -80,12 +80,12 @@ module UiHelper
   def copy_button(value, label: "Copy", **options)
     tag.div(class: "copyable", data: { controller: "clipboard", clipboard_text_value: value }) do
       safe_join([
-        tag.code(value, class: "code-chip"),
-        tag.button(type: "button", class: "btn btn-secondary btn-sm btn-icon", title: label, "aria-label": label,
-                   data: { action: "clipboard#copy", clipboard_target: "button" }, **options) do
-          safe_join([icon(:copy, class: "copy-idle"), icon(:check, class: "copy-done", hidden: true)])
-        end
-      ])
+                  tag.code(value, class: "code-chip"),
+                  tag.button(type: "button", class: "btn btn-secondary btn-sm btn-icon", title: label, "aria-label": label,
+                             data: { action: "clipboard#copy", clipboard_target: "button" }, **options) do
+                    safe_join([icon(:copy, class: "copy-idle"), icon(:check, class: "copy-done", hidden: true)])
+                  end
+                ])
     end
   end
 
