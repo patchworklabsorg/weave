@@ -14,7 +14,9 @@ module ConsoleAccess
 
       @current ||= ConsoleAccess.username_for(SignIn.new(kind: "console").await!)
     rescue Error, Interrupt => e
-      abort(e.message.presence || "Cancelled.") # rubocop:disable Rails/Exit -- a console without a sign-in must not open
+      # A console without a sign-in must not open.
+      warn(e.message.presence || "Cancelled.")
+      raise SystemExit.new(false)
     end
 
   end
