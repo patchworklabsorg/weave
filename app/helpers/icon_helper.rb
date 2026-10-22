@@ -11,8 +11,11 @@ module IconHelper
   def icon(name, size: 16, title: nil, **options)
     attributes = options.merge(width: size, height: size)
     if title
+      # lucide-rails adds aria-hidden="true" by default; a labelled icon must
+      # override it or assistive tech skips the label.
       attributes[:role] = "img"
       attributes["aria-label"] = title
+      attributes["aria-hidden"] = "false"
     else
       attributes["aria-hidden"] = "true"
     end

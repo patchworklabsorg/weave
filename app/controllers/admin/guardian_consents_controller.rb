@@ -11,7 +11,7 @@ class Admin::GuardianConsentsController < Admin::BaseController
     @recent = GuardianConsent.where.not(reviewed_at: nil).where.not(user_id: nil).includes(:user, :reviewed_by)
                              .order(reviewed_at: :desc)
     if params[:search].present?
-      term = "%#{GuardianConsent.sanitize_sql_like(params[:search].strip)}%"
+      term = "%#{GuardianConsent.sanitize_sql_like(params[:search].to_s.strip)}%"
       @recent = @recent.joins(:user)
                        .where("users.first_name ILIKE :t OR users.last_name ILIKE :t OR users.email ILIKE :t OR users.p_id ILIKE :t", t: term)
     end

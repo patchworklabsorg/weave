@@ -12,6 +12,7 @@
           autofocus: local_assigns[:autofocus], data: { search_target: "input", action: "input->search#search" } %>
   </label>
   <% if value.present? %>
-    <%= link_to "Clear", url, class: "btn btn-quiet btn-sm", data: { turbo_frame: frame, turbo_action: "advance" } %>
+    <%# A full visit, so the input itself is reset too. %>
+    <%= link_to "Clear", url, class: "btn btn-quiet btn-sm" %>
   <% end %>
 <% end %>

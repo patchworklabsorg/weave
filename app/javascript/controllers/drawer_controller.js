@@ -2,7 +2,8 @@ import { Controller } from "@hotwired/stimulus"
 
 // Opens and closes a panel that is hidden on small screens: the admin
 // sidebar and the member nav sheet. The panel and the optional scrim carry
-// data-open; the CSS does the rest.
+// data-open; the CSS does the rest. The panel may be absent (a signed-out
+// top bar has no menu), so every method checks for it.
 export default class extends Controller {
   static targets = ["panel", "scrim", "button"]
 
@@ -32,10 +33,11 @@ export default class extends Controller {
   }
 
   get isOpen() {
-    return this.panelTarget.dataset.open === "true"
+    return this.hasPanelTarget && this.panelTarget.dataset.open === "true"
   }
 
   set(open) {
+    if (!this.hasPanelTarget) return
     this.panelTarget.dataset.open = String(open)
     if (this.hasScrimTarget) this.scrimTarget.dataset.open = String(open)
     this.buttonTargets.forEach((button) => button.setAttribute("aria-expanded", String(open)))

@@ -15,7 +15,7 @@ class Admin::UsersController < Admin::BaseController
     @users = User.all
 
     if params[:search].present?
-      search_term = "%#{User.sanitize_sql_like(params[:search].strip)}%"
+      search_term = "%#{User.sanitize_sql_like(params[:search].to_s.strip)}%"
       @users = @users.where(
         "first_name ILIKE :t OR last_name ILIKE :t OR email ILIKE :t OR p_id ILIKE :t OR (first_name || ' ' || last_name) ILIKE :t",
         t: search_term

@@ -18,8 +18,12 @@ class Admin::SearchController < Admin::BaseController
 
   def users(query)
     term = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
+    # Only users this admin may open (Admin::UsersController#show checks the
+    # same thing), so no result is a dead end.
     User.where("first_name ILIKE :t OR last_name ILIKE :t OR email ILIKE :t OR p_id ILIKE :t", t: term)
-        .order(:first_name, :last_name).limit(LIMIT).map do |user|
+        .order(:first_name, :last_name).limit(LIMIT * 3)
+        .select { |user| UserAdminPermissions.new(current_user, user).view? }
+        .first(LIMIT).map do |user|
       { type: "user", label: user.full_name, hint: user.email, path: admin_user_path(user) }
     end
   end

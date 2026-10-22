@@ -9,8 +9,10 @@ RSpec.describe "Admin list search", type: :request do
   before { sign_in_via_magic_link(admin) }
 
   describe "groups" do
-    let!(:engineering) { create(:group, name: "Engineering", slug: "eng", description: "Builds things") }
-    let!(:finance) { create(:group, name: "Finance", slug: "fin", description: "Counts things") }
+    before do
+      create(:group, name: "Engineering", slug: "eng", description: "Builds things")
+      create(:group, name: "Finance", slug: "fin", description: "Counts things")
+    end
 
     it "filters by name, slug or description" do
       get admin_groups_path(search: "eng")
@@ -48,8 +50,12 @@ RSpec.describe "Admin list search", type: :request do
   end
 
   describe "OAuth apps" do
-    let!(:krater) { Doorkeeper::Application.create!(name: "Krater", redirect_uri: "https://krater.example.com/cb", scopes: "profile") }
-    let!(:quilt) { Doorkeeper::Application.create!(name: "Quilt", redirect_uri: "https://quilt.example.com/cb", scopes: "profile") }
+    let(:quilt) { Doorkeeper::Application.create!(name: "Quilt", redirect_uri: "https://quilt.example.com/cb", scopes: "profile") }
+
+    before do
+      Doorkeeper::Application.create!(name: "Krater", redirect_uri: "https://krater.example.com/cb", scopes: "profile")
+      quilt
+    end
 
     it "filters by name, client id or redirect URI" do
       get admin_oauth_applications_path(search: "krat")
