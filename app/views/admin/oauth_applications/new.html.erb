@@ -14,7 +14,7 @@
 
 <div class="max-w-2xl">
   <div class="patch p-6">
-    <%= form_with model: @application, url: admin_oauth_applications_path, local: true, class: "space-y-6" do |form| %>
+    <%= form_with model: @application, url: admin_oauth_applications_path, local: true, data: { turbo: false }, class: "space-y-6" do |form| %>
       <% if @application.errors.any? %>
         <div class="patch border-2 border-orchid bg-orchid-soft/40 text-ink p-4">
           <div class="flex">

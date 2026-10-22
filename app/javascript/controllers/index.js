@@ -7,6 +7,9 @@ import { application } from "./application"
 import ClipboardController from "./clipboard_controller"
 application.register("clipboard", ClipboardController)
 
+import ConfirmSubmitController from "./confirm_submit_controller"
+application.register("confirm-submit", ConfirmSubmitController)
+
 import CountdownController from "./countdown_controller"
 application.register("countdown", CountdownController)
 
