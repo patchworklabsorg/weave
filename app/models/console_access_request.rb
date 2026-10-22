@@ -5,51 +5,51 @@
 # Table name: console_access_requests
 # Database name: primary
 #
-#  id            :bigint           not null, primary key
-#  claimed_at    :datetime
-#  code_digest   :string           not null
-#  decided_at    :datetime
-#  decided_ip    :string
-#  expires_at    :datetime         not null
-#  host          :string
-#  kind          :string           not null
-#  status        :string           default("pending"), not null
-#  created_at    :datetime         not null
-#  updated_at    :datetime         not null
-#  decided_by_id :bigint
+#  id           :bigint           not null, primary key
+#  claimed_at   :datetime
+#  code_digest  :string           not null
+#  confirmed_at :datetime
+#  confirmed_ip :string
+#  expires_at   :datetime         not null
+#  host         :string
+#  kind         :string           not null
+#  status       :string           default("pending"), not null
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#  user_id      :bigint
 #
 # Indexes
 #
-#  index_console_access_requests_on_code_digest    (code_digest) UNIQUE
-#  index_console_access_requests_on_decided_by_id  (decided_by_id)
+#  index_console_access_requests_on_code_digest  (code_digest) UNIQUE
+#  index_console_access_requests_on_user_id      (user_id)
 #
 # Foreign Keys
 #
-#  fk_rails_...  (decided_by_id => users.id)
+#  fk_rails_...  (user_id => users.id)
 #
 
-# A request to open a production console: `bin/rails console` (kind "console")
-# or `bin/rails dbconsole` (kind "sql"). The console shows a code. A superadmin
-# signs in to Weave, enters the code and approves it. The console then records
-# its Console1984 session under that person's name and PWL id. See
-# docs/CONSOLE_ACCESS.md.
+# A production console that waits to learn who uses it: `bin/rails console`
+# (kind "console") or `bin/rails dbconsole` (kind "sql"). The console shows a
+# code. The person who started it signs in to Weave as themselves and enters
+# the code. The console then records its Console1984 session under that
+# person's name and PWL id. See docs/CONSOLE_ACCESS.md.
 #
 # The class inherits from Console1984::Base so that Console1984 protects this
-# table like its own: a console session cannot change who approved it.
+# table like its own: a console session cannot change whose session it is.
 class ConsoleAccessRequest < Console1984::Base
   include EncodedIds::HashidIdentifiable
-  set_public_id_prefix :cnsl
+  set_public_id_prefix :cnslw
 
   self.table_name = "console_access_requests"
 
   KINDS = %w[console sql].freeze
-  STATUSES = %w[pending approved denied].freeze
+  STATUSES = %w[pending confirmed rejected].freeze
   EXPIRATION = 10.minutes
   # Crockford base32: no I, L, O or U, so a person can read and type the code.
   CODE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
   CODE_LENGTH = 8
 
-  belongs_to :decided_by, class_name: "User", optional: true
+  belongs_to :user, optional: true
 
   validates :kind, inclusion: { in: KINDS }
   validates :status, inclusion: { in: STATUSES }
@@ -81,40 +81,41 @@ class ConsoleAccessRequest < Console1984::Base
   end
 
   def pending? = status == "pending"
-  def approved? = status == "approved"
-  def denied? = status == "denied"
+  def confirmed? = status == "confirmed"
+  def rejected? = status == "rejected"
   def expired? = pending? && expires_at.past?
 
-  # Only a superadmin can approve, and only a pending request that has not
-  # expired. Returns false otherwise.
-  def approve!(by:, ip: nil)
-    return false unless by&.superadmin?
+  # The signed-in admin says "this console is mine". Only an admin can, and
+  # only for a pending request that has not expired. Returns false otherwise.
+  def confirm!(by:, ip: nil)
+    return false unless by&.admin?
 
-    decide!("approved", by, ip)
+    record!("confirmed", by, ip)
   end
 
-  def deny!(by:, ip: nil) = decide!("denied", by, ip)
+  # The signed-in admin says "this console is not mine". It stops.
+  def reject!(by:, ip: nil) = record!("rejected", by, ip)
 
-  # The console calls this when it sees the approval. It returns the approver
-  # once, so one approval opens one console. An approval that no console
-  # claims within EXPIRATION stays unused. The approver must still be a
-  # superadmin, also when the approval was written into the database by hand.
+  # The console calls this when it sees the confirmation. It returns the user
+  # once, so one confirmation opens one console. A confirmation that no
+  # console claims within EXPIRATION stays unused. The user must still be an
+  # admin, also when the row was written into the database by hand.
   def claim!
-    return unless decided_by&.superadmin?
+    return unless user&.admin?
 
-    # One conditional UPDATE, so two consoles cannot claim the same approval.
-    claimed = self.class.where(id:, status: "approved", claimed_at: nil, decided_at: EXPIRATION.ago..)
+    # One conditional UPDATE, so two consoles cannot claim the same confirmation.
+    claimed = self.class.where(id:, status: "confirmed", claimed_at: nil, confirmed_at: EXPIRATION.ago..)
                   .update_all(claimed_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-    claimed == 1 ? decided_by : nil
+    claimed == 1 ? user : nil
   end
 
   private
 
-  def decide!(new_status, by, ip)
+  def record!(new_status, by, ip)
     with_lock do
       return false unless pending? && !expired?
 
-      update!(status: new_status, decided_by: by, decided_at: Time.current, decided_ip: ip)
+      update!(status: new_status, user: by, confirmed_at: Time.current, confirmed_ip: ip)
     end
   end
 

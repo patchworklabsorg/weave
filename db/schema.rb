@@ -297,14 +297,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.string "host"
     t.string "status", default: "pending", null: false
     t.datetime "expires_at", null: false
-    t.bigint "decided_by_id"
-    t.datetime "decided_at"
-    t.string "decided_ip"
+    t.bigint "user_id"
+    t.datetime "confirmed_at"
+    t.string "confirmed_ip"
     t.datetime "claimed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["code_digest"], name: "index_console_access_requests_on_code_digest", unique: true
-    t.index ["decided_by_id"], name: "index_console_access_requests_on_decided_by_id"
+    t.index ["user_id"], name: "index_console_access_requests_on_user_id"
   end
 
   create_table "email_addresses", force: :cascade do |t|
@@ -746,7 +746,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   add_foreign_key "application_role_assignments", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "application_roles", "oauth_applications", column: "application_id", on_delete: :cascade
   add_foreign_key "application_roles", "users", column: "created_by_id", on_delete: :nullify
-  add_foreign_key "console_access_requests", "users", column: "decided_by_id"
+  add_foreign_key "console_access_requests", "users", on_delete: :nullify
   add_foreign_key "email_addresses", "users"
   add_foreign_key "group_memberships", "groups"
   add_foreign_key "group_memberships", "users"

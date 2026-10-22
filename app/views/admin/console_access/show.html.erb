@@ -1,10 +1,10 @@
-<% content_for :title, "Console access" %>
+<% content_for :title, "Console sign-in" %>
 
 <div class="mb-6">
-  <h2 class="font-display text-2xl font-bold text-ink mb-4">Approve a console</h2>
+  <h2 class="font-display text-2xl font-bold text-ink mb-4">Sign in a console</h2>
   <p class="text-ink-soft">
     A production console (<code>bin/rails console</code> or <code>bin/rails dbconsole</code>) shows a code and waits.
-    Enter the code to approve the console as yourself. Approve only a console that you started.
+    Enter the code so that Weave records the console session under your name. Enter only the code of a console that you started.
   </p>
 </div>
 
@@ -18,7 +18,7 @@
 </div>
 
 <% if @recent.any? %>
-  <h3 class="font-display text-lg font-bold text-ink mb-3">Recent requests</h3>
+  <h3 class="font-display text-lg font-bold text-ink mb-3">Recent consoles</h3>
   <div class="patch overflow-hidden">
     <table class="min-w-full divide-y divide-ink-soft/20">
       <thead>
@@ -26,7 +26,7 @@
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Console</th>
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Host</th>
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Status</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Decided by</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Signed in by</th>
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Requested</th>
         </tr>
       </thead>
@@ -38,7 +38,7 @@
             <td class="px-6 py-3 text-sm text-ink">
               <%= request.expired? ? "expired" : request.status %><%= " (opened)" if request.claimed_at %>
             </td>
-            <td class="px-6 py-3 text-sm text-ink"><%= request.decided_by&.full_name %></td>
+            <td class="px-6 py-3 text-sm text-ink"><%= request.user&.full_name %></td>
             <td class="px-6 py-3 text-sm text-ink-faint"><%= request.created_at.strftime("%b %-d, %Y %H:%M") %></td>
           </tr>
         <% end %>

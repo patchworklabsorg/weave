@@ -6,13 +6,13 @@ module ConsoleAccess
   #
   # Console1984::QueryAuditor also asks it, in every process, if Rails sends a
   # "query.rails" event. Rails 8.1 does not, but outside a console this returns
-  # nil (Console1984 then writes "unknown") so a server never waits for an
-  # approval.
+  # nil (Console1984 then writes "unknown") so a server never waits for a
+  # sign-in.
   class UsernameResolver
     def current
       return unless defined?(Rails::Console)
 
-      @current ||= ConsoleAccess.username_for(Approval.new(kind: "console").await!)
+      @current ||= ConsoleAccess.username_for(SignIn.new(kind: "console").await!)
     rescue Error, Interrupt => e
       abort(e.message.presence || "Cancelled.")
     end

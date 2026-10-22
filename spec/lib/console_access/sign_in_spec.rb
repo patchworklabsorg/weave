@@ -2,48 +2,38 @@
 
 require "rails_helper"
 
-RSpec.describe ConsoleAccess::Approval do
+RSpec.describe ConsoleAccess::SignIn do
   let(:output) { StringIO.new }
-  let(:superadmin) { create(:user, :superadmin) }
+  let(:admin) { create(:user, :admin) }
 
-  # The sleeper runs between polls, so it stands in for the superadmin.
-  def approval(&decide)
-    described_class.new(kind: "console", output:, host: "weave-web", sleeper: ->(_) { decide.call(ConsoleAccessRequest.last) })
+  # The sleeper runs between polls, so it stands in for the person in Weave.
+  def sign_in(&act)
+    described_class.new(kind: "console", output:, host: "weave-web", sleeper: ->(_) { act.call(ConsoleAccessRequest.last) })
   end
 
-  it "shows the code and the approval page, then returns the approver" do
-    approver = nil
-    expect { approver = approval { it.approve!(by: superadmin) }.await! }
-      .to change(ActionMailer::Base.deliveries, :count).by(1)
+  it "shows the code and the sign-in page, then returns the user" do
+    user = sign_in { it.confirm!(by: admin) }.await!
 
-    expect(approver).to eq(superadmin)
-    expect(ActionMailer::Base.deliveries.last.to).to eq([superadmin.email])
+    expect(user).to eq(admin)
     expect(output.string).to include("#{Weave.url}/admin/console_access")
     expect(output.string).to match(/[0-9A-Z]{4}-[0-9A-Z]{4}/)
   end
 
-  it "stays closed when the approval email cannot be sent" do
-    allow(ConsoleAccessMailer).to receive(:opened).and_raise(StandardError, "SMTP is down")
-
-    expect { approval { it.approve!(by: superadmin) }.await! }.to raise_error(ConsoleAccess::Error, /could not send/)
-  end
-
-  it "stays closed when the approver is no longer a superadmin" do
-    request_approver = superadmin
+  it "stays closed when the user is no longer an admin" do
     expect do
-      approval do |request|
-        request.approve!(by: request_approver)
-        request_approver.update!(role: "admin")
+      sign_in do |request|
+        request.confirm!(by: admin)
+        admin.update!(role: "user")
       end.await!
     end.to raise_error(ConsoleAccess::Error, /cannot be used/)
   end
 
-  it "stops when the request is denied" do
-    expect { approval { it.deny!(by: superadmin) }.await! }.to raise_error(ConsoleAccess::Error, /denied/)
+  it "stops when the console is marked as not mine" do
+    expect { sign_in { it.reject!(by: admin) }.await! }.to raise_error(ConsoleAccess::Error, /not yours/)
   end
 
-  it "stops when the request expires" do
-    expect { approval { travel(ConsoleAccessRequest::EXPIRATION + 1.second) }.await! }
+  it "stops when the code expires" do
+    expect { sign_in { travel(ConsoleAccessRequest::EXPIRATION + 1.second) }.await! }
       .to raise_error(ConsoleAccess::Error, /expired/)
   end
 end

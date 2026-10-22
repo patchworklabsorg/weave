@@ -570,10 +570,10 @@ Rails.application.routes.draw do
         end
       end
 
-      # A superadmin approves a production console. See docs/CONSOLE_ACCESS.md.
+      # A person signs their production console in. See docs/CONSOLE_ACCESS.md.
       resource :console_access, only: [:show], controller: "console_access" do
         post :lookup
-        post :decide
+        post :confirm
       end
 
       # Mount engines under /admin path

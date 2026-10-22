@@ -155,7 +155,7 @@ Both RSpec (`spec/`) and Minitest (`test/`) coexist. New tests should follow the
 System tests use Capybara + Selenium WebDriver.
 
 ### Audit Logging
-All console access is audited via Console1984. In production and staging, `bin/rails console` and `bin/rails dbconsole` wait until a superadmin approves them at `/admin/console_access`, and the session is recorded under that person. `dbconsole` opens an audited SQL console, not psql. Details: `docs/CONSOLE_ACCESS.md`. Reviewers read the sessions at `/admin/console` (Audits1984).
+All console access is audited via Console1984. In production and staging, `bin/rails console` and `bin/rails dbconsole` wait until the person who started them signs them in at `/admin/console_access`, and the session is recorded under that person. The app's database role (`weave_app`) cannot delete or rewrite the audit tables. `dbconsole` opens an audited SQL console, not psql. Details: `docs/CONSOLE_ACCESS.md`. Reviewers read the sessions at `/admin/console` (Audits1984).
 
 ## Color Palette
 UI components use the defined color palette:

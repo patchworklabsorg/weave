@@ -2,7 +2,7 @@
 
 module ConsoleAccess
   # The SQL console that `bin/rails dbconsole` opens in a protected
-  # environment, in place of psql. A superadmin approves it like the Rails
+  # environment, in place of psql. The person signs it in like the Rails
   # console, and Console1984 records the reason and every statement, so the
   # session shows in /admin/console next to the Rails console sessions.
   #
@@ -19,15 +19,15 @@ module ConsoleAccess
       WHERE table_schema = current_schema() ORDER BY table_name
     SQL
 
-    def initialize(db_config:, input: nil, output: $stdout, approval: Approval.new(kind: "sql"))
+    def initialize(db_config:, input: nil, output: $stdout, sign_in: SignIn.new(kind: "sql"))
       @db_config = db_config
       @input = input || method(:read_with_reline)
       @output = output
-      @approval = approval
+      @sign_in = sign_in
     end
 
     def start
-      user = @approval.await!
+      user = @sign_in.await!
       reason = read_reason
       Console1984.session_logger.start_session(ConsoleAccess.username_for(user), "SQL (#{@db_config.name}): #{reason}")
       @output.puts "Connected to #{@db_config.name} as #{ConsoleAccess.username_for(user)}. Every statement is recorded."
@@ -55,7 +55,7 @@ module ConsoleAccess
       sql = expand(text)
       Console1984.session_logger.before_executing([text == sql ? sql : "#{text}\n#{sql}"])
       if sql.match?(protected_tables_pattern)
-        @output.puts "Refused: the audit tables cannot be read or changed from this console."
+        @output.puts "Skipped: this console does not run statements on the audit tables."
         return
       end
 

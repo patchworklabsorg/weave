@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
-# Production consoles that a superadmin approves in Weave, so every Console1984
-# session names a real, signed-in person. See docs/CONSOLE_ACCESS.md.
+# Production consoles that the person at the keyboard signs in to Weave, so
+# every Console1984 session names a real, signed-in person. See
+# docs/CONSOLE_ACCESS.md.
 #
 # Not autoloaded: config/initializers/console_access.rb requires it, because
 # Console1984 needs the username resolver during boot.
@@ -17,6 +18,6 @@ module ConsoleAccess
   end
 end
 
-require_relative "console_access/approval"
+require_relative "console_access/sign_in"
 require_relative "console_access/username_resolver"
 require_relative "console_access/sql_console"

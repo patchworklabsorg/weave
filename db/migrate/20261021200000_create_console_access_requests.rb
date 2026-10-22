@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# A production console waits for a superadmin to approve it in Weave. See
-# ConsoleAccessRequest and docs/CONSOLE_ACCESS.md.
+# A production console waits until the person who started it signs it in to
+# Weave as themselves. See ConsoleAccessRequest and docs/CONSOLE_ACCESS.md.
 class CreateConsoleAccessRequests < ActiveRecord::Migration[8.1]
   def change
     create_table :console_access_requests do |t|
@@ -10,9 +10,9 @@ class CreateConsoleAccessRequests < ActiveRecord::Migration[8.1]
       t.string :host
       t.string :status, null: false, default: "pending"
       t.datetime :expires_at, null: false
-      t.references :decided_by, foreign_key: { to_table: :users }
-      t.datetime :decided_at
-      t.string :decided_ip
+      t.references :user, foreign_key: { on_delete: :nullify }
+      t.datetime :confirmed_at
+      t.string :confirmed_ip
       t.datetime :claimed_at
 
       t.timestamps
