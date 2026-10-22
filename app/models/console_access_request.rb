@@ -25,7 +25,7 @@
 #
 # Foreign Keys
 #
-#  fk_rails_...  (user_id => users.id)
+#  fk_rails_...  (user_id => users.id) ON DELETE => nullify
 #
 
 # A production console that waits to learn who uses it: `bin/rails console`

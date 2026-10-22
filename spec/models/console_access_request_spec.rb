@@ -27,7 +27,7 @@ require "rails_helper"
 #
 # Foreign Keys
 #
-#  fk_rails_...  (user_id => users.id)
+#  fk_rails_...  (user_id => users.id) ON DELETE => nullify
 #
 
 RSpec.describe ConsoleAccessRequest do
