@@ -2,22 +2,25 @@
     ApplicationController#authenticate_user! sends every such request here, so
     without this template the app answers 406 to *every* page — including this
     one — and an unconfirmed account is locked out with nothing to act on. %>
-<div class="absolute inset-0 flex items-center justify-center p-6">
+<div class="min-h-full flex items-center justify-center p-6">
   <div class="patch patch-bound patch-tilt-l w-full max-w-md">
     <div class="quilt-binding"></div>
+    <div class="p-8 sm:p-9 space-y-6">
+      <div class="text-center space-y-2">
+        <%= render "shared/wordmark", size: :lg, href: nil %>
+        <h1 class="font-display text-2xl font-bold text-ink">Confirm your email</h1>
+        <p class="text-ink-soft text-sm">One more step before you can use Weave.</p>
+      </div>
 
-    <div class="p-9 pb-5 text-center">
-      <h1 class="font-display text-3xl font-bold text-ink">Confirm your email</h1>
-      <p class="text-ink-soft mt-2">One more step before you can use Weave.</p>
-    </div>
-
-    <div class="px-9 pb-9 space-y-6">
-      <div class="patch border-2 border-grape bg-grape-soft/40 p-4">
-        <p class="text-sm text-ink text-center">
-          We sent a confirmation link to
-          <strong class="break-all"><%= @user.email %></strong>.
-          Open it and you'll be signed in and ready to go.
-        </p>
+      <div class="callout callout-grape">
+        <%= icon(:mail, size: 18) %>
+        <div class="callout-body">
+          <p>
+            We sent a confirmation link to
+            <strong class="break-all"><%= @user.email %></strong>.
+            Open it and you'll be signed in and ready to go.
+          </p>
+        </div>
       </div>
 
       <p class="text-sm text-ink-faint text-center">
@@ -26,11 +29,11 @@
 
       <%= render "resend_section", user: @user %>
 
-      <div class="text-center">
+      <div class="text-center text-sm">
         <%= button_to "Sign out",
               logout_path,
               method: :delete,
-              class: "text-sm text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2" %>
+              class: "link cursor-pointer" %>
       </div>
     </div>
   </div>

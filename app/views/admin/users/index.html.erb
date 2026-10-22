@@ -1,84 +1,73 @@
-<div class="container mx-auto px-4 py-8" data-controller="search">
-  <div class="flex justify-between items-center mb-6">
-    <h1 class="font-display text-2xl font-bold text-ink">Users</h1>
-  </div>
+<% content_for :title, "Users" %>
 
-  <div class="mb-6">
-    <%= form_with url: admin_users_path, method: :get, local: true,
-        class: "flex gap-4 items-end",
-        data: { turbo_frame: "users_table", turbo_action: "advance" } do |form| %>
-      <div class="flex-1">
-        <%= form.text_field :search,
-            value: params[:search],
-            placeholder: "Search by name, email, or PWL ID...",
-            class: "block w-full rounded-md border-violet shadow-sm focus:border-grape focus:ring-grape sm:text-sm bg-paper",
-            data: { search_target: "input", action: "input->search#search" } %>
-      </div>
-      <% if params[:search].present? %>
-        <div>
-          <%= link_to "Clear", admin_users_path, class: "inline-flex justify-center rounded-md border border-violet bg-paper py-2 px-4 text-sm font-medium text-grape shadow-sm hover:bg-grape-soft focus:outline-none focus:ring-2 focus:ring-grape focus:ring-offset-2 transition-colors" %>
-        </div>
-      <% end %>
-    <% end %>
+<%= page_header "Users", lede: "Everyone with a Weave account." do %>
+  <%= link_to new_admin_user_path, class: "btn btn-primary" do %>
+    <%= icon(:plus) %>New user
+  <% end %>
+<% end %>
+
+<section class="card card-flush">
+  <div class="card-header">
+    <div class="w-full">
+      <%= render "shared/search_form", url: admin_users_path, frame: "users_table", placeholder: "Search by name, email or PWL ID", autofocus: true %>
+    </div>
   </div>
 
   <%= turbo_frame_tag "users_table" do %>
-    <div class="bg-paper shadow-lg shadow-grape/10 overflow-hidden rounded-lg border border-violet/20">
-      <table class="min-w-full divide-y divide-violet/30">
-      <thead class="bg-grape-soft">
-        <tr>
-          <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">PWL ID</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Name</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Email</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Role</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Actions</th>
-        </tr>
-      </thead>
-      <tbody class="bg-paper divide-y divide-violet/20">
-        <% @users.each do |user| %>
-          <tr class="hover:bg-grape-soft/50 transition-colors">
-            <td class="px-4 py-4 whitespace-nowrap text-sm text-ink font-medium">
-              <%= user.p_id %>
-            </td>
-            <td class="px-4 py-4 whitespace-nowrap text-sm text-ink">
-              <%= user.full_name %>
-            </td>
-            <td class="px-4 py-4 whitespace-nowrap text-sm text-ink-soft">
-              <%= user.email %>
-            </td>
-            <td class="px-4 py-4 whitespace-nowrap text-sm text-ink-soft">
-              <span class="inline-flex items-center px-2.5 py-0.5 text-xs leading-5 font-semibold rounded-full <%= user.admin? ? 'bg-grape-soft text-grape' : 'bg-grape-soft/40 text-ink-soft' %>">
-                <%= user.role.titleize %>
-              </span>
-            </td>
-            <td class="px-4 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex items-center">
-              <% if user.is_impersonatable?(current_user) && !impersonating? %>
-                <%= button_to 'Impersonate', impersonate_admin_user_path(user), method: :post,
-                    class: 'text-grape hover:text-ink transition-colors',
-                    form: { class: 'inline-block', data: { turbo: false } },
-                    local: true,
-                    data: { turbo_confirm: "Are you sure you want to impersonate #{user.full_name}?" } %>
-              <% end %>
-            <%# button to view user %>
+    <% if params[:search].present? %>
+      <p class="px-5 pt-3 text-sm text-ink-soft">
+        <%= pluralize(@users.size, "user") %> <%= @users.size == 1 ? "matches" : "match" %> &ldquo;<%= params[:search] %>&rdquo;
+      </p>
+    <% end %>
 
-           <% if user.is_viewable?(current_user) %>
-            <%= button_to 'View', admin_user_path(user), method: :get,
-                class: 'text-grape hover:text-ink transition-colors',
-                form: { class: 'inline-block', data: { turbo: false } },
-                local: true %>
-           <% end %>
-
-              <%# TODO: re-enable delete button when we implement soft delete and have a policy in place for this %>
-              <%# <% if user != current_user && !impersonating? %>
-                <%# <%= button_to 'Delete', admin_user_path(user), method: :delete, %>
-                    <%# class: 'text-red-600 hover:text-red-900', %>
-                    <%# form: { class: 'inline-block', data: { turbo_confirm: 'Are you sure?' } } %>
-              <%# <% end %>
-            </td>
-          </tr>
-        <% end %>
-      </tbody>
-      </table>
-    </div>
+    <% if @users.any? %>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>PWL ID</th>
+              <th>Role</th>
+              <th>Joined</th>
+              <th class="actions"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @users.each do |user| %>
+              <tr>
+                <td>
+                  <%= user.full_name %>
+                  <span class="table-sub"><%= user.email %></span>
+                </td>
+                <td class="mono"><%= user.p_id %></td>
+                <td>
+                  <%= badge user.role.titleize, tone: (user.superadmin? ? :grape : (user.admin? ? :violet : :neutral)) %>
+                </td>
+                <td class="whitespace-nowrap text-ink-soft" title="<%= user.created_at.iso8601 %>">
+                  <%= time_ago_in_words(user.created_at) %> ago
+                </td>
+                <td class="actions">
+                  <% if user.is_viewable?(current_user) %>
+                    <%= link_to "View", admin_user_path(user), class: "btn btn-quiet btn-sm", data: { turbo_frame: "_top" } %>
+                  <% end %>
+                  <% if user.is_impersonatable?(current_user) && !impersonating? %>
+                    <%= button_to "Impersonate", impersonate_admin_user_path(user), method: :post,
+                          class: "btn btn-quiet btn-sm",
+                          form: { class: "inline-block", data: { turbo: false } },
+                          local: true,
+                          data: { turbo_confirm: "Are you sure you want to impersonate #{user.full_name}?" } %>
+                  <% end %>
+                  <%# TODO: re-enable delete button when we implement soft delete and have a policy in place for this %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% elsif params[:search].present? %>
+      <%= empty_state "No users match", body: "Try a different name, email or PWL ID.", icon: :search_x %>
+    <% else %>
+      <%= empty_state "No users yet", icon: :users %>
+    <% end %>
   <% end %>
-</div>
+</section>

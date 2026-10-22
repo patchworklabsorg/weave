@@ -500,6 +500,9 @@ Rails.application.routes.draw do
       # Admin dashboard is the root of the admin namespace
       root to: "dashboard#index"
 
+      # Live results for the ⌘K command bar
+      get :search, to: "search#index", defaults: { format: :json }
+
       # Resources and sub-resources
       resources :users do
         member do

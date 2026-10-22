@@ -9,6 +9,10 @@ class Admin::OauthApplicationsController < Admin::BaseController
 
   def index
     @applications = Doorkeeper::Application.order(created_at: :desc)
+    return if params[:search].blank?
+
+    term = "%#{Doorkeeper::Application.sanitize_sql_like(params[:search].strip)}%"
+    @applications = @applications.where("name ILIKE :t OR uid ILIKE :t OR redirect_uri ILIKE :t", t: term)
   end
 
   def show

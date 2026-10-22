@@ -1,102 +1,62 @@
-<% content_for :title, "New OAuth Application" %>
+<% content_for :title, "New OAuth app" %>
 
-<div class="mb-6">
-  <div class="flex justify-between items-center mb-4">
-    <div>
-      <h2 class="font-display text-2xl font-bold text-ink">New OAuth Application</h2>
-      <p class="text-ink-soft">Create a new OAuth 2.0 client application</p>
-    </div>
-    <div>
-      <%= link_to "Back to Applications", admin_oauth_applications_path, class: "btn-stitch-ghost" %>
-    </div>
-  </div>
-</div>
+<div class="page-narrow mx-auto">
+  <%= page_header("New OAuth application", lede: "Create a new OAuth 2.0 client application") %>
 
-<div class="max-w-2xl">
-  <div class="patch p-6">
-    <%= form_with model: @application, url: admin_oauth_applications_path, local: true, data: { turbo: false }, class: "space-y-6" do |form| %>
-      <% if @application.errors.any? %>
-        <div class="patch border-2 border-orchid bg-orchid-soft/40 text-ink p-4">
-          <div class="flex">
-            <div class="flex-shrink-0">
-              <svg class="h-5 w-5 text-orchid" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-              </svg>
-            </div>
-            <div class="ml-3">
-              <h3 class="text-sm font-medium text-orchid">
-                There were <%= pluralize(@application.errors.count, "error") %> with your submission:
-              </h3>
-              <div class="mt-2 text-sm text-ink">
-                <ul class="list-disc pl-5 space-y-1">
-                  <% @application.errors.full_messages.each do |message| %>
-                    <li><%= message %></li>
-                  <% end %>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      <% end %>
+  <%= form_with model: @application, url: admin_oauth_applications_path, local: true, data: { turbo: false }, class: "card" do |form| %>
+    <div class="card-body space-y-5">
+      <%= form_errors(@application) %>
 
-      <div>
-        <%= form.label :name, class: "block text-sm font-medium text-ink" %>
-        <%= form.text_field :name,
-            class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint",
-            placeholder: "My Application" %>
-        <p class="mt-2 text-sm text-ink-faint">A human-readable name for your application.</p>
+      <div class="field-group">
+        <%= form.label :name, class: "field-label" %>
+        <%= form.text_field :name, class: "field", placeholder: "My Application" %>
+        <p class="field-hint">A human-readable name for your application.</p>
       </div>
 
-      <div>
-        <%= form.label :redirect_uri, "Redirect URIs", class: "block text-sm font-medium text-ink" %>
-        <%= form.text_area :redirect_uri,
-            rows: 4,
-            class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint",
+      <div class="field-group">
+        <%= form.label :redirect_uri, "Redirect URIs", class: "field-label" %>
+        <%= form.text_area :redirect_uri, rows: 4, class: "field",
             placeholder: "https://yourapp.com/auth/callback\nhttps://yourapp.com/oauth/callback" %>
-        <p class="mt-2 text-sm text-ink-faint">
+        <p class="field-hint">
           One URI per line. These are the only URIs your application can redirect to after authorization.
         </p>
       </div>
 
-      <div>
-        <%= form.label :scopes, class: "block text-sm font-medium text-ink" %>
-        <%= form.text_field :scopes,
-            class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint",
-            placeholder: "profile email",
+      <div class="field-group">
+        <%= form.label :scopes, class: "field-label" %>
+        <%= form.text_field :scopes, class: "field", placeholder: "profile email",
             value: form.object.scopes || "profile email" %>
-        <p class="mt-2 text-sm text-ink-faint">
+        <p class="field-hint">
           Space-separated list of scopes. Available:
-          <code>profile</code> (basic user info),
-          <code>email</code> (user email address),
-          <code>admin</code> (administrative access),
-          <code>slack</code> (Slack membership and Slack ID),
-          <code>groups</code> (the user's groups that are linked to this app),
-          <code>roles</code> (the user's roles in this app).
-          App tokens only (<code>client_credentials</code>):
-          <code>directory</code> (the directory API),
-          <code>quilt</code> (the Quilt patch API),
-          <code>introspect</code> (check the app tokens of other apps, superadmin only).
+          <code class="code-chip">profile</code> (basic user info),
+          <code class="code-chip">email</code> (user email address),
+          <code class="code-chip">admin</code> (administrative access),
+          <code class="code-chip">slack</code> (Slack membership and Slack ID),
+          <code class="code-chip">groups</code> (the user's groups that are linked to this app),
+          <code class="code-chip">roles</code> (the user's roles in this app).
+          App tokens only (<code class="code-chip">client_credentials</code>):
+          <code class="code-chip">directory</code> (the directory API),
+          <code class="code-chip">quilt</code> (the Quilt patch API),
+          <code class="code-chip">introspect</code> (check the app tokens of other apps, superadmin only).
           Leave empty to use defaults.
         </p>
       </div>
 
-      <div>
-        <div class="flex items-center">
-          <%= form.check_box :confidential,
-              class: "h-4 w-4 rounded border-2 border-neutral-300 text-grape focus:ring-grape",
-              checked: true %>
-          <%= form.label :confidential, "Confidential Application", class: "ml-2 block text-sm text-ink" %>
-        </div>
-        <p class="mt-2 text-sm text-ink-faint">
-          Confidential applications can securely store client secrets (recommended for server-side apps).
-          Uncheck for public applications like mobile apps or SPAs.
-        </p>
-      </div>
+      <label class="choice">
+        <%= form.check_box :confidential, class: "checkbox", checked: true %>
+        <span>
+          Confidential Application
+          <span class="choice-hint">
+            Confidential applications can securely store client secrets (recommended for server-side apps).
+            Uncheck for public applications like mobile apps or SPAs.
+          </span>
+        </span>
+      </label>
 
-      <div class="flex justify-end space-x-3">
-        <%= link_to "Cancel", admin_oauth_applications_path, class: "btn-stitch-ghost" %>
-        <%= form.submit "Create Application", class: "btn-stitch" %>
+      <div class="form-actions">
+        <%= link_to "Cancel", admin_oauth_applications_path, class: "btn btn-secondary" %>
+        <%= form.submit "Create app", class: "btn btn-primary" %>
       </div>
-    <% end %>
-  </div>
+    </div>
+  <% end %>
 </div>

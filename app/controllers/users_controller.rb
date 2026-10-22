@@ -51,7 +51,7 @@ class UsersController < ApplicationController
 
   def sessions
     @user = current_user
-    @sessions = @user.user_sessions.order(created_at: :desc)
+    @sessions = @user.user_sessions.includes(:impersonated_by).order(created_at: :desc)
   end
 
   def edit

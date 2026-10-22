@@ -1,170 +1,118 @@
 <% content_for :title, "Your account" %>
 
-<div class="max-w-5xl mx-auto px-4 py-10">
-
+<div class="page">
   <% if @user.onboarding_pending? %>
-    <div class="patch border-2 border-grape bg-grape-soft/40 p-5 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
-      <div class="flex-1">
+    <div class="callout callout-grape mb-6 items-center">
+      <%= icon(:sparkles, size: 18) %>
+      <div class="callout-body">
         <% if @user.birthday.nil? %>
-          <p class="font-semibold text-ink"><%= t("birthday.banner_title") %></p>
-          <p class="text-sm text-ink-soft mt-1"><%= t("birthday.banner_body") %></p>
+          <p class="callout-title"><%= t("birthday.banner_title") %></p>
+          <p><%= t("birthday.banner_body") %></p>
         <% elsif @user.guardian_consent_missing? %>
-          <p class="font-semibold text-ink"><%= t("guardian_consent.form.title") %></p>
-          <p class="text-sm text-ink-soft mt-1"><%= t("guardian_consent.form.intro") %></p>
+          <p class="callout-title"><%= t("guardian_consent.form.title") %></p>
+          <p><%= t("guardian_consent.form.intro") %></p>
         <% elsif @user.slack_member? %>
-          <p class="font-semibold text-ink">Accept the Code of Conduct</p>
-          <p class="text-sm text-ink-soft mt-1">Everyone in the Patchwork Labs Slack now accepts the Code of Conduct. It takes a few seconds.</p>
+          <p class="callout-title">Accept the Code of Conduct</p>
+          <p>Everyone in the Patchwork Labs Slack now accepts the Code of Conduct. It takes a few seconds.</p>
         <% else %>
-          <p class="font-semibold text-ink">Finish joining the Patchwork Labs Slack</p>
-          <p class="text-sm text-ink-soft mt-1">You become a full member once you're in the Slack and have accepted the Code of Conduct.</p>
+          <p class="callout-title">Finish joining the Patchwork Labs Slack</p>
+          <p>You become a full member once you're in the Slack and have accepted the Code of Conduct.</p>
         <% end %>
       </div>
-      <%= link_to "Continue", slack_onboarding_path, class: "btn-stitch shrink-0 justify-center" %>
+      <%= link_to "Continue", slack_onboarding_path, class: "btn btn-primary btn-sm shrink-0" %>
     </div>
   <% end %>
 
-  <!-- Header -->
-  <div class="patch patch-bound mb-6">
-    <div class="quilt-binding"></div>
-    <div class="p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center gap-5">
-      <% if @user.slack_profile_image_url.present? %>
-        <img src="<%= @user.slack_profile_image_url %>" alt="<%= @user.full_name %>"
-             class="h-20 w-20 rounded-full object-cover border-2 border-lavender-purple/40 shrink-0">
-      <% else %>
-        <div class="h-20 w-20 rounded-full bg-grape text-white flex items-center justify-center text-2xl font-bold font-display shrink-0">
-          <%= @user.initials.upcase %>
-        </div>
-      <% end %>
-
-      <div class="flex-1 min-w-0">
-        <h1 class="font-display text-3xl font-bold text-ink leading-tight"><%= @user.full_name %></h1>
+  <%# page_header markup by hand: the avatar and badges sit inside the heading. %>
+  <header class="page-header">
+    <div class="flex items-center gap-4 min-w-0">
+      <%= avatar(@user, size: :xl) %>
+      <div class="min-w-0">
+        <h1 class="page-title"><%= @user.full_name %></h1>
         <div class="flex flex-wrap items-center gap-2 mt-2">
-          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-grape-soft text-grape">
-            <%= @user.community_member? ? "Community member" : @user.role.humanize %>
-          </span>
-          <% if @user.is_board? %>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-soft text-teal">Board</span>
+          <%= badge(@user.community_member? ? "Community member" : @user.role.humanize, tone: :grape) %>
+          <%= badge("Board", tone: :teal) if @user.is_board? %>
+          <%= badge("Staff", tone: :sky) if @user.is_staff? %>
+          <%= badge("Contractor", tone: :violet) if @user.is_contractor? %>
+          <% if @user.email_verified? %>
+            <%= badge("Email verified", tone: :success) %>
+          <% else %>
+            <%= badge("Email unverified", tone: :warning) %>
           <% end %>
-          <% if @user.is_staff? %>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-soft text-sky">Staff</span>
-          <% end %>
-          <% if @user.is_contractor? %>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-violet-soft text-violet">Contractor</span>
-          <% end %>
-          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= @user.email_verified? ? 'bg-teal-soft text-teal' : 'bg-orchid-soft text-orchid' %>">
-            <%= @user.email_verified? ? 'Email verified' : 'Email unverified' %>
-          </span>
         </div>
         <% if @user.slack_title.present? %>
-          <p class="text-ink-soft mt-2"><%= @user.slack_title %></p>
+          <p class="page-lede"><%= @user.slack_title %></p>
         <% end %>
-      </div>
-
-      <div class="flex flex-col gap-2 shrink-0">
-        <% if @user.admin? %>
-          <%= link_to "Admin panel", admin_root_path, class: "btn-stitch text-sm" %>
-        <% end %>
-        <%= link_to "Sessions", profile_sessions_path, class: "btn-stitch-ghost text-sm" %>
-        <%= link_to "Passkeys", passkeys_path, class: "btn-stitch-ghost text-sm" %>
-        <%= link_to "Password", password_path, class: "btn-stitch-ghost text-sm" %>
-        <%= button_to "Sign out", logout_path, method: :delete, class: "btn-stitch-ghost text-sm", form_class: "inline-block" %>
       </div>
     </div>
-  </div>
+    <div class="page-actions">
+      <%= link_to edit_profile_path, class: "btn btn-primary" do %>
+        <%= icon(:pencil) %>Edit profile
+      <% end %>
+    </div>
+  </header>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-    <!-- Account details -->
-    <div class="patch p-6">
-      <h2 class="font-display text-lg font-bold text-ink mb-4">Account</h2>
-      <dl class="divide-y divide-lavender-purple/20">
-        <div class="flex justify-between gap-4 py-2.5">
-          <dt class="text-sm text-ink-faint">Weave ID</dt>
-          <dd class="text-sm text-ink font-medium text-right break-all"><%= @user.p_id %></dd>
-        </div>
-        <div class="flex justify-between gap-4 py-2.5">
-          <dt class="text-sm text-ink-faint">Email</dt>
-          <dd class="text-sm text-ink font-medium text-right break-all"><%= @user.email %></dd>
-        </div>
-        <% if @user.phone_number.present? || @user.slack_phone.present? %>
-          <div class="flex justify-between gap-4 py-2.5">
-            <dt class="text-sm text-ink-faint">Phone</dt>
-            <dd class="text-sm text-ink font-medium text-right"><%= @user.phone_number.presence || @user.slack_phone %></dd>
-          </div>
-        <% end %>
-        <% if @user.pronouns.present? %>
-          <div class="flex justify-between gap-4 py-2.5">
-            <dt class="text-sm text-ink-faint">Pronouns</dt>
-            <dd class="text-sm text-ink font-medium text-right"><%= @user.pronouns %></dd>
-          </div>
-        <% end %>
-        <% if @user.birthday.present? %>
-          <div class="flex justify-between gap-4 py-2.5">
-            <dt class="text-sm text-ink-faint">Birthday</dt>
-            <dd class="text-sm text-ink font-medium text-right"><%= @user.birthday.strftime("%B %-d") %></dd>
-          </div>
-        <% end %>
-        <div class="flex justify-between gap-4 py-2.5">
-          <dt class="text-sm text-ink-faint">Member since</dt>
-          <dd class="text-sm text-ink font-medium text-right"><%= @user.created_at.strftime("%B %-d, %Y") %></dd>
-        </div>
-        <div class="flex justify-between gap-4 py-2.5">
-          <dt class="text-sm text-ink-faint">Active sessions</dt>
-          <dd class="text-sm text-ink font-medium text-right"><%= @user.user_sessions.not_expired.count %></dd>
-        </div>
-      </dl>
-    </div>
-
-    <!-- Community / Slack profile -->
-    <% if @user.slack_id.present? %>
-      <div class="patch p-6">
-        <h2 class="font-display text-lg font-bold text-ink mb-4">Community profile</h2>
-        <dl class="divide-y divide-lavender-purple/20">
-          <% if @user.slack_display_name.present? %>
-            <div class="flex justify-between gap-4 py-2.5">
-              <dt class="text-sm text-ink-faint">Slack handle</dt>
-              <dd class="text-sm text-ink font-medium text-right">@<%= @user.slack_display_name %></dd>
-            </div>
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Account</h2>
+      </div>
+      <div class="card-body">
+        <dl class="dl">
+          <%= dl_row "Weave ID", @user.p_id %>
+          <%= dl_row "Email", @user.email %>
+          <% if @user.phone_number.present? || @user.slack_phone.present? %>
+            <%= dl_row "Phone", @user.phone_number.presence || @user.slack_phone %>
           <% end %>
-          <% dept = [@user.slack_department, @user.slack_division, @user.slack_organization].compact_blank.join(" · ") %>
-          <% if dept.present? %>
-            <div class="flex justify-between gap-4 py-2.5">
-              <dt class="text-sm text-ink-faint">Team</dt>
-              <dd class="text-sm text-ink font-medium text-right"><%= dept %></dd>
-            </div>
+          <% if @user.pronouns.present? %>
+            <%= dl_row "Pronouns", @user.pronouns %>
           <% end %>
-          <% location = [@user.slack_city, @user.slack_state, @user.slack_country].compact_blank.join(", ") %>
-          <% if location.present? %>
-            <div class="flex justify-between gap-4 py-2.5">
-              <dt class="text-sm text-ink-faint">Location</dt>
-              <dd class="text-sm text-ink font-medium text-right"><%= location %></dd>
-            </div>
+          <% if @user.birthday.present? %>
+            <%= dl_row "Birthday", @user.birthday.strftime("%B %-d") %>
           <% end %>
-          <% if @user.slack_start_date.present? %>
-            <div class="flex justify-between gap-4 py-2.5">
-              <dt class="text-sm text-ink-faint">Started</dt>
-              <dd class="text-sm text-ink font-medium text-right"><%= @user.slack_start_date.strftime("%B %Y") %></dd>
-            </div>
-          <% end %>
+          <%= dl_row "Member since", @user.created_at.strftime("%B %-d, %Y") %>
+          <%= dl_row "Active sessions", @user.user_sessions.not_expired.count %>
         </dl>
+      </div>
+    </section>
 
-        <% links = { "Website" => @user.slack_website, "GitHub" => @user.slack_github, "LinkedIn" => @user.slack_linkedin }.select { |_, v| v.present? } %>
-        <% if links.any? %>
-          <div class="flex flex-wrap gap-3 mt-4 pt-4 border-t border-lavender-purple/20">
-            <% links.each do |label, url| %>
-              <%= link_to label, url, target: "_blank", rel: "noopener noreferrer",
-                    class: "text-sm text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2" %>
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Community profile</h2>
+      </div>
+      <div class="card-body">
+        <% if @user.slack_id.present? %>
+          <% dept = [@user.slack_department, @user.slack_division, @user.slack_organization].compact_blank.join(" · ") %>
+          <% location = [@user.slack_city, @user.slack_state, @user.slack_country].compact_blank.join(", ") %>
+          <% links = { "Website" => @user.slack_website, "GitHub" => @user.slack_github, "LinkedIn" => @user.slack_linkedin }.select { |_, v| v.present? } %>
+          <dl class="dl">
+            <% if @user.slack_display_name.present? %>
+              <%= dl_row "Slack handle", "@#{@user.slack_display_name}" %>
             <% end %>
-          </div>
+            <% if dept.present? %>
+              <%= dl_row "Team", dept %>
+            <% end %>
+            <% if location.present? %>
+              <%= dl_row "Location", location %>
+            <% end %>
+            <% if @user.slack_start_date.present? %>
+              <%= dl_row "Started", @user.slack_start_date.strftime("%B %Y") %>
+            <% end %>
+            <% if links.any? %>
+              <%= dl_row("Links") do %>
+                <span class="flex flex-wrap gap-3">
+                  <% links.each do |label, url| %>
+                    <%= link_to label, url, target: "_blank", rel: "noopener noreferrer", class: "link" %>
+                  <% end %>
+                </span>
+              <% end %>
+            <% end %>
+          </dl>
+        <% else %>
+          <p class="text-sm text-ink-soft">Your Patchwork Labs Slack profile isn't linked yet. Once you <%= link_to "join the Slack", slack_onboarding_path, class: "link" %>, your community details will show up here automatically.</p>
         <% end %>
       </div>
-    <% else %>
-      <div class="patch p-6">
-        <h2 class="font-display text-lg font-bold text-ink mb-4">Community profile</h2>
-        <p class="text-sm text-ink-soft">Your Patchwork Labs Slack profile isn't linked yet. Once you <%= link_to "join the Slack", slack_onboarding_path, class: "text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2" %>, your community details will show up here automatically.</p>
-      </div>
-    <% end %>
-
+    </section>
   </div>
 
   <p class="text-xs text-ink-faint mt-6 text-center">This is a read-only view of your account. Some details sync automatically from Slack.</p>

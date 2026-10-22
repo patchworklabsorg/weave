@@ -1,22 +1,22 @@
 <% content_for :title, "Choose a new password" %>
 
-<div class="absolute inset-0 flex items-center justify-center p-6">
-  <div class="patch patch-bound patch-tilt-l w-full max-w-md">
+<div class="min-h-full flex items-center justify-center p-6">
+  <div class="patch patch-bound patch-tilt-r w-full max-w-md">
     <div class="quilt-binding"></div>
+    <div class="p-8 sm:p-9 space-y-6">
+      <div class="text-center space-y-2">
+        <%= render "shared/wordmark", size: :lg, href: nil %>
+        <h1 class="font-display text-2xl font-bold text-ink">Choose a new password</h1>
+        <p class="text-ink-soft text-sm">Your password has expired. Choose a new one.</p>
+      </div>
 
-    <div class="p-9 pb-5 text-center">
-      <h1 class="font-display text-3xl font-bold text-ink">Weave</h1>
-      <p class="text-ink-soft mt-2">Your password has expired. Choose a new one.</p>
-    </div>
-
-    <div class="px-9 pb-9 space-y-6">
       <%= form_with url: expired_password_path, method: :patch, local: true, data: { turbo: false }, class: "space-y-4" do %>
         <%= render "passwords/password_fields", ask_current: true %>
-        <%= submit_tag "Change password", class: "btn-stitch w-full" %>
+        <%= submit_tag "Change password", class: "btn btn-primary btn-block" %>
       <% end %>
 
       <p class="text-sm text-ink-soft text-center">
-        <%= link_to "Use an email link instead", login_path, class: "text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2" %>
+        <%= link_to "Use an email link instead", login_path, class: "link" %>
       </p>
     </div>
   </div>

@@ -1,446 +1,50 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#2F2F2F">
-    <meta name="msapplication-TileColor" content="#2F2F2F">
-    <meta name="apple-mobile-web-app-title" content="Weave Admin">
-    <meta name="application-name" content="Weave Admin">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-
-    <title><%= content_for(:title) || "Admin" %> - Weave</title>
-
-    <%= yield :head %>
-
-    <%= csrf_meta_tags %>
-    <%= csp_meta_tag %>
-
-    <link rel="icon" href="/icon.png" type="image/png">
-    <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/icon.png">
-
-    <%= render "shared/theme" %>
-    <%# Brand fonts (Geist + Shantell Sans) are self-hosted and declared via
-        @font-face in the compiled Tailwind stylesheet below — no external link. %>
-    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
-    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
-    <%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
-
-    <style nonce="<%= content_security_policy_nonce %>">
-      /* Glass surfaces ride on the quilt tokens (defined in the Tailwind
-         stylesheet, which also flips them in dark mode). These vars cover
-         the frosted-white fills that have no token equivalent. */
-      :root {
-        --glass-80: rgba(255, 255, 255, 0.8);
-        --glass-50: rgba(255, 255, 255, 0.5);
-        --glass-40: rgba(255, 255, 255, 0.4);
-        --glass-30: rgba(255, 255, 255, 0.3);
-        --glass-tint: rgba(199, 183, 226, 0.1);
-        --glass-lav: rgba(199, 183, 226, 0.3);
-        --glass-border: rgba(199, 183, 226, 0.4);
-        --glass-border-soft: rgba(199, 183, 226, 0.3);
-        --glass-text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
-        --glass-text-shadow-strong: 0 1px 2px rgba(255, 255, 255, 0.7);
-      }
-      /* Dark set appears twice — manual override, then system
-         preference. Keep them identical. */
-      [data-theme="dark"] {
-        --glass-80: rgba(31, 25, 56, 0.85);
-        --glass-50: rgba(31, 25, 56, 0.6);
-        --glass-40: rgba(31, 25, 56, 0.5);
-        --glass-30: rgba(31, 25, 56, 0.35);
-        --glass-tint: rgba(169, 136, 233, 0.08);
-        --glass-lav: rgba(108, 62, 193, 0.25);
-        --glass-border: rgba(108, 62, 193, 0.5);
-        --glass-border-soft: rgba(108, 62, 193, 0.35);
-        --glass-text-shadow: none;
-        --glass-text-shadow-strong: none;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root:not([data-theme="light"]) {
-          --glass-80: rgba(31, 25, 56, 0.85);
-          --glass-50: rgba(31, 25, 56, 0.6);
-          --glass-40: rgba(31, 25, 56, 0.5);
-          --glass-30: rgba(31, 25, 56, 0.35);
-          --glass-tint: rgba(169, 136, 233, 0.08);
-          --glass-lav: rgba(108, 62, 193, 0.25);
-          --glass-border: rgba(108, 62, 193, 0.5);
-          --glass-border-soft: rgba(108, 62, 193, 0.35);
-          --glass-text-shadow: none;
-          --glass-text-shadow-strong: none;
-        }
-      }
-
-      body {
-        background-color: var(--color-quilt);
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-      }
-
-      .gradient-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: -1;
-      }
-
-      .admin-container {
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
-        min-height: 80vh;
-        padding: 10px;
-        position: relative;
-      }
-
-      .admin-card {
-        background: var(--glass-50);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        border-radius: 20px;
-        border: 1px solid var(--glass-border);
-        box-shadow: 0 8px 32px rgba(108, 62, 193, 0.15);
-        width: 100%;
-        max-width: 1200px;
-        margin-top: 20px;
-        overflow: hidden;
-      }
-
-      .admin-header {
-        background: linear-gradient(135deg, var(--glass-lav) 0%, var(--glass-50) 100%);
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
-        color: var(--color-ink);
-        padding: 20px 30px;
-        border-bottom: 1px solid var(--glass-border);
-        text-shadow: var(--glass-text-shadow);
-      }
-
-      .admin-nav {
-        background: var(--glass-40);
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
-        border-bottom: 2px solid var(--glass-border-soft);
-        padding: 0;
-      }
-
-      .admin-nav-list {
-        display: flex;
-        flex-wrap: wrap;
-        margin: 0;
-        padding: 0;
-        list-style: none;
-      }
-
-      .admin-nav-item {
-        margin: 0;
-        border-right: 1px solid var(--glass-border);
-      }
-
-      .admin-nav-item:first-child {
-        border-left: 2px solid transparent;
-        border-color: var(--glass-border);
-      }
-
-      .admin-nav-item:last-child {
-        border-right: 2px solid transparent;
-        border-color: var(--glass-border);
-      }
-
-      .admin-nav-link {
-        display: block;
-        padding: 12px 24px;
-        color: var(--color-ink);
-        text-decoration: none;
-        border-bottom: 3px solid transparent;
-        transition: all 0.3s ease;
-        font-weight: 500;
-        text-shadow: var(--glass-text-shadow);
-        position: relative;
-      }
-
-      .admin-nav-link::after {
-        content: '';
-        position: absolute;
-        right: 0;
-        top: 10%;
-        height: 80%;
-        width: 1px;
-        background: var(--glass-border-soft);
-        transition: all 0.3s ease;
-      }
-
-      .admin-nav-item:last-child .admin-nav-link::after {
-        display: none;
-      }
-
-      .admin-nav-link:hover,
-      .admin-nav-link.active {
-        color: var(--color-ink);
-        background: linear-gradient(135deg, var(--glass-80) 0%, var(--glass-tint) 100%);
-        border-bottom-color: var(--color-grape);
-        box-shadow: 0 2px 8px rgba(108, 62, 193, 0.1);
-      }
-
-      .admin-nav-link:hover::after,
-      .admin-nav-link.active::after {
-        background: var(--glass-border);
-        box-shadow: 0 0 4px rgba(108, 62, 193, 0.2);
-      }
-
-      .admin-content {
-        padding: 30px;
-        background: var(--glass-30);
-        backdrop-filter: blur(3px);
-        -webkit-backdrop-filter: blur(3px);
-        color: var(--color-ink);
-        text-shadow: var(--glass-text-shadow);
-      }
-
-      /* Make content elements more readable on glass background */
-      .admin-content h1,
-      .admin-content h2,
-      .admin-content h3,
-      .admin-content h4,
-      .admin-content h5,
-      .admin-content h6 {
-        color: var(--color-ink);
-        text-shadow: var(--glass-text-shadow-strong);
-      }
-
-      .admin-content table {
-        background: var(--glass-40);
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
-        border-radius: 8px;
-        border: 1px solid var(--glass-border);
-        overflow: hidden;
-      }
-
-      .admin-content th {
-        background: var(--glass-50);
-        color: var(--color-ink);
-        text-shadow: var(--glass-text-shadow-strong);
-        font-weight: 700;
-      }
-
-      .admin-content td {
-        color: var(--color-ink);
-        border-color: var(--glass-border-soft);
-        text-shadow: var(--glass-text-shadow);
-      }
-
-      /* Semantic status colors (red=error, orange=warning) are kept for legibility;
-         success/neutral badges use the quilt soft-pill tokens directly and don't
-         need an override since they already render as solid pastels. */
-      .admin-content .text-red-600 {
-        color: #dc2626 !important;
-        text-shadow: var(--glass-text-shadow);
-        font-weight: 600;
-      }
-
-      .admin-content .text-orange-600 {
-        color: #ea580c !important;
-        text-shadow: var(--glass-text-shadow);
-        font-weight: 600;
-      }
-
-      [data-theme="dark"] .admin-content .text-red-600 { color: #f87171 !important; }
-      [data-theme="dark"] .admin-content .text-orange-600 { color: #fb923c !important; }
-      @media (prefers-color-scheme: dark) {
-        :root:not([data-theme="light"]) .admin-content .text-red-600 { color: #f87171 !important; }
-        :root:not([data-theme="light"]) .admin-content .text-orange-600 { color: #fb923c !important; }
-      }
-
-      /* Improved button styling for glass effect */
-      .glass-button {
-        background: var(--glass-40) !important;
-        backdrop-filter: blur(5px) !important;
-        -webkit-backdrop-filter: blur(5px) !important;
-        border: 2px solid var(--color-grape) !important;
-        color: var(--color-ink) !important;
-        text-shadow: var(--glass-text-shadow-strong) !important;
-        transition: all 0.3s ease !important;
-        position: relative !important;
-        z-index: 10 !important;
-        font-weight: 600 !important;
-      }
-
-      .glass-button:hover {
-        background: linear-gradient(135deg, var(--color-grape) 0%, #2a2050 100%) !important;
-        border-color: var(--color-lavender-purple) !important;
-        transform: translateY(-1px) !important;
-        box-shadow: 0 6px 16px rgba(108, 62, 193, 0.3) !important;
-        color: #fefdff !important;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
-      }
-
-      .admin-user-info {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 15px;
-      }
-
-      .admin-user-details {
-        flex: 1;
-      }
-
-      .admin-user-name {
-        font-size: 18px;
-        font-weight: 600;
-        margin: 0;
-      }
-
-      .admin-user-role {
-        font-size: 14px;
-        opacity: 0.9;
-        margin: 0;
-      }
-
-      @media (max-width: 768px) {
-        .admin-container {
-          padding: 10px;
-        }
-
-        .admin-card {
-          margin-top: 10px;
-        }
-
-        .admin-header {
-          padding: 15px 20px;
-        }
-
-        .admin-content {
-          padding: 20px;
-        }
-      }
-    </style>
+    <title><%= [content_for(:title), "Admin", "Weave"].compact_blank.join(" · ") %></title>
+    <meta name="robots" content="noindex">
+    <%= render "shared/head" %>
   </head>
 
-  <body class="quilt-bg text-ink font-sans">
-    <div class="gradient-overlay"></div>
-
+  <body class="bg-quilt text-ink font-sans">
     <%= render "shared/staging_badge" %>
 
-    <% if impersonating? %>
-      <div class="bg-orange-500 text-white text-center py-2 px-4 flex items-center justify-between fixed top-0 left-0 w-full z-40">
-        <div class="flex-1 text-center">
-          <strong>⚠️ IMPERSONATING:</strong> You are impersonating <%= current_user.full_name %>
-          (logged in as <%= admin_user.full_name %>)
-        </div>
-        <%= button_to "Stop Impersonating", stop_impersonating_admin_users_path,
-            method: :delete,
-            class: "bg-orange-600 hover:bg-orange-700 text-white px-4 py-1 rounded text-sm",
-            form: { class: "inline" } %>
-      </div>
-    <% end %>
+    <div class="admin-shell" data-controller="drawer" data-action="keydown@window->drawer#keydown">
+      <%= render "shared/sidebar" %>
+      <div class="sidebar-scrim" data-drawer-target="scrim" data-action="click->drawer#close" aria-hidden="true"></div>
 
-    <div class="admin-container" style="<%= impersonating? ? 'padding-top: 60px;' : '' %>">
-      <div class="admin-card">
-        <!-- Header -->
-        <div class="admin-header">
-          <div class="admin-user-info">
-            <div class="admin-user-details">
-              <h1 class="admin-user-name">Weave Admin</h1>
-              <p class="admin-user-role">Logged in as <%= current_user.full_name %> (<%= current_user.role.titleize %>)</p>
-            </div>
-            <div>
-              <% if impersonating? %>
-                <%= button_to "Stop Impersonating", stop_impersonating_admin_users_path,
-                    method: :delete,
-                    class: "glass-button px-4 py-2 rounded text-sm cursor-pointer" %>
-              <% else %>
-                <%= button_to "Sign Out", logout_path,
-                    method: :delete,
-                    form_class: "inline-block",
-                    class: "glass-button px-4 py-2 rounded text-sm cursor-pointer" %>
-              <% end %>
-            </div>
+      <div class="admin-main">
+        <%= render "shared/impersonation_banner" %>
 
-            <%# link back to user pages (home) %>
-            <%= link_to "Back to User Pages", root_path,
-                class: "glass-button px-4 py-2 rounded text-sm cursor-pointer" %>
-
+        <header class="admin-topbar">
+          <button type="button" class="btn btn-quiet btn-sm btn-icon sidebar-menu-btn" aria-label="Open navigation" aria-expanded="false"
+                  data-drawer-target="button" data-action="drawer#toggle">
+            <%= icon(:menu, size: 18) %>
+          </button>
+          <div class="admin-topbar-crumb">
+            <%= link_to "Admin", admin_root_path, class: "link-quiet" %>
+            <% if content_for?(:title) %>
+              <span class="mx-1 text-ink-faint">/</span>
+              <strong><%= content_for(:title) %></strong>
+            <% end %>
           </div>
-        </div>
+          <div class="admin-topbar-end">
+            <button type="button" class="cmdk-trigger" data-command-bar-trigger aria-label="Search users, groups and apps, or jump to a page">
+              <%= icon(:search) %>
+              <span class="cmdk-trigger-label">Search or jump to…</span>
+              <span class="kbd">⌘K</span>
+            </button>
+            <%= render "shared/theme_toggle" %>
+          </div>
+        </header>
 
-        <!-- Navigation -->
-        <nav class="admin-nav">
-          <ul class="admin-nav-list">
-            <li class="admin-nav-item">
-              <%= link_to admin_root_path,
-                  class: "admin-nav-link #{controller_name == 'dashboard' ? 'active' : ''}" do %>
-                Dashboard
-              <% end %>
-            </li>
-            <li class="admin-nav-item">
-              <%= link_to admin_users_path,
-                  class: "admin-nav-link #{controller_name == 'users' ? 'active' : ''}" do %>
-                Users
-              <% end %>
-            </li>
-            <li class="admin-nav-item">
-              <%= link_to admin_groups_path,
-                  class: "admin-nav-link #{controller_name.in?(%w[groups group_memberships]) ? 'active' : ''}" do %>
-                Groups
-              <% end %>
-            </li>
-            <li class="admin-nav-item">
-              <%= link_to admin_guardian_consents_path,
-                  class: "admin-nav-link #{controller_name == 'guardian_consents' ? 'active' : ''}" do %>
-                Consents
-              <% end %>
-            </li>
-            <li class="admin-nav-item">
-              <%= link_to admin_oauth_applications_path,
-                  class: "admin-nav-link #{controller_name == 'oauth_applications' ? 'active' : ''}" do %>
-                OAuth Apps
-              <% end %>
-            </li>
-            <li class="admin-nav-item">
-              <%= link_to '/admin/jobs',
-                  class: "admin-nav-link #{controller_name == 'jobs' ? 'active' : ''}" do %>
-                Jobs
-              <% end %>
-            </li>
-            <li class="admin-nav-item">
-              <%= link_to '/admin/flipper',
-                  class: "admin-nav-link #{controller_name == 'flipper' ? 'active' : ''}" do %>
-                Flipper
-              <% end %>
-            </li>
-            <li class="admin-nav-item">
-              <%= link_to '/admin/blazer',
-                  class: "admin-nav-link #{controller_name == 'blazer' ? 'active' : ''}" do %>
-                Blazer
-              <% end %>
-            </li>
-            <li class="admin-nav-item">
-              <%= link_to '/admin/console',
-                  class: "admin-nav-link #{controller_name == 'console' ? 'active' : ''}" do %>
-                Console Audits
-              <% end %>
-            </li>
-
-          </ul>
-        </nav>
-
-        <!-- Main Content -->
-        <div class="admin-content">
+        <main class="page page-wide">
           <%= yield %>
-        </div>
+        </main>
       </div>
     </div>
 
-    <%= render 'shared/flash' %>
-    <%= render "shared/theme_toggle" %>
+    <%= render "shared/flash" %>
+    <%= render "shared/command_bar" %>
   </body>
 </html>

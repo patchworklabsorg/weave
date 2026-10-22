@@ -156,13 +156,13 @@ System tests use Capybara + Selenium WebDriver.
 ### Audit Logging
 All console access is audited via Console1984. Sensitive operations (user impersonation, data exports) are logged via Audits1984.
 
-## Color Palette
-UI components use the defined color palette:
-- **Deep Purple** (#4B006E): Primary brand, bold accents
-- **Lavender Purple** (#C7B7E2): Soft highlights, secondary elements
-- **Clean White** (#FFFFFF): Backgrounds, contrast
-- **Dark Grayish-Blue** (#2C3440): Text, subtle elements
-- **Near-Black** (#18181A): Primary text, grounding elements
+## UI
+Weave is the reference implementation of the Patchwork design system. Read `docs/UI.md` before you touch a view. The guide (principles, tokens, components, icons) is in internal-docs under `design/`.
+
+- Tokens and component classes: `app/assets/tailwind/application.css`. Use token utilities (`bg-paper`, `text-ink-soft`, `border-hairline`), never a hex or a raw Tailwind palette color.
+- Helpers: `page_header`, `badge`, `nav_link`, `empty_state`, `form_errors`, `copy_button`, `avatar`, `dl_row` (`app/helpers/ui_helper.rb`) and `icon(:name)` (Lucide, `app/helpers/icon_helper.rb`). No emoji in the interface.
+- One `btn-primary` per view. Danger actions confirm first. Every page works at 390px and in dark mode.
+- Admin pages go in the sidebar (`shared/_sidebar`) and the command bar (`shared/_command_bar`).
 
 ## Deployment
 Production runs as Docker containers on the `alastor` NixOS host. The image is built on Ruby Alpine (`Dockerfile`). Thruster handles HTTP acceleration inside the image.

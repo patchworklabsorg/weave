@@ -1,20 +1,33 @@
-<%# Applies the saved (or system) theme before first paint, and handles
-    clicks on [data-theme-toggle] buttons via delegation so it keeps
-    working across Turbo visits. Include in <head>, before stylesheets. %>
+<%# Theme plumbing, in <head> before the stylesheets so there is no flash.
+
+    Every Patchwork app follows the device: with nothing stored, the theme
+    is whatever prefers-color-scheme says, and it switches live when the
+    OS does. A click on a [data-theme-toggle] cycles system -> light ->
+    dark -> system and stores the pick in localStorage ("light" or "dark";
+    nothing stored means system). The <html> element carries
+    data-theme (the resolved theme the stylesheet reads) and
+    data-theme-source ("system" or "manual", which the toggle's icon reads).
+    Delegated listeners keep working across Turbo visits. %>
 <script nonce="<%= content_security_policy_nonce %>">
   (() => {
     const root = document.documentElement;
     const media = matchMedia("(prefers-color-scheme: dark)");
+    const stored = () => {
+      try { const value = localStorage.getItem("theme"); return value === "light" || value === "dark" ? value : null; } catch { return null; }
+    };
     const apply = () => {
-      root.dataset.theme = localStorage.getItem("theme") || (media.matches ? "dark" : "light");
+      const pick = stored();
+      root.dataset.theme = pick || (media.matches ? "dark" : "light");
+      root.dataset.themeSource = pick ? "manual" : "system";
     };
     apply();
     media.addEventListener("change", apply);
     document.addEventListener("click", (event) => {
       if (!event.target.closest("[data-theme-toggle]")) return;
-      const next = root.dataset.theme === "dark" ? "light" : "dark";
-      localStorage.setItem("theme", next);
-      root.dataset.theme = next;
+      const pick = stored();
+      const next = pick === null ? "light" : pick === "light" ? "dark" : null;
+      try { next ? localStorage.setItem("theme", next) : localStorage.removeItem("theme"); } catch { /* private window */ }
+      apply();
     });
   })();
 </script>
