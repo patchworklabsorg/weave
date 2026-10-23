@@ -4,6 +4,32 @@ require "rails_helper"
 
 # The permanent log: a Postgres trigger writes it, so every write path is in
 # it, and the database refuses to change or delete a row.
+# == Schema Information
+# Schema version: 20261023120000
+#
+# Table name: privileged_attribute_changes
+# Database name: primary
+#
+#  id             :bigint           not null, primary key
+#  actor_label    :string
+#  attribute_name :string           not null
+#  changed_at     :datetime         not null
+#  db_user        :string           not null
+#  new_value      :text
+#  old_value      :text
+#  operation      :string           not null
+#  role_key       :string
+#  role_scope     :string
+#  actor_id       :bigint
+#  user_id        :bigint           not null
+#  user_p_id      :string
+#  user_role_id   :bigint
+#
+# Indexes
+#
+#  index_privileged_attribute_changes_on_changed_at  (changed_at)
+#  index_privileged_attribute_changes_on_user_id     (user_id)
+#
 RSpec.describe PrivilegedAttributeChange do
   include ActiveJob::TestHelper
 

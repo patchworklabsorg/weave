@@ -7,6 +7,7 @@
 # private key, so Weave can't open this value. Each holder has one for each
 # of their hardware keys.
 # == Schema Information
+# Schema version: 20261023120000
 #
 # Table name: key_custody_wrapped_shares
 # Database name: primary
@@ -20,7 +21,7 @@
 #
 # Indexes
 #
-#  idx_on_share_id_hardware_key_id_f328b38774             (share_id,hardware_key_id) UNIQUE
+#  idx_on_share_id_hardware_key_id_f328b38774           (share_id,hardware_key_id) UNIQUE
 #  index_key_custody_wrapped_shares_on_hardware_key_id  (hardware_key_id)
 #  index_key_custody_wrapped_shares_on_share_id         (share_id)
 #

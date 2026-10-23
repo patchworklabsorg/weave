@@ -19,6 +19,32 @@
 # actor_id and actor_label come from the weave.actor_id and weave.actor_label
 # settings of the database session (see PrivilegedChangeActor). db_user is the
 # database role that made the change.
+# == Schema Information
+# Schema version: 20261023120000
+#
+# Table name: privileged_attribute_changes
+# Database name: primary
+#
+#  id             :bigint           not null, primary key
+#  actor_label    :string
+#  attribute_name :string           not null
+#  changed_at     :datetime         not null
+#  db_user        :string           not null
+#  new_value      :text
+#  old_value      :text
+#  operation      :string           not null
+#  role_key       :string
+#  role_scope     :string
+#  actor_id       :bigint
+#  user_id        :bigint           not null
+#  user_p_id      :string
+#  user_role_id   :bigint
+#
+# Indexes
+#
+#  index_privileged_attribute_changes_on_changed_at  (changed_at)
+#  index_privileged_attribute_changes_on_user_id     (user_id)
+#
 class PrivilegedAttributeChange < ApplicationRecord
   # The user columns the users trigger logs. Older rows also name the old
   # role booleans (LEGACY_ATTRIBUTES).

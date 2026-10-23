@@ -13,23 +13,28 @@
 # image again, ask again. The open is a BreakGlassDecryption, and it sends
 # the notice ladder (BreakGlassNotice).
 # == Schema Information
+# Schema version: 20261023120000
 #
 # Table name: break_glass_records
 # Database name: primary
 #
-#  id                        :bigint           not null, primary key
-#  denial_reason             :text
-#  denied_at                 :datetime
-#  expires_at                :datetime
-#  granted_at                :datetime
-#  reason                    :text             not null
-#  created_at                :datetime         not null
-#  updated_at                :datetime         not null
-#  denied_by_id              :bigint
-#  key_set_id                :bigint
-#  requested_by_id           :bigint
-#  user_id                   :bigint
-#  verification_id           :bigint           not null
+#  id                   :bigint           not null, primary key
+#  denial_reason        :text
+#  denied_at            :datetime
+#  expires_at           :datetime
+#  granted_at           :datetime
+#  handoff_expires_at   :datetime
+#  handoff_sealed_key   :text
+#  opened_at            :datetime
+#  reason               :text             not null
+#  requester_public_key :text
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  denied_by_id         :bigint
+#  key_set_id           :bigint
+#  requested_by_id      :bigint
+#  user_id              :bigint
+#  verification_id      :bigint           not null
 #
 # Indexes
 #

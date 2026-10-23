@@ -5,6 +5,43 @@ require "rails_helper"
 # Role assignments are permanent: a revoke sets revoked_at once, and the
 # database refuses every other change, DELETE and TRUNCATE. Triggers write
 # each grant and revoke to the permanent log.
+# == Schema Information
+# Schema version: 20261023120000
+#
+# Table name: user_roles
+# Database name: primary
+#
+#  id                              :bigint           not null, primary key
+#  granted_at                      :datetime         not null
+#  reason                          :text
+#  revoke_reason                   :text
+#  revoked_at                      :datetime
+#  scope                           :string
+#  created_at                      :datetime         not null
+#  granted_by_id                   :bigint
+#  identity_governance_proposal_id :bigint
+#  revoked_by_id                   :bigint
+#  role_id                         :bigint           not null
+#  user_id                         :bigint
+#
+# Indexes
+#
+#  index_user_roles_active_by_role                      (role_id,scope) WHERE (revoked_at IS NULL)
+#  index_user_roles_on_granted_by_id                    (granted_by_id)
+#  index_user_roles_on_identity_governance_proposal_id  (identity_governance_proposal_id)
+#  index_user_roles_on_revoked_by_id                    (revoked_by_id)
+#  index_user_roles_on_role_id                          (role_id)
+#  index_user_roles_on_user_id                          (user_id)
+#  index_user_roles_one_active_assignment               (user_id, role_id, COALESCE(scope, ''::character varying)) UNIQUE WHERE (revoked_at IS NULL)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (granted_by_id => users.id) ON DELETE => nullify
+#  fk_rails_...  (identity_governance_proposal_id => identity_governance_proposals.id) ON DELETE => nullify
+#  fk_rails_...  (revoked_by_id => users.id) ON DELETE => nullify
+#  fk_rails_...  (role_id => roles.id)
+#  fk_rails_...  (user_id => users.id) ON DELETE => nullify
+#
 RSpec.describe UserRole do
   let(:user) { create(:user, :verified) }
   let(:actor) { create(:user, :owner, :verified) }
