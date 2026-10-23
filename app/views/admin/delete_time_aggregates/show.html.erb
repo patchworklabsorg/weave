@@ -1,31 +1,41 @@
 <% content_for :title, "Departed totals" %>
 
-<div class="mb-6">
-  <h2 class="font-display text-2xl font-bold text-ink mb-2">Departed totals</h2>
-  <p class="text-ink-soft">
-    Participation of deleted accounts, added to these totals before each deletion. Counts only, never a row per
-    person. Counts under <%= @report["threshold"] %> are hidden. Demographic totals of departed members are on the
-    <%= link_to "demographics page", admin_demographics_path, class: "text-grape underline" %>.
-    <%= link_to "What we do with your data", Weave.data_page_url, target: "_blank", rel: "noopener noreferrer", class: "text-grape underline" %>
-  </p>
-</div>
-
-<% sections = [["All departed participations", @report["all"]]] + @report["cohorts"].to_a %>
-<% sections.each do |title, tally| %>
-  <h3 class="font-display text-lg font-bold text-ink mb-3"><%= title %></h3>
-  <div class="patch p-6 mb-6 text-sm">
-    <p class="mb-3">Participations: <%= tally["respondents"] || "hidden (fewer than #{@report['threshold']})" %></p>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <% tally["fields"].each do |field, counts| %>
-        <div>
-          <p class="font-semibold"><%= field.humanize %></p>
-          <ul>
-            <% counts.each do |value, count| %>
-              <li><%= value %>: <%= count.nil? ? "hidden" : count %></li>
-            <% end %>
-          </ul>
-        </div>
-      <% end %>
-    </div>
+<header class="page-header">
+  <div>
+    <h1 class="page-title">Departed totals</h1>
+    <p class="page-lede">
+      Participation of deleted accounts, added to these totals before each deletion. Counts only, never a row per
+      person. Counts under <%= @report["threshold"] %> are hidden. Demographic totals of departed members are on the
+      <%= link_to "demographics page", admin_demographics_path, class: "link" %>.
+      <%= link_to "What we do with your data", Weave.data_page_url, target: "_blank", rel: "noopener noreferrer", class: "link" %>
+    </p>
   </div>
-<% end %>
+</header>
+
+<div class="space-y-6">
+  <% sections = [["All departed participations", @report["all"]]] + @report["cohorts"].to_a %>
+  <% sections.each do |title, tally| %>
+    <section class="card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title"><%= title %></h2>
+          <p class="card-lede">Participations: <%= tally["respondents"] || "hidden (fewer than #{@report['threshold']})" %></p>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <% tally["fields"].each do |field, counts| %>
+            <div>
+              <h3 class="section-title"><%= field.humanize %></h3>
+              <dl class="dl">
+                <% counts.each do |value, count| %>
+                  <%= dl_row value, (count.nil? ? "hidden" : count) %>
+                <% end %>
+              </dl>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </section>
+  <% end %>
+</div>

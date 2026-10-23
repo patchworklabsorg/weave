@@ -1,66 +1,71 @@
 <%# The roles of one user, with the grant rule of each (see RoleGrants and config/roles.yml). %>
-<% input_class = "px-3 py-2 rounded-lg border-2 border-neutral-300 bg-paper text-sm" %>
-<div id="roles" class="patch p-6 mt-6">
-  <h2 class="font-display text-lg font-bold text-ink mb-1">Roles</h2>
-  <p class="text-sm text-ink-soft mb-4">
-    Each change follows the grant rule of the role. Weave logs each grant and revoke in the permanent log.
-  </p>
-  <ul class="divide-y divide-ink-soft/10">
-    <% RoleRegistry.definitions.each_value do |definition| %>
-      <% scopes = definition.scopable? ? user.role_scopes(definition.key) : [] %>
-      <% held = definition.scopable? ? scopes.any? : user.has_role?(definition.key) %>
-      <li class="py-3 text-sm text-ink space-y-2">
-        <div class="flex flex-wrap justify-between gap-2">
-          <span>
-            <span class="font-medium"><%= definition.name %></span>
-            <% if definition.scopable? %>
-              <%= held ? "(#{scopes.join(', ')})" : "(none)" %>
-            <% else %>
-              <%= held ? "· has the role" : "· does not have the role" %>
-            <% end %>
-          </span>
-          <span class="text-ink-faint text-xs">
-            Grant: <%= RoleGrants.rule_text(definition.key, :grant) %> Revoke: <%= RoleGrants.rule_text(definition.key, :revoke) %>
-          </span>
-        </div>
+<section id="roles" class="card">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Roles</h2>
+      <p class="card-lede">Each change follows the grant rule of the role. Weave logs each grant and revoke in the permanent log.</p>
+    </div>
+  </div>
+  <div class="card-body">
+    <ul class="record-list">
+      <% RoleRegistry.definitions.each_value do |definition| %>
+        <% scopes = definition.scopable? ? user.role_scopes(definition.key) : [] %>
+        <% held = definition.scopable? ? scopes.any? : user.has_role?(definition.key) %>
+        <li class="record flex-col items-stretch gap-2">
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <span class="record-title">
+              <%= definition.name %>
+              <span class="font-normal <%= held ? 'text-ink' : 'text-ink-faint' %>">
+                <% if definition.scopable? %>
+                  <%= held ? "(#{scopes.join(', ')})" : "(none)" %>
+                <% else %>
+                  <%= held ? "· has the role" : "· does not have the role" %>
+                <% end %>
+              </span>
+            </span>
+            <span class="record-meta">
+              Grant: <%= RoleGrants.rule_text(definition.key, :grant) %> Revoke: <%= RoleGrants.rule_text(definition.key, :revoke) %>
+            </span>
+          </div>
 
-        <% revoke_targets = definition.scopable? ? scopes : (held ? [nil] : []) %>
-        <% revoke_targets.each do |scope| %>
-          <% if RoleGrants.allowed_now?(current_user, user, definition.key, :revoke) %>
-            <%= form_with url: revoke_admin_role_assignments_path, method: :post, class: "flex flex-col sm:flex-row gap-2" do |form| %>
-              <%= form.hidden_field :user_id, value: user.p_id %>
-              <%= form.hidden_field :role, value: definition.key %>
-              <%= form.hidden_field :scope, value: scope %>
-              <%= form.hidden_field :return_to, value: "user" %>
-              <%= form.text_field :reason, required: true, placeholder: "Reason",
-                    aria: { label: "Reason to revoke #{definition.name}#{" (#{scope})" if scope}" }, class: "flex-1 #{input_class}" %>
-              <%= form.submit "Revoke #{definition.name.downcase}#{" (#{scope})" if scope}", class: "btn-stitch-ghost",
-                    data: { turbo_confirm: "Revoke the #{definition.name.downcase} role of #{user.full_name} now?" } %>
-            <% end %>
-          <% elsif RoleGrants.proposal?(definition.key, :revoke) %>
-            <p class="text-xs text-ink-faint">To revoke it, an owner proposes the change on the identity governance page.</p>
-          <% end %>
-        <% end %>
-
-        <% if !held || definition.scopable? %>
-          <% if RoleGrants.allowed_now?(current_user, user, definition.key, :grant) %>
-            <%= form_with url: admin_role_assignments_path, method: :post, class: "flex flex-col sm:flex-row gap-2" do |form| %>
-              <%= form.hidden_field :user_id, value: user.p_id %>
-              <%= form.hidden_field :role, value: definition.key %>
-              <%= form.hidden_field :return_to, value: "user" %>
-              <% if definition.scopable? %>
-                <%= form.select :scope, RoleRegistry.scopes_for(definition.key) - scopes, {}, class: input_class,
-                      aria: { label: "Scope of #{definition.name}" } %>
+          <% revoke_targets = definition.scopable? ? scopes : (held ? [nil] : []) %>
+          <% revoke_targets.each do |scope| %>
+            <% if RoleGrants.allowed_now?(current_user, user, definition.key, :revoke) %>
+              <%= form_with url: revoke_admin_role_assignments_path, method: :post, class: "flex flex-col sm:flex-row gap-2" do |form| %>
+                <%= form.hidden_field :user_id, value: user.p_id %>
+                <%= form.hidden_field :role, value: definition.key %>
+                <%= form.hidden_field :scope, value: scope %>
+                <%= form.hidden_field :return_to, value: "user" %>
+                <%= form.text_field :reason, required: true, placeholder: "Reason",
+                      aria: { label: "Reason to revoke #{definition.name}#{" (#{scope})" if scope}" }, class: "field field-sm flex-1" %>
+                <%= form.submit "Revoke #{definition.name.downcase}#{" (#{scope})" if scope}", class: "btn btn-danger btn-sm",
+                      data: { turbo_confirm: "Revoke the #{definition.name.downcase} role of #{user.full_name} now?" } %>
               <% end %>
-              <%= form.text_field :reason, placeholder: "Reason (optional)",
-                    aria: { label: "Reason to grant #{definition.name}" }, class: "flex-1 #{input_class}" %>
-              <%= form.submit "Grant #{definition.name.downcase}", class: "btn-stitch-ghost" %>
+            <% elsif RoleGrants.proposal?(definition.key, :revoke) %>
+              <p class="field-hint">To revoke it, an owner proposes the change on the identity governance page.</p>
             <% end %>
-          <% elsif RoleGrants.proposal?(definition.key, :grant) %>
-            <p class="text-xs text-ink-faint">To grant it, an owner proposes the change on the identity governance page.</p>
           <% end %>
-        <% end %>
-      </li>
-    <% end %>
-  </ul>
-</div>
+
+          <% if !held || definition.scopable? %>
+            <% if RoleGrants.allowed_now?(current_user, user, definition.key, :grant) %>
+              <%= form_with url: admin_role_assignments_path, method: :post, class: "flex flex-col sm:flex-row gap-2" do |form| %>
+                <%= form.hidden_field :user_id, value: user.p_id %>
+                <%= form.hidden_field :role, value: definition.key %>
+                <%= form.hidden_field :return_to, value: "user" %>
+                <% if definition.scopable? %>
+                  <%= form.select :scope, RoleRegistry.scopes_for(definition.key) - scopes, {}, class: "field field-sm sm:w-48",
+                        aria: { label: "Scope of #{definition.name}" } %>
+                <% end %>
+                <%= form.text_field :reason, placeholder: "Reason (optional)",
+                      aria: { label: "Reason to grant #{definition.name}" }, class: "field field-sm flex-1" %>
+                <%= form.submit "Grant #{definition.name.downcase}", class: "btn btn-secondary btn-sm" %>
+              <% end %>
+            <% elsif RoleGrants.proposal?(definition.key, :grant) %>
+              <p class="field-hint">To grant it, an owner proposes the change on the identity governance page.</p>
+            <% end %>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+</section>

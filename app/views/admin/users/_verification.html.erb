@@ -2,29 +2,29 @@
     admin user page. Changes to the identity team go through the governance page
     (see IdentityGovernance). %>
 <% latest = user.latest_verification %>
-<div class="mb-4 pb-4 border-b border-ink-soft/10">
-  <p class="text-sm font-medium text-ink">Identity verification</p>
-  <p class="text-xs text-ink-faint mt-1">
+<div class="space-y-2">
+  <h3 class="section-title">Identity verification</h3>
+  <p class="record-meta">
     <%= user.verification_status.humanize %>.
     <% if latest&.reverification_required? %>
       New call needed: <%= latest.reverification_reason.humanize %>.
     <% end %>
     <% if latest && current_user.identity_team %>
-      <%= link_to "Last attempt #{latest.public_id}", identity_verification_path(latest), class: "underline" %>
+      <%= link_to "Last attempt #{latest.public_id}", identity_verification_path(latest), class: "link" %>
     <% end %>
   </p>
 
   <% residency = ResidencyFlow.current_check(user) %>
-  <p class="text-xs text-ink-faint mt-1">
+  <p class="record-meta">
     US residency: <%= t("residency.statuses.#{user.us_residency_status}") %><%= ", #{residency.us_state_name}, until #{residency.expires_at.to_date.to_fs(:long)}" if residency&.us_resident %>.
   </p>
 
   <% roles = [("identity team" if user.identity_team), ("key holder" if user.identity_key_holder), ("lead" if user.identity_lead)].compact %>
-  <p class="text-xs text-ink-faint mt-1">Identity team: <%= roles.any? ? roles.join(", ") : "no" %></p>
+  <p class="record-meta">Identity team: <%= roles.any? ? roles.join(", ") : "no" %></p>
 
   <% if IdentityGovernance.can_view?(current_user) %>
-    <p class="text-xs mt-1">
-      <%= link_to "Change the identity team on the governance page", identity_governance_path, class: "text-grape underline" %>
+    <p class="text-sm">
+      <%= link_to "Change the identity team on the governance page", identity_governance_path, class: "link" %>
     </p>
   <% end %>
 </div>

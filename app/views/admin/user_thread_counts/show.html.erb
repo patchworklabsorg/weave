@@ -1,135 +1,165 @@
 <%# A member's Thread Count (see ThreadCount). Internal: admins see the score,
     and only superadmins and owners see the entries behind it. %>
 <% content_for :title, "Thread Count: #{@user.full_name}" %>
-<% field_class = "w-full px-3 py-2 rounded-lg border-2 border-neutral-300 bg-paper text-sm" %>
 
-<div class="mb-6">
-  <p class="text-sm"><%= link_to "Back to #{@user.full_name}", admin_user_path(@user), class: "text-grape hover:text-ink underline decoration-dashed underline-offset-2" %></p>
-  <h2 class="font-display text-2xl font-bold text-ink mt-2">Thread Count</h2>
-  <p class="text-ink-soft mt-1">
-    The internal trust score of <%= @user.full_name %>. Staff only: never tell the member their score or what it is made of.
-    The weights in <code>config/thread_count.yml</code> are a first draft.
-  </p>
-</div>
-
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-  <div class="patch p-6">
-    <p class="text-sm font-medium text-ink-faint">Score now</p>
-    <p class="font-display text-4xl font-bold text-ink mt-1" data-testid="thread-count-score"><%= thread_count_number(@score) %></p>
-    <p class="text-xs text-ink-faint mt-2">Entries fade over time, so the score drops unless trust is renewed.</p>
-  </div>
-
-  <div class="patch p-6">
-    <h3 class="font-display text-lg font-bold text-ink mb-2">Vouch</h3>
-    <% if @own_vouch %>
-      <p class="text-xs text-ink-faint mb-2">You vouched for this member on <%= @own_vouch.created_at.strftime("%b %-d, %Y") %>. To renew it, vouch again and tick the renew box.</p>
-    <% end %>
-    <%= form_with url: admin_user_thread_count_entries_path(@user), method: :post, class: "space-y-2" do |form| %>
-      <%= form.hidden_field :kind, value: "vouch" %>
-      <%= form.text_field :voucher, placeholder: "On behalf of (Weave ID or email). Blank means you.", maxlength: 255,
-            aria: { label: "On behalf of" }, class: field_class %>
-      <%= form.text_area :reason, required: true, rows: 3, maxlength: ThreadCount::Entry::REASON_MAX_LENGTH,
-            placeholder: "Why do you put your name on this member?", aria: { label: "Reason" }, class: field_class %>
-      <%= form.url_field :evidence_url, placeholder: "Evidence link (optional)", aria: { label: "Evidence link" }, class: field_class %>
-      <label class="flex items-center gap-2 text-xs text-ink-soft">
-        <%= form.check_box :renew, {}, "1", "0" %> Renew an earlier vouch from the same voucher
-      </label>
-      <%= form.submit "Vouch", class: "btn-stitch-ghost" %>
-    <% end %>
-  </div>
-
-  <div class="patch p-6">
-    <h3 class="font-display text-lg font-bold text-ink mb-2">Record an entry</h3>
-    <%= form_with url: admin_user_thread_count_entries_path(@user), method: :post, class: "space-y-2" do |form| %>
-      <%= form.select :kind, @manual_kinds, {}, aria: { label: "Kind" }, class: field_class %>
-      <%= form.text_area :reason, required: true, rows: 3, maxlength: ThreadCount::Entry::REASON_MAX_LENGTH,
-            placeholder: "What happened? Write the reason in full.", aria: { label: "Reason" }, class: field_class %>
-      <%= form.url_field :evidence_url, placeholder: "Evidence link (optional)", aria: { label: "Evidence link" }, class: field_class %>
-      <%= form.submit "Record", class: "btn-stitch-ghost" %>
-    <% end %>
-  </div>
-</div>
-
-<% if @own_vouch && @composition.nil? %>
-  <div class="patch p-6 mb-8">
-    <h3 class="font-display text-lg font-bold text-ink mb-2">Withdraw your vouch</h3>
-    <%= form_with url: reverse_admin_user_thread_count_entry_path(@user, @own_vouch), method: :patch, class: "flex flex-col sm:flex-row gap-2" do |form| %>
-      <%= form.text_field :reason, required: true, maxlength: 500, placeholder: "Why do you withdraw it?", aria: { label: "Reason" }, class: field_class %>
-      <%= form.submit "Withdraw", class: "btn-stitch-ghost" %>
-    <% end %>
-  </div>
-<% end %>
-
-<% if @composition %>
-  <h3 class="font-display text-lg font-bold text-ink mb-3">What the score is made of</h3>
-  <% if @composition.empty? %>
-    <div class="patch p-6"><p class="text-sm text-ink-faint">No entries yet.</p></div>
-  <% else %>
-    <% entries_by_id = @composition.to_h { |line| [line.entry.id, line.entry] } %>
-    <div class="patch overflow-x-auto">
-      <table class="min-w-full divide-y divide-ink-soft/20">
-        <thead>
-          <tr>
-            <% ["When", "Entry", "Weight", "Now", "From", "Reason", ""].each do |heading| %>
-              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider"><%= heading %></th>
-            <% end %>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-ink-soft/10">
-          <% @composition.each do |line| %>
-            <% entry = line.entry %>
-            <% author = entry.author %>
-            <% recorder = entry.recorded_by %>
-            <% service = entry.service %>
-            <tr class="<%= 'opacity-60' if entry.reversal? || line.reversed? %>">
-              <td class="px-4 py-3 text-xs text-ink-faint whitespace-nowrap"><%= entry.created_at.strftime("%b %-d, %Y") %></td>
-              <td class="px-4 py-3 text-sm text-ink">
-                <%= thread_count_label(entry.kind, entry.level) %>
-                <% reversed_entry = entries_by_id[entry.reverses_id] %>
-                <% if reversed_entry %>
-                  <span class="text-xs text-ink-faint">of the <%= thread_count_label(reversed_entry.kind, reversed_entry.level).downcase %> from <%= reversed_entry.created_at.strftime("%b %-d, %Y") %></span>
-                <% elsif line.reversed? %>
-                  <span class="text-xs text-ink-faint">(reversed)</span>
-                <% end %>
-                <% if entry.project_ref %>
-                  <div class="text-xs text-ink-faint">Project <code><%= entry.project_ref %></code></div>
-                <% end %>
-              </td>
-              <td class="px-4 py-3 text-sm text-ink"><%= thread_count_number(line.weight) %></td>
-              <td class="px-4 py-3 text-sm text-ink"><%= thread_count_number(line.contribution) %></td>
-              <td class="px-4 py-3 text-xs text-ink-soft">
-                <% if service %>
-                  <%= service.name %> (service)
-                <% else %>
-                  <%= author&.full_name || "a deleted user" %>
-                  <% if recorder && recorder != author %>
-                    <div class="text-ink-faint">recorded by <%= recorder.full_name %></div>
-                  <% end %>
-                <% end %>
-              </td>
-              <td class="px-4 py-3 text-xs text-ink-soft max-w-md">
-                <%= entry.reason %>
-                <% if entry.evidence_url %>
-                  <div><%= link_to "Evidence", entry.evidence_url, rel: "noopener noreferrer", target: "_blank", class: "text-grape underline" %></div>
-                <% end %>
-              </td>
-              <td class="px-4 py-3">
-                <% unless entry.reversal? || line.reversed? %>
-                  <details>
-                    <summary class="text-xs text-grape cursor-pointer">Reverse</summary>
-                    <%= form_with url: reverse_admin_user_thread_count_entry_path(@user, entry), method: :patch, class: "mt-2 space-y-2" do |form| %>
-                      <%= form.text_field :reason, required: true, maxlength: 500, placeholder: "Why?", aria: { label: "Reason" }, class: field_class %>
-                      <%= form.submit "Reverse", class: "btn-stitch-ghost" %>
-                    <% end %>
-                  </details>
-                <% end %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+<p class="mb-2 text-sm">
+  <%= link_to admin_user_path(@user), class: "link-quiet inline-flex items-center gap-1 text-ink-soft" do %>
+    <%= icon(:arrow_left, size: 14) %>Back to <%= @user.full_name %>
   <% end %>
-<% else %>
-  <p class="text-xs text-ink-faint">Only superadmins and owners can see what the score is made of.</p>
-<% end %>
+</p>
+
+<header class="page-header">
+  <div>
+    <h1 class="page-title">Thread Count</h1>
+    <p class="page-lede">
+      The internal trust score of <%= @user.full_name %>. Staff only: never tell the member their score or what it is made of.
+      The weights in <code class="code-chip">config/thread_count.yml</code> are a first draft.
+    </p>
+  </div>
+</header>
+
+<div class="space-y-6">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+    <section class="card stat">
+      <span class="stat-label">Score now</span>
+      <span class="stat-value" data-testid="thread-count-score"><%= thread_count_number(@score) %></span>
+      <span class="stat-note">Entries fade over time, so the score drops unless trust is renewed.</span>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Vouch</h2>
+      </div>
+      <div class="card-body space-y-3">
+        <% if @own_vouch %>
+          <p class="field-hint">You vouched for this member on <%= @own_vouch.created_at.strftime("%b %-d, %Y") %>. To renew it, vouch again and tick the renew box.</p>
+        <% end %>
+        <%= form_with url: admin_user_thread_count_entries_path(@user), method: :post, class: "space-y-3" do |form| %>
+          <%= form.hidden_field :kind, value: "vouch" %>
+          <%= form.text_field :voucher, placeholder: "On behalf of (Weave ID or email). Blank means you.", maxlength: 255,
+                aria: { label: "On behalf of" }, class: "field" %>
+          <%= form.text_area :reason, required: true, rows: 3, maxlength: ThreadCount::Entry::REASON_MAX_LENGTH,
+                placeholder: "Why do you put your name on this member?", aria: { label: "Reason" }, class: "field" %>
+          <%= form.url_field :evidence_url, placeholder: "Evidence link (optional)", aria: { label: "Evidence link" }, class: "field" %>
+          <label class="choice text-sm">
+            <%= form.check_box :renew, { class: "checkbox" }, "1", "0" %>
+            <span>Renew an earlier vouch from the same voucher</span>
+          </label>
+          <%= form.submit "Vouch", class: "btn btn-secondary" %>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Record an entry</h2>
+      </div>
+      <div class="card-body">
+        <%= form_with url: admin_user_thread_count_entries_path(@user), method: :post, class: "space-y-3" do |form| %>
+          <%= form.select :kind, @manual_kinds, {}, aria: { label: "Kind" }, class: "field" %>
+          <%= form.text_area :reason, required: true, rows: 3, maxlength: ThreadCount::Entry::REASON_MAX_LENGTH,
+                placeholder: "What happened? Write the reason in full.", aria: { label: "Reason" }, class: "field" %>
+          <%= form.url_field :evidence_url, placeholder: "Evidence link (optional)", aria: { label: "Evidence link" }, class: "field" %>
+          <%= form.submit "Record", class: "btn btn-secondary" %>
+        <% end %>
+      </div>
+    </section>
+  </div>
+
+  <% if @own_vouch && @composition.nil? %>
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Withdraw your vouch</h2>
+      </div>
+      <div class="card-body">
+        <%= form_with url: reverse_admin_user_thread_count_entry_path(@user, @own_vouch), method: :patch, class: "flex flex-col sm:flex-row gap-2" do |form| %>
+          <%= form.text_field :reason, required: true, maxlength: 500, placeholder: "Why do you withdraw it?", aria: { label: "Reason" }, class: "field flex-1" %>
+          <%= form.submit "Withdraw", class: "btn btn-danger", data: { turbo_confirm: "Withdraw your vouch for #{@user.full_name}?" } %>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+
+  <% if @composition %>
+    <section class="card card-flush">
+      <div class="card-header">
+        <h2 class="card-title">What the score is made of</h2>
+      </div>
+      <% if @composition.empty? %>
+        <%= empty_state("No entries yet.", icon: :list) %>
+      <% else %>
+        <% entries_by_id = @composition.to_h { |line| [line.entry.id, line.entry] } %>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">When</th>
+                <th scope="col">Entry</th>
+                <th scope="col" class="num">Weight</th>
+                <th scope="col" class="num">Now</th>
+                <th scope="col">From</th>
+                <th scope="col">Reason</th>
+                <th scope="col" class="actions"><span class="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @composition.each do |line| %>
+                <% entry = line.entry %>
+                <% author = entry.author %>
+                <% recorder = entry.recorded_by %>
+                <% service = entry.service %>
+                <tr class="<%= 'opacity-60' if entry.reversal? || line.reversed? %>">
+                  <td class="whitespace-nowrap text-ink-faint"><%= entry.created_at.strftime("%b %-d, %Y") %></td>
+                  <td>
+                    <%= thread_count_label(entry.kind, entry.level) %>
+                    <% reversed_entry = entries_by_id[entry.reverses_id] %>
+                    <% if reversed_entry %>
+                      <span class="table-sub">of the <%= thread_count_label(reversed_entry.kind, reversed_entry.level).downcase %> from <%= reversed_entry.created_at.strftime("%b %-d, %Y") %></span>
+                    <% elsif line.reversed? %>
+                      <span class="table-sub">(reversed)</span>
+                    <% end %>
+                    <% if entry.project_ref %>
+                      <span class="table-sub">Project <code class="mono"><%= entry.project_ref %></code></span>
+                    <% end %>
+                  </td>
+                  <td class="num"><%= thread_count_number(line.weight) %></td>
+                  <td class="num"><%= thread_count_number(line.contribution) %></td>
+                  <td class="text-ink-soft">
+                    <% if service %>
+                      <%= service.name %> (service)
+                    <% else %>
+                      <%= author&.full_name || "a deleted user" %>
+                      <% if recorder && recorder != author %>
+                        <span class="table-sub">recorded by <%= recorder.full_name %></span>
+                      <% end %>
+                    <% end %>
+                  </td>
+                  <td class="text-ink-soft min-w-48 max-w-md">
+                    <%= entry.reason %>
+                    <% if entry.evidence_url %>
+                      <span class="table-sub"><%= link_to "Evidence", entry.evidence_url, rel: "noopener noreferrer", target: "_blank", class: "link" %></span>
+                    <% end %>
+                  </td>
+                  <td class="actions">
+                    <% unless entry.reversal? || line.reversed? %>
+                      <details class="text-left">
+                        <summary class="link text-sm cursor-pointer">Reverse</summary>
+                        <%= form_with url: reverse_admin_user_thread_count_entry_path(@user, entry), method: :patch, class: "mt-2 space-y-2 min-w-48" do |form| %>
+                          <%= form.text_field :reason, required: true, maxlength: 500, placeholder: "Why?", aria: { label: "Reason" }, class: "field field-sm" %>
+                          <%= form.submit "Reverse", class: "btn btn-danger btn-sm",
+                                data: { turbo_confirm: "Reverse this entry?" } %>
+                        <% end %>
+                      </details>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+    </section>
+  <% else %>
+    <p class="field-hint">Only superadmins and owners can see what the score is made of.</p>
+  <% end %>
+</div>
