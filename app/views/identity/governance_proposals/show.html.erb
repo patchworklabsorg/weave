@@ -1,82 +1,124 @@
 <% content_for :title, "Identity team proposal" %>
-<% input_class = "flex-1 px-3 py-2 rounded-lg border-2 border-neutral-300 bg-paper text-sm" %>
+<% status = @proposal.expired_now? ? "expired" : @proposal.status %>
 
-<div class="mb-6">
-  <p class="text-sm"><%= link_to "Back to governance", identity_governance_path, class: "text-grape hover:underline" %></p>
-  <h2 class="font-display text-2xl font-bold text-ink mt-2 mb-2"><%= @proposal.description.upcase_first %></h2>
-  <p class="text-ink-soft">
-    <span class="font-mono"><%= @proposal.public_id %></span>.
-    Proposed by <%= @proposal.proposed_by&.full_name || "a deleted user" %> on <%= @proposal.created_at.utc.strftime("%Y-%m-%d") %>.
-    Status: <%= @proposal.expired_now? ? "expired" : @proposal.status %>.
-    <% if @proposal.pending? %>Expires <%= @proposal.expires_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>.<% end %>
-  </p>
-  <p class="text-ink mt-2">Reason: <%= @proposal.reason %></p>
-  <% if @proposal.close_reason.present? %>
-    <p class="text-ink-soft mt-1">Closing note: <%= @proposal.close_reason %></p>
-  <% end %>
-</div>
-
-<% if @preconditions %>
-  <h3 class="font-display text-lg font-bold text-ink mb-3">Preconditions (checked again at the approval)</h3>
-  <div class="patch overflow-hidden mb-8">
-    <ul class="divide-y divide-ink-soft/10">
-      <% @preconditions.each do |check| %>
-        <li class="px-6 py-3 text-sm <%= check.met ? 'text-ink' : 'text-red-600' %>">
-          <%= check.met ? "Met" : "Not met" %>:
-          <%= { verified: "verified by another verifier", adult: "#{IdentityGovernanceSettings.verifier_minimum_age} or older", nda: "signed NDA on record" }.fetch(check.key) %>.
-          <span class="text-ink-soft"><%= check.detail %></span>
-        </li>
-      <% end %>
-    </ul>
+<header class="page-header">
+  <div class="min-w-0">
+    <p class="text-sm"><%= link_to "Back to governance", identity_governance_path, class: "link-quiet text-ink-soft" %></p>
+    <h1 class="page-title"><%= @proposal.description.upcase_first %></h1>
+    <p class="page-lede">
+      <span class="mono"><%= @proposal.public_id %></span>.
+      Proposed by <%= @proposal.proposed_by&.full_name || "a deleted user" %> on <%= @proposal.created_at.utc.strftime("%Y-%m-%d") %>.
+      Status: <%= status %>.
+      <% if @proposal.pending? %>Expires <%= @proposal.expires_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>.<% end %>
+    </p>
   </div>
-<% end %>
-
-<h3 class="font-display text-lg font-bold text-ink mb-3">Approvals</h3>
-<div class="patch overflow-hidden mb-8">
-  <ul class="divide-y divide-ink-soft/10">
-    <% if @proposal.key_holder_change? %>
-      <% User.where(id: @proposal.required_approver_ids).order(:first_name).each do |member| %>
-        <li class="px-6 py-3 text-sm text-ink">
-          <%= member.full_name %>: <%= @proposal.approver_ids.include?(member.id) ? "approved" : "not yet" %>
-        </li>
+  <% if IdentityGovernance.can_withdraw?(@proposal, current_user) %>
+    <div class="page-actions">
+      <%= form_with url: withdraw_identity_governance_proposal_path(@proposal), method: :patch do |form| %>
+        <%= form.submit "Withdraw the proposal", class: "btn btn-secondary" %>
       <% end %>
-      <li class="px-6 py-3 text-xs text-ink-faint">Every board member at the time of the proposal must approve.</li>
-    <% else %>
-      <% @proposal.approvals.includes(:approver).each do |approval| %>
-        <li class="px-6 py-3 text-sm text-ink"><%= approval.approver&.full_name || "A deleted user" %> approved on <%= approval.created_at.utc.strftime("%Y-%m-%d") %>.</li>
-      <% end %>
-      <li class="px-6 py-3 text-xs text-ink-faint">One board member who did not make the proposal, and who is not its subject, must approve.</li>
-    <% end %>
-  </ul>
-</div>
-
-<% if @proposal.open? && IdentityGovernance.can_approve?(@proposal, current_user) %>
-  <div class="patch p-6 mb-8 space-y-3">
-    <%= form_with url: approve_identity_governance_proposal_path(@proposal), method: :patch do |form| %>
-      <%= form.submit "Approve", class: "btn-stitch", data: { turbo_confirm: "Approve: #{@proposal.description}?" } %>
-    <% end %>
-    <%= form_with url: reject_identity_governance_proposal_path(@proposal), method: :patch, class: "flex flex-col sm:flex-row gap-2" do |form| %>
-      <%= form.text_field :reason, required: true, placeholder: "Why reject?", aria: { label: "Why reject?" }, class: input_class %>
-      <%= form.submit "Reject", class: "btn-stitch-ghost" %>
-    <% end %>
-  </div>
-<% end %>
-
-<% if IdentityGovernance.can_withdraw?(@proposal, current_user) %>
-  <%= form_with url: withdraw_identity_governance_proposal_path(@proposal), method: :patch, class: "mb-8" do |form| %>
-    <%= form.submit "Withdraw the proposal", class: "btn-stitch-ghost" %>
+    </div>
   <% end %>
-<% end %>
+</header>
 
-<h3 class="font-display text-lg font-bold text-ink mb-3">Log</h3>
-<div class="patch overflow-hidden">
-  <ul class="divide-y divide-ink-soft/10">
-    <% @events.each do |event| %>
-      <li class="px-6 py-3 text-sm text-ink">
-        <span class="text-ink-faint"><%= event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %></span>
-        <%= event.summary %>
-        <% if event.data["reason"].present? %><span class="text-ink-soft">Reason: <%= event.data["reason"] %></span><% end %>
-      </li>
+<div class="space-y-6">
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Proposal</h2>
+      <%= badge(status.to_s.humanize, tone: { "applied" => :success, "approved" => :success, "rejected" => :danger, "pending" => :warning }.fetch(status.to_s, :neutral)) %>
+    </div>
+    <div class="card-body space-y-2 text-sm">
+      <p class="text-ink">Reason: <%= @proposal.reason %></p>
+      <% if @proposal.close_reason.present? %>
+        <p class="text-ink-soft">Closing note: <%= @proposal.close_reason %></p>
+      <% end %>
+    </div>
+  </section>
+
+  <% if @preconditions %>
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Preconditions (checked again at the approval)</h2>
+      </div>
+      <div class="card-body">
+        <ul class="record-list">
+          <% @preconditions.each do |check| %>
+            <li class="record items-start justify-start">
+              <%= badge(check.met ? "Met" : "Not met", tone: check.met ? :success : :danger, icon: check.met ? :check : :x) %>
+              <div class="record-main">
+                <p class="record-title"><%= { verified: "verified by another verifier", adult: "#{IdentityGovernanceSettings.verifier_minimum_age} or older", nda: "signed NDA on record" }.fetch(check.key) %>.</p>
+                <p class="record-meta"><%= check.detail %></p>
+              </div>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    </section>
+  <% end %>
+
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">Approvals</h2>
+        <p class="card-lede">
+          <% if @proposal.key_holder_change? %>
+            Every board member at the time of the proposal must approve.
+          <% else %>
+            One board member who did not make the proposal, and who is not its subject, must approve.
+          <% end %>
+        </p>
+      </div>
+    </div>
+    <div class="card-body">
+      <ul class="record-list">
+        <% if @proposal.key_holder_change? %>
+          <% User.where(id: @proposal.required_approver_ids).order(:first_name).each do |member| %>
+            <% approved = @proposal.approver_ids.include?(member.id) %>
+            <li class="record">
+              <span class="record-title"><%= member.full_name %></span>
+              <%= badge(approved ? "approved" : "not yet", tone: approved ? :success : :neutral) %>
+            </li>
+          <% end %>
+        <% else %>
+          <% @proposal.approvals.includes(:approver).each do |approval| %>
+            <li class="record">
+              <span class="record-title"><%= approval.approver&.full_name || "A deleted user" %> approved on <%= approval.created_at.utc.strftime("%Y-%m-%d") %>.</span>
+            </li>
+          <% end %>
+        <% end %>
+      </ul>
+    </div>
+    <% if @proposal.open? && IdentityGovernance.can_approve?(@proposal, current_user) %>
+      <div class="card-footer flex flex-col sm:flex-row sm:items-center gap-3">
+        <%= form_with url: approve_identity_governance_proposal_path(@proposal), method: :patch do |form| %>
+          <%= form.submit "Approve", class: "btn btn-primary", data: { turbo_confirm: "Approve: #{@proposal.description}?" } %>
+        <% end %>
+        <%= form_with url: reject_identity_governance_proposal_path(@proposal), method: :patch, class: "flex flex-1 flex-col sm:flex-row gap-2" do |form| %>
+          <%= form.text_field :reason, required: true, placeholder: "Why reject?", aria: { label: "Why reject?" }, class: "field sm:flex-1" %>
+          <%= form.submit "Reject", class: "btn btn-secondary" %>
+        <% end %>
+      </div>
     <% end %>
-  </ul>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Log</h2>
+    </div>
+    <div class="card-body">
+      <ul class="record-list">
+        <% @events.each do |event| %>
+          <li class="record">
+            <div class="record-main">
+              <p class="record-title"><%= event.summary %></p>
+              <p class="record-meta">
+                <%= event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>
+                <% if event.data["reason"].present? %><span class="text-ink-soft">Reason: <%= event.data["reason"] %></span><% end %>
+              </p>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  </section>
 </div>

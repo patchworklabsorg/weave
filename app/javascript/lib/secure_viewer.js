@@ -73,7 +73,7 @@ export async function renderSecureImage(container, { bytes, contentType, waterma
   const canvas = document.createElement("canvas")
   canvas.width = bitmap.width
   canvas.height = bitmap.height
-  canvas.className = "secure-viewer-canvas max-w-full h-auto rounded-lg border-2 border-ink-soft/20"
+  canvas.className = "secure-viewer-canvas"
   canvas.setAttribute("role", "img")
   canvas.setAttribute("aria-label", "The ID image, with a watermark")
   canvas.draggable = false

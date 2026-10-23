@@ -1,20 +1,13 @@
 <% content_for :title, "Verification" %>
 
-<div class="mb-6 flex flex-wrap justify-between items-start gap-4">
-  <div>
-    <h2 class="font-display text-2xl font-bold text-ink mb-2">Identity verification</h2>
-    <p class="text-ink-soft">
-      Take an attempt for pre-review, check the document, then set the call. Nobody verifies their own account,
-      and nobody who failed a member can verify them again.
-    </p>
-  </div>
-  <div class="flex gap-2">
-    <%= link_to "Break-glass", identity_break_glass_records_path, class: "btn-stitch-ghost" %>
-    <% if current_user.admin? %>
-      <%= link_to "Board report", admin_break_glass_report_path, class: "btn-stitch-ghost" %>
-    <% end %>
-  </div>
-</div>
+<%= page_header("Identity verification",
+      lede: "Take an attempt for pre-review, check the document, then set the call. Nobody verifies their own account, " \
+            "and nobody who failed a member can verify them again.") do %>
+  <%= link_to identity_break_glass_records_path, class: "btn btn-secondary" do %><%= icon(:key_round) %>Break-glass<% end %>
+  <% if current_user.admin? %>
+    <%= link_to admin_break_glass_report_path, class: "btn btn-secondary" do %><%= icon(:file_text) %>Board report<% end %>
+  <% end %>
+<% end %>
 
 <%
   sections = [
@@ -27,23 +20,34 @@
   ]
 %>
 
-<% sections.each do |title, verifications, detail| %>
-  <h3 class="font-display text-lg font-bold text-ink mb-3"><%= title %></h3>
-  <div class="patch overflow-hidden mb-8">
-    <% if verifications.any? %>
-      <ul class="divide-y divide-ink-soft/10">
-        <% verifications.each do |verification| %>
-          <li class="px-6 py-3 flex flex-wrap justify-between gap-2">
-            <span class="text-sm text-ink">
-              <%= link_to verification.public_id, identity_verification_path(verification), class: "font-mono hover:text-grape" %>
-              <%= verification.user&.full_name || "A deleted account" %>
-            </span>
-            <span class="text-sm text-ink-soft"><%= detail.call(verification) %></span>
-          </li>
-        <% end %>
-      </ul>
-    <% else %>
-      <p class="px-6 py-4 text-sm text-ink-faint">Nothing here.</p>
-    <% end %>
-  </div>
-<% end %>
+<div class="space-y-6">
+  <% sections.each do |title, verifications, detail| %>
+    <section class="card">
+      <div class="card-header">
+        <div class="flex items-center gap-2">
+          <h2 class="card-title"><%= title %></h2>
+          <%= badge(verifications.size.to_s, tone: verifications.any? ? :grape : :neutral) %>
+        </div>
+      </div>
+      <% if verifications.any? %>
+        <div class="card-body">
+          <ul class="record-list">
+            <% verifications.each do |verification| %>
+              <li class="record flex-wrap">
+                <div class="record-main">
+                  <p class="record-title flex flex-wrap items-baseline gap-x-2">
+                    <%= link_to verification.public_id, identity_verification_path(verification), class: "link mono" %>
+                    <span><%= verification.user&.full_name || "A deleted account" %></span>
+                  </p>
+                </div>
+                <span class="record-meta"><%= detail.call(verification) %></span>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      <% else %>
+        <p class="card-body text-sm text-ink-faint">Nothing here.</p>
+      <% end %>
+    </section>
+  <% end %>
+</div>

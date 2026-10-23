@@ -1,185 +1,233 @@
 <% content_for :title, "Key custody" %>
-<% input_class = "px-3 py-2 rounded-lg border-2 border-neutral-300 bg-paper text-sm" %>
 
-<div class="mb-6">
-  <h2 class="font-display text-2xl font-bold text-ink mb-2">Key custody</h2>
-  <p class="text-ink-soft">
-    Each stored ID image is sealed to a master public key. The master private key exists only as
-    <%= KeyCustody.share_count %> shares, one for each key holder. Any <%= KeyCustody.threshold %> holders open an image,
-    each with one of their hardware keys. Weave never stores the private key or a share.
-  </p>
+<%= page_header("Key custody",
+      lede: "Each stored ID image is sealed to a master public key. The master private key exists only as " \
+            "#{KeyCustody.share_count} shares, one for each key holder. Any #{KeyCustody.threshold} holders open an image, " \
+            "each with one of their hardware keys. Weave never stores the private key or a share.") do %>
+  <% if KeyCustody::Ceremony.can_run?(current_user) && KeyCustody::Ceremony.blocker.nil? %>
+    <%= link_to new_identity_key_ceremony_path, class: "btn btn-primary" do %><%= icon(:key_round) %><%= @current ? "Rotate: run a new ceremony" : "Run the key ceremony" %><% end %>
+  <% end %>
+<% end %>
+
+<div class="space-y-6">
   <% if (warning = KeyCustody.warning) %>
-    <p class="text-sm text-orange-600 mt-2" role="alert"><%= warning %></p>
+    <div class="callout callout-warning" role="alert">
+      <%= icon(:triangle_alert, size: 18) %>
+      <div class="callout-body"><p><%= warning %></p></div>
+    </div>
   <% end %>
-</div>
 
-<h3 class="font-display text-lg font-bold text-ink mb-3">Key sets</h3>
-<div class="patch overflow-hidden mb-8">
-  <% if @key_sets.any? %>
-    <ul class="divide-y divide-ink-soft/10">
-      <% @key_sets.each do |key_set| %>
-        <li class="px-6 py-3 text-sm text-ink space-y-2">
-          <div class="flex flex-wrap justify-between gap-2">
-            <span>
-              <span class="font-mono"><%= key_set.public_id %></span>:
-              <strong><%= key_set.status %></strong><%= " (#{key_set.compromised_reason.to_s.humanize.downcase})" if key_set.compromised_at %>,
-              any <%= key_set.threshold %> of <%= key_set.share_count %>
-              <%= "· rotation of #{key_set.rotated_from.public_id}" if key_set.rotated_from %>
-            </span>
-            <span class="text-ink-soft">
-              Holders: <%= key_set.shares.map { |share| share.holder&.full_name || "a deleted user" }.to_sentence %>
-            </span>
-          </div>
-          <% if key_set.pending? %>
-            <% if key_set.compromised_at %>
-              <p class="text-xs text-orange-600">The key holders changed after this ceremony. Discard it and run a new ceremony.</p>
-            <% else %>
-              <p class="text-xs text-ink-soft">
-                Waits for activation by every holder. Shares given now: <%= @activation_progress[:new] %> of <%= key_set.share_count %> new
-                <% if key_set.rotation? %>, <%= @activation_progress[:old] %> of <%= key_set.rotated_from.threshold %> old<% end %>.
-                A share waits, encrypted, for <%= VerificationSettings.pending_share_ttl.inspect %>.
-              </p>
-              <% waiting_ids = KeyCustody::Activation.waiting_holder_ids(key_set) %>
-              <ul class="text-xs text-ink-soft">
-                <% key_set.shares.each do |share| %>
-                  <li>
-                    <%= share.holder&.full_name || "a deleted user" %>:
-                    <%= waiting_ids.include?(share.holder_id) ? "share given" : "not yet" %>
-                  </li>
-                <% end %>
-              </ul>
-              <% if waiting_ids.include?(current_user.id) && !key_set.rotation? %>
-                <p class="text-xs text-ink-soft">You gave your share. The key set goes live when every holder has given theirs.</p>
-              <% elsif KeyCustody::Activation.can_submit?(current_user, key_set) %>
-                <div data-controller="key-custody"
-                     data-key-custody-options-url-value="<%= activation_options_identity_key_set_path(key_set) %>"
-                     data-key-custody-submit-url-value="<%= activate_identity_key_set_path(key_set) %>">
-                  <button type="button" class="btn-stitch-ghost" data-action="key-custody#activate">
-                    Activate with my hardware key<%= " (new and old share)" if key_set.rotation? %>
-                  </button>
-                  <p class="text-xs text-ink-faint mt-1" data-key-custody-target="status" aria-live="polite"></p>
+  <% if KeyCustody::Ceremony.can_run?(current_user) && (ceremony_blocker = KeyCustody::Ceremony.blocker) %>
+    <div class="callout">
+      <%= icon(:info, size: 18) %>
+      <div class="callout-body"><p class="text-ink-soft"><%= ceremony_blocker %></p></div>
+    </div>
+  <% end %>
+
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Key sets</h2>
+    </div>
+    <% if @key_sets.any? %>
+      <div class="card-body">
+        <ul class="record-list">
+          <% @key_sets.each do |key_set| %>
+            <li class="record flex-col items-stretch gap-3">
+              <div class="flex flex-wrap items-start justify-between gap-2">
+                <div class="record-main">
+                  <p class="record-title flex flex-wrap items-center gap-2">
+                    <span class="mono"><%= key_set.public_id %></span>
+                    <%= badge(key_set.status.to_s, tone: { "active" => :success, "pending" => :warning, "compromised" => :danger }.fetch(key_set.status.to_s, :neutral)) %>
+                  </p>
+                  <p class="record-meta">
+                    <%= "(#{key_set.compromised_reason.to_s.humanize.downcase}), " if key_set.compromised_at %>any <%= key_set.threshold %> of <%= key_set.share_count %>
+                    <%= "· rotation of #{key_set.rotated_from.public_id}" if key_set.rotated_from %>
+                  </p>
                 </div>
-              <% end %>
-            <% end %>
-            <% if KeyCustody::Ceremony.can_discard?(current_user) %>
-              <%= form_with url: discard_identity_key_set_path(key_set), method: :patch, class: "flex flex-col sm:flex-row gap-2" do |form| %>
-                <%= form.text_field :reason, required: true, placeholder: "Why discard this key set?",
-                      aria: { label: "Why discard #{key_set.public_id}?" }, class: "flex-1 #{input_class}" %>
-                <%= form.submit "Discard", class: "btn-stitch-ghost" %>
-              <% end %>
-            <% end %>
-          <% end %>
-        </li>
-      <% end %>
-    </ul>
-  <% else %>
-    <p class="px-6 py-4 text-sm text-ink-faint">No key set yet. Run the ceremony.</p>
-  <% end %>
-</div>
-
-<% if KeyCustody::Ceremony.can_run?(current_user) %>
-  <% if (ceremony_blocker = KeyCustody::Ceremony.blocker) %>
-    <p class="mb-8 text-sm text-ink-soft"><%= ceremony_blocker %></p>
-  <% else %>
-    <p class="mb-8">
-      <%= link_to(@current ? "Rotate: run a new ceremony" : "Run the key ceremony", new_identity_key_ceremony_path, class: "btn-stitch") %>
-    </p>
-  <% end %>
-<% end %>
-
-<h3 class="font-display text-lg font-bold text-ink mb-3">Key holders and their hardware keys</h3>
-<div class="patch overflow-hidden mb-8">
-  <% if @holders.any? %>
-    <ul class="divide-y divide-ink-soft/10">
-      <% @holders.each do |holder| %>
-        <li class="px-6 py-3 text-sm text-ink">
-          <%= holder.full_name %>:
-          <%= holder.identity_hardware_keys.select(&:active?).map { |key| "#{key.label}#{' (seal key not set up)' unless key.sealable?}" }.to_sentence.presence || "no hardware key" %>
-          (<%= holder.identity_hardware_keys.to_a.count(&:sealable?) %> of <%= VerificationSettings.hardware_keys_per_holder %> ready)
-        </li>
-      <% end %>
-    </ul>
-  <% else %>
-    <p class="px-6 py-4 text-sm text-ink-faint">No key holders. The board adds them through governance.</p>
-  <% end %>
-</div>
-
-<% if KeyCustody.holder?(current_user) %>
-  <h3 class="font-display text-lg font-bold text-ink mb-3">My hardware keys</h3>
-  <div class="patch p-6 mb-8 space-y-4">
-    <% if @my_keys.any? %>
-      <ul class="space-y-3">
-        <% @my_keys.each do |key| %>
-          <li class="text-sm text-ink space-y-2">
-            <p>
-              <%= key.label %>, enrolled <%= key.created_at.to_date.to_fs(:long) %>.
-              <% if key.active? %>
-                <%= @my_share && KeyCustody::Recovery.keys_for(@my_share).include?(key) ? "Opens your share." : "Holds no share of the current key set." %>
-              <% else %>
-                Revoked <%= key.revoked_at.to_date.to_fs(:long) %>: <%= key.revoked_reason %>.
-              <% end %>
-            </p>
-            <% if key.active? && !key.sealable? %>
-              <div data-controller="key-custody"
-                   data-key-custody-options-url-value="<%= seal_key_options_identity_hardware_key_path(key) %>"
-                   data-key-custody-submit-url-value="<%= seal_key_identity_hardware_key_path(key) %>">
-                <p class="text-xs text-orange-600">This key has no seal key yet, so no share can be sealed to it.</p>
-                <button type="button" class="btn-stitch-ghost" data-action="key-custody#registerSealKey">Set up the seal key of this key</button>
-                <p class="text-xs text-ink-faint mt-1" data-key-custody-target="status" aria-live="polite"></p>
+                <p class="text-sm text-ink-soft">
+                  Holders: <%= key_set.shares.map { |share| share.holder&.full_name || "a deleted user" }.to_sentence %>
+                </p>
               </div>
-            <% end %>
-            <% if key.active? %>
-              <% if key.sealable? && @my_share && KeyCustody::Recovery.keys_for(@my_share).exclude?(key) && KeyCustody::Recovery.keys_for(@my_share).any? %>
-                <div data-controller="key-custody"
-                     data-key-custody-options-url-value="<%= rewrap_options_identity_hardware_key_path(key) %>"
-                     data-key-custody-submit-url-value="<%= rewrap_identity_hardware_key_path(key) %>">
-                  <button type="button" class="btn-stitch-ghost" data-action="key-custody#rewrap">Seal my share for this key</button>
-                  <p class="text-xs text-ink-faint mt-1" data-key-custody-target="status" aria-live="polite"></p>
-                </div>
+              <% if key_set.pending? %>
+                <% if key_set.compromised_at %>
+                  <div class="callout callout-warning">
+                    <%= icon(:triangle_alert, size: 18) %>
+                    <div class="callout-body"><p>The key holders changed after this ceremony. Discard it and run a new ceremony.</p></div>
+                  </div>
+                <% else %>
+                  <div class="well space-y-2">
+                    <p class="text-sm text-ink-soft">
+                      Waits for activation by every holder. Shares given now: <%= @activation_progress[:new] %> of <%= key_set.share_count %> new
+                      <% if key_set.rotation? %>, <%= @activation_progress[:old] %> of <%= key_set.rotated_from.threshold %> old<% end %>.
+                      A share waits, encrypted, for <%= VerificationSettings.pending_share_ttl.inspect %>.
+                    </p>
+                    <% waiting_ids = KeyCustody::Activation.waiting_holder_ids(key_set) %>
+                    <ul class="space-y-0.5 text-sm text-ink">
+                      <% key_set.shares.each do |share| %>
+                        <li class="flex items-center gap-1.5">
+                          <%= icon(waiting_ids.include?(share.holder_id) ? :circle_check : :circle_dashed, class: waiting_ids.include?(share.holder_id) ? "text-success" : "text-ink-faint") %>
+                          <span>
+                            <%= share.holder&.full_name || "a deleted user" %>:
+                            <%= waiting_ids.include?(share.holder_id) ? "share given" : "not yet" %>
+                          </span>
+                        </li>
+                      <% end %>
+                    </ul>
+                  </div>
+                  <% if waiting_ids.include?(current_user.id) && !key_set.rotation? %>
+                    <p class="text-sm text-ink-soft">You gave your share. The key set goes live when every holder has given theirs.</p>
+                  <% elsif KeyCustody::Activation.can_submit?(current_user, key_set) %>
+                    <div class="space-y-1" data-controller="key-custody"
+                         data-key-custody-options-url-value="<%= activation_options_identity_key_set_path(key_set) %>"
+                         data-key-custody-submit-url-value="<%= activate_identity_key_set_path(key_set) %>">
+                      <button type="button" class="btn btn-secondary" data-action="key-custody#activate">
+                        <%= icon(:key_round) %>Activate with my hardware key<%= " (new and old share)" if key_set.rotation? %>
+                      </button>
+                      <p class="field-hint" data-key-custody-target="status" aria-live="polite"></p>
+                    </div>
+                  <% end %>
+                <% end %>
+                <% if KeyCustody::Ceremony.can_discard?(current_user) %>
+                  <%= form_with url: discard_identity_key_set_path(key_set), method: :patch, class: "flex flex-col sm:flex-row gap-2" do |form| %>
+                    <%= form.text_field :reason, required: true, placeholder: "Why discard this key set?",
+                          aria: { label: "Why discard #{key_set.public_id}?" }, class: "field sm:flex-1" %>
+                    <%= form.submit "Discard", class: "btn btn-secondary" %>
+                  <% end %>
+                <% end %>
               <% end %>
-              <%= form_with url: revoke_identity_hardware_key_path(key), method: :patch, class: "flex flex-col sm:flex-row gap-2" do |form| %>
-                <%= form.text_field :reason, required: true, placeholder: "Lost, broken or stolen: say what happened",
-                      aria: { label: "Why revoke #{key.label}?" }, class: "flex-1 #{input_class}" %>
-                <%= form.submit "Revoke", class: "btn-stitch-ghost",
-                      data: { turbo_confirm: "Revoke this key? Its sealed share is deleted and the board is told. With no key left, the key set must be rotated." } %>
-              <% end %>
-            <% end %>
-          </li>
-        <% end %>
-      </ul>
-    <% end %>
-    <% if KeyCustody::Enrollment.can_enroll?(current_user) %>
-      <div class="flex flex-col sm:flex-row gap-2" data-controller="key-custody"
-           data-key-custody-options-url-value="<%= options_identity_hardware_keys_path %>"
-           data-key-custody-submit-url-value="<%= identity_hardware_keys_path %>">
-        <label class="sr-only" for="hardware_key_role">Role</label>
-        <select id="hardware_key_role" class="<%= input_class %>" data-key-custody-target="role">
-          <% KeyCustody::Enrollment.open_roles(current_user).each do |role| %>
-            <option value="<%= role %>"><%= role.capitalize %></option>
+            </li>
           <% end %>
-        </select>
-        <label class="sr-only" for="hardware_key_nickname">Name</label>
-        <input id="hardware_key_nickname" type="text" maxlength="60" autocomplete="off" placeholder="Name, for example the colour of the key"
-               class="flex-1 <%= input_class %>" data-key-custody-target="nickname">
-        <button type="button" class="btn-stitch-ghost" data-action="key-custody#enroll">Enroll a hardware key</button>
-        <p class="text-xs text-ink-faint" data-key-custody-target="status" aria-live="polite"></p>
+        </ul>
       </div>
+    <% else %>
+      <%= empty_state("No key set yet. Run the ceremony.", icon: :key_round) %>
     <% end %>
-  </div>
-<% end %>
+  </section>
 
-<h3 class="font-display text-lg font-bold text-ink mb-3">Log</h3>
-<div class="patch overflow-hidden">
-  <% if @events.any? %>
-    <ul class="divide-y divide-ink-soft/10">
-      <% @events.each do |event| %>
-        <li class="px-6 py-3 text-sm text-ink">
-          <span class="text-xs text-ink-faint"><%= event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %></span>
-          <%= event.summary %>
-        </li>
-      <% end %>
-    </ul>
-  <% else %>
-    <p class="px-6 py-4 text-sm text-ink-faint">Nothing yet.</p>
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Key holders and their hardware keys</h2>
+    </div>
+    <% if @holders.any? %>
+      <div class="card-body">
+        <ul class="record-list">
+          <% @holders.each do |holder| %>
+            <li class="record">
+              <div class="record-main">
+                <p class="record-title"><%= holder.full_name %></p>
+                <p class="record-meta">
+                  <%= holder.identity_hardware_keys.select(&:active?).map { |key| "#{key.label}#{' (seal key not set up)' unless key.sealable?}" }.to_sentence.presence || "no hardware key" %>
+                </p>
+              </div>
+              <% ready = holder.identity_hardware_keys.to_a.count(&:sealable?) %>
+              <%= badge("#{ready} of #{VerificationSettings.hardware_keys_per_holder} ready", tone: ready >= VerificationSettings.hardware_keys_per_holder ? :success : :warning) %>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% else %>
+      <%= empty_state("No key holders. The board adds them through governance.", icon: :users) %>
+    <% end %>
+  </section>
+
+  <% if KeyCustody.holder?(current_user) %>
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">My hardware keys</h2>
+      </div>
+      <div class="card-body space-y-4">
+        <% if @my_keys.any? %>
+          <ul class="record-list">
+            <% @my_keys.each do |key| %>
+              <li class="record flex-col items-stretch gap-3">
+                <div class="record-main">
+                  <p class="record-title flex flex-wrap items-center gap-2">
+                    <%= key.label %>
+                    <% unless key.active? %><%= badge("Revoked", tone: :danger) %><% end %>
+                  </p>
+                  <p class="record-meta">
+                    Enrolled <%= key.created_at.to_date.to_fs(:long) %>.
+                    <% if key.active? %>
+                      <%= @my_share && KeyCustody::Recovery.keys_for(@my_share).include?(key) ? "Opens your share." : "Holds no share of the current key set." %>
+                    <% else %>
+                      Revoked <%= key.revoked_at.to_date.to_fs(:long) %>: <%= key.revoked_reason %>.
+                    <% end %>
+                  </p>
+                </div>
+                <% if key.active? && !key.sealable? %>
+                  <div class="space-y-2" data-controller="key-custody"
+                       data-key-custody-options-url-value="<%= seal_key_options_identity_hardware_key_path(key) %>"
+                       data-key-custody-submit-url-value="<%= seal_key_identity_hardware_key_path(key) %>">
+                    <div class="callout callout-warning">
+                      <%= icon(:triangle_alert, size: 18) %>
+                      <div class="callout-body"><p>This key has no seal key yet, so no share can be sealed to it.</p></div>
+                    </div>
+                    <button type="button" class="btn btn-secondary" data-action="key-custody#registerSealKey">Set up the seal key of this key</button>
+                    <p class="field-hint" data-key-custody-target="status" aria-live="polite"></p>
+                  </div>
+                <% end %>
+                <% if key.active? %>
+                  <% if key.sealable? && @my_share && KeyCustody::Recovery.keys_for(@my_share).exclude?(key) && KeyCustody::Recovery.keys_for(@my_share).any? %>
+                    <div class="space-y-1" data-controller="key-custody"
+                         data-key-custody-options-url-value="<%= rewrap_options_identity_hardware_key_path(key) %>"
+                         data-key-custody-submit-url-value="<%= rewrap_identity_hardware_key_path(key) %>">
+                      <button type="button" class="btn btn-secondary" data-action="key-custody#rewrap">Seal my share for this key</button>
+                      <p class="field-hint" data-key-custody-target="status" aria-live="polite"></p>
+                    </div>
+                  <% end %>
+                  <%= form_with url: revoke_identity_hardware_key_path(key), method: :patch, class: "flex flex-col sm:flex-row gap-2" do |form| %>
+                    <%= form.text_field :reason, required: true, placeholder: "Lost, broken or stolen: say what happened",
+                          aria: { label: "Why revoke #{key.label}?" }, class: "field sm:flex-1" %>
+                    <%= form.submit "Revoke", class: "btn btn-danger",
+                          data: { turbo_confirm: "Revoke this key? Its sealed share is deleted and the board is told. With no key left, the key set must be rotated." } %>
+                  <% end %>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+        <% if KeyCustody::Enrollment.can_enroll?(current_user) %>
+          <div class="<%= 'border-t border-hairline pt-4 ' if @my_keys.any? %>space-y-1.5" data-controller="key-custody"
+               data-key-custody-options-url-value="<%= options_identity_hardware_keys_path %>"
+               data-key-custody-submit-url-value="<%= identity_hardware_keys_path %>">
+            <div class="flex flex-col sm:flex-row gap-2">
+              <label class="sr-only" for="hardware_key_role">Role</label>
+              <select id="hardware_key_role" class="field sm:w-40" data-key-custody-target="role">
+                <% KeyCustody::Enrollment.open_roles(current_user).each do |role| %>
+                  <option value="<%= role %>"><%= role.capitalize %></option>
+                <% end %>
+              </select>
+              <label class="sr-only" for="hardware_key_nickname">Name</label>
+              <input id="hardware_key_nickname" type="text" maxlength="60" autocomplete="off" placeholder="Name, for example the colour of the key"
+                     class="field sm:flex-1" data-key-custody-target="nickname">
+              <button type="button" class="btn btn-secondary" data-action="key-custody#enroll"><%= icon(:plus) %>Enroll a hardware key</button>
+            </div>
+            <p class="field-hint" data-key-custody-target="status" aria-live="polite"></p>
+          </div>
+        <% end %>
+      </div>
+    </section>
   <% end %>
+
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Log</h2>
+    </div>
+    <% if @events.any? %>
+      <div class="card-body">
+        <ul class="record-list">
+          <% @events.each do |event| %>
+            <li class="record">
+              <div class="record-main">
+                <p class="record-title"><%= event.summary %></p>
+                <p class="record-meta"><%= event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %></p>
+              </div>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% else %>
+      <p class="card-body text-sm text-ink-faint">Nothing yet.</p>
+    <% end %>
+  </section>
 </div>
