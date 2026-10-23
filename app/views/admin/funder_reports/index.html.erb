@@ -1,0 +1,31 @@
+<%# The funder profiles (see Admin::FunderReportsController). %>
+<% content_for :title, "Funder reports" %>
+
+<div class="mb-6 space-y-2">
+  <h2 class="font-display text-2xl font-bold text-ink">Funder reports</h2>
+  <p class="text-ink-soft">
+    Each funder profile is in <code>config/kyc/data_retention.yml</code>. Open a funder to preview its report. The preview
+    uses only that funder's fields, threshold, amount setting and consent rule. There is no export and no send yet.
+  </p>
+</div>
+
+<div class="patch overflow-hidden">
+  <% if @profiles.any? %>
+    <ul class="divide-y divide-ink-soft/10">
+      <% @profiles.each do |profile| %>
+        <li class="px-6 py-3 text-sm text-ink flex flex-wrap justify-between gap-2">
+          <span>
+            <%= link_to profile.name, admin_funder_report_path(profile.key), class: "text-grape font-medium" %>
+            <span class="text-ink-faint">(<%= profile.key %>)</span>
+          </span>
+          <span class="text-ink-soft">
+            Programs: <%= profile.programs.to_sentence.presence || "none" %>.
+            <%= profile.report_cadence.humanize %>.<%= " Consent required." if profile.consent_required? %>
+          </span>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="px-6 py-4 text-sm text-ink-faint">No funder has a profile yet. See the checklist in docs/KYC_ROLLOUT.md.</p>
+  <% end %>
+</div>

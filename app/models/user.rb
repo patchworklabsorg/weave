@@ -162,6 +162,21 @@ class User < ApplicationRecord
   # new call (see VerificationFlow.require_reverification). This also catches
   # a change an admin makes.
   after_update :require_reverification_for_identity_change, if: :identity_attributes_changed?
+  # Any delete path starts the retention window of the audit records (see
+  # DataRetention::Sweeps). The deletion pipeline sets it first.
+  before_destroy :mark_verifications_account_deleted
+
+  # Data handling, takeout and deletion (see DataCategories and
+  # DeletionPipeline). The pipeline folds or detaches participation rows
+  # before the user row goes. Financial records stay under their obligation:
+  # the database empties user_id.
+  has_many :program_participations, dependent: :delete_all
+  has_many :grant_disbursements, dependent: nil
+  has_many :deletion_requests, dependent: nil
+  has_many :takeout_requests, dependent: :destroy
+  has_many :dormancy_warnings, dependent: :delete_all
+  has_many :funder_consents, dependent: :delete_all
+
   # The Knot: the one-way hash set of this member's IDs (see Knot). It stays
   # after the account is deleted. The deletion pipeline calls
   # KnotLinker.write_record_and_detach!, and the database empties user_id.
@@ -453,6 +468,12 @@ class User < ApplicationRecord
 
   def last_login_at
     user_sessions.maximum(:created_at)
+  end
+
+  # When the member last used Weave: the newest sign-in or session activity,
+  # or the sign-up. The dormancy clock starts here (see DormancyJob).
+  def last_active_at
+    [user_sessions.maximum(:last_seen_at), user_sessions.maximum(:created_at), created_at].compact.max
   end
 
   def locked?
@@ -838,6 +859,10 @@ class User < ApplicationRecord
 
   def fold_demographics = DemographicsVault.fold!(self)
 
+  def mark_verifications_account_deleted
+    verifications.where(account_deleted_at: nil).update_all(account_deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
   private
 
   def admin_override_pretend?
@@ -873,7 +898,7 @@ class User < ApplicationRecord
     errors.add(:identity_lead, "needs identity team membership") if identity_lead
   end
 
-  # The proposal names exactly two key holders, so a third can't be added.
+  # At most break_glass.max_key_holders (3) key holders; any 2 approve a request.
   def identity_key_holder_limit
     others = User.identity_key_holders.where.not(id:).count
     return if others < VerificationSettings.max_key_holders

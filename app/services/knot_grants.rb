@@ -61,6 +61,9 @@ module KnotGrants
         return failure(base: I18n.t("knot.grants.cap_reached")) unless eligible?(user, program)
 
         grant = knot.program_grants.create!(program:, granted_at: Time.current)
+        # The participation record, which folds into the delete-time
+        # aggregates when the member deletes the account (DeletionPipeline).
+        ProgramParticipation.record!(user, program:, outcome: "granted")
         audit = knot.audit_verification
         VerificationEvent.record!(audit, :program_grant_recorded, actor: by, program:, knot: knot.public_id) if audit
       end

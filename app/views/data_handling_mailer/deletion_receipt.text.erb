@@ -1,0 +1,20 @@
+<%= t("data_handling.mailer.deletion_receipt.intro") %>
+
+<%= t("data_handling.mailer.deletion_receipt.removed") %>:
+<% Array(@receipt["removed"]).each do |key| %>
+- <%= @categories[key].name %>: <%= @categories[key].legal_basis %>
+<% end %>
+
+<%= t("data_handling.mailer.deletion_receipt.retained") %>:
+<% Array(@receipt["retained"]).each do |key| %>
+- <%= @categories[key].name %>: <%= @categories[key].legal_basis %>
+<% end %>
+
+<%= t("data_handling.mailer.deletion_receipt.none_held") %>:
+<% Array(@receipt["none_held"]).each do |key| %>
+- <%= @categories[key].name %>
+<% end %>
+
+<%= t("data_handling.mailer.deletion_receipt.closing") %>
+
+<%= t("data_handling.data_page_link") %>: <%= @data_page_url %>

@@ -1,0 +1,5 @@
+<%= t("data_handling.mailer.deletion_requested.body", first_name: @user.first_name, date: @deletion_request.review_due_at.to_date.to_fs(:long)) %>
+
+<%= t("data_handling.mailer.deletion_requested.action") %>: <%= @url %>
+
+<%= t("data_handling.data_page_link") %>: <%= @data_page_url %>

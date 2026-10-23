@@ -15,8 +15,10 @@
       <%= yield %>
     </main>
 
-    <footer class="page pt-0 pb-8 text-xs text-ink-faint flex flex-wrap gap-x-4 gap-y-1">
+    <footer class="page pt-0 pb-8 text-xs text-ink-faint flex flex-wrap gap-x-4 gap-y-1" data-testid="data-footer">
       <span>Weave is the Patchwork Labs identity provider.</span>
+      <span><%= t("data_handling.footer") %></span>
+      <%= link_to t("data_handling.data_page_link"), Weave.data_page_url, class: "link-quiet", target: "_blank", rel: "noopener noreferrer" %>
       <a href="https://github.com/patchworklabsorg/weave" class="link-quiet" target="_blank" rel="noopener noreferrer">Source</a>
       <a href="mailto:security@patchworklabs.org" class="link-quiet">Report a security issue</a>
     </footer>

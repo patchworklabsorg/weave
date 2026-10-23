@@ -1,0 +1,5 @@
+<%= t("data_handling.mailer.dormancy_warning.body", first_name: @user.first_name, date: @deadline.to_date.to_fs(:long)) %>
+
+<%= t("data_handling.mailer.dormancy_warning.action") %>: <%= @login_url %>
+
+<%= t("data_handling.data_page_link") %>: <%= @data_page_url %>

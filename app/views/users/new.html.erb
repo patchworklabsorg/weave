@@ -50,6 +50,9 @@
           We'll email you a secure sign-in link — no password to remember.
         </p>
 
+        <p class="text-xs text-ink-faint text-center mb-3">
+          <%= link_to t("data_handling.data_page_link"), Weave.data_page_url, target: "_blank", rel: "noopener noreferrer", class: "link" %>
+        </p>
         <%= form.submit "Create account", class: "btn btn-primary btn-block" %>
       <% end %>
 

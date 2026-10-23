@@ -1,0 +1,7 @@
+These deletion requests are past their review date:
+
+<% @requests.each do |request| %>
+- <%= request.public_id %> (<%= request.source %>), due <%= request.review_due_at.to_date.to_fs(:long) %>
+<% end %>
+
+Review them: <%= @admin_url %>

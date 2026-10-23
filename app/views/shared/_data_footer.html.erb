@@ -1,0 +1,6 @@
+<%# Footer for the pages without the member footer (sign in, home, admin):
+    every page links to "What we do with your data". %>
+<footer class="text-center text-xs text-ink-faint py-6 px-4" data-testid="data-footer">
+  <%= t("data_handling.footer") %>
+  <%= link_to t("data_handling.data_page_link"), Weave.data_page_url, target: "_blank", rel: "noopener noreferrer", class: "link" %>
+</footer>

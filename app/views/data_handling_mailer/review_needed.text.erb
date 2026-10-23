@@ -1,0 +1,7 @@
+A deletion request (<%= @deletion_request.source %>) waits for the identity team's authenticity check.
+
+Request: <%= @deletion_request.public_id %>
+Review due: <%= @deletion_request.review_due_at.to_date.to_fs(:long) %>
+Deletion complete by: <%= @deletion_request.complete_by.to_date.to_fs(:long) %>
+
+Review it: <%= @admin_url %>
