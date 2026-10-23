@@ -56,7 +56,7 @@ RSpec.describe "Admin Knot", type: :request do
     it "shows the manual review on the attempt page" do
       verification = create(:verification, :call_scheduled, knot_review_reason: "soft_match")
 
-      get admin_verification_path(verification)
+      get identity_verification_path(verification)
 
       expect(response.body).to include("Manual review", "can never fail or block")
     end

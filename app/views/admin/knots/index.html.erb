@@ -18,7 +18,7 @@
     <ul class="text-sm text-ink space-y-1">
       <% @knot_reviews.each do |verification| %>
         <li>
-          <%= link_to verification.public_id, admin_verification_path(verification), class: "font-mono text-grape" %>:
+          <%= link_to verification.public_id, identity_verification_path(verification), class: "font-mono text-grape" %>:
           <%= t("knot.review_reasons.#{verification.knot_review_reason}") %>
         </li>
       <% end %>

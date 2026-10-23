@@ -15,4 +15,16 @@ Member notices delayed now: <%= @report.delayed_notices.size %>
 - Delayed member notice for <%= notice.break_glass_record.public_id %> since <%= notice.delayed_at.utc.strftime("%Y-%m-%d") %>: <%= notice.delay_reason %> (<%= notice.delay_signed_off? ? "signed off, holds until #{notice.delay_ends_at.utc.strftime('%Y-%m-%d')} at the latest" : "not signed off" %>)
 <% end %>
 
+Identity team governance: <%= @report.governance_events.size %> steps
+<% @report.governance_events.each do |event| %>
+- <%= event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>: <%= event.summary %><%= " Reason: #{event.data['reason']}" if event.data["reason"].present? %>
+<% end %>
+
+Changes to privileged attributes (permanent log): <%= @report.privileged_changes.size %>
+<% @report.privileged_changes.each do |change| %>
+- <%= change.changed_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>: <%= change.summary %>. By <%= change.actor_name %>.
+<% end %>
+
+The identity team now: <%= @report.identity_team.map { |member| [member.full_name, ("key holder" if member.identity_key_holder), ("lead" if member.identity_lead)].compact.join(", ") }.join("; ").presence || "nobody" %>
+
 Full report: <%= @report_url %>

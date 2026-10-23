@@ -90,3 +90,9 @@ dormancy:
 deletion_review_reminder:
   class: DeletionReviewReminderJob
   schedule: every day at 9am
+
+# Mark identity team proposals past their expiry as expired (see
+# IdentityGovernance and config/kyc/identity_governance.yml).
+expire_identity_governance_proposals:
+  class: ExpireIdentityGovernanceProposalsJob
+  schedule: every hour

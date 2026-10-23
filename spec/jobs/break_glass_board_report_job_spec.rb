@@ -28,4 +28,16 @@ RSpec.describe BreakGlassBoardReportJob do
 
     expect(mail.body.encoded).to include("Decryptions: 1", record.public_id, "Fraud report: compare it", "Active fraud case 12")
   end
+
+  it "lists the identity team governance steps of the month and the team now" do
+    owner = create(:user, :owner, :verified)
+    member = create(:user, :key_holder, first_name: "Ria", last_name: "Stone")
+    IdentityGovernance.remove_member(member, by: owner, reason: "Left the org.")
+    create(:user, :identity_lead, first_name: "Lea", last_name: "Lead")
+
+    mail = BreakGlassMailer.board_report(create(:user, :verified, is_board: true), Date.current.beginning_of_month.iso8601)
+
+    expect(mail.body.encoded).to include("Identity team governance: 1 steps", "removed Ria Stone from the identity team",
+                                         "Reason: Left the org.", "Lea Lead, lead")
+  end
 end

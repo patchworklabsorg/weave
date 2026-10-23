@@ -5,7 +5,7 @@
 class BreakGlassMailer < ApplicationMailer
   def approval_needed(record, holder)
     @record = record
-    @admin_url = admin_break_glass_records_url
+    @admin_url = identity_break_glass_records_url
 
     mail(to: holder.email, subject: env_subject("[IDP Alert] Break-glass approval needed (#{record.public_id})"))
   end
@@ -15,7 +15,7 @@ class BreakGlassMailer < ApplicationMailer
     @notice = notice
     @decryption = notice.break_glass_decryption
     @record = notice.break_glass_record
-    @admin_url = admin_break_glass_records_url
+    @admin_url = identity_break_glass_records_url
 
     mail(to: notice.recipient.email, subject: env_subject("[IDP Alert] A stored ID image was decrypted (#{@record.public_id})"))
   end
@@ -34,7 +34,7 @@ class BreakGlassMailer < ApplicationMailer
   def notice_delayed(notice, lead)
     @notice = notice
     @record = notice.break_glass_record
-    @admin_url = admin_break_glass_records_url
+    @admin_url = identity_break_glass_records_url
 
     mail(to: lead.email, subject: env_subject("[IDP Alert] A member notice was delayed (#{@record.public_id})"))
   end

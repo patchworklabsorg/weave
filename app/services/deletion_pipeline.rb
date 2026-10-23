@@ -146,6 +146,9 @@ module DeletionPipeline
       # A session this member opened while impersonating someone points at
       # them without a delete rule.
       User::Session.where(impersonated_by_id: user.id).update_all(impersonated_by_id: nil) # rubocop:disable Rails/SkipsModelValidations
+      # An identity team member leaves the team first: logged, the board is
+      # told, and a key holder starts a key rotation.
+      IdentityGovernance.account_deleted!(user)
 
       PaperTrail.request(enabled: false) { user.destroy! }
       scrub_versions!(versions, user.id)

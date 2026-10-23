@@ -9,8 +9,10 @@
     </p>
   </div>
   <div class="flex gap-2">
-    <%= link_to "Break-glass", admin_break_glass_records_path, class: "btn-stitch-ghost" %>
-    <%= link_to "Board report", admin_break_glass_report_path, class: "btn-stitch-ghost" %>
+    <%= link_to "Break-glass", identity_break_glass_records_path, class: "btn-stitch-ghost" %>
+    <% if current_user.admin? %>
+      <%= link_to "Board report", admin_break_glass_report_path, class: "btn-stitch-ghost" %>
+    <% end %>
   </div>
 </div>
 
@@ -33,7 +35,7 @@
         <% verifications.each do |verification| %>
           <li class="px-6 py-3 flex flex-wrap justify-between gap-2">
             <span class="text-sm text-ink">
-              <%= link_to verification.public_id, admin_verification_path(verification), class: "font-mono hover:text-grape" %>
+              <%= link_to verification.public_id, identity_verification_path(verification), class: "font-mono hover:text-grape" %>
               <%= verification.user&.full_name || "A deleted account" %>
             </span>
             <span class="text-sm text-ink-soft"><%= detail.call(verification) %></span>

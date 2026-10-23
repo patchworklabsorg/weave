@@ -1,0 +1,9 @@
+<%= @event.summary %>
+
+When: <%= @event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>
+
+The board approves changes to the identity team: one board member approves a new verifier or a lead change, and every board member approves a key holder change. Only an owner can change the board.
+
+You get this email because you are on the board, or were on it until this change. If you did not expect this change, tell the other board members.
+
+<%= @url %>

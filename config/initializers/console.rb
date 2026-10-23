@@ -2,6 +2,11 @@
 
 Rails.application.configure do
   console do
+    # The permanent log of privileged attributes names the console user (see
+    # PrivilegedChangeActor). Console1984 asks for the name in production.
+    username = (Console1984.supervisor.current_username if Console1984.running_protected_environment?)
+    PrivilegedChangeActor.set!(label: "console #{username.presence || ENV.fetch('USER', 'unknown')}")
+
     PaperTrail.request.whodunnit = lambda {
       @paper_trail_whodunnit ||= begin
         user = nil

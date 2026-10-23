@@ -2,8 +2,7 @@
 
 # The identity team's side of verification (see VerificationFlow): the queue,
 # pre-review, the call outcome and escalations.
-class Admin::VerificationsController < Admin::BaseController
-  include IdentityTeamAccess
+class Identity::VerificationsController < Identity::BaseController
   include SecureImageResponse
 
   RECENT_LIMIT = 20
@@ -31,9 +30,9 @@ class Admin::VerificationsController < Admin::BaseController
 
   def start_pre_review
     if VerificationFlow.start_pre_review(@verification, by: current_user)
-      redirect_to admin_verification_path(@verification), notice: "You took this attempt for pre-review."
+      redirect_to identity_verification_path(@verification), notice: "You took this attempt for pre-review."
     else
-      redirect_to admin_verification_path(@verification), alert: "This attempt can't go to pre-review now, or it is your own."
+      redirect_to identity_verification_path(@verification), alert: "This attempt can't go to pre-review now, or it is your own."
     end
   end
 
@@ -54,36 +53,36 @@ class Admin::VerificationsController < Admin::BaseController
 
   def reject_document
     if VerificationFlow.reject_document(@verification, by: current_user, note: params[:note].to_s.strip)
-      redirect_to admin_verification_path(@verification), notice: "The member was asked for a new document."
+      redirect_to identity_verification_path(@verification), notice: "The member was asked for a new document."
     else
-      redirect_to admin_verification_path(@verification), alert: "Write what the member must fix. The attempt must be in pre-review."
+      redirect_to identity_verification_path(@verification), alert: "Write what the member must fix. The attempt must be in pre-review."
     end
   end
 
   def take_over_pre_review
     if VerificationFlow.take_over_pre_review(@verification, by: current_user)
-      redirect_to admin_verification_path(@verification), notice: "You are now the pre-reviewer. The hand-over is logged."
+      redirect_to identity_verification_path(@verification), notice: "You are now the pre-reviewer. The hand-over is logged."
     else
-      redirect_to admin_verification_path(@verification),
+      redirect_to identity_verification_path(@verification),
                   alert: "Only another identity team member can take over, while the attempt is in pre-review."
     end
   end
 
   def approve_document
     if VerificationFlow.approve_document(@verification, by: current_user)
-      redirect_to admin_verification_path(@verification),
+      redirect_to identity_verification_path(@verification),
                   notice: "Document OK. Agree a call time with the member by email or Slack, then record it here."
     else
-      redirect_to admin_verification_path(@verification), alert: "Only the pre-reviewer can mark the document OK, during pre-review."
+      redirect_to identity_verification_path(@verification), alert: "Only the pre-reviewer can mark the document OK, during pre-review."
     end
   end
 
   def schedule_call
     at = parse_time(params[:call_scheduled_for])
     if VerificationFlow.schedule_call(@verification, by: current_user, at:)
-      redirect_to admin_verification_path(@verification), notice: "The call time is recorded. We emailed the member."
+      redirect_to identity_verification_path(@verification), notice: "The call time is recorded. We emailed the member."
     else
-      redirect_to admin_verification_path(@verification),
+      redirect_to identity_verification_path(@verification),
                   alert: "Give a time in the future. The document must be OK first, or the attempt must have a call."
     end
   end
@@ -102,7 +101,7 @@ class Admin::VerificationsController < Admin::BaseController
       details_mismatch: params[:details_mismatch] == "1"
     )
     if result.success?
-      redirect_to admin_verification_path(@verification), notice: "Recorded the outcome: #{result.verification.status}."
+      redirect_to identity_verification_path(@verification), notice: "Recorded the outcome: #{result.verification.status}."
     elsif (@mismatch = result.errors.slice(*VerificationFlow::MISMATCH_KEYS)).any?
       # Show the form again with what the verifier typed (never stored), so
       # they can correct the entry or fail the call.
@@ -111,7 +110,7 @@ class Admin::VerificationsController < Admin::BaseController
       show
       render :show, status: :unprocessable_content
     else
-      redirect_to admin_verification_path(@verification),
+      redirect_to identity_verification_path(@verification),
                   alert: "Outcome not recorded: #{result.errors.map { |key, message| key == :base ? message : "#{key.to_s.humanize} #{message}" }.join('. ')}."
     end
   end
@@ -119,9 +118,9 @@ class Admin::VerificationsController < Admin::BaseController
   def resolve_escalation
     if VerificationFlow.resolve_escalation(@verification, by: current_user, resolution: params[:resolution].to_s,
                                                           note: params[:note].to_s.strip)
-      redirect_to admin_verification_path(@verification), notice: "The escalation is resolved."
+      redirect_to identity_verification_path(@verification), notice: "The escalation is resolved."
     else
-      redirect_to admin_verification_path(@verification), alert: "Only an identity team lead can resolve an escalation, with a note."
+      redirect_to identity_verification_path(@verification), alert: "Only an identity team lead can resolve an escalation, with a note."
     end
   end
 

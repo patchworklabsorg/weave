@@ -78,3 +78,52 @@
     <p class="px-6 py-4 text-sm text-ink-faint">None.</p>
   <% end %>
 </div>
+
+<h3 class="font-display text-lg font-bold text-ink mt-8 mb-3">Identity team governance</h3>
+<div class="patch overflow-hidden mb-8">
+  <% if @report.governance_events.any? %>
+    <ul class="divide-y divide-ink-soft/10">
+      <% @report.governance_events.each do |event| %>
+        <li class="px-6 py-3 text-sm text-ink">
+          <%= event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>: <%= event.summary %>
+          <% if event.data["reason"].present? %><span class="text-ink-soft">Reason: <%= event.data["reason"] %></span><% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="px-6 py-4 text-sm text-ink-faint">No governance steps in this month.</p>
+  <% end %>
+</div>
+
+<h3 class="font-display text-lg font-bold text-ink mb-3">Changes to privileged attributes</h3>
+<p class="text-sm text-ink-soft mb-3">From the permanent log: every change to board membership, the identity team flags and the admin role. A database trigger writes it, so console and SQL changes are in it too.</p>
+<div class="patch overflow-hidden mb-8">
+  <% if @report.privileged_changes.any? %>
+    <ul class="divide-y divide-ink-soft/10">
+      <% @report.privileged_changes.each do |change| %>
+        <li class="px-6 py-3 text-sm text-ink">
+          <span class="text-ink-faint"><%= change.changed_at.utc.strftime("%Y-%m-%d %H:%M UTC") %></span>
+          <%= change.summary %>
+          <span class="text-ink-soft">By <%= change.actor_name %>.</span>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="px-6 py-4 text-sm text-ink-faint">No changes in this month.</p>
+  <% end %>
+</div>
+
+<h3 class="font-display text-lg font-bold text-ink mb-3">The identity team now</h3>
+<div class="patch overflow-hidden">
+  <% if @report.identity_team.any? %>
+    <ul class="divide-y divide-ink-soft/10">
+      <% @report.identity_team.each do |member| %>
+        <li class="px-6 py-3 text-sm text-ink">
+          <%= member.full_name %><%= ", key holder" if member.identity_key_holder %><%= ", lead" if member.identity_lead %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="px-6 py-4 text-sm text-ink-faint">Nobody is on the identity team.</p>
+  <% end %>
+</div>

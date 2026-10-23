@@ -1,0 +1,12 @@
+<%= @proposal.proposed_by&.full_name || "A deleted user" %> proposes to <%= @proposal.description %> (<%= @proposal.public_id %>).
+
+Reason: <%= @proposal.reason %>
+
+<% if @proposal.key_holder_change? -%>
+Every board member at the time of the proposal must approve a key holder change. The change applies after the last approval.
+<% else -%>
+One board member who did not make the proposal must approve it.
+<% end -%>
+The proposal expires on <%= @proposal.expires_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>.
+
+<%= @url %>

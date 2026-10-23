@@ -6,11 +6,11 @@
 %>
 
 <div class="mb-6">
-  <%= link_to "All verifications", admin_verifications_path, class: "text-sm text-grape" %>
+  <%= link_to "All verifications", identity_verifications_path, class: "text-sm text-grape" %>
   <h2 class="font-display text-2xl font-bold text-ink mt-2"><%= @verification.public_id %>: <%= @verification.status.humanize %></h2>
   <p class="text-ink-soft mt-1">
     <% if @user %>
-      <%= link_to @user.full_name, admin_user_path(@user), class: "hover:text-grape" %> (<%= @user.p_id %>),
+      <% if current_user.admin? %><%= link_to @user.full_name, admin_user_path(@user), class: "hover:text-grape" %><% else %><%= @user.full_name %><% end %> (<%= @user.p_id %>),
       <%= @user.minor? ? "under 18" : "18 or older" %>.
       Member status: <%= @user.verification_status.humanize %>.
     <% else %>
@@ -35,7 +35,7 @@
   </div>
 <% end %>
 
-<% if @verification.knot && current_user.identity_team %>
+<% if @verification.knot && current_user.identity_team && current_user.admin? %>
   <p class="text-sm text-ink-soft mb-6">
     Knot: <%= link_to @verification.knot.public_id, admin_knot_path(@verification.knot), class: "font-mono text-grape" %>
     <%= "(fraud flag set)" if @verification.knot.blacklisted %>
@@ -44,7 +44,7 @@
 
 <% if !own && @verification.submitted? %>
   <div class="patch p-6 mb-6">
-    <%= button_to "Take for pre-review", start_pre_review_admin_verification_path(@verification), method: :patch, class: "btn-stitch" %>
+    <%= button_to "Take for pre-review", start_pre_review_identity_verification_path(@verification), method: :patch, class: "btn-stitch" %>
   </div>
 <% end %>
 
@@ -53,23 +53,23 @@
     <h3 class="font-display text-lg font-bold text-ink">Pre-review</h3>
     <% if @verification.pre_reviewer == current_user %>
       <p class="text-sm text-ink-soft">Each view of the image is logged. Open it only to check the document.</p>
-      <%= render "shared/secure_image_viewer", url: image_admin_verification_path(@verification), label: "Show the ID image" %>
+      <%= render "shared/secure_image_viewer", url: image_identity_verification_path(@verification), label: "Show the ID image" %>
     <% else %>
       <p class="text-sm text-ink-soft">
         <%= @verification.pre_reviewer&.full_name || "A deleted user" %> is the pre-reviewer. Only they can open the image and mark the document OK.
         If they can't finish it, you can take it over. The hand-over is logged.
       </p>
-      <%= button_to "Take over pre-review", take_over_pre_review_admin_verification_path(@verification), method: :patch, class: "btn-stitch-ghost",
+      <%= button_to "Take over pre-review", take_over_pre_review_identity_verification_path(@verification), method: :patch, class: "btn-stitch-ghost",
             data: { turbo_confirm: "Take over this pre-review? You become the pre-reviewer, and the hand-over is logged." } %>
     <% end %>
     <% if @verification.pre_reviewer == current_user %>
       <div class="space-y-1">
-        <%= button_to "Document OK", approve_document_admin_verification_path(@verification), method: :patch, class: "btn-stitch",
+        <%= button_to "Document OK", approve_document_identity_verification_path(@verification), method: :patch, class: "btn-stitch",
               data: { turbo_confirm: "Mark the document OK? Pre-review ends, and you can no longer see the image." } %>
         <p class="text-xs text-ink-faint">Pre-review ends. Then agree a call time with the member by email or Slack, and record it here.</p>
       </div>
     <% end %>
-    <%= form_with url: reject_document_admin_verification_path(@verification), method: :patch, class: "space-y-2" do |form| %>
+    <%= form_with url: reject_document_identity_verification_path(@verification), method: :patch, class: "space-y-2" do |form| %>
       <%= form.text_area :note, required: true, rows: 2, placeholder: "What must the member fix? The member sees this note.",
             aria: { label: "What must the member fix?" }, class: input_class %>
       <%= form.submit "Send back: ask for a new document", class: "btn-stitch-ghost" %>
@@ -85,7 +85,7 @@
         The document is OK. Agree a call time with <%= @user&.first_name || "the member" %> by email or Slack first. Then record it here.
       </p>
     <% end %>
-    <%= form_with url: schedule_call_admin_verification_path(@verification), method: :patch, class: "flex flex-col sm:flex-row gap-2" do |form| %>
+    <%= form_with url: schedule_call_identity_verification_path(@verification), method: :patch, class: "flex flex-col sm:flex-row gap-2" do |form| %>
       <%= form.datetime_local_field :call_scheduled_for, required: true, aria: { label: "Call time (UTC)" }, class: input_class %>
       <%= form.submit "Record the call time", class: "btn-stitch-ghost" %>
     <% end %>
@@ -106,7 +106,7 @@
       <% values = @decision_values || {} %>
       <% typed = values[:identifiers] || {} %>
       <% mismatch = @mismatch || {} %>
-      <%= form_with url: decide_admin_verification_path(@verification), method: :patch, class: "space-y-3", html: { autocomplete: "off" } do |form| %>
+      <%= form_with url: decide_identity_verification_path(@verification), method: :patch, class: "space-y-3", html: { autocomplete: "off" } do |form| %>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label class="text-sm text-ink">Second verifier (optional)
             <%= form.select :second_verifier, @team.reject { |member| @excluded_ids.include?(member.id) }.map { |member| [member.full_name, member.p_id] },
@@ -171,7 +171,7 @@
       <p class="text-sm text-ink-soft">This member failed <%= VerificationFlow.failed_calls_since_reset(@user) %> calls. Read the chain below.</p>
     <% end %>
     <% if current_user.identity_lead %>
-      <%= form_with url: resolve_escalation_admin_verification_path(@verification), method: :patch, class: "space-y-2" do |form| %>
+      <%= form_with url: resolve_escalation_identity_verification_path(@verification), method: :patch, class: "space-y-2" do |form| %>
         <%= form.text_area :note, required: true, rows: 2, placeholder: "Why?", aria: { label: "Why?" }, class: input_class %>
         <div class="flex gap-2">
           <%= form.button "Allow one more round", name: "resolution", value: "retry_allowed", class: "btn-stitch-ghost" %>
@@ -206,7 +206,7 @@
       To open the stored image outside pre-review, ask with a reason. Two key holders must approve. Each decryption tells
       the key holders who approved, the lead, the member (after <%= VerificationSettings.member_notice_delay.inspect %>) and the board.
     </p>
-    <%= form_with url: admin_verification_break_glass_records_path(@verification), method: :post, class: "space-y-2" do |form| %>
+    <%= form_with url: identity_verification_break_glass_records_path(@verification), method: :post, class: "space-y-2" do |form| %>
       <%= form.text_area :reason, required: true, rows: 2, minlength: 10, placeholder: "Why do you need the image itself?",
             aria: { label: "Why do you need the image?" }, class: input_class %>
       <%= form.submit "Ask for break-glass access", class: "btn-stitch-ghost" %>
@@ -226,7 +226,7 @@
   <ol class="text-sm text-ink space-y-1">
     <% @chain.each do |attempt| %>
       <li>
-        <%= link_to_unless attempt == @verification, attempt.public_id, admin_verification_path(attempt), class: "font-mono text-grape" %>:
+        <%= link_to_unless attempt == @verification, attempt.public_id, identity_verification_path(attempt), class: "font-mono text-grape" %>:
         <%= attempt.status.humanize %>, <%= attempt.created_at.to_date.to_fs(:long) %>
         <%= "(verifier: #{attempt.verifier&.full_name || 'a deleted user'})" if attempt.decided? %>
       </li>

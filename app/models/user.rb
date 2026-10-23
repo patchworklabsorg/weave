@@ -184,13 +184,17 @@ class User < ApplicationRecord
 
   # The identity team runs verification. Key holders approve break-glass
   # access to stored ID images, and the lead gets every break-glass notice
-  # (see BreakGlass). Only an owner changes these (see
-  # Admin::UserIdentityTeamController).
+  # (see BreakGlass). Changes go through IdentityGovernance: two people add a
+  # verifier or change the lead, the whole board changes a key holder, and one
+  # owner or lead removes a member at once.
   scope :identity_team, -> { where(identity_team: true) }
   scope :identity_key_holders, -> { identity_team.where(identity_key_holder: true) }
   scope :identity_leads, -> { identity_team.where(identity_lead: true) }
   validate :identity_roles_need_identity_team
   validate :identity_key_holder_limit, if: -> { identity_key_holder && will_save_change_to_identity_key_holder? }
+  # Signed NDAs, recorded by hand by an owner (see IdentityNda). The rows
+  # stay after the account is deleted: the database empties user_id.
+  has_many :identity_ndas, dependent: nil
   # Self-reported demographics are sealed in DemographicsVault, with no
   # association here: the app has no read path to them. On delete, the sealed
   # answers fold into the departed totals before the user row goes. The
@@ -652,6 +656,18 @@ class User < ApplicationRecord
   end
 
   def identity_verified? = verification_status == "verified"
+
+  # Full years of age today, or nil without a birthday.
+  def age_in_years(on: Date.current)
+    return nil if birthday.nil?
+
+    years = on.year - birthday.year
+    years -= 1 if on < birthday.next_year(years)
+    years
+  end
+
+  # The newest signed NDA on record (see IdentityNda).
+  def current_identity_nda = identity_ndas.newest_first.first
 
   # The blacklist flag of the member's Knot (see Knot). Program grants check
   # it (see KnotGrants).

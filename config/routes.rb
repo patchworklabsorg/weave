@@ -521,6 +521,55 @@ Rails.application.routes.draw do
     end
   end
 
+  # The identity area (see Identity::BaseController). Not under /admin: the
+  # identity team does not need the admin role, and the admin role alone does
+  # not open these pages.
+  namespace :identity do
+    # Identity verification, for the identity team (see VerificationFlow).
+    resources :verifications, only: [:index, :show] do
+      member do
+        patch :start_pre_review
+        patch :take_over_pre_review
+        post :image
+        patch :reject_document
+        patch :approve_document
+        patch :schedule_call
+        patch :decide
+        patch :resolve_escalation
+      end
+      resources :break_glass_records, only: [:create]
+    end
+
+    # Break-glass access to stored ID images (see BreakGlass).
+    resources :break_glass_records, only: [:index] do
+      member do
+        patch :approve
+        patch :deny
+        post :image
+      end
+    end
+    resources :break_glass_notices, only: [] do
+      member do
+        patch :delay
+        patch :sign_off_delay
+        patch :lift_delay
+      end
+    end
+
+    # Identity team governance (see IdentityGovernance): owners, board members
+    # and identity team leads.
+    resource :governance, controller: "governance", only: [:show]
+    resources :governance_proposals, only: [:create, :show] do
+      member do
+        patch :approve
+        patch :reject
+        patch :withdraw
+      end
+    end
+    resources :team_removals, only: [:create]
+    resources :ndas, only: [:create]
+  end
+
   # Admin namespace with constraint
   constraints AdminConstraint.new do
     namespace :admin do
@@ -549,9 +598,6 @@ Rails.application.routes.draw do
             patch :verify
           end
         end
-
-        # Identity team membership, key holder and lead (owner only).
-        resource :identity_team, controller: "user_identity_team", only: [:update]
 
         # Program grants on the member's Knot (see KnotGrants).
         resources :program_grants, controller: "user_program_grants", only: [:create] do
@@ -584,36 +630,8 @@ Rails.application.routes.draw do
         end
       end
 
-      # Identity verification, for the identity team (see VerificationFlow).
-      resources :verifications, only: [:index, :show] do
-        member do
-          patch :start_pre_review
-          patch :take_over_pre_review
-          post :image
-          patch :reject_document
-          patch :approve_document
-          patch :schedule_call
-          patch :decide
-          patch :resolve_escalation
-        end
-        resources :break_glass_records, only: [:create]
-      end
-
-      # Break-glass access to stored ID images (see BreakGlass).
-      resources :break_glass_records, only: [:index] do
-        member do
-          patch :approve
-          patch :deny
-          post :image
-        end
-      end
-      resources :break_glass_notices, only: [] do
-        member do
-          patch :delay
-          patch :sign_off_delay
-          patch :lift_delay
-        end
-      end
+      # The break-glass board report (see BreakGlassReport). The verification
+      # pages themselves are in the identity area (/identity), below.
       resource :break_glass_report, only: [:show]
 
       # Guardian consents with a flag, for an admin to check (see

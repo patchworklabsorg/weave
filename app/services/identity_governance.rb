@@ -1,0 +1,517 @@
+# frozen_string_literal: true
+
+# Who may be on the identity team, and how the team changes (locked by Jasper
+# on 2026-10-12, see docs/KYC.md "Identity team governance").
+#
+# - Add a verifier: an owner proposes with a reason, and a different board
+#   member approves. Nobody approves their own proposal or a proposal about
+#   themselves. At the approval, the candidate must be verified (by another
+#   person), at least verifier_minimum_age, and have a signed NDA on record.
+# - Make or unmake a lead: the same two-person rule. A new lead must be
+#   verified by another verifier.
+# - Add or remove a key holder: an owner proposes, and every board member at
+#   proposal time approves. A new key holder must be verified by another
+#   verifier. The change applies only after the last approval.
+#   Each applied change sends KEY_HOLDERS_CHANGED.
+# - Remove a member: at once, by any one owner or identity team lead, with a
+#   reason. It also clears the key holder and lead flags. The board gets an
+#   email.
+# - A pending proposal expires after proposal_expiry_days.
+#
+# Every step adds an IdentityGovernanceEvent. PaperTrail records each change
+# to a proposal and to the user flags.
+module IdentityGovernance
+  # Sent after the commit of every change to the set of key holders. The
+  # key custody work subscribes to it to force a rotation of the master key.
+  # Payload: user (the key holder added or removed), change (:added or
+  # :removed), holder_ids (the key holders after the change), proposal (nil
+  # for a removal from the team), actor.
+  KEY_HOLDERS_CHANGED = "key_holders_changed.identity"
+
+  Result = Data.define(:record, :errors) do
+    def success? = errors.empty?
+
+    def message = errors.map { |key, text| key == :base ? text : "#{key.to_s.humanize} #{text}" }.join(". ")
+  end
+
+  # One precondition for a new verifier, as shown on the proposal.
+  Precondition = Data.define(:key, :met, :detail)
+
+  # A key holder change needs every board member. With fewer than two on
+  # the board, one person could approve it alone.
+  MINIMUM_BOARD_FOR_KEY_HOLDERS = 2
+
+  # Serializes the changes to the set of key holders, so two proposals that
+  # apply at the same time can't go over VerificationSettings.max_key_holders.
+  KEY_HOLDER_LOCK = 0x1D6B17
+
+  # A new key holder and a new lead must be verified, by another verifier,
+  # at the proposal and at the approval.
+  VERIFIED_SUBJECT_KINDS = %w[add_key_holder set_lead].freeze
+
+  FLAG_CHANGES = {
+    "add_member"        => { identity_team: true },
+    "set_lead"          => { identity_lead: true },
+    "clear_lead"        => { identity_lead: false },
+    "add_key_holder"    => { identity_key_holder: true },
+    "remove_key_holder" => { identity_key_holder: false }
+  }.freeze
+
+  class << self
+    # -- Who may do what -------------------------------------------------
+
+    # Owners and board members read the governance page. Identity team leads
+    # read it too, because they can remove a member.
+    def can_view?(user) = user.present? && (user.owner? || user.is_board || lead?(user))
+
+    def can_propose?(user) = user.present? && user.owner?
+
+    def can_record_nda?(user) = user.present? && user.owner?
+
+    def can_remove?(by, subject)
+      by.present? && subject.present? && subject.identity_team && (by.owner? || lead?(by))
+    end
+
+    def can_approve?(proposal, by)
+      return false unless by&.is_board && proposal.pending?
+      return false if proposal.approvals.exists?(approver_id: by.id)
+
+      if proposal.key_holder_change?
+        proposal.required_approver_ids.include?(by.id)
+      else
+        by.id != proposal.proposed_by_id && by.id != proposal.subject_id
+      end
+    end
+
+    # The proposer withdraws, or an owner withdraws for them.
+    def can_withdraw?(proposal, by) = proposal.pending? && by.present? && (by.id == proposal.proposed_by_id || by.owner?)
+
+    # Board members who may still approve the proposal.
+    def eligible_approvers(proposal)
+      User.where(is_board: true).select { |user| can_approve?(proposal, user) }
+    end
+
+    # -- Preconditions for a verifier ------------------------------------
+
+    def preconditions(user)
+      latest = user.latest_verification
+      verified = user.identity_verified? && latest.verifier_id != user.id
+      age = user.age_in_years
+      minimum = IdentityGovernanceSettings.verifier_minimum_age
+      nda = user.current_identity_nda
+
+      [
+        Precondition.new(
+          key: :verified, met: verified,
+          detail: if verified
+                    "Verified on #{latest.decided_at&.to_date&.iso8601} by #{latest.verifier&.full_name || 'a deleted user'}."
+                  else
+                    "Not verified by another verifier. Status: #{user.verification_status.humanize.downcase}."
+                  end
+        ),
+        Precondition.new(
+          key: :adult, met: age.present? && age >= minimum,
+          detail: age.nil? ? "No birthday on record." : "#{age} years old (at least #{minimum} needed)."
+        ),
+        Precondition.new(
+          key: :nda, met: nda.present?,
+          detail: nda ? "NDA version #{nda.nda_version}, signed #{nda.signed_on.iso8601} (#{nda.signature_reference})." : "No signed NDA on record."
+        )
+      ]
+    end
+
+    def preconditions_met?(user) = preconditions(user).all?(&:met)
+
+    # -- Proposals -------------------------------------------------------
+
+    def propose(kind:, subject:, by:, reason:)
+      kind = kind.to_s
+      reason = reason.to_s.strip
+      return failure(base: "Only an owner can propose a change to the identity team.") unless can_propose?(by)
+      return failure(kind: "is not a known change") unless IdentityGovernanceProposal::KINDS.include?(kind)
+      return failure(base: "Choose a person by their Weave ID or email.") if subject.nil?
+      return failure(reason: "is required") if reason.blank?
+
+      state_error = state_error(kind, subject)
+      return failure(base: state_error) if state_error
+      if IdentityGovernanceProposal.awaiting_approval.exists?(kind:, subject_id: subject.id)
+        return failure(base: "A proposal for this change already waits for approval.")
+      end
+
+      required = IdentityGovernanceProposal::KEY_HOLDER_KINDS.include?(kind) ? User.where(is_board: true).order(:id).pluck(:id) : []
+      if kind.in?(IdentityGovernanceProposal::KEY_HOLDER_KINDS) && required.size < MINIMUM_BOARD_FOR_KEY_HOLDERS
+        return failure(base: "A key holder change needs at least #{MINIMUM_BOARD_FOR_KEY_HOLDERS} board members to approve it.")
+      end
+
+      proposal = nil
+      with_whodunnit(by) do
+        IdentityGovernanceProposal.transaction do
+          proposal = IdentityGovernanceProposal.create!(
+            kind:, subject:, proposed_by: by, reason:, required_approver_ids: required,
+            expires_at: IdentityGovernanceSettings.proposal_expiry.from_now
+          )
+          record_event(:proposed, proposal, actor: by, reason:)
+          ActiveRecord.after_all_transactions_commit { notify_approvers(proposal) }
+        end
+      end
+      success(proposal)
+    end
+
+    def approve(proposal, by:)
+      proposal.reload
+      if proposal.expired_now?
+        IdentityGovernanceProposal.transaction do
+          proposal.lock!
+          expire!(proposal) if proposal.expired_now?
+        end
+      end
+
+      errors = {}
+      with_whodunnit(by) do
+        IdentityGovernanceProposal.transaction do
+          lock_key_holders! if proposal.key_holder_change?
+          proposal.lock!
+          errors = approval_errors(proposal, by)
+          raise ActiveRecord::Rollback if errors.any?
+
+          proposal.approvals.create!(approver: by)
+          record_event(:approved, proposal, actor: by)
+          if complete?(proposal)
+            errors = apply!(proposal, by)
+            raise ActiveRecord::Rollback if errors.any?
+          end
+        end
+      end
+      errors.any? ? failure(errors, proposal) : success(proposal)
+    end
+
+    def reject(proposal, by:, reason:)
+      reason = reason.to_s.strip
+      return failure({ base: "Only a board member who may approve this proposal can reject it." }, proposal) unless proposal.open? && can_approve?(proposal, by)
+      return failure({ reason: "is required" }, proposal) if reason.blank?
+
+      close!(proposal, "rejected", by:, reason:)
+      success(proposal)
+    end
+
+    def withdraw(proposal, by:)
+      return failure({ base: "Only the proposer or an owner can withdraw a pending proposal." }, proposal) unless can_withdraw?(proposal, by)
+
+      close!(proposal, "withdrawn", by:, reason: nil)
+      success(proposal)
+    end
+
+    # Marks every pending proposal past its expiry (ExpireIdentityGovernanceProposalsJob).
+    def expire_due!
+      IdentityGovernanceProposal.due_to_expire.find_each do |proposal|
+        IdentityGovernanceProposal.transaction do
+          proposal.lock!
+          expire!(proposal) if proposal.expired_now?
+        end
+      end
+    end
+
+    # -- Removal ---------------------------------------------------------
+
+    def remove_member(subject, by:, reason:)
+      reason = reason.to_s.strip
+      return failure(base: "Only an owner or an identity team lead can remove a member of the identity team.") unless can_remove?(by, subject)
+      return failure(reason: "is required") if reason.blank?
+
+      event = nil
+      errors = {}
+      with_whodunnit(by) do
+        User.transaction do
+          lock_key_holders!
+          subject.lock!
+          was_key_holder = subject.identity_key_holder
+          roles = { key_holder: subject.identity_key_holder, lead: subject.identity_lead }
+          unless subject.update(identity_team: false, identity_key_holder: false, identity_lead: false)
+            errors = { base: "Not removed: #{subject.errors.full_messages.to_sentence}." }
+            raise ActiveRecord::Rollback
+          end
+          IdentityGovernanceProposal.pending.where(subject:).find_each do |proposal|
+            close!(proposal, "cancelled", by:, reason: "#{subject.full_name} was removed from the identity team.")
+          end
+          event = IdentityGovernanceEvent.record!(:member_removed, actor: by, subject:, reason:, was_key_holder: roles[:key_holder],
+                                                                   was_lead: roles[:lead])
+          ActiveRecord.after_all_transactions_commit do
+            notify_board_of_removal(event)
+            key_holders_changed(subject, :removed, nil, by) if was_key_holder
+          end
+        end
+      end
+      errors.any? ? failure(errors) : success(event)
+    end
+
+    # -- NDAs ------------------------------------------------------------
+
+    def record_nda(user, by:, signed_on:, version:, reference:)
+      return failure(base: "Only an owner can record an NDA.") unless can_record_nda?(by)
+      return failure(base: "Choose a person by their Weave ID or email.") if user.nil?
+
+      nda = IdentityNda.new(user:, recorded_by: by, signed_on:, nda_version: version.to_s.strip, signature_reference: reference.to_s.strip)
+      return failure(nda.errors.to_hash.transform_values { |messages| messages.to_sentence }) unless nda.valid?
+
+      IdentityNda.transaction do
+        nda.save!
+        IdentityGovernanceEvent.record!(:nda_recorded, actor: by, subject: user, nda: nda.public_id,
+                                                       nda_version: nda.nda_version, signed_on: nda.signed_on.iso8601,
+                                                       signature_reference: nda.signature_reference)
+      end
+      success(nda)
+    end
+
+    # -- Bootstrap -------------------------------------------------------
+
+    # True before the first bootstrap, while no member of the identity team is
+    # verified. Only then can bootstrap! run. After the first run it stays
+    # closed for ever: later changes go through proposals.
+    def bootstrap_open? = !bootstrap_ran? && User.identity_team.none?(&:identity_verified?)
+
+    def bootstrap_ran? = IdentityGovernanceEvent.exists?(kind: "bootstrap_member_added")
+
+    # The one-time start of the identity team (docs/KYC_ROLLOUT.md). Nobody is
+    # verified yet, so nobody can meet the verifier preconditions. An owner
+    # adds the first verifiers at once. Each must be at least
+    # verifier_minimum_age and have a signed NDA on record. Then they verify
+    # each other in a circle: each person's verifier is the person before
+    # them in the list, and the first person's verifier is the last person.
+    #
+    # Refuses after its first run, and once any member of the identity team
+    # is verified.
+    def bootstrap!(users, by:)
+      users = Array(users).compact.uniq
+      return failure(base: "Only an owner can run the bootstrap.") unless can_propose?(by)
+      return failure(base: "The bootstrap is closed: it ran before. Use proposals.") if bootstrap_ran?
+      return failure(base: "The bootstrap is closed: a member of the identity team is verified. Use proposals.") unless bootstrap_open?
+      return failure(base: "Give at least two people, so each one is verified by another person.") if users.size < 2
+
+      blocked = users.filter_map do |user|
+        unmet = preconditions(user).reject { |check| check.key == :verified || check.met }
+        "#{user.full_name}: #{unmet.map(&:detail).join(' ')}" if unmet.any?
+      end
+      return failure(base: "Not ready: #{blocked.join(' ')}") if blocked.any?
+
+      plan = users.each_with_index.map { |user, index| [user, users[index - 1]] }
+      with_whodunnit(by) do
+        User.transaction do
+          plan.each do |user, verifier|
+            user.lock!
+            user.update!(identity_team: true) unless user.identity_team
+            IdentityGovernanceEvent.record!(:bootstrap_member_added, actor: by, subject: user, verified_by_id: verifier.id,
+                                                                     verified_by_p_id: verifier.p_id, circle: users.map(&:p_id))
+          end
+        end
+      end
+      success(plan)
+    end
+
+    # Where the bootstrap circle stands: each member, who verifies them, and
+    # their verification status.
+    def bootstrap_status
+      IdentityGovernanceEvent.where(kind: "bootstrap_member_added").includes(:subject).order(:id).map do |event|
+        verifier = User.find_by(id: event.data["verified_by_id"])
+        user = event.subject
+        { user:, verifier:, status: user&.verification_status, verified_by: user&.latest_verification&.verifier }
+      end
+    end
+
+    # A member who joined in the bootstrap is not verified at first. Until
+    # they are, they may record a call outcome only for the person after them
+    # in the circle (VerificationFlow.decide asks). Returns the error, or nil.
+    # Every other member was verified before they joined (see preconditions).
+    def bootstrap_decision_error(by, member)
+      return nil if by.nil? || by.identity_verified? || !bootstrap_member?(by)
+      return nil if member && !member.identity_verified? && bootstrap_verifier_id(member) == by.id
+
+      "You joined in the bootstrap and are not verified yet. You can only verify the person after you in the circle."
+    end
+
+    # -- Account deletion and the board ----------------------------------
+
+    # The deletion pipeline calls this inside its transaction, before the
+    # user row goes. A deleted identity team member leaves the team like a
+    # removal: the open proposals about them close, the board is told, and a
+    # key holder sends KEY_HOLDERS_CHANGED after the commit.
+    def account_deleted!(user)
+      return unless user.identity_team
+
+      lock_key_holders!
+      was_key_holder = user.identity_key_holder
+      was_lead = user.identity_lead
+      IdentityGovernanceProposal.pending.where(subject: user).find_each do |proposal|
+        close!(proposal, "cancelled", by: nil, reason: "The account was deleted.")
+      end
+      event = IdentityGovernanceEvent.record!(:member_removed, actor: nil, subject: user, reason: "The account was deleted.",
+                                                               was_key_holder:, was_lead:)
+      user.update_columns(identity_team: false, identity_key_holder: false, identity_lead: false) # rubocop:disable Rails/SkipsModelValidations
+      ActiveRecord.after_all_transactions_commit do
+        notify_board_of_removal(event)
+        key_holders_changed(user, :removed, nil, nil) if was_key_holder
+      end
+      event
+    end
+
+    # Admin::UsersController calls this in the transaction that saved a change
+    # of user.is_board. Only an owner makes the change (see
+    # UserAdminPermissions#change_board?). It is logged, and every board
+    # member before and after the change gets an email.
+    def board_changed!(user, by:)
+      kind = user.is_board ? :board_member_added : :board_member_removed
+      event = IdentityGovernanceEvent.record!(kind, actor: by, subject: user)
+      recipients = User.where(is_board: true).or(User.where(id: user.id)).to_a
+      ActiveRecord.after_all_transactions_commit do
+        recipients.each do |member|
+          next unless member.can_authenticate? && member.email.present?
+
+          IdentityGovernanceMailer.board_changed(event, member).deliver_later
+        end
+      end
+      event
+    end
+
+    private
+
+    def bootstrap_member?(user) = IdentityGovernanceEvent.exists?(kind: "bootstrap_member_added", subject_id: user.id)
+
+    # The planned verifier of a bootstrap member, from the newest bootstrap.
+    def bootstrap_verifier_id(user)
+      IdentityGovernanceEvent.where(kind: "bootstrap_member_added", subject_id: user.id).order(:id).last&.data&.dig("verified_by_id")
+    end
+
+    def lead?(user) = user.identity_team && user.identity_lead
+
+    # The verified precondition of a new verifier (see .preconditions).
+    def verified_by_another?(user) = preconditions(user).find { |check| check.key == :verified }.met
+
+    def lock_key_holders!
+      ActiveRecord::Base.connection.execute("SELECT pg_advisory_xact_lock(#{KEY_HOLDER_LOCK})")
+    end
+
+    def state_error(kind, subject)
+      error = flag_state_error(kind, subject)
+      return error if error
+      return unless VERIFIED_SUBJECT_KINDS.include?(kind) && !verified_by_another?(subject)
+
+      "#{subject.full_name} must be verified (by another verifier) before this change."
+    end
+
+    def flag_state_error(kind, subject)
+      case kind
+      when "add_member"
+        "#{subject.full_name} is already on the identity team." if subject.identity_team
+      when "set_lead"
+        if !subject.identity_team then "#{subject.full_name} must be on the identity team first."
+        elsif subject.identity_lead then "#{subject.full_name} is already a lead."
+        end
+      when "clear_lead"
+        "#{subject.full_name} is not a lead." unless subject.identity_lead
+      when "add_key_holder"
+        if !subject.identity_team then "#{subject.full_name} must be on the identity team first."
+        elsif subject.identity_key_holder then "#{subject.full_name} is already a key holder."
+        elsif User.identity_key_holders.count >= VerificationSettings.max_key_holders
+          "There are already #{VerificationSettings.max_key_holders} key holders. Remove one first."
+        end
+      when "remove_key_holder"
+        "#{subject.full_name} is not a key holder." unless subject.identity_key_holder
+      end
+    end
+
+    def approval_errors(proposal, by)
+      return { base: "This proposal expired. The owner must propose it again." } if proposal.expired? || proposal.expired_now?
+      return { base: "This proposal is #{proposal.status}." } unless proposal.pending?
+
+      unless can_approve?(proposal, by)
+        if proposal.key_holder_change?
+          return { base: "Only a board member from the time of the proposal who has not approved yet can approve a key holder change." }
+        end
+
+        return { base: "Only a board member who did not make the proposal, and who is not its subject, can approve it." }
+      end
+
+      subject = proposal.subject
+      return { base: "The person of this proposal no longer exists." } if subject.nil?
+
+      if proposal.kind == "add_member"
+        unmet = preconditions(subject).reject(&:met)
+        return { base: "#{subject.full_name} can't join the identity team yet: #{unmet.map(&:detail).join(' ')}" } if unmet.any?
+      end
+
+      state = state_error(proposal.kind, subject)
+      state ? { base: state } : {}
+    end
+
+    def complete?(proposal)
+      proposal.key_holder_change? ? proposal.missing_approver_ids.empty? : proposal.approvals.any?
+    end
+
+    # Applies an approved proposal. Returns errors, or {} on success.
+    def apply!(proposal, by)
+      subject = proposal.subject
+      subject.lock!
+      unless subject.update(FLAG_CHANGES.fetch(proposal.kind))
+        return { base: "Not applied: #{subject.errors.full_messages.to_sentence}." }
+      end
+
+      proposal.update!(status: "applied", closed_at: Time.current, closed_by: by)
+      record_event(:applied, proposal, actor: by)
+      if proposal.key_holder_change?
+        change = proposal.kind == "add_key_holder" ? :added : :removed
+        ActiveRecord.after_all_transactions_commit { key_holders_changed(subject, change, proposal, by) }
+      end
+      {}
+    end
+
+    def close!(proposal, status, by:, reason:)
+      proposal.update!(status:, closed_at: Time.current, closed_by: by, close_reason: reason)
+      record_event(status, proposal, actor: by, reason:)
+    end
+
+    def expire!(proposal)
+      proposal.update!(status: "expired", closed_at: Time.current)
+      record_event(:expired, proposal, actor: nil)
+    end
+
+    def record_event(kind, proposal, actor:, **data)
+      IdentityGovernanceEvent.record!(kind, actor:, subject: proposal.subject, proposal:, proposal_kind: proposal.kind,
+                                            proposal_id: proposal.public_id, **data.compact)
+    end
+
+    def key_holders_changed(user, change, proposal, actor)
+      ActiveSupport::Notifications.instrument(
+        KEY_HOLDERS_CHANGED,
+        user:, change:, proposal:, actor:, holder_ids: User.identity_key_holders.order(:id).pluck(:id)
+      )
+    end
+
+    def notify_approvers(proposal)
+      eligible_approvers(proposal).each do |approver|
+        next unless approver.can_authenticate? && approver.email.present?
+
+        IdentityGovernanceMailer.approval_needed(proposal, approver).deliver_later
+      end
+    end
+
+    def notify_board_of_removal(event)
+      User.where(is_board: true).where.not(email: nil).find_each do |member|
+        next unless member.can_authenticate?
+
+        IdentityGovernanceMailer.member_removed(event, member).deliver_later
+      end
+    end
+
+    # PaperTrail and the permanent log of privileged attributes both name the
+    # actor (see PrivilegedChangeActor).
+    def with_whodunnit(by, &block)
+      PaperTrail.request(whodunnit: by&.id&.to_s) do
+        by ? PrivilegedChangeActor.with(actor: by, &block) : yield
+      end
+    end
+
+    def success(record) = Result.new(record:, errors: {})
+
+    def failure(errors, record = nil) = Result.new(record:, errors:)
+
+  end
+end

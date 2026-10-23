@@ -21,8 +21,8 @@ The identity team is a flag on the user, not a role rank:
 | `users.identity_lead` | Gets every break-glass notice and resolves escalations. |
 
 - `SystemGroups` mirrors `identity_team` into the `identity-team` system group, so access rules and apps can ask "is the user in group X?" like the other built-in groups.
-- The identity team pages live in the admin panel (`/admin/verifications`). A team member also needs the admin role to reach them.
-- Only an owner changes these flags (`Admin::UserIdentityTeamController`), and never on their own account. PaperTrail records each change.
+- The verification pages live in the identity area (`/identity/verifications`, `/identity/break_glass_records`), not in the admin panel. A team member does not need the admin role. An admin who is not on the team can't open them.
+- The flags change only through governance (see "Identity team governance" below). PaperTrail records each change.
 
 ### The flow
 
@@ -278,6 +278,151 @@ The values are in `config/kyc/verification.yml`. Values marked `LOCKED` were dec
 | `break_glass.max_fraud_delay_days` | 30 | Locked |
 
 The retention window for verification audit records is part of the retention question in the proposal. The deletion part sets it.
+
+## Identity team governance
+
+Jasper locked these rules on 2026-10-12. `IdentityGovernance` (`app/services/identity_governance.rb`) holds them. The identity team can open ID images and approve break-glass access, so no one person can change who is on it.
+
+### Who changes what
+
+| Change | Who asks | Who approves | When it applies |
+| --- | --- | --- | --- |
+| Add a verifier | an owner, with a reason | one board member who is not the proposer and not the candidate | at the approval, if the preconditions are met |
+| Make or unmake a lead | an owner, with a reason | one board member who is not the proposer and not the subject | at the approval |
+| Add or remove a key holder | an owner, with a reason | every board member at proposal time | after the last approval |
+| Remove a member | any one owner or identity team lead, with a reason | nobody | at once |
+
+- A new lead (`set_lead`) and a new key holder (`add_key_holder`) must be verified by another verifier. Weave checks this at the proposal and again at the approval (`IdentityGovernance::VERIFIED_SUBJECT_KINDS`).
+- Nobody approves their own proposal. Nobody approves a proposal about themselves, except for a key holder change: there every board member must approve, the subject too if they are on the board.
+- A key holder change snapshots the board at proposal time (`required_approver_ids`). A person who joins the board later can't approve it. A person who leaves the board can't approve it any more, so the proposal waits until it expires.
+- A key holder change needs at least 2 board members (`MINIMUM_BOARD_FOR_KEY_HOLDERS`). With one board member, that person could approve the change alone, so the proposal is refused.
+- Approvals of key holder changes and removals take one database lock (`KEY_HOLDER_LOCK`), so two changes at the same time can't go over the limit of key holders.
+- A pending proposal expires after `proposal_expiry_days`. `ExpireIdentityGovernanceProposalsJob` marks it every hour. An approval also refuses an expired proposal.
+- A board member can reject a proposal with a reason. The proposer or an owner can withdraw it.
+- Removal also clears the key holder and lead flags, and cancels the open proposals about that person. Each board member gets an email (`IdentityGovernanceMailer#member_removed`).
+- The approvers of a new proposal get an email (`IdentityGovernanceMailer#approval_needed`).
+- When the deletion pipeline deletes the account of an identity team member, `IdentityGovernance.account_deleted!` removes them from the team first. It logs a `member_removed` event, cancels the open proposals about them and tells the board. For a key holder, it sends `key_holders_changed.identity`.
+
+### The board
+
+The board group (`users.is_board`) approves every change to the identity team, so the board itself is protected:
+
+- Only an owner can change `is_board`, on `/admin/users/:id/edit` or when they create a user (`UserAdminPermissions#change_board?`). Other admins see the box but can't change it. An owner can mark their own account: that adds an approver, and nobody approves their own proposal.
+- Each change adds a `board_member_added` or `board_member_removed` event, in the same transaction as the change.
+- Every board member before and after the change gets an email (`IdentityGovernanceMailer#board_changed`).
+
+An owner can still change the board and then propose. The log, the emails and the monthly board report make this visible to the other board members.
+
+```mermaid
+stateDiagram-v2
+  [*] --> pending: owner proposes, with a reason
+  pending --> applied: approval complete (one board member, or the whole board for a key holder)
+  pending --> rejected: a board member rejects, with a reason
+  pending --> withdrawn: the proposer or an owner withdraws
+  pending --> expired: proposal_expiry_days pass
+  pending --> cancelled: the subject is removed from the team
+  applied --> [*]
+```
+
+### Preconditions for a verifier
+
+`IdentityGovernance.preconditions` checks these at the approval, and the proposal page shows each one:
+
+1. The candidate is verified: `verification_status` is `verified`, and another person recorded the decision.
+2. The candidate is at least `verifier_minimum_age` (18).
+3. The candidate has a signed NDA on record.
+
+A proposal can wait for a missing precondition. When the owner records the NDA, a board member can approve the same proposal.
+
+### NDA records
+
+NDAs are signed with Adobe Acrobat Sign. An owner records each signed NDA on the governance page: the date it was signed, the NDA version and the Adobe Acrobat Sign agreement ID (`IdentityNda`). There is no upload, and Weave keeps no copy of the document.
+
+- The rows are append-only. A newer row supersedes an older one (`User#current_identity_nda`).
+- The rows stay after the account is deleted. The database empties `user_id`. They are staff records, not member data, so they are not in the data-category registry.
+
+### Verifiers and the admin role
+
+```mermaid
+flowchart LR
+  V[Verifier, no admin role] -->|/identity/verifications| VP[Queue, pre-review, call outcome]
+  V -->|/identity/break_glass_records| BG[Break-glass requests]
+  V -.->|/admin/...| X[Refused: AdminConstraint]
+  A[Admin, not on the team] -.->|/identity/...| Y[Refused: Identity::BaseController]
+  G[Owner, board member, lead] -->|/identity/governance| GP[Governance page]
+```
+
+- `Identity::BaseController` lets in only identity team members. It does not ask for the admin role. It also refuses an admin who impersonates someone.
+- The governance pages (`/identity/governance`) let in owners, board members and identity team leads. Each action checks its own rule.
+- The deletion review (`/admin/deletion_requests`), the Knot pages and the board report stay in the admin panel. A verifier who reviews deletions still needs the admin role.
+
+### The key holder hook
+
+After the commit of every change to the key holder set, Weave sends the `ActiveSupport::Notifications` event `key_holders_changed.identity` (`IdentityGovernance::KEY_HOLDERS_CHANGED`). The payload has `user`, `change` (`:added` or `:removed`), `holder_ids` (the key holders after the change), `proposal` (empty for a removal from the team) and `actor`. The key custody work subscribes to it to force a master-key rotation.
+
+### Bootstrap
+
+Nobody is verified when the team starts, so nobody can meet the preconditions. `IdentityGovernance.bootstrap!` (`bin/rails identity:bootstrap`) adds the first verifiers at once. Each must be at least 18 and have an NDA on record. Then they verify each other in a circle, so each one is verified by another person. The bootstrap runs one time only: it refuses after its first run (a `bootstrap_member_added` event exists), and when any member of the identity team is verified. The steps are in `docs/KYC_ROLLOUT.md`.
+
+`VerificationFlow.decide` enforces the circle. A member who joined in the bootstrap and is not verified yet can record a call outcome only for the person after them in the circle (`IdentityGovernance.bootstrap_decision_error`). When they are verified, this limit stops. A member who joined through a proposal was verified before they joined, so the limit does not apply to them.
+
+```mermaid
+flowchart LR
+  J[Jasper] -->|verifies| K[Kieran]
+  K -->|verifies| A[Adam]
+  A -->|verifies| J
+```
+
+### Audit
+
+- Every step adds an `IdentityGovernanceEvent` row: `proposed`, `approved`, `rejected`, `withdrawn`, `expired`, `cancelled`, `applied`, `member_removed`, `nda_recorded`, `bootstrap_member_added`, `board_member_added`, `board_member_removed`. The rows are append-only.
+- PaperTrail records each change to a proposal and to the user flags.
+- The governance page shows the team, the proposals, the NDA records and the log.
+- The monthly board report (`BreakGlassReport`, the page and the email) lists every governance step of the month, every change in the permanent log of the month, and the team as it is now.
+
+### The permanent log
+
+Every change to `users.is_board`, `users.identity_team`, `users.identity_key_holder`, `users.identity_lead` and `users.role` goes into the table `privileged_attribute_changes`. A Postgres trigger writes the rows, not the app. Thus a console write, `update_column`, `update_all` and raw SQL are in the log too.
+
+```mermaid
+flowchart LR
+  W[Any write to users: app, console, update_column, SQL] --> T[Trigger log_privileged_attribute_changes]
+  S[Session settings weave.actor_id and weave.actor_label] --> T
+  T --> L[(privileged_attribute_changes)]
+  X[UPDATE, DELETE or TRUNCATE] --> R[Trigger refuse_privileged_attribute_change_edits]
+  R -->|raises an error| L
+```
+
+| Column | Meaning |
+| --- | --- |
+| `user_id` | The person. No foreign key, so the row stays after the account is deleted. |
+| `user_p_id` | A copy of the person's p_id at the time of the change. |
+| `attribute_name` | One of the five columns. |
+| `old_value`, `new_value` | The values as text. `role` is the integer of the enum (0 user, 1 admin, 2 superadmin, 3 owner). The pages show the name too. |
+| `operation` | `update`, or `insert` for a new user with a flag that is true or a role above user. |
+| `changed_at` | The time of the transaction. |
+| `db_user` | The database role that made the change. |
+| `actor_id`, `actor_label` | Who acted, from the session settings `weave.actor_id` and `weave.actor_label`. Empty when nobody set them. |
+
+- The trigger writes one row for each changed column. A write that does not change a value writes no row.
+- A second trigger refuses `UPDATE` and `DELETE` on each row, and `TRUNCATE` on the table. The rows are never deleted and never expire. The deletion pipeline and the retention jobs do not touch them. A spec runs the deletion pipeline and the retention jobs and checks that the rows stay.
+- `PrivilegedAttributeChange` is a read-only model.
+- `PrivilegedChangeActor` sets the actor. `ApplicationController` sets it for each request (the signed-in user, or the admin during an impersonation) and clears it after the request. `IdentityGovernance` sets it for each action that has an actor. `ApplicationJob` sets the label to the job class. A console session sets the label to the Console1984 user name (`config/initializers/console.rb`).
+- The governance page shows the newest 50 rows. The monthly board report (the page and the email) lists every row of the month.
+- The log is a staff governance record. It is not one of the nine data categories of the member matrix, because it holds rows only for people who had one of these roles or flags. It keeps the p_id of a deleted account on purpose.
+
+#### How fresh databases get the trigger
+
+`db/schema.rb` is in Ruby format, and plain Rails can't dump triggers. Weave uses the `fx` gem: it dumps the functions (`create_function`) and the triggers (`create_trigger`) into `db/schema.rb`. Thus `db:schema:load` (the test database, CI, a fresh database) creates them too. The migration `CreatePrivilegedAttributeChanges` uses `execute` with a down method that drops the triggers, the functions and the table. If you change the trigger, write a new migration and check that `db/schema.rb` gets the new definition.
+
+### Open values
+
+The values are in `config/kyc/identity_governance.yml`.
+
+| Key | Value | State |
+| --- | --- | --- |
+| `proposal_expiry_days` | 14 | Locked |
+| `verifier_minimum_age` | 18 | Locked |
 
 ## The Knot
 

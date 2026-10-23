@@ -13,6 +13,8 @@
 # who outranks the target may change them, and never on their own account.
 # Owners may grant any role (someone has to be able to appoint owners);
 # everyone else only roles strictly below their own.
+#
+# Board membership (is_board) is privileged too: see change_board?.
 class UserAdminPermissions
   def initialize(actor, target)
     @actor = actor
@@ -34,6 +36,14 @@ class UserAdminPermissions
   def assign_role?(role) = assignable_roles.include?(role.to_s)
 
   def change_password? = privileged?
+
+  # Board membership drives identity team governance: a board member approves
+  # a new verifier, and the whole board approves a key holder change (see
+  # IdentityGovernance). Only an owner changes it, so an admin can't put
+  # themselves or a friend on the board, or empty it to approve alone. Each
+  # change is logged and the board is told. An owner may mark their own
+  # account: that adds an approver, and nobody approves their own proposal.
+  def change_board? = @actor.owner?
 
   private
 
