@@ -47,7 +47,7 @@ class Admin::UsersController < Admin::BaseController
       @user.password_confirmation = random_password
     end
 
-    if privileged_attributes_allowed && save_with_board_log
+    if privileged_attributes_allowed && @user.save
       redirect_to admin_users_path, notice: "User was successfully created."
     else
       render :new, status: :unprocessable_content
@@ -60,7 +60,7 @@ class Admin::UsersController < Admin::BaseController
   def update
     @user.assign_attributes(user_params)
 
-    if assign_privileged_attributes && @user.valid? && reset_directory_password && save_with_board_log
+    if assign_privileged_attributes && @user.valid? && reset_directory_password && @user.save
       # Pushed from here, not a model callback, so the Slack sync's own
       # writes are not sent back to Slack.
       PushSlackProfileFieldsJob.perform_later(@user.id) if @user.slack_profile_fields_need_push?
@@ -188,9 +188,9 @@ class Admin::UsersController < Admin::BaseController
   def user_params
     params.require(:user).permit(
       :first_name, :last_name, :legal_first_name, :legal_last_name, :email, :pronouns, :phone_number, :birthday,
-      # Membership attribute flags (configure capabilities, not access).
-      # is_board is privileged: see assign_privileged_attributes.
-      :is_staff, :is_contractor,
+      # Staff, contractor and board are roles now. They change through the
+      # roles section of the user page (Admin::RoleAssignmentsController),
+      # which applies the grant rules of config/roles.yml.
       # Manager relationship
       :manager_id,
       # Slack API-editable fields
@@ -199,7 +199,7 @@ class Admin::UsersController < Admin::BaseController
     )
   end
 
-  # Role, password and board membership are read outside the permit list because what may be
+  # Role and password are read outside the permit list because what may be
   # assigned depends on who is acting on whom (UserAdminPermissions). A request
   # asking for more than that is rejected as a whole rather than partly applied.
   # Returns false, with errors on @user, when rejected.
@@ -231,15 +231,6 @@ class Admin::UsersController < Admin::BaseController
       end
     end
 
-    if submitted.key?(:is_board)
-      board = ActiveModel::Type::Boolean.new.cast(submitted[:is_board]) || false
-      if board != @user.is_board
-        return reject_privileged_change(:is_board, "can only be changed by an owner") unless permissions.change_board?
-
-        @user.is_board = board
-      end
-    end
-
     true
   end
 
@@ -268,19 +259,6 @@ class Admin::UsersController < Admin::BaseController
     message = status == :policy_rejected ? "does not meet the Active Directory password policy" : "was not changed: Active Directory refused it (#{status})"
     @user.errors.add(:password, message)
     false
-  end
-
-  # Saves the user. A change of board membership is logged and the board is
-  # told, in the same transaction (see IdentityGovernance.board_changed!).
-  def save_with_board_log
-    # Read before the save: callbacks after a create save the row again, which
-    # resets saved_changes.
-    board_change = @user.will_save_change_to_is_board?
-    User.transaction do
-      saved = @user.save
-      IdentityGovernance.board_changed!(@user, by: current_user) if saved && board_change
-      saved
-    end
   end
 
   def reject_privileged_change(attribute, message)

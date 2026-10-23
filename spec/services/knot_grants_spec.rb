@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe KnotGrants do
-  let(:lead) { create(:user, :admin) }
+  let(:lead) { create(:user, :admin, :patch_lead) }
   let(:board) { create(:user, :admin, is_board: true) }
   let(:knot) { create(:knot, :with_audit) }
   let(:member) { knot.user }
@@ -13,7 +13,8 @@ RSpec.describe KnotGrants do
   end
 
   before do
-    with_programs(ganymede: { name: "Project Ganymede", grant_cap: 1, patch_lead_p_ids: [lead.p_id] })
+    with_programs(ganymede: { name: "Project Ganymede", grant_cap: 1 })
+    lead
   end
 
   it "reads the locked Ganymede cap of 1 from config" do
@@ -43,7 +44,7 @@ RSpec.describe KnotGrants do
     end
 
     it "treats a nil cap as no cap" do
-      with_programs(ganymede: { name: "Project Ganymede", grant_cap: nil, patch_lead_p_ids: [lead.p_id] })
+      with_programs(ganymede: { name: "Project Ganymede", grant_cap: nil })
 
       3.times { described_class.record(member, program: "ganymede", by: lead) }
 

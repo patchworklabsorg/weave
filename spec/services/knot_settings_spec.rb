@@ -13,9 +13,17 @@ RSpec.describe KnotSettings do
     %w[development test production].each { |environment| expect(values_for(environment)[:keep_years]).to be_nil }
   end
 
-  it "names Adam as the Ganymede patch lead in production only" do
-    expect(values_for("production").dig(:programs, :ganymede, :patch_lead_p_ids)).to eq(["PWL8724F96B89"])
-    expect(values_for("production").dig(:programs, :ganymede, :grant_cap)).to eq(1)
-    expect(values_for("test").dig(:programs, :ganymede, :patch_lead_p_ids)).to eq([])
+  it "keeps the locked Ganymede cap, and no patch lead list: a patch lead is a role" do
+    %w[development test production].each do |environment|
+      expect(values_for(environment).dig(:programs, :ganymede, :grant_cap)).to eq(1)
+      expect(values_for(environment).dig(:programs, :ganymede)).not_to have_key(:patch_lead_p_ids)
+    end
+  end
+
+  it "refuses the old patch_lead_p_ids key with a clear error" do
+    allow(described_class).to receive(:config)
+      .and_return({ programs: { ganymede: { name: "Project Ganymede", grant_cap: 1, patch_lead_p_ids: ["PWL1"] } } })
+
+    expect { described_class.programs }.to raise_error(ArgumentError, /patch_lead_p_ids is gone/)
   end
 end

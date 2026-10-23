@@ -14,12 +14,18 @@
 #   verifier. The change applies only after the last approval.
 #   Each applied change sends KEY_HOLDERS_CHANGED.
 # - Remove a member: at once, by any one owner or identity team lead, with a
-#   reason. It also clears the key holder and lead flags. The board gets an
+#   reason. It also revokes the key holder and lead roles. The board gets an
 #   email.
+# - Make someone the patch lead of a program: an owner proposes, and a
+#   different board member approves. The program must be in
+#   config/kyc/knot.yml. One owner removes a patch lead at once (RoleGrants).
 # - A pending proposal expires after proposal_expiry_days.
 #
-# Every step adds an IdentityGovernanceEvent. PaperTrail records each change
-# to a proposal and to the user flags.
+# The roles are rows in user_roles (see RoleGrants). The rule of each change
+# comes from config/roles.yml: a proposal kind is allowed only while the rule
+# of its role is a proposal rule, and the preconditions are the ones the
+# config names. Every step adds an IdentityGovernanceEvent. PaperTrail records
+# each change to a proposal, and the permanent log records each role change.
 module IdentityGovernance
   # Sent after the commit of every change to the set of key holders. The
   # key custody work subscribes to it to force a rotation of the master key.
@@ -45,17 +51,19 @@ module IdentityGovernance
   # apply at the same time can't go over VerificationSettings.max_key_holders.
   KEY_HOLDER_LOCK = 0x1D6B17
 
-  # A new key holder and a new lead must be verified, by another verifier,
-  # at the proposal and at the approval.
-  VERIFIED_SUBJECT_KINDS = %w[add_key_holder set_lead].freeze
-
-  FLAG_CHANGES = {
-    "add_member"        => { identity_team: true },
-    "set_lead"          => { identity_lead: true },
-    "clear_lead"        => { identity_lead: false },
-    "add_key_holder"    => { identity_key_holder: true },
-    "remove_key_holder" => { identity_key_holder: false }
+  # The role and the direction of each proposal kind. The rule and the
+  # preconditions come from config/roles.yml (see RoleGrants.rule).
+  KIND_ROLES = {
+    "add_member"        => ["verifier", :grant],
+    "set_lead"          => ["identity_lead", :grant],
+    "clear_lead"        => ["identity_lead", :revoke],
+    "add_key_holder"    => ["key_holder", :grant],
+    "remove_key_holder" => ["key_holder", :revoke],
+    "add_patch_lead"    => ["patch_lead", :grant]
   }.freeze
+
+  # The keys of .preconditions for the precondition names of the config.
+  PRECONDITION_KEYS = { "verified_by_another" => :verified, "adult" => :adult, "nda" => :nda }.freeze
 
   class << self
     # -- Who may do what -------------------------------------------------
@@ -76,7 +84,7 @@ module IdentityGovernance
       return false unless by&.is_board && proposal.pending?
       return false if proposal.approvals.exists?(approver_id: by.id)
 
-      if proposal.key_holder_change?
+      if proposal.all_board?
         proposal.required_approver_ids.include?(by.id)
       else
         by.id != proposal.proposed_by_id && by.id != proposal.subject_id
@@ -88,8 +96,21 @@ module IdentityGovernance
 
     # Board members who may still approve the proposal.
     def eligible_approvers(proposal)
-      User.where(is_board: true).select { |user| can_approve?(proposal, user) }
+      User.board_members.with_roles.select { |user| can_approve?(proposal, user) }
     end
+
+    # The role key and the direction (:grant or :revoke) of a proposal kind.
+    def kind_role(kind) = KIND_ROLES.fetch(kind.to_s)
+
+    # The rule of a proposal kind, from config/roles.yml.
+    def kind_rule(kind)
+      key, action = kind_role(kind)
+      RoleGrants.rule(key, action)
+    end
+
+    # The kinds an owner can propose now: the kinds whose role has a proposal
+    # rule in the config.
+    def proposable_kinds = IdentityGovernanceProposal::KINDS.select { |kind| kind_rule(kind).proposal? }
 
     # -- Preconditions for a verifier ------------------------------------
 
@@ -124,22 +145,32 @@ module IdentityGovernance
 
     # -- Proposals -------------------------------------------------------
 
-    def propose(kind:, subject:, by:, reason:)
+    def propose(kind:, subject:, by:, reason:, scope: nil)
       kind = kind.to_s
       reason = reason.to_s.strip
+      scope = scope.presence&.to_s
       return failure(base: "Only an owner can propose a change to the identity team.") unless can_propose?(by)
       return failure(kind: "is not a known change") unless IdentityGovernanceProposal::KINDS.include?(kind)
       return failure(base: "Choose a person by their Weave ID or email.") if subject.nil?
       return failure(reason: "is required") if reason.blank?
 
-      state_error = state_error(kind, subject)
+      role_key, = kind_role(kind)
+      rule = kind_rule(kind)
+      return failure(base: "This change does not need a proposal: #{RoleGrants.rule_text(*kind_role(kind))}") unless rule.proposal?
+      unless RoleRegistry.valid_scope?(role_key, scope)
+        return failure(scope: "must be one of: #{RoleRegistry.scopes_for(role_key).join(', ')}") if RoleRegistry.fetch(role_key).scopable?
+
+        scope = nil
+      end
+
+      state_error = state_error(kind, subject, scope:)
       return failure(base: state_error) if state_error
-      if IdentityGovernanceProposal.awaiting_approval.exists?(kind:, subject_id: subject.id)
+      if IdentityGovernanceProposal.awaiting_approval.exists?(kind:, subject_id: subject.id, scope:)
         return failure(base: "A proposal for this change already waits for approval.")
       end
 
-      required = IdentityGovernanceProposal::KEY_HOLDER_KINDS.include?(kind) ? User.where(is_board: true).order(:id).pluck(:id) : []
-      if kind.in?(IdentityGovernanceProposal::KEY_HOLDER_KINDS) && required.size < MINIMUM_BOARD_FOR_KEY_HOLDERS
+      required = rule.all_board? ? User.board_members.order(:id).pluck(:id) : []
+      if rule.all_board? && required.size < MINIMUM_BOARD_FOR_KEY_HOLDERS
         return failure(base: "A key holder change needs at least #{MINIMUM_BOARD_FOR_KEY_HOLDERS} board members to approve it.")
       end
 
@@ -147,7 +178,7 @@ module IdentityGovernance
       with_whodunnit(by) do
         IdentityGovernanceProposal.transaction do
           proposal = IdentityGovernanceProposal.create!(
-            kind:, subject:, proposed_by: by, reason:, required_approver_ids: required,
+            kind:, subject:, scope:, proposed_by: by, reason:, required_approver_ids: required,
             expires_at: IdentityGovernanceSettings.proposal_expiry.from_now
           )
           record_event(:proposed, proposal, actor: by, reason:)
@@ -224,12 +255,10 @@ module IdentityGovernance
         User.transaction do
           lock_key_holders!
           subject.lock!
+          subject.reload_roles!
           was_key_holder = subject.identity_key_holder
           roles = { key_holder: subject.identity_key_holder, lead: subject.identity_lead }
-          unless subject.update(identity_team: false, identity_key_holder: false, identity_lead: false)
-            errors = { base: "Not removed: #{subject.errors.full_messages.to_sentence}." }
-            raise ActiveRecord::Rollback
-          end
+          RoleGrants.revoke!(subject, "verifier", by:, reason:)
           IdentityGovernanceProposal.pending.where(subject:).find_each do |proposal|
             close!(proposal, "cancelled", by:, reason: "#{subject.full_name} was removed from the identity team.")
           end
@@ -298,7 +327,7 @@ module IdentityGovernance
         User.transaction do
           plan.each do |user, verifier|
             user.lock!
-            user.update!(identity_team: true) unless user.identity_team
+            RoleGrants.grant!(user, "verifier", by:, reason: "Bootstrap of the identity team.") unless user.identity_team
             IdentityGovernanceEvent.record!(:bootstrap_member_added, actor: by, subject: user, verified_by_id: verifier.id,
                                                                      verified_by_p_id: verifier.p_id, circle: users.map(&:p_id))
           end
@@ -345,7 +374,7 @@ module IdentityGovernance
       end
       event = IdentityGovernanceEvent.record!(:member_removed, actor: nil, subject: user, reason: "The account was deleted.",
                                                                was_key_holder:, was_lead:)
-      user.update_columns(identity_team: false, identity_key_holder: false, identity_lead: false) # rubocop:disable Rails/SkipsModelValidations
+      RoleGrants.revoke!(user, "verifier", reason: "The account was deleted.")
       ActiveRecord.after_all_transactions_commit do
         notify_board_of_removal(event)
         key_holders_changed(user, :removed, nil, nil) if was_key_holder
@@ -353,14 +382,14 @@ module IdentityGovernance
       event
     end
 
-    # Admin::UsersController calls this in the transaction that saved a change
-    # of user.is_board. Only an owner makes the change (see
-    # UserAdminPermissions#change_board?). It is logged, and every board
-    # member before and after the change gets an email.
+    # RoleGrants calls this in the transaction that granted or revoked the
+    # board role. Only an owner makes the change (the board rule in
+    # config/roles.yml). It is logged, and every board member before and
+    # after the change gets an email.
     def board_changed!(user, by:)
       kind = user.is_board ? :board_member_added : :board_member_removed
       event = IdentityGovernanceEvent.record!(kind, actor: by, subject: user)
-      recipients = User.where(is_board: true).or(User.where(id: user.id)).to_a
+      recipients = User.board_members.or(User.where(id: user.id)).to_a
       ActiveRecord.after_all_transactions_commit do
         recipients.each do |member|
           next unless member.can_authenticate? && member.email.present?
@@ -382,22 +411,35 @@ module IdentityGovernance
 
     def lead?(user) = user.identity_team && user.identity_lead
 
-    # The verified precondition of a new verifier (see .preconditions).
-    def verified_by_another?(user) = preconditions(user).find { |check| check.key == :verified }.met
-
     def lock_key_holders!
       ActiveRecord::Base.connection.execute("SELECT pg_advisory_xact_lock(#{KEY_HOLDER_LOCK})")
     end
 
-    def state_error(kind, subject)
-      error = flag_state_error(kind, subject)
-      return error if error
-      return unless VERIFIED_SUBJECT_KINDS.include?(kind) && !verified_by_another?(subject)
-
-      "#{subject.full_name} must be verified (by another verifier) before this change."
+    def state_error(kind, subject, scope: nil, stage: :proposal)
+      flag_state_error(kind, subject, scope:) || precondition_error(kind, subject, stage)
     end
 
-    def flag_state_error(kind, subject)
+    # The preconditions that config/roles.yml names for the stage (:proposal
+    # or :approval). Returns the error, or nil.
+    def precondition_error(kind, subject, stage)
+      rule = kind_rule(kind)
+      names = stage == :proposal ? rule.preconditions_at_proposal : rule.preconditions_at_approval
+      return nil if names.empty?
+
+      keys = names.map { |name| PRECONDITION_KEYS.fetch(name) }
+      unmet = preconditions(subject).select { |check| keys.include?(check.key) }.reject(&:met)
+      return nil if unmet.empty?
+
+      if kind == "add_member"
+        "#{subject.full_name} can't join the identity team yet: #{unmet.map(&:detail).join(' ')}"
+      elsif unmet.map(&:key) == [:verified]
+        "#{subject.full_name} must be verified (by another verifier) before this change."
+      else
+        "#{subject.full_name} can't get this role yet: #{unmet.map(&:detail).join(' ')}"
+      end
+    end
+
+    def flag_state_error(kind, subject, scope: nil)
       case kind
       when "add_member"
         "#{subject.full_name} is already on the identity team." if subject.identity_team
@@ -415,6 +457,8 @@ module IdentityGovernance
         end
       when "remove_key_holder"
         "#{subject.full_name} is not a key holder." unless subject.identity_key_holder
+      when "add_patch_lead"
+        "#{subject.full_name} is already the patch lead of #{scope}." if subject.has_role?("patch_lead", scope:)
       end
     end
 
@@ -423,7 +467,7 @@ module IdentityGovernance
       return { base: "This proposal is #{proposal.status}." } unless proposal.pending?
 
       unless can_approve?(proposal, by)
-        if proposal.key_holder_change?
+        if proposal.all_board?
           return { base: "Only a board member from the time of the proposal who has not approved yet can approve a key holder change." }
         end
 
@@ -433,25 +477,34 @@ module IdentityGovernance
       subject = proposal.subject
       return { base: "The person of this proposal no longer exists." } if subject.nil?
 
+      # A new verifier: the preconditions first, as before the roles table.
       if proposal.kind == "add_member"
-        unmet = preconditions(subject).reject(&:met)
-        return { base: "#{subject.full_name} can't join the identity team yet: #{unmet.map(&:detail).join(' ')}" } if unmet.any?
+        unmet = precondition_error(proposal.kind, subject, :approval)
+        return { base: unmet } if unmet
       end
 
-      state = state_error(proposal.kind, subject)
+      state = state_error(proposal.kind, subject, scope: proposal.scope, stage: :approval)
       state ? { base: state } : {}
     end
 
     def complete?(proposal)
-      proposal.key_holder_change? ? proposal.missing_approver_ids.empty? : proposal.approvals.any?
+      proposal.all_board? ? proposal.missing_approver_ids.empty? : proposal.approvals.any?
     end
 
     # Applies an approved proposal. Returns errors, or {} on success.
     def apply!(proposal, by)
       subject = proposal.subject
       subject.lock!
-      unless subject.update(FLAG_CHANGES.fetch(proposal.kind))
-        return { base: "Not applied: #{subject.errors.full_messages.to_sentence}." }
+      subject.reload_roles!
+      role_key, action = kind_role(proposal.kind)
+      begin
+        if action == :grant
+          RoleGrants.grant!(subject, role_key, scope: proposal.scope, by:, reason: proposal.reason, proposal:)
+        else
+          RoleGrants.revoke!(subject, role_key, scope: proposal.scope, by:, reason: proposal.reason)
+        end
+      rescue RoleGrants::Error, ActiveRecord::RecordInvalid => error
+        return { base: "Not applied: #{error.message}" }
       end
 
       proposal.update!(status: "applied", closed_at: Time.current, closed_by: by)
@@ -475,7 +528,7 @@ module IdentityGovernance
 
     def record_event(kind, proposal, actor:, **data)
       IdentityGovernanceEvent.record!(kind, actor:, subject: proposal.subject, proposal:, proposal_kind: proposal.kind,
-                                            proposal_id: proposal.public_id, **data.compact)
+                                            proposal_id: proposal.public_id, **{ proposal_scope: proposal.scope }.compact, **data.compact)
     end
 
     def key_holders_changed(user, change, proposal, actor)
@@ -494,7 +547,7 @@ module IdentityGovernance
     end
 
     def notify_board_of_removal(event)
-      User.where(is_board: true).where.not(email: nil).find_each do |member|
+      User.board_members.where.not(email: nil).find_each do |member|
         next unless member.can_authenticate?
 
         IdentityGovernanceMailer.member_removed(event, member).deliver_later

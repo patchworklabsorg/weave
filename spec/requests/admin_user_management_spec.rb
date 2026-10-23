@@ -62,10 +62,18 @@ RSpec.describe "Admin user management permissions", type: :request do
       end
 
       it "can still edit a member's details" do
-        update_user(member, first_name: "Renamed", email: "renamed@example.com", is_staff: "1")
+        update_user(member, first_name: "Renamed", email: "renamed@example.com")
 
         expect(response).to redirect_to(admin_user_path(member))
-        expect(member.reload).to have_attributes(first_name: "Renamed", email: "renamed@example.com", is_staff: true)
+        expect(member.reload).to have_attributes(first_name: "Renamed", email: "renamed@example.com")
+      end
+
+      it "ignores the old role fields of the user form: roles change through the roles section" do
+        update_user(member, first_name: "Renamed", is_staff: "1", is_board: "1", is_contractor: "1")
+
+        expect(response).to redirect_to(admin_user_path(member))
+        expect(member.reload).to have_attributes(first_name: "Renamed", is_staff: false, is_board: false, is_contractor: false)
+        expect(UserRole.count).to eq(0)
       end
 
       it "can change a member's legal name" do
@@ -351,30 +359,50 @@ RSpec.describe "Admin user management permissions", type: :request do
   end
 
   # Board membership drives identity team governance (see IdentityGovernance),
-  # so only an owner changes it, never on their own account, and each change is
-  # logged and told to the board.
+  # so only an owner changes it (the board rule in config/roles.yml), and each
+  # change is logged and told to the board. It changes through the roles
+  # section of the edit page (Admin::RoleAssignmentsController).
   describe "board membership" do
     include ActiveJob::TestHelper
+
+    def grant_board(user) = post admin_role_assignments_path, params: { user_id: user.p_id, role: "board", return_to: "user" }
+
+    def revoke_board(user, reason: "Left the board")
+      post revoke_admin_role_assignments_path, params: { user_id: user.p_id, role: "board", reason:, return_to: "user" }
+    end
 
     it "lets an owner add a member to the board, with a log row and an email to the board" do
       sitting = create(:user, :verified, is_board: true)
       sign_in_via_magic_link(owner)
 
-      perform_enqueued_jobs { update_user(member, is_board: "1") }
+      perform_enqueued_jobs { grant_board(member) }
 
+      expect(response).to redirect_to(admin_user_path(member, anchor: "roles"))
       expect(member.reload.is_board).to be(true)
       expect(IdentityGovernanceEvent.sole).to have_attributes(kind: "board_member_added", actor: owner, subject: member)
       expect(ActionMailer::Base.deliveries.flat_map(&:to)).to include(sitting.email, member.email)
+      expect(UserRole.find_by!(user: member)).to have_attributes(granted_by: owner)
+    end
+
+    it "lets an owner take a member off the board, with a log row" do
+      board = create(:user, :verified, is_board: true)
+      sign_in_via_magic_link(owner)
+
+      revoke_board(board)
+
+      expect(board.reload.is_board).to be(false)
+      expect(IdentityGovernanceEvent.sole).to have_attributes(kind: "board_member_removed", actor: owner, subject: board)
+      expect(UserRole.find_by!(user: board)).to have_attributes(revoked_by: owner, revoke_reason: "Left the board")
     end
 
     it "writes the change to the permanent log with the owner as the actor, and clears the actor after the request" do
       sign_in_via_magic_link(owner)
 
-      update_user(member, is_board: "1")
+      grant_board(member)
 
       expect(PrivilegedAttributeChange.where(user_id: member.id).sole)
-        .to have_attributes(attribute_name: "is_board", old_value: "false", new_value: "true", actor_id: owner.id,
-                            actor_label: "user #{owner.p_id}")
+        .to have_attributes(attribute_name: "role:board", role_key: "board", operation: "grant", old_value: "false",
+                            new_value: "true", actor_id: owner.id, actor_label: "user #{owner.p_id}")
       expect(PrivilegedChangeActor.current).to eq(["", ""])
     end
 
@@ -382,10 +410,10 @@ RSpec.describe "Admin user management permissions", type: :request do
       [admin, superadmin].each do |actor|
         sign_in_via_magic_link(actor)
 
-        update_user(actor, is_board: "1")
-        expect(response).to have_http_status(:unprocessable_content)
-        update_user(member, is_board: "1")
-        expect(response).to have_http_status(:unprocessable_content)
+        grant_board(actor)
+        expect(flash[:alert]).to include("Not granted")
+        grant_board(member)
+        expect(flash[:alert]).to include("Not granted")
       end
 
       expect([admin, superadmin, member].map { |user| user.reload.is_board }).to all(be(false))
@@ -396,43 +424,85 @@ RSpec.describe "Admin user management permissions", type: :request do
       board = create(:user, :verified, is_board: true)
       sign_in_via_magic_link(admin)
 
-      update_user(board, is_board: "0")
+      revoke_board(board)
 
+      expect(flash[:alert]).to include("Not revoked")
       expect(board.reload.is_board).to be(true)
+    end
+
+    it "lets an owner add another owner to the board and take them off, from the user page" do
+      other_owner = create(:user, :owner, :verified)
+      sign_in_via_magic_link(owner)
+
+      get admin_user_path(other_owner)
+      expect(response.body).to include("Grant board member")
+
+      grant_board(other_owner)
+      expect(response).to redirect_to(admin_user_path(other_owner, anchor: "roles"))
+      expect(other_owner.reload.is_board).to be(true)
+
+      revoke_board(other_owner)
+      expect(other_owner.reload.is_board).to be(false)
+      expect(IdentityGovernanceEvent.order(:id).pluck(:kind)).to eq(%w[board_member_added board_member_removed])
     end
 
     it "lets an owner mark their own account, with a log row" do
       sign_in_via_magic_link(owner)
 
-      update_user(owner, is_board: "1")
+      grant_board(owner)
 
       expect(owner.reload.is_board).to be(true)
       expect(IdentityGovernanceEvent.sole).to have_attributes(kind: "board_member_added", actor: owner, subject: owner)
     end
 
-    it "lets an owner create a board member, with a log row" do
+    it "shows the roles section with the rule of each role, and the grant form only where the actor may use it" do
+      sign_in_via_magic_link(admin)
+
+      get admin_user_path(member)
+
+      expect(response.body).to include("Roles", "One owner, at once, for any person, other owners too.", "Any admin, at once.",
+                                       "An owner proposes. Every board member approves.", "Grant staff")
+      expect(response.body).not_to include("Grant board member")
+    end
+  end
+
+  describe "staff and contractor roles" do
+    it "lets any admin grant and revoke staff and contractor for a person they manage, with a log row" do
+      sign_in_via_magic_link(admin)
+
+      post admin_role_assignments_path, params: { person: member.email, role: "staff", reason: "Hired" }
+      post admin_role_assignments_path, params: { person: member.p_id, role: "contractor" }
+
+      expect(response).to redirect_to(admin_role_assignments_path)
+      expect(member.reload).to have_attributes(is_staff: true, is_contractor: true)
+      expect(PrivilegedAttributeChange.where(user_id: member.id).pluck(:role_key)).to eq(%w[staff contractor])
+
+      get admin_role_assignments_path
+      expect(response.body).to include("Staff and contractors", member.full_name, "Reason: Hired")
+
+      post revoke_admin_role_assignments_path, params: { user_id: member.p_id, role: "staff", reason: "Left" }
+      expect(member.reload.is_staff).to be(false)
+    end
+
+    it "does not let an admin change the roles of a peer or a superior" do
+      other_admin = create(:user, :admin, :verified)
+      sign_in_via_magic_link(admin)
+
+      post admin_role_assignments_path, params: { person: other_admin.p_id, role: "staff" }
+
+      expect(flash[:alert]).to include("Not granted")
+      expect(other_admin.reload.is_staff).to be(false)
+    end
+
+    it "refuses a role with a proposal rule, and an unknown role" do
       sign_in_via_magic_link(owner)
 
-      post admin_users_path, params: { user: { first_name: "New", last_name: "Board", email: "new.board@example.com", is_board: "1" } }
+      post admin_role_assignments_path, params: { person: member.p_id, role: "verifier" }
+      expect(flash[:alert]).to include("needs a proposal on the identity governance page")
 
-      expect(User.find_by(email: "new.board@example.com").is_board).to be(true)
-      expect(IdentityGovernanceEvent.sole.kind).to eq("board_member_added")
-    end
-
-    it "does not let an admin create a board member" do
-      sign_in_via_magic_link(admin)
-
-      expect { post admin_users_path, params: { user: { first_name: "New", last_name: "Board", email: "new.board@example.com", is_board: "1" } } }
-        .not_to change(User, :count)
-    end
-
-    it "lets an admin save other fields when the board box is unchanged" do
-      board = create(:user, :verified, is_board: true)
-      sign_in_via_magic_link(admin)
-
-      update_user(board, first_name: "Renamed", is_board: "1")
-
-      expect(board.reload).to have_attributes(first_name: "Renamed", is_board: true)
+      post admin_role_assignments_path, params: { person: member.p_id, role: "wizard" }
+      expect(flash[:alert]).to eq("Unknown role.")
+      expect(UserRole.count).to eq(0)
     end
   end
 end

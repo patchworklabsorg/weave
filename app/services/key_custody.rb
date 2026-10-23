@@ -113,7 +113,7 @@ module KeyCustody
     def notify_board(event)
       return unless event&.board_kind?
 
-      User.where(is_board: true).where.not(email: nil).find_each do |member|
+      User.board_members.where.not(email: nil).find_each do |member|
         KeyCustodyMailer.event(event, member).deliver_later
       end
     end

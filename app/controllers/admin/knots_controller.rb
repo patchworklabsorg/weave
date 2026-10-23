@@ -57,7 +57,7 @@ class Admin::KnotsController < Admin::BaseController
 
   def require_signer
     return if current_user.identity_team || current_user.is_board
-    return if KnotSettings.program_keys.any? { |program| KnotGrants.patch_lead?(current_user, program) }
+    return if KnotGrants.any_patch_lead?(current_user)
 
     redirect_to admin_root_path, alert: "Only the identity team, the board and patch leads can open this page."
   end

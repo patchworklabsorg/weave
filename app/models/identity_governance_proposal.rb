@@ -24,6 +24,7 @@
 #  kind                  :string           not null
 #  reason                :text             not null
 #  required_approver_ids :bigint           default([]), not null, is an Array
+#  scope                 :string
 #  status                :string           default("pending"), not null
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
@@ -50,7 +51,7 @@ class IdentityGovernanceProposal < ApplicationRecord
 
   has_paper_trail
 
-  KINDS = %w[add_member set_lead clear_lead add_key_holder remove_key_holder].freeze
+  KINDS = %w[add_member set_lead clear_lead add_key_holder remove_key_holder add_patch_lead].freeze
   KEY_HOLDER_KINDS = %w[add_key_holder remove_key_holder].freeze
   STATUSES = %w[pending applied rejected withdrawn expired cancelled].freeze
 
@@ -74,20 +75,28 @@ class IdentityGovernanceProposal < ApplicationRecord
     define_method(:"#{name}?") { status == name }
   end
 
-  def self.describe(kind, name)
+  def self.describe(kind, name, scope = nil)
     case kind.to_s
     when "add_member" then "add #{name} to the identity team"
     when "set_lead" then "make #{name} an identity team lead"
     when "clear_lead" then "remove #{name} as an identity team lead"
     when "add_key_holder" then "make #{name} a key holder"
     when "remove_key_holder" then "remove #{name} as a key holder"
+    when "add_patch_lead" then "make #{name} the patch lead of #{scope ? KnotSettings.program(scope)&.name || scope : 'a program'}"
     else kind.to_s.humanize
     end
   end
 
-  def description = self.class.describe(kind, subject&.full_name || "a deleted user")
+  def description = self.class.describe(kind, subject&.full_name || "a deleted user", scope)
 
   def key_holder_change? = KEY_HOLDER_KINDS.include?(kind)
+
+  # The role of this proposal (see IdentityGovernance::KIND_ROLES).
+  def role_key = IdentityGovernance.kind_role(kind).first
+
+  # Every board member at proposal time must approve (the
+  # owner_proposes_all_board_approve rule in config/roles.yml).
+  def all_board? = IdentityGovernance.kind_rule(kind).all_board?
 
   def open? = pending? && expires_at.future?
 

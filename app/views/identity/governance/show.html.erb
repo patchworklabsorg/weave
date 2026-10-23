@@ -6,6 +6,7 @@
   <p class="text-ink-soft">
     An owner proposes a new verifier or a lead change, and a different board member approves it.
     A key holder change needs every board member. Any owner or identity team lead removes a member at once.
+    The rule of each role is in the Roles section below (config/roles.yml).
   </p>
   <% if @bootstrap_open %>
     <p class="text-sm text-orange-600 mt-2">
@@ -38,7 +39,7 @@
               <%= form.text_field :reason, required: true, placeholder: "Reason for the removal",
                     aria: { label: "Reason to remove #{member.full_name}" }, class: "flex-1 #{input_class}" %>
               <%= form.submit "Remove now", class: "btn-stitch-ghost",
-                    data: { turbo_confirm: "Remove #{member.full_name} from the identity team now? This also clears the key holder and lead flags. The board gets an email." } %>
+                    data: { turbo_confirm: "Remove #{member.full_name} from the identity team now? This also revokes the key holder and lead roles. The board gets an email." } %>
             <% end %>
           <% end %>
         </li>
@@ -47,6 +48,33 @@
   <% else %>
     <p class="px-6 py-4 text-sm text-ink-faint">Nobody is on the identity team.</p>
   <% end %>
+</div>
+
+<h3 id="roles" class="font-display text-lg font-bold text-ink mb-3">Roles</h3>
+<p class="text-sm text-ink-soft mb-3">
+  Each role, who has it, and its grant rule. Staff and contractor change on the
+  <%= link_to "staff and contractors page", admin_role_assignments_path, class: "underline hover:text-grape" %>,
+  and board member and the removal of a patch lead on the roles section of a user's admin page.
+</p>
+<div class="patch overflow-hidden mb-8">
+  <ul class="divide-y divide-ink-soft/10">
+    <% RoleRegistry.definitions.each_value do |definition| %>
+      <% assignments = @role_assignments.fetch(definition.key, []) %>
+      <li class="px-6 py-3 text-sm text-ink space-y-1">
+        <div class="flex flex-wrap justify-between gap-2">
+          <span class="font-medium"><%= definition.name %><%= " (scoped by program)" if definition.scopable? %></span>
+          <span class="text-ink-soft">Grant: <%= RoleGrants.rule_text(definition.key, :grant) %> Revoke: <%= RoleGrants.rule_text(definition.key, :revoke) %></span>
+        </div>
+        <p class="text-ink-soft">
+          <% if assignments.any? %>
+            <%= safe_join(assignments.map { |assignment| "#{assignment.user&.full_name || 'A deleted user'}#{" (#{assignment.scope})" if assignment.scope}" }, "; ") %>
+          <% else %>
+            Nobody.
+          <% end %>
+        </p>
+      </li>
+    <% end %>
+  </ul>
 </div>
 
 <h3 class="font-display text-lg font-bold text-ink mb-3">Proposals that wait</h3>
@@ -82,8 +110,13 @@
         </div>
         <div>
           <%= form.label :kind, "Change", class: "block text-sm text-ink mb-1" %>
-          <%= form.select :kind, IdentityGovernanceProposal::KINDS.map { |kind| [IdentityGovernanceProposal.describe(kind, "this person").upcase_first, kind] },
+          <%= form.select :kind, IdentityGovernance.proposable_kinds.map { |kind| [IdentityGovernanceProposal.describe(kind, "this person").upcase_first, kind] },
                 {}, class: "w-full #{input_class}" %>
+        </div>
+        <div>
+          <%= form.label :scope, "Program (for a patch lead only)", class: "block text-sm text-ink mb-1" %>
+          <%= form.select :scope, KnotSettings.programs.map { |program| [program.name, program.key] }, { include_blank: "None" },
+                class: "w-full #{input_class}" %>
         </div>
         <div>
           <%= form.label :reason, "Reason", class: "block text-sm text-ink mb-1" %>
@@ -169,7 +202,7 @@
 </div>
 
 <h3 id="permanent-log" class="mt-8 font-display text-lg font-bold text-ink mb-3">Permanent log of privileged attributes</h3>
-<p class="text-sm text-ink-soft mb-3">Every change to is_board, identity_team, identity_key_holder, identity_lead and role. A database trigger writes it. Nobody can change or delete a row.</p>
+<p class="text-sm text-ink-soft mb-3">Every grant and revoke of a role (with its scope), and every change to the admin tier (role). Database triggers write it. Nobody can change or delete a row.</p>
 <div class="patch overflow-hidden mt-8">
   <% if @privileged_changes.any? %>
     <ul class="divide-y divide-ink-soft/10">

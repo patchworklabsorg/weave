@@ -40,14 +40,13 @@ class BreakGlassReport
     IdentityGovernanceEvent.where(created_at: range).includes(:actor, :subject).order(:created_at, :id)
   end
 
-  # Every change in the month to a privileged user attribute (is_board,
-  # identity_team, identity_key_holder, identity_lead, role), from the
-  # permanent log (see PrivilegedAttributeChange).
+  # Every grant and revoke of a role in the month, and every change to the
+  # admin tier (role), from the permanent log (see PrivilegedAttributeChange).
   def privileged_changes
     PrivilegedAttributeChange.between(range).includes(:actor).order(:changed_at, :id)
   end
 
   # The identity team as it is now, for the board to check.
-  def identity_team = User.identity_team.order(:first_name, :last_name)
+  def identity_team = User.identity_team.with_roles.order(:first_name, :last_name)
 
 end

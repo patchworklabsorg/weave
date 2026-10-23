@@ -105,11 +105,10 @@ RSpec.describe "Admin Knot", type: :request do
   end
 
   describe "program grants on the admin user page" do
-    let(:lead) { create(:user, :admin, :verified) }
+    let(:lead) { create(:user, :admin, :verified, :patch_lead) }
 
     before do
-      allow(KnotSettings).to receive(:config)
-        .and_return({ programs: { ganymede: { name: "Project Ganymede", grant_cap: 1, patch_lead_p_ids: [lead.p_id] } } })
+      allow(KnotSettings).to receive(:config).and_return({ programs: { ganymede: { name: "Project Ganymede", grant_cap: 1 } } })
     end
 
     it "lets the patch lead record a grant, then ask for an override that a board member signs off" do

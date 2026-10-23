@@ -85,22 +85,11 @@
         <h2 class="card-title">Staff &amp; Organization</h2>
       </div>
       <div class="card-body space-y-4">
-        <label class="choice">
-          <%= form.check_box :is_board, class: "checkbox", disabled: !admin_permissions_for(@user).change_board? %>
-          <span>Board member<span class="choice-hint">Mark as a board member. Only an owner can change this. The board gets an email about each change.</span></span>
-        </label>
-        <label class="choice">
-          <%= form.check_box :is_staff, class: "checkbox" %>
-          <span>Is staff<span class="choice-hint">Mark as staff member (can have/be a manager)</span></span>
-        </label>
-        <label class="choice">
-          <%= form.check_box :is_contractor, class: "checkbox" %>
-          <span>Is contractor<span class="choice-hint">Mark as contractor (can have/be a manager)</span></span>
-        </label>
+        <p class="field-hint">Board member, staff and contractor are roles. Change them in the Roles section of the user page. Each role has its own grant rule.</p>
         <div class="field-group">
           <%= form.label :manager_id, "Manager", class: "field-label" %>
           <%= form.collection_select :manager_id,
-                User.where(is_staff: true).or(User.where(is_contractor: true)).order(:first_name),
+                User.staff_members.or(User.contractors).order(:first_name),
                 :id, :full_name,
                 { include_blank: "No manager" },
                 class: "field" %>

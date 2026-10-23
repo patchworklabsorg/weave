@@ -30,7 +30,7 @@ RSpec.describe "Admin sidebar", type: :request do
     get admin_root_path
 
     expect(sidebar).to eq(
-      "People" => %w[Users Groups Consents],
+      "People" => ["Users", "Staff and contractors", "Groups", "Consents"],
       "Data" => ["Demographics", "Funder reports"],
       "System" => ["Dashboard", "OAuth apps", "Jobs", "Feature flags", "Blazer", "Console audits", "Console sign-in"]
     )
@@ -44,7 +44,7 @@ RSpec.describe "Admin sidebar", type: :request do
 
     expect(sidebar).to eq(
       "Identity" => ["Verification", "Key custody", "Knot"],
-      "People" => %w[Users Groups Consents],
+      "People" => ["Users", "Staff and contractors", "Groups", "Consents"],
       "Data" => ["Deletion", "Demographics", "Funder reports"],
       "System" => ["Dashboard", "OAuth apps", "Jobs", "Feature flags", "Blazer", "Console audits", "Console sign-in"]
     )
@@ -62,7 +62,7 @@ RSpec.describe "Admin sidebar", type: :request do
   end
 
   it "shows a board member without the admin role only key custody and governance" do
-    sign_in_via_magic_link(create(:user, :verified, is_board: true))
+    sign_in_via_magic_link(create(:user, :verified, :board))
 
     get identity_key_custody_path
 

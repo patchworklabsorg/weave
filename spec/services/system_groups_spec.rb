@@ -67,7 +67,8 @@ RSpec.describe SystemGroups do
   describe ".sync_all" do
     it "repairs memberships that a callback-free change left wrong" do
       user = create(:user)
-      user.update_column(:is_contractor, true) # rubocop:disable Rails/SkipsModelValidations
+      # A role row written without RoleGrants (as raw SQL would), so no sync ran.
+      UserRole.create!(user:, role: Role.fetch!("contractor"), granted_at: Time.current)
       expect(slugs_for(user)).to be_empty
 
       described_class.sync_all

@@ -634,6 +634,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.text "close_reason"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "scope"
     t.index ["closed_by_id"], name: "index_identity_governance_proposals_on_closed_by_id"
     t.index ["proposed_by_id"], name: "index_identity_governance_proposals_on_proposed_by_id"
     t.index ["status", "expires_at"], name: "index_identity_governance_proposals_on_status_and_expires_at"
@@ -892,6 +893,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.string "db_user", null: false
     t.bigint "actor_id"
     t.string "actor_label"
+    t.string "role_key"
+    t.string "role_scope"
+    t.bigint "user_role_id"
     t.index ["changed_at"], name: "index_privileged_attribute_changes_on_changed_at"
     t.index ["user_id"], name: "index_privileged_attribute_changes_on_user_id"
   end
@@ -920,6 +924,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.index ["retained_until"], name: "index_program_participations_on_retained_until"
     t.index ["user_id", "program", "year"], name: "index_program_participations_on_user_id_and_program_and_year", unique: true, where: "(user_id IS NOT NULL)"
     t.index ["user_id"], name: "index_program_participations_on_user_id"
+  end
+
+  create_table "roles", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "name", null: false
+    t.text "description"
+    t.boolean "scopable", default: false, null: false
+    t.boolean "system", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_roles_on_key", unique: true
   end
 
   create_table "rollups", force: :cascade do |t|
@@ -1083,6 +1098,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.datetime "updated_at", null: false
     t.index ["external_id"], name: "index_user_passkeys_on_external_id", unique: true
     t.index ["user_id"], name: "index_user_passkeys_on_user_id"
+  end
+
+  create_table "user_roles", force: :cascade do |t|
+    t.bigint "user_id"
+    t.bigint "role_id", null: false
+    t.string "scope"
+    t.bigint "granted_by_id"
+    t.datetime "granted_at", null: false
+    t.text "reason"
+    t.bigint "identity_governance_proposal_id"
+    t.datetime "revoked_at"
+    t.bigint "revoked_by_id"
+    t.text "revoke_reason"
+    t.datetime "created_at", default: -> { "now()" }, null: false
+    t.index "user_id, role_id, COALESCE(scope, ''::character varying)", name: "index_user_roles_one_active_assignment", unique: true, where: "(revoked_at IS NULL)"
+    t.index ["granted_by_id"], name: "index_user_roles_on_granted_by_id"
+    t.index ["identity_governance_proposal_id"], name: "index_user_roles_on_identity_governance_proposal_id"
+    t.index ["revoked_by_id"], name: "index_user_roles_on_revoked_by_id"
+    t.index ["role_id", "scope"], name: "index_user_roles_active_by_role", where: "(revoked_at IS NULL)"
+    t.index ["role_id"], name: "index_user_roles_on_role_id"
+    t.index ["user_id"], name: "index_user_roles_on_user_id"
+    t.check_constraint "revoked_at IS NOT NULL OR revoked_by_id IS NULL AND revoke_reason IS NULL", name: "user_roles_revoke_fields_need_revoked_at"
   end
 
   create_table "user_seen_at_histories", force: :cascade do |t|
@@ -1348,6 +1385,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   add_foreign_key "thread_count_entries", "users", on_delete: :cascade
   add_foreign_key "user_magic_links", "users"
   add_foreign_key "user_passkeys", "users"
+  add_foreign_key "user_roles", "identity_governance_proposals", on_delete: :nullify
+  add_foreign_key "user_roles", "roles"
+  add_foreign_key "user_roles", "users", column: "granted_by_id", on_delete: :nullify
+  add_foreign_key "user_roles", "users", column: "revoked_by_id", on_delete: :nullify
+  add_foreign_key "user_roles", "users", on_delete: :nullify
   add_foreign_key "user_sessions", "users"
   add_foreign_key "user_sessions", "users", column: "impersonated_by_id"
   add_foreign_key "users", "users", column: "manager_id"
@@ -1377,7 +1419,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
         actor_id_text text := nullif(current_setting('weave.actor_id', true), '');
         actor_label_text text := nullif(current_setting('weave.actor_label', true), '');
       BEGIN
-        FOREACH column_name IN ARRAY ARRAY['is_board', 'identity_team', 'identity_key_holder', 'identity_lead', 'role'] LOOP
+        FOREACH column_name IN ARRAY ARRAY['role'] LOOP
           new_text := to_jsonb(NEW) ->> column_name;
           IF TG_OP = 'INSERT' THEN
             old_text := NULL;
@@ -1410,6 +1452,88 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
       $function$
   SQL
 
+  create_function :log_user_role_changes, sql_definition: <<-'SQL'
+      CREATE OR REPLACE FUNCTION public.log_user_role_changes()
+       RETURNS trigger
+       LANGUAGE plpgsql
+       SET search_path TO 'pg_catalog'
+      AS $function$
+      DECLARE
+        actor_id_text text := nullif(current_setting('weave.actor_id', true), '');
+        actor_label_text text := nullif(current_setting('weave.actor_label', true), '');
+        role_key_text text;
+        p_id_text text;
+        operation_text text;
+      BEGIN
+        IF TG_OP = 'INSERT' THEN
+          operation_text := 'grant';
+        ELSIF OLD.revoked_at IS NULL AND NEW.revoked_at IS NOT NULL THEN
+          operation_text := 'revoke';
+        ELSE
+          RETURN NULL;
+        END IF;
+
+        SELECT key INTO role_key_text FROM public.roles WHERE id = NEW.role_id;
+        SELECT p_id INTO p_id_text FROM public.users WHERE id = NEW.user_id;
+
+        INSERT INTO public.privileged_attribute_changes
+          (user_id, user_p_id, attribute_name, old_value, new_value, operation, changed_at, db_user, actor_id, actor_label,
+           role_key, role_scope, user_role_id)
+        VALUES
+          (COALESCE(NEW.user_id, 0), p_id_text,
+           'role:' || role_key_text || COALESCE('[' || NEW.scope || ']', ''),
+           CASE WHEN operation_text = 'grant' THEN 'false' ELSE 'true' END,
+           CASE WHEN operation_text = 'grant' THEN 'true' ELSE 'false' END,
+           operation_text, now(), CURRENT_USER,
+           CASE WHEN actor_id_text ~ '^[0-9]+$' THEN actor_id_text::bigint END, actor_label_text,
+           role_key_text, NEW.scope, NEW.id);
+        RETURN NULL;
+      END;
+      $function$
+  SQL
+
+  create_function :refuse_user_role_edits, sql_definition: <<-'SQL'
+      CREATE OR REPLACE FUNCTION public.refuse_user_role_edits()
+       RETURNS trigger
+       LANGUAGE plpgsql
+       SET search_path TO 'pg_catalog'
+      AS $function$
+      BEGIN
+        IF TG_OP <> 'UPDATE' THEN
+          RAISE EXCEPTION 'user_roles rows are permanent: % is not allowed. Revoke a role by setting revoked_at.', TG_OP;
+        END IF;
+
+        IF NEW.id IS DISTINCT FROM OLD.id
+           OR NEW.role_id IS DISTINCT FROM OLD.role_id
+           OR NEW.scope IS DISTINCT FROM OLD.scope
+           OR NEW.granted_at IS DISTINCT FROM OLD.granted_at
+           OR NEW.reason IS DISTINCT FROM OLD.reason
+           OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+          RAISE EXCEPTION 'user_roles: only a revoke can change a row';
+        END IF;
+
+        -- The database empties these foreign keys when the row they point
+        -- to goes. Nothing else may change them.
+        IF (NEW.user_id IS DISTINCT FROM OLD.user_id AND NEW.user_id IS NOT NULL)
+           OR (NEW.granted_by_id IS DISTINCT FROM OLD.granted_by_id AND NEW.granted_by_id IS NOT NULL)
+           OR (NEW.identity_governance_proposal_id IS DISTINCT FROM OLD.identity_governance_proposal_id
+               AND NEW.identity_governance_proposal_id IS NOT NULL) THEN
+          RAISE EXCEPTION 'user_roles: only a revoke can change a row';
+        END IF;
+
+        IF OLD.revoked_at IS NOT NULL THEN
+          IF NEW.revoked_at IS DISTINCT FROM OLD.revoked_at
+             OR NEW.revoke_reason IS DISTINCT FROM OLD.revoke_reason
+             OR (NEW.revoked_by_id IS DISTINCT FROM OLD.revoked_by_id AND NEW.revoked_by_id IS NOT NULL) THEN
+            RAISE EXCEPTION 'user_roles: the role is already revoked';
+          END IF;
+        END IF;
+
+        RETURN NEW;
+      END;
+      $function$
+  SQL
+
   create_trigger :privileged_attribute_changes_no_truncate, sql_definition: <<-SQL
       CREATE TRIGGER privileged_attribute_changes_no_truncate BEFORE TRUNCATE ON public.privileged_attribute_changes FOR EACH STATEMENT EXECUTE FUNCTION refuse_privileged_attribute_change_edits()
   SQL
@@ -1419,6 +1543,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   SQL
 
   create_trigger :log_privileged_attribute_changes, sql_definition: <<-SQL
-      CREATE TRIGGER log_privileged_attribute_changes AFTER INSERT OR UPDATE OF is_board, identity_team, identity_key_holder, identity_lead, role ON public.users FOR EACH ROW EXECUTE FUNCTION log_privileged_attribute_changes()
+      CREATE TRIGGER log_privileged_attribute_changes AFTER INSERT OR UPDATE OF role ON public.users FOR EACH ROW EXECUTE FUNCTION log_privileged_attribute_changes()
+  SQL
+
+  create_trigger :log_user_role_changes, sql_definition: <<-SQL
+      CREATE TRIGGER log_user_role_changes AFTER INSERT OR UPDATE OF revoked_at ON public.user_roles FOR EACH ROW EXECUTE FUNCTION log_user_role_changes()
+  SQL
+
+  create_trigger :user_roles_append_only, sql_definition: <<-SQL
+      CREATE TRIGGER user_roles_append_only BEFORE DELETE OR UPDATE ON public.user_roles FOR EACH ROW EXECUTE FUNCTION refuse_user_role_edits()
+  SQL
+
+  create_trigger :user_roles_no_truncate, sql_definition: <<-SQL
+      CREATE TRIGGER user_roles_no_truncate BEFORE TRUNCATE ON public.user_roles FOR EACH STATEMENT EXECUTE FUNCTION refuse_user_role_edits()
   SQL
 end
