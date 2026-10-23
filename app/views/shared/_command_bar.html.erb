@@ -20,7 +20,8 @@
     ["Jobs", "/admin/jobs", :activity, "admin mission control queue"],
     ["Feature flags", "/admin/flipper", :flag, "admin flipper"],
     ["Blazer", "/admin/blazer", :database, "admin sql queries reports"],
-    ["Console audits", "/admin/console", :terminal, "admin audits1984"]
+    ["Console audits", "/admin/console", :terminal, "admin audits1984"],
+    ["Console sign-in", admin_console_access_path, :key_round, "admin production console dbconsole code"]
   ] : []
   admin_actions = current_user.admin? ? [
     ["New user", new_admin_user_path, :plus, "create add"],

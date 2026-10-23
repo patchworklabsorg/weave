@@ -12,7 +12,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_21_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -289,6 +289,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_120000) do
     t.datetime "updated_at", null: false
     t.string "username", null: false
     t.index ["username"], name: "index_console1984_users_on_username"
+  end
+
+  create_table "console_access_requests", force: :cascade do |t|
+    t.string "kind", null: false
+    t.string "code_digest", null: false
+    t.string "host"
+    t.string "status", default: "pending", null: false
+    t.datetime "expires_at", null: false
+    t.bigint "user_id"
+    t.datetime "confirmed_at"
+    t.string "confirmed_ip"
+    t.datetime "claimed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code_digest"], name: "index_console_access_requests_on_code_digest", unique: true
+    t.index ["user_id"], name: "index_console_access_requests_on_user_id"
   end
 
   create_table "email_addresses", force: :cascade do |t|
@@ -730,6 +746,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_120000) do
   add_foreign_key "application_role_assignments", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "application_roles", "oauth_applications", column: "application_id", on_delete: :cascade
   add_foreign_key "application_roles", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "console_access_requests", "users", on_delete: :nullify
   add_foreign_key "email_addresses", "users"
   add_foreign_key "group_memberships", "groups"
   add_foreign_key "group_memberships", "users"

@@ -173,6 +173,9 @@
 #                                           PATCH  /admin/oauth_applications/:id(.:format)                                                           admin/oauth_applications#update
 #                                           PUT    /admin/oauth_applications/:id(.:format)                                                           admin/oauth_applications#update
 #                                           DELETE /admin/oauth_applications/:id(.:format)                                                           admin/oauth_applications#destroy
+#               lookup_admin_console_access POST   /admin/console_access/lookup(.:format)                                                            admin/console_access#lookup
+#              confirm_admin_console_access POST   /admin/console_access/confirm(.:format)                                                           admin/console_access#confirm
+#                      admin_console_access GET    /admin/console_access(.:format)                                                                   admin/console_access#show
 #                admin_mission_control_jobs        /admin/jobs                                                                                       MissionControl::Jobs::Engine
 #                          admin_audits1984        /admin/console                                                                                    Audits1984::Engine
 #                                                  /admin/flipper                                                                                    Flipper::UI
@@ -572,6 +575,12 @@ Rails.application.routes.draw do
         resources :roles, controller: "oauth_application_roles", only: [:create, :destroy] do
           resources :assignments, controller: "oauth_application_role_assignments", only: [:create, :destroy]
         end
+      end
+
+      # A person signs their production console in. See docs/CONSOLE_ACCESS.md.
+      resource :console_access, only: [:show], controller: "console_access" do
+        post :lookup
+        post :confirm
       end
 
       # Mount engines under /admin path

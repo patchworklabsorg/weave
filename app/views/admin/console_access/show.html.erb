@@ -1,0 +1,64 @@
+<% content_for :title, "Console sign-in" %>
+
+<%= page_header "Sign in a console",
+      lede: "A production console (bin/rails console or bin/rails dbconsole) shows a code and waits. Enter the code so that Weave records the console session under your name. Enter only the code of a console that you started." %>
+
+<div class="space-y-6">
+  <div class="card">
+    <div class="card-body">
+      <%= form_with url: lookup_admin_console_access_path, method: :post, class: "flex flex-col sm:flex-row gap-2" do |form| %>
+        <div class="field-group flex-1">
+          <%= form.label :code, "Console code", class: "sr-only" %>
+          <%= form.text_field :code, required: true, autocomplete: "off", autocapitalize: "characters", spellcheck: false,
+                placeholder: "ABCD-1234", class: "field mono uppercase" %>
+        </div>
+        <%= form.submit "Continue", class: "btn btn-primary" %>
+      <% end %>
+    </div>
+  </div>
+
+  <% if @recent.any? %>
+    <div class="card card-flush">
+      <div class="card-header">
+        <h2 class="card-title">Recent consoles</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Console</th>
+              <th scope="col">Host</th>
+              <th scope="col">Status</th>
+              <th scope="col">Signed in by</th>
+              <th scope="col">Requested</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @recent.each do |request| %>
+              <tr>
+                <td><%= request.kind == "sql" ? "SQL" : "Rails" %></td>
+                <td class="mono"><%= request.host %></td>
+                <td>
+                  <% if request.expired? %>
+                    <%= badge "Expired" %>
+                  <% elsif request.confirmed? %>
+                    <%= badge "Confirmed", tone: :success %>
+                  <% elsif request.rejected? %>
+                    <%= badge "Rejected", tone: :danger %>
+                  <% else %>
+                    <%= badge "Waiting", tone: :info %>
+                  <% end %>
+                  <% if request.claimed_at %>
+                    <span class="table-sub">opened</span>
+                  <% end %>
+                </td>
+                <td><%= request.user&.full_name %></td>
+                <td class="text-ink-faint"><%= request.created_at.strftime("%b %-d, %Y %H:%M") %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+</div>
