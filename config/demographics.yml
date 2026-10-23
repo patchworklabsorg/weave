@@ -1,0 +1,54 @@
+# The demographics vault (see DemographicsVault and docs/KYC.md).
+#
+# Members answer these questions themselves. Their answer is the only source
+# of record. Every question is optional, and every question gets a
+# "prefer_not_to_say" option automatically. Labels live in
+# config/locales/demographics.en.yml under demographics.fields.<key>.
+#
+# Counsel can still change any value here. No code change is needed.
+shared:
+  # LOCKED (2026-10-12): the smallest count a report shows. A cell with a
+  # count from 1 to (threshold - 1) shows as "fewer than <threshold>". The
+  # delete-time aggregates use the same value. Counsel can still change it
+  # here.
+  small_count_threshold: 10
+
+  # Age bands, as the lowest age of each band. The last band has no upper
+  # limit. Weave derives the band from the member's birthday when the member
+  # saves their answers, and stores only the band. LOCKED (2026-10-13): under
+  # 13, 13-15, 16-17, 18-24, 25-34, 35+. The split at 18 keeps minors apart,
+  # and the adult bands follow common census brackets.
+  age_band_starts: [0, 13, 16, 18, 25, 35] # LOCKED
+
+  # The questions. type is "choice" (one answer) or "multi" (any number of
+  # answers). self_describe adds a "self_describe" option with a short text
+  # field. Reports count self-described answers only as "self_describe" and
+  # never show the text.
+  #
+  # LOCKED (2026-10-23): gender identity is the only field. When a funder
+  # asks for another field, add it here. Example (not active):
+  #
+  #   - key: race_ethnicity
+  #     type: multi
+  #     options: [american_indian_alaska_native, asian, black, hispanic_latino,
+  #               middle_eastern_north_african, pacific_islander, white]
+  #     self_describe: true
+  #
+  # Race, ethnicity, sexual orientation and health are special category data
+  # under GDPR Article 9. Ask counsel before you add one.
+  fields:
+    - key: gender_identity
+      type: choice
+      options: [woman, man, non_binary]
+      self_describe: true
+
+  # A public key (PEM) for the sealed envelopes. Not secret. Each deployment
+  # sets its own in credentials (demographics.public_key), which wins over
+  # this value. The private key never goes in credentials or in the app's
+  # env file: see docs/KYC.md.
+  public_key:
+
+# Tests use a smaller threshold so the specs need fewer records. The locked
+# value above is what production and staging use.
+test:
+  small_count_threshold: 3

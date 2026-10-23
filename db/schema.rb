@@ -365,6 +365,40 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.index ["user_id"], name: "index_console_access_requests_on_user_id"
   end
 
+  create_table "demographic_departed_totals", force: :cascade do |t|
+    t.text "envelope", null: false
+    t.string "key_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "demographic_folds", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "envelope", null: false
+    t.string "key_id", null: false
+    t.jsonb "cohorts", default: [], null: false
+  end
+
+  create_table "demographic_records", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.text "envelope", null: false
+    t.string "key_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_demographic_records_on_user_id", unique: true
+  end
+
+  create_table "demographic_reports", force: :cascade do |t|
+    t.datetime "generated_at", null: false
+    t.integer "threshold", null: false
+    t.jsonb "results", default: {}, null: false
+    t.integer "unreadable_count", default: 0, null: false
+    t.integer "folds_counted", default: 0, null: false
+    t.string "run_by"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["generated_at"], name: "index_demographic_reports_on_generated_at"
+  end
+
   create_table "email_addresses", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "email", null: false
@@ -916,6 +950,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   add_foreign_key "break_glass_records", "users", on_delete: :nullify
   add_foreign_key "break_glass_records", "verifications"
   add_foreign_key "console_access_requests", "users", on_delete: :nullify
+  add_foreign_key "demographic_records", "users", on_delete: :cascade
   add_foreign_key "email_addresses", "users"
   add_foreign_key "group_memberships", "groups"
   add_foreign_key "group_memberships", "users"

@@ -128,5 +128,11 @@
     </section>
   </div>
 
+  <% unless impersonating? %>
+    <div class="mt-6">
+      <%= render "demographics/prompt", user: @user %>
+    </div>
+  <% end %>
+
   <p class="text-xs text-ink-faint mt-6 text-center">This is a read-only view of your account. Some details sync automatically from Slack.</p>
 </div>

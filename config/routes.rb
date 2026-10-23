@@ -69,6 +69,10 @@
 #                      destroy_all_sessions DELETE /profile/sessions(.:format)                                                                       users#destroy_all_sessions
 #                                   session DELETE /profile/sessions/:id(.:format)                                                                   users#destroy_session
 #                            update_profile PATCH  /profile(.:format)                                                                                users#update
+#                              demographics GET    /profile/demographics(.:format)                                                                   demographics#show
+#                                           PATCH  /profile/demographics(.:format)                                                                   demographics#update
+#                                           PUT    /profile/demographics(.:format)                                                                   demographics#update
+#                                           DELETE /profile/demographics(.:format)                                                                   demographics#destroy
 #                        email_confirmation GET    /email_confirmation(.:format)                                                                     email_confirmations#show
 #                             confirm_email GET    /confirm_email/:token(.:format)                                                                   email_confirmations#confirm
 #                 resend_email_confirmation POST   /email_confirmation/resend(.:format)                                                              email_confirmations#resend
@@ -121,6 +125,7 @@
 #                                           PATCH  /admin/groups/:id(.:format)                                                                       admin/groups#update
 #                                           PUT    /admin/groups/:id(.:format)                                                                       admin/groups#update
 #                                           DELETE /admin/groups/:id(.:format)                                                                       admin/groups#destroy
+#                        admin_demographics GET    /admin/demographics(.:format)                                                                     admin/demographics#show
 #                    activate_admin_service PATCH  /admin/services/:id/activate(.:format)                                                            admin/services#activate
 #                  deactivate_admin_service PATCH  /admin/services/:id/deactivate(.:format)                                                          admin/services#deactivate
 #                     suspend_admin_service PATCH  /admin/services/:id/suspend(.:format)                                                             admin/services#suspend
@@ -456,6 +461,10 @@ Rails.application.routes.draw do
   delete "/profile/sessions/:id", to: "users#destroy_session", as: :session
   patch "/profile", to: "users#update", as: :update_profile
 
+  # The member's self-reported demographics: answer, answer again, or take
+  # the answers back. Write-only (see DemographicsVault).
+  resource :demographics, path: "profile/demographics", only: [:show, :update, :destroy]
+
   # Email confirmation routes
   get "/email_confirmation", to: "email_confirmations#show", as: :email_confirmation
   get "/confirm_email/:token", to: "email_confirmations#confirm", as: :confirm_email
@@ -598,6 +607,10 @@ Rails.application.routes.draw do
       resources :groups do
         resources :memberships, controller: "group_memberships", only: [:create, :destroy]
       end
+
+      # Demographics aggregates for funder reports. Counts only, never a
+      # member's answers (see DemographicsReport).
+      resource :demographics, only: [:show]
 
       resources :services do
         member do

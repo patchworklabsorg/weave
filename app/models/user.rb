@@ -176,6 +176,12 @@ class User < ApplicationRecord
   scope :identity_leads, -> { identity_team.where(identity_lead: true) }
   validate :identity_roles_need_identity_team
   validate :identity_key_holder_limit, if: -> { identity_key_holder && will_save_change_to_identity_key_holder? }
+  # Self-reported demographics are sealed in DemographicsVault, with no
+  # association here: the app has no read path to them. On delete, the sealed
+  # answers fold into the departed totals before the user row goes. The
+  # deletion pipeline folds first with its own cohorts, which makes this a
+  # no-op.
+  before_destroy :fold_demographics
 
   # OAuth apps this user may use by a direct grant (see AppAccess).
   has_many :application_access_grants, as: :grantee, dependent: :destroy
@@ -829,6 +835,8 @@ class User < ApplicationRecord
   def mark_guardian_consents_account_deleted
     guardian_consents.update_all(account_deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
+
+  def fold_demographics = DemographicsVault.fold!(self)
 
   private
 
