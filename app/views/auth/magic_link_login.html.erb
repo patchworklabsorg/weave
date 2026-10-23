@@ -1,17 +1,15 @@
-<div class="absolute inset-0 flex items-center justify-center p-6">
-  <div class="patch patch-bound patch-tilt-l w-full max-w-md">
+<div class="min-h-full flex items-center justify-center p-6">
+  <div class="patch patch-bound patch-tilt-r w-full max-w-md">
     <div class="quilt-binding"></div>
-
-    <div class="p-9 pb-5 text-center">
-      <h1 class="font-display text-3xl font-bold text-ink">Weave</h1>
-      <p class="text-ink-soft mt-2">Confirm your sign in.</p>
-    </div>
-
-    <div class="px-9 pb-9 space-y-6">
-      <p class="text-sm text-ink text-center">
-        You're about to sign in as
-        <strong class="break-all"><%= @magic_link_user.email %></strong>.
-      </p>
+    <div class="p-8 sm:p-9 space-y-6">
+      <div class="text-center space-y-2">
+        <%= render "shared/wordmark", size: :lg, href: nil %>
+        <h1 class="font-display text-2xl font-bold text-ink">Confirm your sign in</h1>
+        <p class="text-ink-soft text-sm">
+          You're about to sign in as
+          <strong class="text-ink break-all"><%= @magic_link_user.email %></strong>.
+        </p>
+      </div>
 
       <%# turbo: false, matching the OAuth authorize forms (see their comment): confirming
           while an OAuth flow is in progress can redirect straight through to /oauth/authorize
@@ -23,7 +21,7 @@
       <%= form_with(url: confirm_magic_link_path(token: @token), method: :post, data: { controller: "fingerprint", turbo: false }) do %>
         <%= hidden_field_tag :fingerprint, "", data: { fingerprint_target: "fingerprint" } %>
         <%= hidden_field_tag :timezone, "", data: { fingerprint_target: "timezone" } %>
-        <%= submit_tag "Sign in", class: "btn-stitch w-full" %>
+        <%= submit_tag "Sign in", class: "btn btn-primary btn-block" %>
       <% end %>
 
       <p class="text-sm text-ink-faint text-center">
@@ -31,11 +29,9 @@
         and nothing will happen.
       </p>
 
-      <div class="text-center">
-        <p class="text-sm text-ink-soft">
-          Not you? <%= link_to "Sign in with a different account", login_path, class: "text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2" %>
-        </p>
-      </div>
+      <p class="text-center text-sm text-ink-soft">
+        Not you? <%= link_to "Sign in with a different account", login_path, class: "link" %>
+      </p>
     </div>
   </div>
 </div>

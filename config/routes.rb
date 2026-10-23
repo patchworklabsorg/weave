@@ -91,6 +91,7 @@
 #                               ok_computer        /ok                                                                                               OkComputer::Engine
 #            stop_impersonating_admin_users DELETE /admin/users/stop_impersonating(.:format)                                                         admin/users#stop_impersonating
 #                                admin_root GET    /admin(.:format)                                                                                  admin/dashboard#index
+#                              admin_search GET    /admin/search(.:format)                                                                           admin/search#index {format: :json}
 #                    impersonate_admin_user POST   /admin/users/:id/impersonate(.:format)                                                            admin/users#impersonate
 #                      regen_pid_admin_user PATCH  /admin/users/:id/regen_pid(.:format)                                                              admin/users#regen_pid
 #                invite_to_slack_admin_user POST   /admin/users/:id/invite_to_slack(.:format)                                                        admin/users#invite_to_slack
@@ -499,6 +500,9 @@ Rails.application.routes.draw do
     namespace :admin do
       # Admin dashboard is the root of the admin namespace
       root to: "dashboard#index"
+
+      # Live results for the ⌘K command bar
+      get :search, to: "search#index", defaults: { format: :json }
 
       # Resources and sub-resources
       resources :users do

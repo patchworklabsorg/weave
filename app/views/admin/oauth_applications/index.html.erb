@@ -1,96 +1,95 @@
-<% content_for :title, "OAuth Applications" %>
+<% content_for :title, "OAuth apps" %>
 
-<div class="mb-6">
-  <h2 class="font-display text-2xl font-bold text-ink mb-4">OAuth Applications</h2>
+<%= page_header("OAuth applications", lede: "Manage OAuth 2.0 client applications") do %>
+  <%= link_to new_admin_oauth_application_path, class: "btn btn-primary" do %><%= icon(:plus) %>New OAuth app<% end %>
+<% end %>
 
-  <div class="flex justify-between items-center mb-4">
-    <p class="text-ink-soft">Manage OAuth 2.0 client applications</p>
-    <%= link_to "New OAuth Application", new_admin_oauth_application_path, class: "btn-stitch" %>
-  </div>
-</div>
-
-<div class="patch overflow-hidden">
-  <div class="overflow-x-auto">
-  <table class="min-w-full divide-y divide-ink-soft/20">
-    <thead>
-      <tr>
-        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Name</th>
-        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Client ID</th>
-        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Type</th>
-        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Scopes</th>
-        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Created</th>
-        <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
-      </tr>
-    </thead>
-    <tbody class="divide-y divide-ink-soft/10">
-      <% @applications.each do |application| %>
-        <tr>
-          <td class="px-6 py-4">
-            <div class="text-sm font-medium text-ink">
-              <%= link_to application.name, admin_oauth_application_path(application), class: "hover:text-grape underline-offset-2 hover:underline" %>
-            </div>
-          </td>
-          <td class="px-6 py-4">
-            <div class="text-sm font-mono text-ink break-all">
-              <%= application.uid %>
-            </div>
-          </td>
-          <td class="px-6 py-4 space-y-1">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-              <%= application.confidential? ? 'bg-sky-soft text-sky' : 'bg-grape-soft text-ink-soft' %>">
-              <%= application.confidential? ? 'Confidential' : 'Public' %>
-            </span>
-            <% if AppAccess.restricted?(application) %>
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orchid-soft text-orchid">Restricted</span>
-            <% end %>
-            <% unless application.requires_code_of_conduct %>
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-soft text-sky">CoC optional</span>
-            <% end %>
-            <% unless application.requires_guardian_consent %>
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-soft text-sky">Guardian consent optional</span>
-            <% end %>
-          </td>
-          <td class="px-6 py-4 text-sm text-ink min-w-48">
-            <% if application.scopes.present? %>
-              <ul class="flex flex-wrap gap-1" aria-label="Scopes">
-                <% application.scopes.all.each do |scope| %>
-                  <li class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-soft text-teal"><%= scope %></li>
-                <% end %>
-              </ul>
-            <% else %>
-              <span class="text-ink-faint">Default</span>
-            <% end %>
-          </td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-ink-soft">
-            <%= time_ago_in_words(application.created_at) %> ago
-          </td>
-          <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-            <%= link_to "View", admin_oauth_application_path(application), class: "text-grape hover:text-ink mr-3" %>
-            <% if current_user.superadmin? %>
-              <%= link_to "Edit", edit_admin_oauth_application_path(application), class: "text-grape hover:text-ink mr-3" %>
-            <% end %>
-            <% if current_user.owner? %>
-              <%= link_to "Delete", admin_oauth_application_path(application), method: :delete,
-                  data: { confirm: "Are you sure? This will revoke all access tokens for this application." },
-                  class: "text-red-600 hover:text-red-900" %>
-            <% end %>
-          </td>
-        </tr>
-      <% end %>
-    </tbody>
-  </table>
+<div class="card card-flush">
+  <div class="card-header">
+    <h2 class="card-title">All applications</h2>
+    <%= render "shared/search_form", url: admin_oauth_applications_path, frame: "oauth_applications_table", placeholder: "Search applications" %>
   </div>
 
-  <% if @applications.empty? %>
-    <div class="text-center py-12">
-      <div class="mx-auto h-12 w-12 text-ink-faint mb-4">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-        </svg>
+  <%= turbo_frame_tag "oauth_applications_table", target: "_top" do %>
+    <% if params[:search].present? %>
+      <p class="px-5 py-3 text-sm text-ink-soft border-b border-hairline">
+        <%= pluralize(@applications.size, "application") %> <%= @applications.size == 1 ? "matches" : "match" %> “<%= params[:search] %>”
+      </p>
+    <% end %>
+
+    <% if @applications.any? %>
+      <div class="table-wrap overflow-x-auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Client ID</th>
+              <th scope="col">Type</th>
+              <th scope="col">Scopes</th>
+              <th scope="col">Created</th>
+              <th scope="col" class="actions"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @applications.each do |application| %>
+              <tr>
+                <td class="font-medium">
+                  <%= link_to application.name, admin_oauth_application_path(application), class: "link-quiet" %>
+                </td>
+                <td>
+                  <span class="mono block max-w-48 truncate" title="<%= application.uid %>"><%= application.uid %></span>
+                </td>
+                <td>
+                  <div class="flex flex-wrap gap-1">
+                    <%= badge(application.confidential? ? "Confidential" : "Public", tone: application.confidential? ? :info : :neutral) %>
+                    <% if AppAccess.restricted?(application) %>
+                      <%= badge "Restricted", tone: :orchid %>
+                    <% end %>
+                    <% unless application.requires_code_of_conduct %>
+                      <%= badge "CoC optional", tone: :sky %>
+                    <% end %>
+                    <% unless application.requires_guardian_consent %>
+                      <%= badge "Guardian consent optional", tone: :sky %>
+                    <% end %>
+                  </div>
+                </td>
+                <td class="min-w-48">
+                  <% if application.scopes.present? %>
+                    <ul class="flex flex-wrap gap-1" aria-label="Scopes">
+                      <% application.scopes.all.each do |scope| %>
+                        <li class="badge badge-teal"><%= scope %></li>
+                      <% end %>
+                    </ul>
+                  <% else %>
+                    <span class="text-ink-faint">Default</span>
+                  <% end %>
+                </td>
+                <td class="whitespace-nowrap text-ink-soft">
+                  <%= time_ago_in_words(application.created_at) %> ago
+                </td>
+                <td class="actions">
+                  <%= link_to "View", admin_oauth_application_path(application), class: "btn btn-quiet btn-sm" %>
+                  <% if current_user.superadmin? %>
+                    <%= link_to "Edit", edit_admin_oauth_application_path(application), class: "btn btn-quiet btn-sm" %>
+                  <% end %>
+                  <% if current_user.owner? %>
+                    <%= button_to "Delete", admin_oauth_application_path(application), method: :delete,
+                        class: "btn btn-danger btn-sm", form_class: "inline-block",
+                        data: { turbo_confirm: "Delete #{application.name}? This revokes every access token for this application." } %>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
       </div>
-      <p class="text-ink-soft text-lg mb-4">No OAuth applications found</p>
-      <p class="text-ink-faint text-sm mb-6">Create your first OAuth application to allow external services to authenticate users.</p>
-      <%= link_to "Create your first OAuth application", new_admin_oauth_application_path, class: "btn-stitch" %>
-    </div>
+    <% elsif params[:search].present? %>
+      <%= empty_state("No OAuth applications match “#{params[:search]}”", body: "Search by name, client ID or redirect URI.", icon: :search) %>
+    <% else %>
+      <%= empty_state("No OAuth applications found",
+            body: "Create your first OAuth application to allow external services to authenticate users.", icon: :shield_check) do %>
+        <%= link_to "Create your first OAuth application", new_admin_oauth_application_path, class: "btn btn-secondary" %>
+      <% end %>
+    <% end %>
   <% end %>
 </div>

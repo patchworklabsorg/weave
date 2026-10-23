@@ -1,0 +1,14 @@
+<%# The validation summary above a form. Use through form_errors(record). %>
+<div class="callout callout-danger" role="alert">
+  <%= icon(:circle_x, size: 18) %>
+  <div class="callout-body">
+    <p class="callout-title">
+      <%= record.errors.count == 1 ? "There is a problem with the form" : "There are #{record.errors.count} problems with the form" %>
+    </p>
+    <ul class="mt-1 list-disc pl-5 space-y-0.5">
+      <% record.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+    </ul>
+  </div>
+</div>

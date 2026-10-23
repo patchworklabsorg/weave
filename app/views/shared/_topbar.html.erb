@@ -1,0 +1,68 @@
+<%# The member-pages top bar (layouts/application). %>
+<header class="topbar" data-controller="drawer" data-action="keydown@window->drawer#keydown">
+  <div class="topbar-inner">
+    <%= render "shared/wordmark" %>
+
+    <% if current_user %>
+      <nav class="topbar-nav" aria-label="Account">
+        <%= nav_link "Account", profile_path, icon: :user, active: request.path.in?([profile_path, edit_profile_path]) %>
+        <%= nav_link "Sessions", profile_sessions_path, icon: :monitor %>
+        <%= nav_link "Passkeys", passkeys_path, icon: :fingerprint %>
+        <%= nav_link "Password", password_path, icon: :lock %>
+      </nav>
+    <% end %>
+
+    <div class="topbar-end">
+      <% if current_user %>
+        <button type="button" class="cmdk-trigger" data-command-bar-trigger aria-label="Search or jump to a page">
+          <%= icon(:search) %>
+          <span class="cmdk-trigger-label">Search or jump to…</span>
+          <span class="kbd">⌘K</span>
+        </button>
+        <%= render "shared/theme_toggle" %>
+        <% if current_user.admin? %>
+          <%= link_to admin_root_path, class: "btn btn-secondary btn-sm hidden sm:inline-flex" do %>
+            <%= icon(:layout_dashboard) %>Admin
+          <% end %>
+        <% end %>
+        <% if impersonating? %>
+          <%= button_to stop_impersonating_admin_users_path, method: :delete, class: "btn btn-quiet btn-sm hidden sm:inline-flex", form_class: "inline-block" do %>
+            <%= icon(:log_out) %>Stop impersonating
+          <% end %>
+        <% else %>
+          <%= button_to logout_path, method: :delete, class: "btn btn-quiet btn-sm hidden sm:inline-flex", form_class: "inline-block", title: "Sign out" do %>
+            <%= icon(:log_out) %>Sign out
+          <% end %>
+        <% end %>
+        <button type="button" class="btn btn-quiet btn-sm btn-icon topbar-menu-btn" aria-label="Open menu" aria-expanded="false"
+                data-drawer-target="button" data-action="drawer#toggle">
+          <%= icon(:menu, size: 18) %>
+        </button>
+      <% else %>
+        <%= render "shared/theme_toggle" %>
+        <%= link_to "Sign in", login_path, class: "btn btn-primary btn-sm" %>
+      <% end %>
+    </div>
+  </div>
+
+  <% if current_user %>
+    <nav class="topbar-sheet" data-drawer-target="panel" aria-label="Account menu">
+      <%= nav_link "Account", profile_path, icon: :user, active: request.path.in?([profile_path, edit_profile_path]) %>
+      <%= nav_link "Sessions", profile_sessions_path, icon: :monitor %>
+      <%= nav_link "Passkeys", passkeys_path, icon: :fingerprint %>
+      <%= nav_link "Password", password_path, icon: :lock %>
+      <% if current_user.admin? %>
+        <%= nav_link "Admin", admin_root_path, icon: :layout_dashboard, active: false %>
+      <% end %>
+      <% if impersonating? %>
+        <%= button_to stop_impersonating_admin_users_path, method: :delete, class: "nav-link w-full", form_class: "contents" do %>
+          <%= icon(:log_out) %><span>Stop impersonating</span>
+        <% end %>
+      <% else %>
+        <%= button_to logout_path, method: :delete, class: "nav-link w-full", form_class: "contents" do %>
+          <%= icon(:log_out) %><span>Sign out</span>
+        <% end %>
+      <% end %>
+    </nav>
+  <% end %>
+</header>

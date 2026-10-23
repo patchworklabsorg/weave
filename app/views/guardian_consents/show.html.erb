@@ -4,100 +4,98 @@
 <% content_for :title, "Guardian consent" %>
 <%
   first_name = @user&.first_name
-  link_class = "text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2"
   title = @state == :form ? t("guardian_consent.page.title", first_name:) : t("guardian_consent.#{@state}.title")
-  input_class = "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors"
 %>
 
-<div class="min-h-full flex items-center justify-center px-4 py-12">
+<div class="min-h-full flex items-center justify-center p-6">
   <div class="patch patch-bound patch-tilt-l w-full max-w-lg">
     <div class="quilt-binding"></div>
+    <div class="p-8 sm:p-9 space-y-6">
+      <div class="text-center space-y-2">
+        <%= render "shared/wordmark", size: :lg, href: nil %>
+        <h1 class="font-display text-2xl font-bold text-ink"><%= title %></h1>
+      </div>
 
-    <div class="p-9 pb-5 text-center">
-      <p class="text-sm font-medium text-ink-faint uppercase tracking-wide">Weave &middot; Patchwork Labs</p>
-      <h1 class="font-display text-3xl font-bold text-ink mt-2">
-        <%= title %>
-      </h1>
-    </div>
+      <div class="space-y-5 text-sm text-ink">
+        <% case @state %>
+        <% when :form %>
+          <p><%= t("guardian_consent.page.intro", first_name:, last_name: @user.last_name) %></p>
 
-    <div class="px-9 pb-9 space-y-5 text-sm text-ink">
-      <% case @state %>
-      <% when :form %>
-        <p><%= t("guardian_consent.page.intro", first_name:, last_name: @user.last_name) %></p>
+          <div>
+            <h2 class="font-semibold"><%= t("guardian_consent.page.what_title") %></h2>
+            <p class="mt-1"><%= t("guardian_consent.page.what") %></p>
+            <p class="mt-1"><%= t("guardian_consent.page.members") %></p>
+          </div>
 
-        <div>
-          <h2 class="font-semibold"><%= t("guardian_consent.page.what_title") %></h2>
-          <p class="mt-1"><%= t("guardian_consent.page.what") %></p>
-          <p class="mt-1"><%= t("guardian_consent.page.members") %></p>
-        </div>
-
-        <div>
-          <h2 class="font-semibold"><%= t("guardian_consent.page.data_title") %></h2>
-          <p class="mt-1"><%= t("guardian_consent.page.data", first_name:) %></p>
-          <p class="mt-1"><%= t("guardian_consent.page.data_check") %></p>
-          <p class="mt-1"><%= t("guardian_consent.page.retention", first_name:) %></p>
-          <p class="mt-1">
-            <%= link_to t("guardian_consent.page.privacy_link"), Weave::PRIVACY_POLICY_URL,
-                  target: "_blank", rel: "noopener noreferrer", class: link_class %>
-          </p>
-        </div>
-
-        <div>
-          <h2 class="font-semibold"><%= t("guardian_consent.page.safety_title") %></h2>
-          <p class="mt-1"><%= t("guardian_consent.page.safety") %></p>
-          <% if SlackService.code_of_conduct_url.present? %>
+          <div>
+            <h2 class="font-semibold"><%= t("guardian_consent.page.data_title") %></h2>
+            <p class="mt-1"><%= t("guardian_consent.page.data", first_name:) %></p>
+            <p class="mt-1"><%= t("guardian_consent.page.data_check") %></p>
+            <p class="mt-1"><%= t("guardian_consent.page.retention", first_name:) %></p>
             <p class="mt-1">
-              <%= link_to t("guardian_consent.page.code_of_conduct_link"), SlackService.code_of_conduct_url,
-                    target: "_blank", rel: "noopener noreferrer", class: link_class %>
+              <%= link_to t("guardian_consent.page.privacy_link"), Weave::PRIVACY_POLICY_URL,
+                    target: "_blank", rel: "noopener noreferrer", class: "link" %>
             </p>
+          </div>
+
+          <div>
+            <h2 class="font-semibold"><%= t("guardian_consent.page.safety_title") %></h2>
+            <p class="mt-1"><%= t("guardian_consent.page.safety") %></p>
+            <% if SlackService.code_of_conduct_url.present? %>
+              <p class="mt-1">
+                <%= link_to t("guardian_consent.page.code_of_conduct_link"), SlackService.code_of_conduct_url,
+                      target: "_blank", rel: "noopener noreferrer", class: "link" %>
+              </p>
+            <% end %>
+          </div>
+
+          <p><%= t("guardian_consent.page.revoke_info") %></p>
+
+          <p><%= t("guardian_consent.page.check_info", first_name:) %></p>
+
+          <%= form_with url: guardian_consent_path(token: params[:token]), method: :post, data: { controller: "fingerprint" },
+                class: "well space-y-4" do |form| %>
+            <%= hidden_field_tag :fingerprint, "", data: { fingerprint_target: "fingerprint" } %>
+            <div class="field-group">
+              <label class="choice">
+                <%= check_box_tag :confirm, "1", params[:confirm] == "1", required: true, class: "checkbox",
+                      aria: { invalid: (true if @form_errors&.key?(:confirm)) } %>
+                <span><%= t("guardian_consent.page.confirm_label", first_name:) %></span>
+              </label>
+              <% if @form_errors&.key?(:confirm) %>
+                <p class="field-error"><%= @form_errors[:confirm] %></p>
+              <% end %>
+            </div>
+            <div class="field-group">
+              <%= form.label :signed_name, t("guardian_consent.page.signed_name"), class: "field-label" %>
+              <%= form.text_field :signed_name, value: params[:signed_name], required: true, maxlength: 100,
+                    autocomplete: "name", aria: { describedby: "signed_name_hint", invalid: (true if @form_errors&.key?(:signed_name)) },
+                    class: "field" %>
+              <p id="signed_name_hint" class="field-hint"><%= t("guardian_consent.page.signed_name_hint") %></p>
+              <% if @form_errors&.key?(:signed_name) %>
+                <p class="field-error"><%= @form_errors[:signed_name] %></p>
+              <% end %>
+            </div>
+            <%= form.submit t("guardian_consent.page.submit"), class: "btn btn-primary btn-block" %>
           <% end %>
-        </div>
 
-        <p><%= t("guardian_consent.page.revoke_info") %></p>
+        <% when :granted %>
+          <p><%= t("guardian_consent.granted.body", first_name:, date: @consent.granted_at.strftime("%B %-d, %Y")) %></p>
+          <p><%= t("guardian_consent.granted.revoke_info", first_name:) %></p>
+          <%= button_to t("guardian_consent.granted.revoke"), guardian_consent_path(token: params[:token]), method: :delete,
+                class: "btn btn-danger btn-block",
+                data: { turbo_confirm: t("guardian_consent.granted.revoke_confirm", first_name:) } %>
 
-        <p><%= t("guardian_consent.page.check_info", first_name:) %></p>
+        <% when :revoked %>
+          <p><%= t("guardian_consent.revoked.body", first_name:) %></p>
 
-        <%= form_with url: guardian_consent_path(token: params[:token]), method: :post, data: { controller: "fingerprint" },
-              class: "patch border-2 border-grape bg-grape-soft/40 p-5 space-y-4" do |form| %>
-          <%= hidden_field_tag :fingerprint, "", data: { fingerprint_target: "fingerprint" } %>
-          <div>
-            <label class="flex items-start gap-3">
-              <%= check_box_tag :confirm, "1", params[:confirm] == "1", required: true,
-                    class: "mt-0.5 h-4 w-4 rounded border-neutral-300 text-grape focus:ring-grape" %>
-              <span><%= t("guardian_consent.page.confirm_label", first_name:) %></span>
-            </label>
-            <% if @form_errors&.key?(:confirm) %>
-              <p class="mt-1 text-sm text-orchid"><%= @form_errors[:confirm] %></p>
-            <% end %>
-          </div>
-          <div>
-            <%= form.label :signed_name, t("guardian_consent.page.signed_name"), class: "block font-medium" %>
-            <%= form.text_field :signed_name, value: params[:signed_name], required: true, maxlength: 100,
-                  autocomplete: "name", aria: { describedby: "signed_name_hint" }, class: input_class %>
-            <p id="signed_name_hint" class="mt-1 text-xs text-ink-faint"><%= t("guardian_consent.page.signed_name_hint") %></p>
-            <% if @form_errors&.key?(:signed_name) %>
-              <p class="mt-1 text-sm text-orchid"><%= @form_errors[:signed_name] %></p>
-            <% end %>
-          </div>
-          <%= form.submit t("guardian_consent.page.submit"), class: "btn-stitch w-full justify-center" %>
+        <% when :expired %>
+          <p><%= t("guardian_consent.expired.body", first_name:) %></p>
+
+        <% else %>
+          <p><%= t("guardian_consent.invalid.body") %></p>
         <% end %>
-
-      <% when :granted %>
-        <p><%= t("guardian_consent.granted.body", first_name:, date: @consent.granted_at.strftime("%B %-d, %Y")) %></p>
-        <p><%= t("guardian_consent.granted.revoke_info", first_name:) %></p>
-        <%= button_to t("guardian_consent.granted.revoke"), guardian_consent_path(token: params[:token]), method: :delete,
-              class: "btn-stitch-ghost w-full justify-center",
-              data: { turbo_confirm: t("guardian_consent.granted.revoke_confirm", first_name:) } %>
-
-      <% when :revoked %>
-        <p><%= t("guardian_consent.revoked.body", first_name:) %></p>
-
-      <% when :expired %>
-        <p><%= t("guardian_consent.expired.body", first_name:) %></p>
-
-      <% else %>
-        <p><%= t("guardian_consent.invalid.body") %></p>
-      <% end %>
+      </div>
 
       <p class="text-xs text-ink-faint text-center"><%= t("guardian_consent.page.contact", email: Weave.mail_address) %></p>
     </div>

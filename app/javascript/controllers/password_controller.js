@@ -29,10 +29,10 @@ export default class extends Controller {
     const icon = element.querySelector('span')
 
     if (met) {
-      element.className = 'flex items-center text-green-600'
+      element.className = 'flex items-center text-success'
       icon.textContent = '✓'
     } else {
-      element.className = 'flex items-center text-red-600'
+      element.className = 'flex items-center text-danger'
       icon.textContent = '✗'
     }
   }

@@ -5,422 +5,403 @@
 <% end %>
 <% content_for :title, @application.name %>
 
-<div class="mb-6">
-  <div class="flex justify-between items-center mb-4">
-    <div>
-      <h2 class="font-display text-2xl font-bold text-ink"><%= @application.name %></h2>
-      <p class="text-ink-soft">OAuth Application Details</p>
-    </div>
-    <div class="flex space-x-3">
-      <%= link_to "Back to Applications", admin_oauth_applications_path, class: "btn-stitch-ghost" %>
-      <% if current_user.superadmin? %>
-        <%= link_to "Edit", edit_admin_oauth_application_path(@application), class: "btn-stitch" %>
+<header class="page-header">
+  <div>
+    <p class="text-sm"><%= link_to "OAuth applications", admin_oauth_applications_path, class: "link-quiet text-ink-soft" %></p>
+    <h1 class="page-title"><%= @application.name %></h1>
+    <div class="page-lede flex flex-wrap items-center gap-1.5">
+      <span>OAuth application</span>
+      <%= badge(@application.confidential? ? "Confidential" : "Public", tone: @application.confidential? ? :info : :neutral) %>
+      <% if AppAccess.restricted?(@application) %>
+        <%= badge "Restricted", tone: :orchid %>
+      <% end %>
+      <% unless @application.requires_code_of_conduct %>
+        <%= badge "CoC optional", tone: :sky %>
+      <% end %>
+      <% unless @application.requires_guardian_consent %>
+        <%= badge "Guardian consent optional", tone: :sky %>
       <% end %>
     </div>
   </div>
-</div>
+  <% if current_user.superadmin? %>
+    <div class="page-actions">
+      <%= link_to edit_admin_oauth_application_path(@application), class: "btn btn-secondary" do %><%= icon(:pencil) %>Edit<% end %>
+    </div>
+  <% end %>
+</header>
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-  <!-- Application Details -->
-  <div class="patch p-6">
-    <h3 class="font-display text-lg font-bold text-ink mb-4">Application Details</h3>
-
-    <dl class="space-y-4">
-      <div>
-        <dt class="text-sm font-medium text-ink-faint">Name</dt>
-        <dd class="mt-1 text-sm text-ink"><%= @application.name %></dd>
-      </div>
-
-      <div>
-        <dt class="text-sm font-medium text-ink-faint">Application Type</dt>
-        <dd class="mt-1">
-          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-            <%= @application.confidential? ? 'bg-sky-soft text-sky' : 'bg-grape-soft text-ink-soft' %>">
-            <%= @application.confidential? ? 'Confidential' : 'Public' %>
-          </span>
-        </dd>
-      </div>
-
-      <div>
-        <dt class="text-sm font-medium text-ink-faint">Scopes</dt>
-        <dd class="mt-1 text-sm text-ink">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Details</h2>
+    </div>
+    <div class="card-body">
+      <dl class="dl">
+        <%= dl_row "Name", @application.name %>
+        <%= dl_row("Application Type") do %>
+          <%= badge(@application.confidential? ? "Confidential" : "Public", tone: @application.confidential? ? :info : :neutral) %>
+        <% end %>
+        <%= dl_row("Scopes") do %>
           <% if @application.scopes.present? %>
-            <% @application.scopes.all.each do |scope| %>
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-soft text-teal mr-2 mb-1">
-                <%= scope %>
-              </span>
-            <% end %>
+            <span class="flex flex-wrap gap-1">
+              <% @application.scopes.all.each do |scope| %>
+                <%= badge scope, tone: :teal %>
+              <% end %>
+            </span>
           <% else %>
             <span class="text-ink-faint">Using default scopes: profile</span>
           <% end %>
-        </dd>
-      </div>
-
-      <div>
-        <dt class="text-sm font-medium text-ink-faint">Created</dt>
-        <dd class="mt-1 text-sm text-ink">
+        <% end %>
+        <%= dl_row("Created") do %>
           <%= @application.created_at.strftime("%B %d, %Y at %I:%M %p") %>
           (<%= time_ago_in_words(@application.created_at) %> ago)
-        </dd>
-      </div>
-    </dl>
+        <% end %>
+      </dl>
+    </div>
   </div>
 
-  <!-- Credentials -->
-  <div class="patch p-6">
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="font-display text-lg font-bold text-ink">Credentials</h3>
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Credentials</h2>
       <% if current_user.superadmin? && @application.confidential? %>
         <%= form_with url: regenerate_secret_admin_oauth_application_path(@application), method: :patch, local: true,
               data: { turbo: false, controller: "confirm-submit", action: "submit->confirm-submit#submit",
                       confirm_submit_message_value: "Regenerate the client secret? The old secret stops working at once, and the app cannot sign users in until it has the new one." },
               class: "inline" do |form| %>
-          <%= form.submit "Regenerate Secret", class: "text-sm btn-stitch-ghost px-3 py-1" %>
+          <%= form.submit "Regenerate secret", class: "btn btn-danger btn-sm" %>
         <% end %>
       <% end %>
     </div>
+    <div class="card-body">
+      <dl class="dl dl-stack">
+        <%= dl_row("Client ID") { copy_button(@application.uid, label: "Copy client ID") } %>
 
-    <dl class="space-y-4">
-      <div>
-        <dt class="text-sm font-medium text-ink-faint">Client ID</dt>
-        <dd class="mt-1">
-          <div class="flex items-center space-x-2" data-controller="clipboard" data-clipboard-text-value="<%= @application.uid %>">
-            <code class="text-sm font-mono bg-grape-soft text-ink px-2 py-1 rounded flex-1 overflow-x-auto">
-              <%= @application.uid %>
-            </code>
-            <button type="button"
-                    data-action="clipboard#copy"
-                    data-clipboard-target="button"
-                    class="text-sm text-ink-soft hover:text-ink"
-                    title="Copy to clipboard">
-              📋
-            </button>
-          </div>
-        </dd>
-      </div>
-
-      <% if @application.confidential? %>
-        <div>
-          <dt class="text-sm font-medium text-ink-faint">Client Secret</dt>
-          <dd class="mt-1">
+        <% if @application.confidential? %>
+          <%= dl_row("Client Secret") do %>
             <% if @plaintext_secret.present? %>
-              <div class="flex items-center space-x-2"
+              <div class="copyable"
                    data-controller="reveal clipboard"
                    data-reveal-secret-value="<%= @plaintext_secret %>"
                    data-reveal-mask-value="<%= "•" * 20 %>"
                    data-clipboard-text-value="<%= @plaintext_secret %>">
-                <code class="text-sm font-mono bg-grape-soft text-ink px-2 py-1 rounded flex-1 overflow-x-auto" data-reveal-target="output"><%= "•" * 20 %></code>
+                <code class="code-chip" data-reveal-target="output"><%= "•" * 20 %></code>
                 <button type="button"
                         data-action="reveal#toggle"
                         data-reveal-target="toggle"
-                        class="text-sm text-ink-soft hover:text-ink"
-                        title="Show/Hide secret">
-                  👁️
+                        class="btn btn-secondary btn-sm btn-icon"
+                        title="Show/Hide secret"
+                        aria-label="Show/Hide secret"
+                        aria-pressed="false">
+                  <%= icon(:eye, class: "reveal-show") %><%= icon(:eye_off, class: "reveal-hide", hidden: true) %>
                 </button>
                 <button type="button"
                         data-action="clipboard#copy"
                         data-clipboard-target="button"
-                        class="text-sm text-ink-soft hover:text-ink"
-                        title="Copy to clipboard">
-                  📋
+                        class="btn btn-secondary btn-sm btn-icon"
+                        title="Copy to clipboard"
+                        aria-label="Copy to clipboard">
+                  <%= icon(:copy, class: "copy-idle") %><%= icon(:check, class: "copy-done", hidden: true) %>
                 </button>
               </div>
-              <p class="mt-1 text-sm text-ink-soft">Copy it now. Weave stores only a hash, so this page cannot show it again. Do not reload this page: that sends the form again.</p>
+              <p class="mt-2 text-sm text-ink-soft">Copy it now. Weave stores only a hash, so this page cannot show it again. Do not reload this page: that sends the form again.</p>
             <% else %>
               <p class="text-sm text-ink-soft">Hidden. Weave stores only a hash of the secret, so it cannot show it. To get a new one, regenerate it.</p>
             <% end %>
-          </dd>
-        </div>
-      <% end %>
-    </dl>
+          <% end %>
+        <% end %>
+      </dl>
+    </div>
   </div>
 
-  <!-- Redirect URIs -->
-  <!-- Access -->
-  <div id="access" class="patch p-6 lg:col-span-2">
-    <div class="flex flex-wrap justify-between items-start gap-4 mb-4">
+  <div id="access" class="card lg:col-span-2">
+    <div class="card-header">
       <div>
-        <h3 class="font-display text-lg font-bold text-ink">Access</h3>
+        <h2 class="card-title">Access</h2>
         <% if AppAccess.restricted?(@application) %>
-          <p class="text-sm text-ink-soft">Only the users and groups below can use this app.</p>
+          <p class="card-lede">Only the users and groups below can use this app.</p>
         <% else %>
-          <p class="text-sm text-ink-soft">Everyone who can sign in to Weave can use this app.</p>
+          <p class="card-lede">Everyone who can sign in to Weave can use this app.</p>
         <% end %>
       </div>
       <% if current_user.superadmin? %>
         <% if AppAccess.restricted?(@application) %>
           <%= button_to "Open to everyone", access_policy_admin_oauth_application_path(@application),
-              method: :patch, params: { access_policy: "everyone" }, class: "btn-stitch-ghost",
+              method: :patch, params: { access_policy: "everyone" }, class: "btn btn-secondary",
               data: { turbo_confirm: "Let everyone who can sign in use #{@application.name}?" } %>
         <% else %>
           <%= button_to "Restrict access", access_policy_admin_oauth_application_path(@application),
-              method: :patch, params: { access_policy: "restricted" }, class: "btn-stitch",
+              method: :patch, params: { access_policy: "restricted" }, class: "btn btn-primary",
               data: { turbo_confirm: "Only users and groups with a grant will be able to use #{@application.name}. Continue?" } %>
         <% end %>
       <% end %>
     </div>
 
-    <% if @access_grants.any? %>
-      <ul class="divide-y divide-ink-soft/10 mb-4">
-        <% @access_grants.each do |grant| %>
-          <li class="flex items-center justify-between py-2 text-sm">
-            <span>
-              <% if grant.grantee.is_a?(Group) %>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-soft text-teal mr-2">Group</span>
-                <%= link_to grant.grantee.name, admin_group_path(grant.grantee), class: "text-ink hover:text-grape font-medium" %>
-              <% else %>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-soft text-sky mr-2">User</span>
-                <%= link_to grant.grantee.full_name, admin_user_path(grant.grantee), class: "text-ink hover:text-grape font-medium" %>
-                <span class="text-xs text-ink-faint"><%= grant.grantee.email %></span>
+    <div class="card-body space-y-5">
+      <% if @access_grants.any? %>
+        <div class="record-list">
+          <% @access_grants.each do |grant| %>
+            <div class="record">
+              <div class="record-main flex flex-wrap items-center gap-2">
+                <% if grant.grantee.is_a?(Group) %>
+                  <%= badge "Group", tone: :teal %>
+                  <%= link_to grant.grantee.name, admin_group_path(grant.grantee), class: "record-title link-quiet" %>
+                <% else %>
+                  <%= badge "User", tone: :sky %>
+                  <%= link_to grant.grantee.full_name, admin_user_path(grant.grantee), class: "record-title link-quiet" %>
+                  <span class="record-meta"><%= grant.grantee.email %></span>
+                <% end %>
+              </div>
+              <% if current_user.superadmin? %>
+                <div class="record-actions">
+                  <%= button_to "Remove", admin_oauth_application_access_grant_path(@application, grant), method: :delete,
+                      class: "btn btn-danger btn-sm",
+                      data: { turbo_confirm: "Remove this access grant?" } %>
+                </div>
               <% end %>
-            </span>
-            <% if current_user.superadmin? %>
-              <%= button_to "Remove", admin_oauth_application_access_grant_path(@application, grant), method: :delete,
-                  class: "text-red-600 hover:text-red-900",
-                  data: { turbo_confirm: "Remove this access grant?" } %>
+            </div>
+          <% end %>
+        </div>
+      <% elsif AppAccess.restricted?(@application) %>
+        <%= empty_state("No grants yet. Nobody can use this app.", icon: :lock) %>
+      <% end %>
+
+      <div class="record-list border-y border-hairline">
+        <div class="record flex-wrap">
+          <div class="record-main text-sm text-ink-soft">
+            <% if @application.requires_code_of_conduct %>
+              Users must accept the Code of Conduct before they can use this app.
+            <% else %>
+              This app is opted out: users who have not accepted the Code of Conduct can use it.
             <% end %>
-          </li>
-        <% end %>
-      </ul>
-    <% elsif AppAccess.restricted?(@application) %>
-      <p class="text-sm text-ink-faint mb-4">No grants yet. Nobody can use this app.</p>
-    <% end %>
-
-    <div class="flex flex-wrap justify-between items-center gap-4 mb-4 py-3 border-y border-ink-soft/10">
-      <p class="text-sm text-ink-soft">
-        <% if @application.requires_code_of_conduct %>
-          Users must accept the Code of Conduct before they can use this app.
-        <% else %>
-          This app is opted out: users who have not accepted the Code of Conduct can use it.
-        <% end %>
-      </p>
-      <% if current_user.superadmin? %>
-        <% if @application.requires_code_of_conduct %>
-          <%= button_to "Opt out of the Code of Conduct", code_of_conduct_admin_oauth_application_path(@application),
-              method: :patch, params: { required: false }, class: "btn-stitch-ghost",
-              data: { turbo_confirm: "Let users who have not accepted the Code of Conduct use #{@application.name}?" } %>
-        <% else %>
-          <%= button_to "Require the Code of Conduct", code_of_conduct_admin_oauth_application_path(@application),
-              method: :patch, params: { required: true }, class: "btn-stitch-ghost",
-              data: { turbo_confirm: "Users who have not accepted the Code of Conduct will lose access to #{@application.name}. Continue?" } %>
-        <% end %>
-      <% end %>
-    </div>
-
-    <div class="flex flex-wrap justify-between items-center gap-4 mb-4 pb-3 border-b border-ink-soft/10">
-      <p class="text-sm text-ink-soft">
-        <% if @application.requires_guardian_consent %>
-          Members under 18 need a parent or guardian's consent before they can use this app.
-        <% else %>
-          This app is opted out: members under 18 can use it without a parent or guardian's consent.
-        <% end %>
-      </p>
-      <% if current_user.superadmin? %>
-        <% if @application.requires_guardian_consent %>
-          <%= button_to "Opt out of guardian consent", guardian_consent_admin_oauth_application_path(@application),
-              method: :patch, params: { required: false }, class: "btn-stitch-ghost",
-              data: { turbo_confirm: "Let members under 18 use #{@application.name} without a parent or guardian's consent?" } %>
-        <% else %>
-          <%= button_to "Require guardian consent", guardian_consent_admin_oauth_application_path(@application),
-              method: :patch, params: { required: true }, class: "btn-stitch-ghost",
-              data: { turbo_confirm: "Members under 18 without a parent or guardian's consent will lose access to #{@application.name}. Continue?" } %>
-        <% end %>
-      <% end %>
-    </div>
-
-    <div class="flex flex-wrap justify-between items-end gap-4 mb-4 pb-3 border-b border-ink-soft/10">
-      <p class="text-sm text-ink-soft flex-1">
-        <% if AppAccess.email_domain_required?(@application) %>
-          The <code>email</code> claim is the user's confirmed address on <strong><%= @application.email_domains.to_sentence(two_words_connector: " or ", last_word_connector: " or ") %></strong>. Users without one can't use this app.
-        <% else %>
-          The <code>email</code> claim is the user's primary address. Set email domains for an app such as Google Workspace, which must get the user's address on its own domains.
-        <% end %>
-      </p>
-      <% if current_user.superadmin? %>
-        <%= form_with url: email_domains_admin_oauth_application_path(@application), method: :patch, local: true, class: "flex items-end gap-2" do |form| %>
-          <div>
-            <%= form.label :email_domains, "Email domains", class: "block text-sm font-medium text-ink" %>
-            <%= form.text_field :email_domains, value: @application.email_domains.join(", "), placeholder: "patchworklabs.org, hackboston.dev",
-                class: "mt-1 w-72 px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
           </div>
-          <%= form.submit "Save", class: "btn-stitch-ghost" %>
-        <% end %>
-      <% end %>
-    </div>
+          <% if current_user.superadmin? %>
+            <div class="record-actions">
+              <% if @application.requires_code_of_conduct %>
+                <%= button_to "Opt out of the Code of Conduct", code_of_conduct_admin_oauth_application_path(@application),
+                    method: :patch, params: { required: false }, class: "btn btn-secondary btn-sm",
+                    data: { turbo_confirm: "Let users who have not accepted the Code of Conduct use #{@application.name}?" } %>
+              <% else %>
+                <%= button_to "Require the Code of Conduct", code_of_conduct_admin_oauth_application_path(@application),
+                    method: :patch, params: { required: true }, class: "btn btn-secondary btn-sm",
+                    data: { turbo_confirm: "Users who have not accepted the Code of Conduct will lose access to #{@application.name}. Continue?" } %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
 
-    <% if current_user.superadmin? %>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <%= form_with scope: :access_grant, url: admin_oauth_application_access_grants_path(@application), local: true,
-            class: "flex items-end gap-2" do |form| %>
-          <div class="flex-1">
-            <%= form.label :group_id, "Add a group", class: "block text-sm font-medium text-ink" %>
-            <%= form.select :group_id, @grantable_groups.map { |group| [group.name, group.public_id] },
-                { include_blank: "Choose a group" }, required: true, class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+        <div class="record flex-wrap">
+          <div class="record-main text-sm text-ink-soft">
+            <% if @application.requires_guardian_consent %>
+              Members under 18 need a parent or guardian's consent before they can use this app.
+            <% else %>
+              This app is opted out: members under 18 can use it without a parent or guardian's consent.
+            <% end %>
           </div>
-          <%= form.submit "Add", class: "btn-stitch" %>
-        <% end %>
-        <%= form_with scope: :access_grant, url: admin_oauth_application_access_grants_path(@application), local: true,
-            class: "flex items-end gap-2" do |form| %>
-          <div class="flex-1">
-            <%= form.label :email, "Add a user", class: "block text-sm font-medium text-ink" %>
-            <%= form.email_field :email, required: true, placeholder: "person@example.com", class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+          <% if current_user.superadmin? %>
+            <div class="record-actions">
+              <% if @application.requires_guardian_consent %>
+                <%= button_to "Opt out of guardian consent", guardian_consent_admin_oauth_application_path(@application),
+                    method: :patch, params: { required: false }, class: "btn btn-secondary btn-sm",
+                    data: { turbo_confirm: "Let members under 18 use #{@application.name} without a parent or guardian's consent?" } %>
+              <% else %>
+                <%= button_to "Require guardian consent", guardian_consent_admin_oauth_application_path(@application),
+                    method: :patch, params: { required: true }, class: "btn btn-secondary btn-sm",
+                    data: { turbo_confirm: "Members under 18 without a parent or guardian's consent will lose access to #{@application.name}. Continue?" } %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="record flex-wrap items-end">
+          <div class="record-main text-sm text-ink-soft min-w-64">
+            <% if AppAccess.email_domain_required?(@application) %>
+              The <code class="code-chip">email</code> claim is the user's confirmed address on <strong class="text-ink"><%= @application.email_domains.to_sentence(two_words_connector: " or ", last_word_connector: " or ") %></strong>. Users without one can't use this app.
+            <% else %>
+              The <code class="code-chip">email</code> claim is the user's primary address. Set email domains for an app such as Google Workspace, which must get the user's address on its own domains.
+            <% end %>
           </div>
-          <%= form.submit "Add", class: "btn-stitch" %>
-        <% end %>
+          <% if current_user.superadmin? %>
+            <div class="record-actions">
+              <%= form_with url: email_domains_admin_oauth_application_path(@application), method: :patch, local: true, class: "flex flex-wrap items-end gap-2" do |form| %>
+                <div class="field-group">
+                  <%= form.label :email_domains, "Email domains", class: "field-label" %>
+                  <%= form.text_field :email_domains, value: @application.email_domains.join(", "), placeholder: "patchworklabs.org, hackboston.dev",
+                      class: "field field-sm w-72 max-w-full" %>
+                </div>
+                <%= form.submit "Save", class: "btn btn-secondary btn-sm" %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
       </div>
-    <% end %>
+
+      <% if current_user.superadmin? %>
+        <div class="well grid grid-cols-1 md:grid-cols-2 gap-4">
+          <%= form_with scope: :access_grant, url: admin_oauth_application_access_grants_path(@application), local: true,
+              class: "flex items-end gap-2" do |form| %>
+            <div class="field-group flex-1 min-w-0">
+              <%= form.label :group_id, "Add a group", class: "field-label" %>
+              <%= form.select :group_id, @grantable_groups.map { |group| [group.name, group.public_id] },
+                  { include_blank: "Choose a group" }, required: true, class: "field" %>
+            </div>
+            <%= form.submit "Add", class: "btn btn-secondary" %>
+          <% end %>
+          <%= form_with scope: :access_grant, url: admin_oauth_application_access_grants_path(@application), local: true,
+              class: "flex items-end gap-2" do |form| %>
+            <div class="field-group flex-1 min-w-0">
+              <%= form.label :email, "Add a user", class: "field-label" %>
+              <%= form.email_field :email, required: true, placeholder: "person@example.com", class: "field" %>
+            </div>
+            <%= form.submit "Add", class: "btn btn-secondary" %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
   </div>
 
-  <!-- Roles -->
-  <div id="roles" class="patch p-6 lg:col-span-2">
-    <div class="mb-4">
-      <h3 class="font-display text-lg font-bold text-ink">Roles</h3>
-      <p class="text-sm text-ink-soft">Roles this app defines. The app reads the keys from the <code>roles</code> claim. A role also gives access when the app is restricted.</p>
+  <div id="roles" class="card lg:col-span-2">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">Roles</h2>
+        <p class="card-lede">Roles this app defines. The app reads the keys from the <code class="code-chip">roles</code> claim. A role also gives access when the app is restricted.</p>
+      </div>
     </div>
 
-    <% if @roles.any? %>
-      <div class="space-y-4 mb-4">
+    <div class="card-body space-y-4">
+      <% if @roles.any? %>
         <% @roles.each do |role| %>
-          <div class="rounded-lg border border-ink-soft/10 p-4">
+          <div class="well space-y-3">
             <div class="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <span class="font-medium text-ink"><%= role.name %></span>
-                <code class="ml-2 text-xs text-ink-soft"><%= role.key %></code>
+              <div class="min-w-0">
+                <p class="flex flex-wrap items-center gap-2">
+                  <span class="font-medium text-ink"><%= role.name %></span>
+                  <code class="code-chip"><%= role.key %></code>
+                </p>
                 <% if role.description.present? %>
-                  <p class="text-xs text-ink-faint"><%= role.description %></p>
+                  <p class="mt-1 text-sm text-ink-soft"><%= role.description %></p>
                 <% end %>
               </div>
               <% if current_user.superadmin? %>
                 <%= button_to "Delete role", admin_oauth_application_role_path(@application, role), method: :delete,
-                    class: "text-red-600 hover:text-red-900 text-sm",
+                    class: "btn btn-danger btn-sm",
                     data: { turbo_confirm: "Delete the #{role.name} role? Everyone loses it." } %>
               <% end %>
             </div>
 
             <% if role.assignments.any? %>
-              <ul class="divide-y divide-ink-soft/10 mt-2">
+              <div class="record-list">
                 <% role.assignments.sort_by { |assignment| [assignment.assignee_type, assignment.created_at] }.each do |assignment| %>
-                  <li class="flex items-center justify-between py-2 text-sm">
-                    <span>
+                  <div class="record">
+                    <div class="record-main flex flex-wrap items-center gap-2">
                       <% if assignment.assignee.is_a?(Group) %>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-soft text-teal mr-2">Group</span>
-                        <%= link_to assignment.assignee.name, admin_group_path(assignment.assignee), class: "text-ink hover:text-grape font-medium" %>
+                        <%= badge "Group", tone: :teal %>
+                        <%= link_to assignment.assignee.name, admin_group_path(assignment.assignee), class: "record-title link-quiet" %>
                       <% else %>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-soft text-sky mr-2">User</span>
-                        <%= link_to assignment.assignee.full_name, admin_user_path(assignment.assignee), class: "text-ink hover:text-grape font-medium" %>
-                        <span class="text-xs text-ink-faint"><%= assignment.assignee.email %></span>
+                        <%= badge "User", tone: :sky %>
+                        <%= link_to assignment.assignee.full_name, admin_user_path(assignment.assignee), class: "record-title link-quiet" %>
+                        <span class="record-meta"><%= assignment.assignee.email %></span>
                       <% end %>
-                    </span>
+                    </div>
                     <% if current_user.superadmin? %>
-                      <%= button_to "Remove", admin_oauth_application_role_assignment_path(@application, role, assignment), method: :delete,
-                          class: "text-red-600 hover:text-red-900",
-                          data: { turbo_confirm: "Remove this role assignment?" } %>
+                      <div class="record-actions">
+                        <%= button_to "Remove", admin_oauth_application_role_assignment_path(@application, role, assignment), method: :delete,
+                            class: "btn btn-danger btn-sm",
+                            data: { turbo_confirm: "Remove this role assignment?" } %>
+                      </div>
                     <% end %>
-                  </li>
+                  </div>
                 <% end %>
-              </ul>
+              </div>
             <% else %>
-              <p class="text-xs text-ink-faint mt-2">Nobody has this role.</p>
+              <p class="text-sm text-ink-faint">Nobody has this role.</p>
             <% end %>
 
             <% if current_user.superadmin? %>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <%= form_with scope: :assignment, url: admin_oauth_application_role_assignments_path(@application, role), local: true,
                     class: "flex items-end gap-2" do |form| %>
-                  <div class="flex-1">
-                    <%= form.label :group_id, "Give to a group", class: "block text-sm font-medium text-ink", for: "role_#{role.id}_group_id" %>
+                  <div class="field-group flex-1 min-w-0">
+                    <%= form.label :group_id, "Give to a group", class: "field-label", for: "role_#{role.id}_group_id" %>
                     <%= form.select :group_id, @groups.map { |group| [group.name, group.public_id] },
-                        { include_blank: "Choose a group" }, required: true, id: "role_#{role.id}_group_id", class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+                        { include_blank: "Choose a group" }, required: true, id: "role_#{role.id}_group_id", class: "field field-sm" %>
                   </div>
-                  <%= form.submit "Add", class: "btn-stitch" %>
+                  <%= form.submit "Add", class: "btn btn-secondary btn-sm" %>
                 <% end %>
                 <%= form_with scope: :assignment, url: admin_oauth_application_role_assignments_path(@application, role), local: true,
                     class: "flex items-end gap-2" do |form| %>
-                  <div class="flex-1">
-                    <%= form.label :email, "Give to a user", class: "block text-sm font-medium text-ink", for: "role_#{role.id}_email" %>
-                    <%= form.email_field :email, required: true, placeholder: "person@example.com", id: "role_#{role.id}_email", class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+                  <div class="field-group flex-1 min-w-0">
+                    <%= form.label :email, "Give to a user", class: "field-label", for: "role_#{role.id}_email" %>
+                    <%= form.email_field :email, required: true, placeholder: "person@example.com", id: "role_#{role.id}_email", class: "field field-sm" %>
                   </div>
-                  <%= form.submit "Add", class: "btn-stitch" %>
+                  <%= form.submit "Add", class: "btn btn-secondary btn-sm" %>
                 <% end %>
               </div>
             <% end %>
           </div>
         <% end %>
-      </div>
-    <% else %>
-      <p class="text-sm text-ink-faint mb-4">This app has no roles.</p>
-    <% end %>
-
-    <% if current_user.superadmin? %>
-      <%= form_with scope: :role, url: admin_oauth_application_roles_path(@application), local: true,
-          class: "grid grid-cols-1 md:grid-cols-4 gap-2 items-end" do |form| %>
-        <div>
-          <%= form.label :key, "Key", class: "block text-sm font-medium text-ink" %>
-          <%= form.text_field :key, required: true, placeholder: "reviewer", class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-        </div>
-        <div>
-          <%= form.label :name, "Name", class: "block text-sm font-medium text-ink" %>
-          <%= form.text_field :name, required: true, placeholder: "Reviewer", class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-        </div>
-        <div>
-          <%= form.label :description, "Description", class: "block text-sm font-medium text-ink" %>
-          <%= form.text_field :description, class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-        </div>
-        <%= form.submit "Add role", class: "btn-stitch" %>
+      <% else %>
+        <p class="text-sm text-ink-faint">This app has no roles.</p>
       <% end %>
-      <p class="mt-2 text-xs text-ink-faint">The key can't change after the role is created. Use lowercase letters, digits, <code>-</code>, <code>_</code> or <code>:</code>.</p>
-    <% end %>
-  </div>
 
-  <div class="patch p-6 lg:col-span-2">
-    <h3 class="font-display text-lg font-bold text-ink mb-4">Redirect URIs</h3>
-
-    <div class="space-y-2">
-      <% @application.redirect_uri.split("\n").each do |uri| %>
-        <div class="flex items-center space-x-2" data-controller="clipboard" data-clipboard-text-value="<%= uri.strip %>">
-          <code class="text-sm font-mono bg-grape-soft text-ink px-2 py-1 rounded flex-1">
-            <%= uri.strip %>
-          </code>
-          <button type="button"
-                  data-action="clipboard#copy"
-                  data-clipboard-target="button"
-                  class="text-sm text-ink-soft hover:text-ink"
-                  title="Copy to clipboard">
-            📋
-          </button>
+      <% if current_user.superadmin? %>
+        <div>
+          <%= form_with scope: :role, url: admin_oauth_application_roles_path(@application), local: true,
+              class: "flex flex-col md:flex-row md:items-end gap-3" do |form| %>
+            <div class="form-grid form-grid-3 flex-1">
+              <div class="field-group">
+                <%= form.label :key, "Key", class: "field-label" %>
+                <%= form.text_field :key, required: true, placeholder: "reviewer", class: "field" %>
+              </div>
+              <div class="field-group">
+                <%= form.label :name, "Name", class: "field-label" %>
+                <%= form.text_field :name, required: true, placeholder: "Reviewer", class: "field" %>
+              </div>
+              <div class="field-group">
+                <%= form.label :description, "Description", class: "field-label" %>
+                <%= form.text_field :description, class: "field" %>
+              </div>
+            </div>
+            <%= form.submit "Add role", class: "btn btn-secondary" %>
+          <% end %>
+          <p class="mt-2 field-hint">The key can't change after the role is created. Use lowercase letters, digits, <code class="code-chip">-</code>, <code class="code-chip">_</code> or <code class="code-chip">:</code>.</p>
         </div>
       <% end %>
     </div>
   </div>
 
-  <!-- Usage Instructions -->
-  <div class="patch p-6 lg:col-span-2">
-    <h3 class="font-display text-lg font-bold text-ink mb-4">Integration Instructions</h3>
+  <div class="card lg:col-span-2">
+    <div class="card-header">
+      <h2 class="card-title">Redirect URIs</h2>
+    </div>
+    <div class="card-body space-y-2">
+      <% @application.redirect_uri.split("\n").each do |uri| %>
+        <%= copy_button(uri.strip, label: "Copy redirect URI") %>
+      <% end %>
+    </div>
+  </div>
 
-    <div class="space-y-4">
+  <div class="card lg:col-span-2">
+    <div class="card-header">
+      <h2 class="card-title">Integration Instructions</h2>
+    </div>
+    <div class="card-body space-y-5">
       <div>
-        <h4 class="font-medium text-ink mb-2">1. Authorization URL</h4>
-        <code class="text-xs font-mono bg-grape-soft text-ink p-3 rounded block overflow-x-auto">
-/oauth/authorize?client_id=<%= @application.uid %>&redirect_uri=YOUR_REDIRECT_URI&response_type=code&scope=profile%20email
-        </code>
+        <h3 class="section-title">1. Authorization URL</h3>
+        <pre class="code-block">/oauth/authorize?client_id=<%= @application.uid %>&redirect_uri=YOUR_REDIRECT_URI&response_type=code&scope=profile%20email</pre>
       </div>
 
       <div>
-        <h4 class="font-medium text-ink mb-2">2. Token Exchange</h4>
-        <code class="text-xs font-mono bg-grape-soft text-ink p-3 rounded block overflow-x-auto">
-POST /oauth/token
+        <h3 class="section-title">2. Token Exchange</h3>
+        <pre class="code-block">POST /oauth/token
 Content-Type: application/x-www-form-urlencoded
 
-grant_type=authorization_code&client_id=<%= @application.uid %>&client_secret=YOUR_SECRET&code=AUTHORIZATION_CODE&redirect_uri=YOUR_REDIRECT_URI
-        </code>
+grant_type=authorization_code&client_id=<%= @application.uid %>&client_secret=YOUR_SECRET&code=AUTHORIZATION_CODE&redirect_uri=YOUR_REDIRECT_URI</pre>
       </div>
 
       <div>
-        <h4 class="font-medium text-ink mb-2">3. User Info</h4>
-        <code class="text-xs font-mono bg-grape-soft text-ink p-3 rounded block overflow-x-auto">
-GET /oauth/userinfo
-Authorization: Bearer ACCESS_TOKEN
-        </code>
+        <h3 class="section-title">3. User Info</h3>
+        <pre class="code-block">GET /oauth/userinfo
+Authorization: Bearer ACCESS_TOKEN</pre>
       </div>
     </div>
   </div>

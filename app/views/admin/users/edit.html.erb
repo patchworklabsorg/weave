@@ -1,225 +1,162 @@
 <% permissions = admin_permissions_for(@user) %>
-<div class="container mx-auto px-4 py-8">
-  <div class="max-w-2xl mx-auto">
-    <div class="flex justify-between items-center mb-6">
-      <div>
-        <h1 class="font-display text-2xl font-bold text-ink">Edit User</h1>
-        <p class="text-ink-soft">Update user information and settings</p>
+<% content_for :title, "Edit #{@user.full_name}" %>
+
+<div class="page-narrow mx-auto">
+  <p class="mb-2 text-sm">
+    <%= link_to admin_user_path(@user), class: "link-quiet inline-flex items-center gap-1 text-ink-soft" do %>
+      <%= icon(:arrow_left, size: 14) %><%= @user.full_name %>
+    <% end %>
+  </p>
+
+  <%= page_header "Edit User", lede: "Update user information and settings" %>
+
+  <%= form_with(model: [:admin, @user], local: true, class: "space-y-6") do |form| %>
+    <%= form_errors(@user) %>
+
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Basic information</h2>
       </div>
-      <%= link_to 'Back to User', admin_user_path(@user),
-          class: 'btn-stitch-ghost' %>
-    </div>
-
-    <%= form_with(model: [:admin, @user], local: true, class: "space-y-6") do |form| %>
-      <% if @user.errors.any? %>
-        <div class="patch border-2 border-orchid bg-orchid-soft/40 text-ink p-4">
-          <h3 class="text-sm font-medium text-orchid">There were <%= pluralize(@user.errors.count, "error") %> with your submission:</h3>
-          <div class="mt-2 text-sm text-ink">
-            <ul role="list" class="list-disc space-y-1 pl-5">
-              <% @user.errors.full_messages.each do |message| %>
-                <li><%= message %></li>
-              <% end %>
-            </ul>
+      <div class="card-body">
+        <div class="form-grid form-grid-2">
+          <div class="field-group">
+            <%= form.label :first_name, "Preferred first name", class: "field-label" %>
+            <%= form.text_field :first_name, class: "field" %>
           </div>
-        </div>
-      <% end %>
-
-      <div class="patch p-6">
-        <h2 class="font-display text-lg font-bold text-ink mb-4">Basic Information</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <%= form.label :first_name, "Preferred first name", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :first_name,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+          <div class="field-group">
+            <%= form.label :last_name, "Preferred last name", class: "field-label" %>
+            <%= form.text_field :last_name, class: "field" %>
           </div>
-          <div>
-            <%= form.label :last_name, "Preferred last name", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :last_name,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+          <div class="field-group">
+            <%= form.label :legal_first_name, class: "field-label" %>
+            <%= form.text_field :legal_first_name, maxlength: 100, placeholder: "Same as preferred name", class: "field" %>
           </div>
-          <div>
-            <%= form.label :legal_first_name, class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :legal_first_name,
-                maxlength: 100,
-                placeholder: "Same as preferred name",
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+          <div class="field-group">
+            <%= form.label :legal_last_name, class: "field-label" %>
+            <%= form.text_field :legal_last_name, maxlength: 100, placeholder: "Same as preferred name", class: "field" %>
           </div>
-          <div>
-            <%= form.label :legal_last_name, class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :legal_last_name,
-                maxlength: 100,
-                placeholder: "Same as preferred name",
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+          <p class="field-hint span-2 -mt-2">Leave the legal name fields blank if they match the preferred name. The legal name is only used where it's legally required.</p>
+          <div class="field-group">
+            <%= form.label :email, class: "field-label" %>
+            <%= form.email_field :email, class: "field" %>
           </div>
-          <div class="md:col-span-2 -mt-2">
-            <p class="text-xs text-ink-faint">Leave the legal name fields blank if they match the preferred name. The legal name is only used where it's legally required.</p>
+          <div class="field-group">
+            <%= form.label :pronouns, class: "field-label" %>
+            <%= form.text_field :pronouns, placeholder: "e.g. they/them", maxlength: User::PRONOUNS_MAX_LENGTH, class: "field" %>
           </div>
-          <div>
-            <%= form.label :email, class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.email_field :email,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+          <div class="field-group">
+            <%= form.label :phone_number, class: "field-label" %>
+            <%= form.telephone_field :phone_number, placeholder: "(802) 555-0123", class: "field" %>
           </div>
-          <div>
-            <%= form.label :pronouns, class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :pronouns,
-                placeholder: "e.g. they/them",
-                maxlength: User::PRONOUNS_MAX_LENGTH,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
-          <div>
-            <%= form.label :phone_number, class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.telephone_field :phone_number,
-                placeholder: "(802) 555-0123",
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
-          <div>
-            <%= form.label :birthday, class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.date_field :birthday,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-            <p class="mt-1 text-xs text-ink-faint">Leave blank to clear the birthday.</p>
+          <div class="field-group">
+            <%= form.label :birthday, class: "field-label" %>
+            <%= form.date_field :birthday, class: "field" %>
+            <p class="field-hint">Leave blank to clear the birthday.</p>
           </div>
         </div>
       </div>
+    </section>
 
-      <div class="patch p-6">
-        <h2 class="font-display text-lg font-bold text-ink mb-4">Account Settings</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Account settings</h2>
+      </div>
+      <div class="card-body">
+        <div class="form-grid form-grid-2">
+          <div class="field-group">
             <% if permissions.assignable_roles.any? %>
-              <%= form.label :role, "Access Level", class: "block text-sm font-medium text-ink mb-1" %>
+              <%= form.label :role, "Access level", class: "field-label" %>
               <%= form.select :role,
-                  options_for_select(permissions.assignable_roles.map { |role| [role.titleize, role] }, @user.role),
-                  {},
-                  class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors" %>
+                    options_for_select(permissions.assignable_roles.map { |role| [role.titleize, role] }, @user.role),
+                    {},
+                    class: "field" %>
             <% else %>
-              <p class="block text-sm font-medium text-ink mb-1">Access Level</p>
-              <p class="text-sm text-ink"><%= @user.role.titleize %></p>
-              <p class="mt-1 text-xs text-ink-faint">Only a superadmin or owner who outranks this user can change their access level, and never their own.</p>
+              <span class="field-label">Access level</span>
+              <span class="field-static"><%= @user.role.titleize %></span>
+              <p class="field-hint">Only a superadmin or owner who outranks this user can change their access level, and never their own.</p>
             <% end %>
           </div>
         </div>
       </div>
+    </section>
 
-      <div class="patch p-6">
-        <h2 class="font-display text-lg font-bold text-ink mb-4">Staff &amp; Organization</h2>
-        <div class="space-y-4">
-          <div class="flex items-start">
-            <div class="flex items-center h-5">
-              <%= form.check_box :is_board,
-                  class: "h-4 w-4 rounded border-2 border-neutral-300 text-grape focus:ring-grape" %>
-            </div>
-            <div class="ml-3 text-sm">
-              <%= form.label :is_board, "Board member", class: "font-medium text-ink" %>
-              <p class="text-ink-soft">Mark as a board member</p>
-            </div>
-          </div>
-
-          <div class="flex items-start">
-            <div class="flex items-center h-5">
-              <%= form.check_box :is_staff,
-                  class: "h-4 w-4 rounded border-2 border-neutral-300 text-grape focus:ring-grape" %>
-            </div>
-            <div class="ml-3 text-sm">
-              <%= form.label :is_staff, class: "font-medium text-ink" %>
-              <p class="text-ink-soft">Mark as staff member (can have/be a manager)</p>
-            </div>
-          </div>
-
-          <div class="flex items-start">
-            <div class="flex items-center h-5">
-              <%= form.check_box :is_contractor,
-                  class: "h-4 w-4 rounded border-2 border-neutral-300 text-grape focus:ring-grape" %>
-            </div>
-            <div class="ml-3 text-sm">
-              <%= form.label :is_contractor, class: "font-medium text-ink" %>
-              <p class="text-ink-soft">Mark as contractor (can have/be a manager)</p>
-            </div>
-          </div>
-
-          <div>
-            <%= form.label :manager_id, "Manager", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.collection_select :manager_id,
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Staff &amp; Organization</h2>
+      </div>
+      <div class="card-body space-y-4">
+        <label class="choice">
+          <%= form.check_box :is_board, class: "checkbox" %>
+          <span>Board member<span class="choice-hint">Mark as a board member</span></span>
+        </label>
+        <label class="choice">
+          <%= form.check_box :is_staff, class: "checkbox" %>
+          <span>Is staff<span class="choice-hint">Mark as staff member (can have/be a manager)</span></span>
+        </label>
+        <label class="choice">
+          <%= form.check_box :is_contractor, class: "checkbox" %>
+          <span>Is contractor<span class="choice-hint">Mark as contractor (can have/be a manager)</span></span>
+        </label>
+        <div class="field-group">
+          <%= form.label :manager_id, "Manager", class: "field-label" %>
+          <%= form.collection_select :manager_id,
                 User.where(is_staff: true).or(User.where(is_contractor: true)).order(:first_name),
                 :id, :full_name,
                 { include_blank: "No manager" },
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors" %>
-            <p class="mt-1 text-xs text-ink-faint">Only staff and contractors can be managers</p>
-          </div>
+                class: "field" %>
+          <p class="field-hint">Only staff and contractors can be managers</p>
         </div>
       </div>
+    </section>
 
-      <div class="patch p-6">
-        <h2 class="font-display text-lg font-bold text-ink mb-4">Professional Information</h2>
-        <p class="text-sm text-ink-faint mb-4">These fields sync with Slack (API-editable fields)</p>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <%= form.label :slack_title, "Job Title", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :slack_title,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
-          <div>
-            <%= form.label :slack_department, "Department", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :slack_department,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
-          <div>
-            <%= form.label :slack_division, "Division", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :slack_division,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
-          <div>
-            <%= form.label :slack_organization, "Organization", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :slack_organization,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
-          <div>
-            <%= form.label :slack_city, "City", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :slack_city,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
-          <div>
-            <%= form.label :slack_state, "State", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :slack_state,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
-          <div>
-            <%= form.label :slack_country, "Country", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :slack_country,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
-          <div>
-            <%= form.label :slack_cost_center, "Cost Center", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :slack_cost_center,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-          </div>
+    <section class="card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Professional information</h2>
+          <p class="card-lede">These fields sync with Slack (API-editable fields)</p>
         </div>
       </div>
-
-      <% if permissions.change_password? %>
-        <div class="patch p-6">
-          <h2 class="font-display text-lg font-bold text-ink mb-4">Change Password</h2>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <%= form.label :password, class: "block text-sm font-medium text-ink mb-1" %>
-              <%= form.password_field :password,
-                  class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-              <p class="mt-1 text-xs text-ink-faint">Leave blank to keep current password.</p>
+      <div class="card-body">
+        <div class="form-grid form-grid-2">
+          <% [
+            [:slack_title, "Job title"], [:slack_department, "Department"],
+            [:slack_division, "Division"], [:slack_organization, "Organization"],
+            [:slack_city, "City"], [:slack_state, "State"],
+            [:slack_country, "Country"], [:slack_cost_center, "Cost center"]
+          ].each do |attribute, label| %>
+            <div class="field-group">
+              <%= form.label attribute, label, class: "field-label" %>
+              <%= form.text_field attribute, class: "field" %>
             </div>
-            <div>
-              <%= form.label :password_confirmation, class: "block text-sm font-medium text-ink mb-1" %>
-              <%= form.password_field :password_confirmation,
-                  class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+          <% end %>
+        </div>
+      </div>
+    </section>
+
+    <% if permissions.change_password? %>
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">Change password</h2>
+        </div>
+        <div class="card-body">
+          <div class="form-grid form-grid-2">
+            <div class="field-group">
+              <%= form.label :password, class: "field-label" %>
+              <%= form.password_field :password, class: "field" %>
+              <p class="field-hint">Leave blank to keep current password.</p>
+            </div>
+            <div class="field-group">
+              <%= form.label :password_confirmation, class: "field-label" %>
+              <%= form.password_field :password_confirmation, class: "field" %>
             </div>
           </div>
         </div>
-      <% end %>
-
-      <div class="flex justify-end space-x-3">
-        <%= link_to 'Cancel', admin_user_path(@user),
-            class: 'btn-stitch-ghost' %>
-        <%= form.submit "Save Changes",
-            class: 'btn-stitch' %>
-      </div>
+      </section>
     <% end %>
-  </div>
+
+    <div class="form-actions">
+      <%= link_to "Cancel", admin_user_path(@user), class: "btn btn-secondary" %>
+      <%= form.submit "Save changes", class: "btn btn-primary" %>
+    </div>
+  <% end %>
 </div>

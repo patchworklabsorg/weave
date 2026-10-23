@@ -1,85 +1,93 @@
 <% content_for :title, "Passkeys" %>
 
-<div class="container mx-auto px-4 py-8 max-w-3xl">
-  <div class="flex justify-between items-center mb-6 gap-4">
-    <div>
-      <h1 class="font-display text-2xl font-bold text-ink">Passkeys</h1>
-      <p class="text-ink-soft">Sign in with your fingerprint, face, or device PIN instead of an email link.</p>
-    </div>
-    <%= link_to "Profile", profile_path, class: "btn-stitch-ghost shrink-0" %>
-  </div>
+<div class="page page-narrow space-y-6">
+  <%= page_header("Passkeys", lede: "Sign in with your fingerprint, face, or device PIN instead of an email link.") %>
 
-  <div class="patch p-6 mb-6">
-    <h2 class="font-display text-lg font-bold text-ink mb-2">Add a passkey</h2>
-    <p class="text-sm text-ink-soft mb-4">
-      Your device or password manager keeps the passkey. You can add one for each device you use.
-      Email links still work if you lose a passkey.
-    </p>
-
-    <% if impersonating? %>
-      <p class="text-sm text-ink-faint">You can't add passkeys while impersonating a user.</p>
-    <% else %>
-      <%= form_with url: passkeys_path, method: :post, local: true,
-            data: { turbo: false, controller: "passkey-register", passkey_register_options_url_value: options_passkeys_path, action: "submit->passkey-register#register:prevent" },
-            class: "space-y-4" do %>
-        <%= hidden_field_tag :credential, "", data: { passkey_register_target: "credential" } %>
-
-        <div class="space-y-2">
-          <%= label_tag :nickname, "Name (optional)", class: "block text-sm font-medium text-ink" %>
-          <%= text_field_tag :nickname, nil,
-                maxlength: User::Passkey::NICKNAME_MAX_LENGTH,
-                placeholder: "For example: Work laptop",
-                autocomplete: "off",
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-        </div>
-
-        <p class="text-sm text-red-700" role="alert" data-passkey-register-target="error" hidden></p>
-        <p class="text-sm text-ink-faint" data-passkey-register-target="unsupported" hidden>
-          This browser can't make passkeys. Try a recent version of Safari, Chrome, Edge, or Firefox.
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">Add a passkey</h2>
+        <p class="card-lede">
+          Your device or password manager keeps the passkey. You can add one for each device you use.
+          Email links still work if you lose a passkey.
         </p>
-
-        <button type="submit" class="btn-stitch disabled:opacity-50" data-passkey-register-target="button">
-          Add a passkey
-        </button>
-      <% end %>
-    <% end %>
-  </div>
-
-  <div class="patch">
-    <div class="px-6 py-4 border-b-2 border-dashed border-ink-soft/30">
-      <h2 class="font-display text-lg font-bold text-ink">Your passkeys</h2>
+      </div>
     </div>
+    <div class="card-body">
+      <% if impersonating? %>
+        <p class="text-sm text-ink-faint">You can't add passkeys while impersonating a user.</p>
+      <% else %>
+        <%= form_with url: passkeys_path, method: :post, local: true,
+              data: { turbo: false, controller: "passkey-register", passkey_register_options_url_value: options_passkeys_path, action: "submit->passkey-register#register:prevent" },
+              class: "space-y-4" do %>
+          <%= hidden_field_tag :credential, "", data: { passkey_register_target: "credential" } %>
 
+          <div class="field-group">
+            <%= label_tag :nickname, class: "field-label" do %>
+              Name <span class="optional">(optional)</span>
+            <% end %>
+            <%= text_field_tag :nickname, nil,
+                  maxlength: User::Passkey::NICKNAME_MAX_LENGTH,
+                  placeholder: "For example: Work laptop",
+                  autocomplete: "off",
+                  class: "field" %>
+          </div>
+
+          <p class="field-error" role="alert" data-passkey-register-target="error" hidden></p>
+          <p class="field-hint" data-passkey-register-target="unsupported" hidden>
+            This browser can't make passkeys. Try a recent version of Safari, Chrome, Edge, or Firefox.
+          </p>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" data-passkey-register-target="button">
+              <%= icon(:fingerprint) %>Add a passkey
+            </button>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Your passkeys</h2>
+    </div>
     <% if @passkeys.any? %>
-      <ul class="divide-y divide-ink-soft/20">
-        <% @passkeys.each do |passkey| %>
-          <li class="px-6 py-4 flex items-center justify-between gap-4">
-            <div class="min-w-0">
-              <p class="font-medium text-ink truncate">
-                <%= passkey.display_name %>
+      <div class="card-body">
+        <div class="record-list">
+          <% @passkeys.each do |passkey| %>
+            <div class="record">
+              <div class="record-main">
+                <div class="record-title flex flex-wrap items-center gap-2">
+                  <span class="min-w-0 break-words"><%= passkey.display_name %></span>
+                  <%= badge("Turned off", tone: :danger) if passkey.compromised? %>
+                </div>
+                <div class="record-meta">
+                  Added <%= passkey.created_at.to_date.to_fs(:long) %> ·
+                  <%= passkey.last_used_at ? "last used #{time_ago_in_words(passkey.last_used_at)} ago" : "not used yet" %>
+                </div>
                 <% if passkey.compromised? %>
-                  <span class="ml-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Turned off</span>
+                  <div class="callout callout-warning mt-2">
+                    <%= icon(:triangle_alert, size: 18) %>
+                    <div class="callout-body">
+                      <p>This passkey may have been copied, so it can't sign in. Remove it and add a new one.</p>
+                    </div>
+                  </div>
                 <% end %>
-              </p>
-              <p class="text-sm text-ink-faint">
-                Added <%= passkey.created_at.to_date.to_fs(:long) %> ·
-                <%= passkey.last_used_at ? "last used #{time_ago_in_words(passkey.last_used_at)} ago" : "not used yet" %>
-              </p>
-              <% if passkey.compromised? %>
-                <p class="text-sm text-red-700 mt-1">This passkey may have been copied, so it can't sign in. Remove it and add a new one.</p>
+              </div>
+              <% unless impersonating? %>
+                <div class="record-actions">
+                  <%= button_to "Remove", passkey_path(passkey), method: :delete,
+                        class: "btn btn-danger btn-sm",
+                        data: { turbo_confirm: "Remove this passkey? It will no longer sign in to your account." } %>
+                </div>
               <% end %>
             </div>
-            <% unless impersonating? %>
-              <%= button_to "Remove", passkey_path(passkey), method: :delete,
-                    class: "text-red-600 hover:text-red-900 text-sm shrink-0",
-                    form: { class: "inline-block" },
-                    data: { turbo_confirm: "Remove this passkey? It will no longer sign in to your account." } %>
-            <% end %>
-          </li>
-        <% end %>
-      </ul>
+          <% end %>
+        </div>
+      </div>
     <% else %>
-      <p class="px-6 py-8 text-center text-sm text-ink-faint">You don't have any passkeys yet.</p>
+      <%= empty_state("No passkeys yet", body: "You don't have any passkeys yet.", icon: :fingerprint) %>
     <% end %>
-  </div>
+  </section>
 </div>

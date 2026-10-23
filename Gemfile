@@ -162,3 +162,5 @@ end
 
 gem "mapkick-rb"
 gem "phonelib"
+
+gem "lucide-rails", "~> 0.7.4"

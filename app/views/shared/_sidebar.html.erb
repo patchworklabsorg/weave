@@ -1,0 +1,50 @@
+<%# The admin sidebar (layouts/admin). On narrow screens it is a drawer
+    opened by the menu button in the admin top bar; both sit inside the same
+    drawer controller in the layout. %>
+<aside class="sidebar" data-drawer-target="panel" aria-label="Admin navigation">
+  <div class="sidebar-brand">
+    <%= render "shared/wordmark", href: admin_root_path %>
+    <%= badge "Admin", tone: :grape %>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+      <div class="nav-section-title">Directory</div>
+      <%= nav_link "Dashboard", admin_root_path, icon: :layout_dashboard, exact: true %>
+      <%= nav_link "Users", admin_users_path, icon: :users %>
+      <%= nav_link "Groups", admin_groups_path, icon: :users %>
+      <%= nav_link "Consents", admin_guardian_consents_path, icon: :shield_check %>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Apps</div>
+      <%= nav_link "OAuth apps", admin_oauth_applications_path, icon: :app_window %>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Operations</div>
+      <%= nav_link "Jobs", "/admin/jobs", icon: :activity, active: false %>
+      <%= nav_link "Feature flags", "/admin/flipper", icon: :flag, active: false %>
+      <%= nav_link "Blazer", "/admin/blazer", icon: :database, active: false %>
+      <%= nav_link "Console audits", "/admin/console", icon: :terminal, active: false %>
+    </div>
+  </nav>
+
+  <div class="sidebar-foot">
+    <div class="sidebar-user">
+      <%= avatar current_user, size: :sm %>
+      <div class="min-w-0">
+        <div class="sidebar-user-name"><%= current_user.full_name %></div>
+        <div class="sidebar-user-role"><%= current_user.role.titleize %></div>
+      </div>
+    </div>
+    <%= nav_link "Back to Weave", profile_path, icon: :arrow_left, active: false %>
+    <% if impersonating? %>
+      <%= button_to stop_impersonating_admin_users_path, method: :delete, class: "nav-link w-full", form_class: "contents" do %>
+        <%= icon(:log_out) %><span>Stop impersonating</span>
+      <% end %>
+    <% else %>
+      <%= button_to logout_path, method: :delete, class: "nav-link w-full", form_class: "contents" do %>
+        <%= icon(:log_out) %><span>Sign out</span>
+      <% end %>
+    <% end %>
+  </div>
+</aside>

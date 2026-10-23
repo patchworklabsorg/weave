@@ -1,35 +1,21 @@
-<!-- app/views/layouts/sessions.html.erb -->
+<%# The focus layout: one centered patch on the quilt. Sign in, sign up,
+    confirmations, consent and onboarding render here. %>
 <!DOCTYPE html>
-<html class="h-full">
+<html lang="en" class="h-full">
   <head>
-    <title>Login | <%= content_for?(:title) ? yield(:title) : "Weave" %></title>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <%= csrf_meta_tags %>
-    <%= csp_meta_tag %>
-
-    <link rel="icon" href="/icon.png" type="image/png">
-    <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/icon.png">
-
-    <%= render "shared/theme" %>
-    <%# Includes all stylesheet files in app/assets/stylesheets %>
-    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
-    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
-    <%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
+    <title><%= [content_for(:title), "Weave"].compact_blank.join(" · ") %></title>
+    <%= render "shared/head" %>
     <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@4/dist/fp.min.js"></script>
   </head>
 
   <body class="h-full quilt-bg text-ink font-sans">
-    <!-- Flash messages positioned completely outside main layout -->
-    <div id="flash" class="fixed top-0 left-0 w-full z-50 pointer-events-none">
-      <%= render 'shared/flash' %>
-    </div>
+    <%= render "shared/staging_badge" %>
+    <div id="flash"><%= render "shared/flash" %></div>
 
     <main class="h-full relative">
       <%= yield %>
     </main>
 
-    <%= render "shared/staging_badge" %>
-    <%= render "shared/theme_toggle" %>
+    <%= render "shared/theme_toggle", floating: true %>
   </body>
 </html>

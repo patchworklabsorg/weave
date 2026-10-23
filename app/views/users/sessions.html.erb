@@ -1,196 +1,121 @@
-<div class="container mx-auto px-4 py-8">
-  <div class="flex justify-between items-center mb-6">
-    <div>
-      <h1 class="font-display text-2xl font-bold text-ink">My Sessions</h1>
-      <p class="text-ink-soft">View and manage your active login sessions</p>
-    </div>
-    <div class="space-x-2">
-      <%= link_to 'Profile', profile_path, class: 'btn-stitch-ghost' %>
-    </div>
-  </div>
+<% content_for :title, "Sessions" %>
+<% session_map_data = @sessions.filter_map(&:map_data) %>
 
-  <!-- Session Locations Map -->
-  <% session_map_data = @sessions.filter_map(&:map_data) %>
-  <% if session_map_data.any? %>
-    <div class="patch mb-8">
-      <div class="px-6 py-4 border-b-2 border-dashed border-ink-soft/30">
-        <h2 class="font-display text-lg font-medium text-ink">Session Locations</h2>
-        <p class="text-sm text-ink-faint">Geographic locations of your login sessions</p>
-      </div>
-      <div class="px-6 py-4">
-        <% content_for :head, javascript_include_tag("mapkick.bundle") %>
-        <%= js_map session_map_data, height: "400px", zoom: 2 %>
-        <div class="mt-4 flex space-x-6 text-sm">
-          <div class="flex items-center">
-            <div class="w-3 h-3 bg-teal rounded-full mr-2"></div>
-            <span class="text-ink-soft">Active Sessions</span>
-          </div>
-          <div class="flex items-center">
-            <div class="w-3 h-3 bg-amber-500 rounded-full mr-2"></div>
-            <span class="text-ink-soft">Impersonated Sessions</span>
-          </div>
-          <div class="flex items-center">
-            <div class="w-3 h-3 bg-ink-faint rounded-full mr-2"></div>
-            <span class="text-ink-soft">Expired Sessions</span>
-          </div>
-        </div>
-      </div>
-    </div>
+<div class="page space-y-6">
+  <%= page_header("Sessions", lede: "View and manage your active login sessions") do %>
+    <% if @sessions.not_expired.count > 1 %>
+      <%= button_to destroy_all_sessions_path, method: :delete,
+            class: "btn btn-danger",
+            data: { turbo_confirm: "Are you sure you want to sign out of all other sessions?" } do %>
+        <%= icon(:log_out) %>Sign out all other sessions
+      <% end %>
+    <% end %>
   <% end %>
 
-  <!-- Activity Summary -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-    <div class="patch p-6">
-      <div class="flex items-center">
-        <div class="flex-shrink-0">
-          <div class="w-8 h-8 bg-teal-soft rounded-full flex items-center justify-center">
-            <svg class="w-4 h-4 text-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-        </div>
-        <div class="ml-4">
-          <dt class="text-sm font-medium text-ink-faint">Active Sessions</dt>
-          <dd class="text-2xl font-bold text-ink"><%= @sessions.not_expired.count %></dd>
-        </div>
-      </div>
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="card stat">
+      <span class="stat-label">Active sessions</span>
+      <span class="stat-value"><%= @sessions.not_expired.count %></span>
     </div>
-
-    <div class="patch p-6">
-      <div class="flex items-center">
-        <div class="flex-shrink-0">
-          <div class="w-8 h-8 bg-sky-soft rounded-full flex items-center justify-center">
-            <svg class="w-4 h-4 text-sky" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-        </div>
-        <div class="ml-4">
-          <dt class="text-sm font-medium text-ink-faint">Total Sessions</dt>
-          <dd class="text-2xl font-bold text-ink"><%= @sessions.count %></dd>
-        </div>
-      </div>
+    <div class="card stat">
+      <span class="stat-label">Total sessions</span>
+      <span class="stat-value"><%= @sessions.count %></span>
     </div>
-
-    <div class="patch p-6">
-      <div class="flex items-center">
-        <div class="flex-shrink-0">
-          <div class="w-8 h-8 bg-violet-soft rounded-full flex items-center justify-center">
-            <svg class="w-4 h-4 text-violet" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-            </svg>
-          </div>
-        </div>
-        <div class="ml-4">
-          <dt class="text-sm font-medium text-ink-faint">Unique Locations</dt>
-          <dd class="text-2xl font-bold text-ink"><%= session_map_data.size %></dd>
-        </div>
-      </div>
+    <div class="card stat">
+      <span class="stat-label">Unique locations</span>
+      <span class="stat-value"><%= session_map_data.size %></span>
     </div>
   </div>
 
-  <!-- Sessions Table -->
-  <div class="patch">
-    <div class="px-6 py-4 border-b-2 border-dashed border-ink-soft/30">
-      <div class="flex justify-between items-center">
-        <h2 class="font-display text-lg font-medium text-ink">Session Details</h2>
-        <% if @sessions.not_expired.count > 1 %>
-          <%= button_to 'Sign Out All Other Sessions', destroy_all_sessions_path, method: :delete,
-              class: 'inline-flex items-center px-3 py-2 border-2 border-red-600 text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500',
-              data: { turbo_confirm: 'Are you sure you want to sign out of all other sessions?' } %>
-        <% end %>
+  <% if session_map_data.any? %>
+    <section class="card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Session locations</h2>
+          <p class="card-lede">Geographic locations of your login sessions</p>
+        </div>
       </div>
-    </div>
+      <div class="card-body">
+        <% content_for :head, javascript_include_tag("mapkick.bundle") %>
+        <%= js_map session_map_data, height: "400px", zoom: 2 %>
+        <div class="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-soft">
+          <span class="inline-flex items-center gap-2"><span class="size-2.5 rounded-full bg-success"></span>Active sessions</span>
+          <span class="inline-flex items-center gap-2"><span class="size-2.5 rounded-full bg-warning"></span>Impersonated sessions</span>
+          <span class="inline-flex items-center gap-2"><span class="size-2.5 rounded-full bg-ink-faint"></span>Expired sessions</span>
+        </div>
+      </div>
+    </section>
+  <% end %>
 
-    <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-ink-soft/20">
-        <thead class="bg-quilt">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium text-ink-faint uppercase tracking-wider">Status</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-ink-faint uppercase tracking-wider">Device</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-ink-faint uppercase tracking-wider">Operating System</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-ink-faint uppercase tracking-wider">Location</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-ink-faint uppercase tracking-wider">Login Time</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-ink-faint uppercase tracking-wider">Last Activity</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-ink-faint uppercase tracking-wider">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="bg-paper divide-y divide-ink-soft/20">
-          <% if @sessions.any? %>
+  <section class="card card-flush">
+    <div class="card-header">
+      <h2 class="card-title">Session details</h2>
+    </div>
+    <% if @sessions.any? %>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Device</th>
+              <th>Operating System</th>
+              <th>Location</th>
+              <th>Login Time</th>
+              <th>Last Activity</th>
+              <th class="actions"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
             <% @sessions.each do |session| %>
               <% is_current = session == current_user_session %>
-              <tr class="<%= 'bg-teal-soft/30' if is_current %>">
-                <td class="px-4 py-4 whitespace-nowrap text-sm">
-                  <% if session.expired? || session.signed_out_at %>
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-quilt text-ink-faint">
-                      Expired
-                    </span>
-                  <% else %>
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-soft text-teal">
-                      <%= is_current ? 'Current' : 'Active' %>
-                    </span>
-                  <% end %>
-                  <% if session.impersonated? %>
-                    <span class="inline-flex items-center ml-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                      Impersonated
-                    </span>
-                  <% end %>
-                </td>
-                <td class="px-4 py-4 text-sm text-ink">
-                  <%= session.device_info || 'Unknown' %>
-                </td>
-                <td class="px-4 py-4 text-sm text-ink-soft">
-                  <%= session.os_info || 'Unknown' %>
-                </td>
-                <td class="px-4 py-4 text-sm text-ink-soft">
-                  <div>
-                    <div><%= session.ip || 'Unknown' %></div>
-                    <% if session.latitude.present? && session.longitude.present? %>
-                      <div class="text-xs text-ink-faint">
-                        <%= session.location_name %>
-                      </div>
+              <tr class="<%= "is-current" if is_current %>">
+                <td>
+                  <div class="flex flex-wrap gap-1">
+                    <% if session.expired? || session.signed_out_at %>
+                      <%= badge("Expired", tone: :neutral) %>
+                    <% else %>
+                      <%= badge(is_current ? "Current" : "Active", tone: :success) %>
                     <% end %>
-                    <% if session.timezone.present? %>
-                      <div class="text-xs text-ink-faint">
-                        <%= session.timezone %>
-                      </div>
-                    <% end %>
+                    <%= badge("Impersonated", tone: :warning) if session.impersonated? %>
                   </div>
                 </td>
-                <td class="px-4 py-4 whitespace-nowrap text-sm text-ink-soft">
-                  <%= session.created_at.strftime("%m/%d/%Y %I:%M %p") %>
+                <td><%= session.device_info || "Unknown" %></td>
+                <td class="text-ink-soft"><%= session.os_info || "Unknown" %></td>
+                <td class="text-ink-soft">
+                  <%= session.ip || "Unknown" %>
+                  <% if session.latitude.present? && session.longitude.present? %>
+                    <span class="table-sub"><%= session.location_name %></span>
+                  <% end %>
+                  <% if session.timezone.present? %>
+                    <span class="table-sub"><%= session.timezone %></span>
+                  <% end %>
                 </td>
-                <td class="px-4 py-4 whitespace-nowrap text-sm text-ink-soft">
+                <td class="whitespace-nowrap text-ink-soft"><%= session.created_at.strftime("%m/%d/%Y %I:%M %p") %></td>
+                <td class="whitespace-nowrap text-ink-soft">
                   <% if session.last_seen_at %>
                     <%= time_ago_in_words(session.last_seen_at) %> ago
                   <% else %>
                     Never
                   <% end %>
                 </td>
-                <td class="px-4 py-4 whitespace-nowrap text-sm text-ink-soft">
+                <td class="actions">
                   <% if is_current %>
                     <span class="text-ink-faint">Current Session</span>
                   <% elsif !session.expired? && !session.signed_out_at %>
-                    <%= button_to 'Revoke', session_path(session), method: :delete,
-                        class: 'text-red-600 hover:text-red-900 text-sm',
-                        form: { class: 'inline-block' },
-                        data: { turbo_confirm: 'Are you sure you want to revoke this session?' } %>
+                    <%= button_to "Revoke", session_path(session), method: :delete,
+                          class: "btn btn-danger btn-sm",
+                          data: { turbo_confirm: "Are you sure you want to revoke this session?" } %>
                   <% else %>
                     <span class="text-ink-faint">Expired</span>
                   <% end %>
                 </td>
               </tr>
             <% end %>
-          <% else %>
-            <tr>
-              <td colspan="7" class="px-4 py-8 text-center text-sm text-ink-faint">
-                No sessions found.
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  </div>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <%= empty_state("No sessions found.", icon: :monitor) %>
+    <% end %>
+  </section>
 </div>
