@@ -1,0 +1,60 @@
+# Text for the US residency check (see ResidencyFlow and docs/KYC.md). Members
+# see this text. Keep it in ASD-STE100 Simplified Technical English. Never ask
+# about citizenship: the check is about where the member lives.
+en:
+  residency:
+    statuses:
+      us_resident: "US resident"
+      not_us_resident: "Not a US resident"
+      pending: "In progress"
+      needs_check: "Not checked"
+    page:
+      title: "US residency"
+      intro: "Some compute partners let only people who live in the US use their capacity. We check where you live, not your citizenship. We keep only the result, your US state, the type of document and the date."
+      us_resident: "We checked that you live in %{state}. This result is good until %{date}."
+      us_resident_renew: "We checked that you live in %{state}. This result ends on %{date}. Upload a new document now to keep it."
+      not_us_resident: "You do not live in the US, or we did not get a document that shows a US address. Some partner programs are open only to US residents. If you live in the US, upload a document."
+      needs_check: "You do not have a residency result. Upload a document that shows that you live in the US. If you do not live in the US, tell us below."
+      ended_address: "Your shipping address moved to another state or country, so your residency result ended. Upload a new document."
+      pending: "Our identity team is checking your document."
+      needs_resubmission: "Your document has a problem: %{note}"
+      identity_first: "You get a residency result with your identity verification. Verify your identity first."
+      evidence_type: "What does the document show?"
+      document: "Photo or scan of the document"
+      document_hint: "JPEG, PNG, HEIC or PDF, up to %{megabytes} MB. We encrypt it and delete it %{days} days after the check, like an ID image."
+      submit: "Upload for the residency check"
+      not_resident: "I do not live in the US"
+      not_resident_confirm: "Tell us that you do not live in the US? You can upload a document later if you move to the US."
+      evidence:
+        id_document: "My US driver's license, learner's permit or state ID, with my current US address"
+        school_enrollment: "My current enrollment at a US school"
+        guardian_state_id: "My parent's or guardian's US driver's license or state ID, with our current US address"
+        guardian_id_and_proof_of_address: "My parent's or guardian's ID, and a proof of our current US address (for example a utility bill)"
+      submission_title: "Proof of US residency (only if your ID does not show a US address)"
+      submission_hint: "If your ID is a US driver's license, learner's permit or state ID with your current US address, you do not need this. If not, and you live in the US, add one of these documents. If you do not live in the US, leave this empty."
+    blockers:
+      identity_needed: "Verify your identity first. The residency check is part of the identity call."
+      in_progress: "You already have a residency check in progress."
+      standing: "Your residency result is still good. You can renew it in the last %{days} days."
+    errors:
+      evidence_type: "Choose what the document shows."
+      document_missing: "Upload a photo or a scan of the document."
+    submitted: "We got your document. Our identity team will check it."
+    declared: "We recorded that you do not live in the US."
+    mailer:
+      action: "See your residency check"
+      decided_yes:
+        subject: "Your US residency check"
+        body: "Hi %{first_name}, our identity team checked your document. You live in %{state}. This result is good until %{date}. We will delete the document in %{days} days."
+      decided_no:
+        subject: "Your US residency check"
+        body: "Hi %{first_name}, our identity team checked your document. It does not show a current US address, so you do not have a US residency result. If you live in the US, upload another document."
+      needs_resubmission:
+        subject: "Your residency document has a problem"
+        body: "Hi %{first_name}, our identity team found a problem with the residency document you uploaded: %{note} Please upload a new document."
+      ended:
+        subject: "Check your US residency again"
+        body: "Hi %{first_name}, your shipping address moved to another state or country, so your US residency result ended. Upload a document that shows your current US address."
+      renewal_due:
+        subject: "Renew your US residency check"
+        body: "Hi %{first_name}, your US residency result ends on %{date}. Upload a document that shows your current US address before then to keep it."

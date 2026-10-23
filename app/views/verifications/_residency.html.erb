@@ -1,0 +1,51 @@
+<%# The US residency part of the member's verification page (see ResidencyFlow). Never ask about citizenship. %>
+<%
+  latest = @residency_latest
+  check = @residency_check
+  message =
+    if @residency_status == "pending" then t("residency.page.pending")
+    elsif latest&.needs_resubmission? && latest.document_review? then t("residency.page.needs_resubmission", note: latest.resubmission_note)
+    elsif check&.us_resident && @residency_blocker.nil? then t("residency.page.us_resident_renew", state: check.us_state_name, date: check.expires_at.to_date.to_fs(:long))
+    elsif check&.us_resident then t("residency.page.us_resident", state: check.us_state_name, date: check.expires_at.to_date.to_fs(:long))
+    elsif check then t("residency.page.not_us_resident")
+    elsif latest&.end_reason == "address_changed" then t("residency.page.ended_address")
+    elsif @residency_blocker == :identity_needed then t("residency.page.identity_first")
+    else t("residency.page.needs_check")
+    end
+%>
+<section class="space-y-3 border-t border-ink-soft/20 pt-6" aria-labelledby="residency_title">
+  <div class="flex items-center justify-between gap-4">
+    <h2 id="residency_title" class="font-display text-lg font-bold text-ink"><%= t("residency.page.title") %></h2>
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= @residency_status == 'us_resident' ? 'bg-teal-soft text-teal' : 'bg-grape-soft text-grape' %>">
+      <%= t("residency.statuses.#{@residency_status}") %>
+    </span>
+  </div>
+  <p class="text-sm text-ink-soft"><%= t("residency.page.intro") %></p>
+  <p class="text-sm text-ink"><%= message %></p>
+
+  <% if @residency_blocker.nil? %>
+    <%= form_with url: verification_residency_path, method: :post, multipart: true, class: "space-y-3" do |form| %>
+      <div>
+        <%= form.label :evidence_type, t("residency.page.evidence_type"), class: "block text-sm font-medium text-ink" %>
+        <%= form.select :evidence_type,
+              (["id_document"] + ResidencyCheck::UPLOAD_EVIDENCE).map { |type| [t("residency.page.evidence.#{type}"), type] },
+              { include_blank: true }, required: true, class: input_class %>
+      </div>
+      <div>
+        <%= form.label :residency_document, t("residency.page.document"), class: "block text-sm font-medium text-ink" %>
+        <%= form.file_field :residency_document, required: true, accept: "image/jpeg,image/png,image/heic,image/heif,.heic,.heif,application/pdf",
+              aria: { describedby: "residency_document_hint" }, class: input_class %>
+        <p id="residency_document_hint" class="mt-1 text-xs text-ink-faint">
+          <%= t("residency.page.document_hint", megabytes: VerificationSettings.max_image_size / 1.megabyte, days: VerificationSettings.purge_image_after_pass.in_days.to_i) %>
+        </p>
+      </div>
+      <%= form.submit t("residency.page.submit"), class: "btn-stitch w-full justify-center" %>
+    <% end %>
+    <% unless check && !check.us_resident %>
+      <%= button_to t("residency.page.not_resident"), not_resident_verification_residency_path, method: :post,
+            class: "btn-stitch-ghost w-full justify-center", data: { turbo_confirm: t("residency.page.not_resident_confirm") } %>
+    <% end %>
+  <% elsif @residency_blocker == :standing %>
+    <p class="text-xs text-ink-faint"><%= t("residency.blockers.standing", days: VerificationSettings.residency_renewal_reminder.in_days.to_i) %></p>
+  <% end %>
+</section>

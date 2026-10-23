@@ -53,6 +53,12 @@ module VerificationSettings
 
     def pending_share_ttl = config.dig(:key_custody, :pending_share_minutes).minutes
 
+    # How long a yes result of the US residency check stands (see
+    # ResidencyCheck), and when the renewal reminder goes out.
+    def residency_valid_for = config.dig(:residency, :valid_months).months
+
+    def residency_renewal_reminder = config.dig(:residency, :renewal_reminder_days).days
+
     def key_custody_challenge_ttl = config.dig(:key_custody, :challenge_minutes).minutes
 
     def require_user_verification? = config.dig(:key_custody, :require_user_verification) == true

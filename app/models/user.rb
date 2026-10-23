@@ -158,6 +158,9 @@ class User < ApplicationRecord
   # account is deleted: they are audit records, and the database empties
   # user_id.
   has_many :verifications, dependent: nil, inverse_of: :user
+  # US residency checks (see ResidencyCheck). Like verifications, they stay as
+  # audit records when the account is deleted.
+  has_many :residency_checks, dependent: nil, inverse_of: :user
   # A birthday or legal name change ends a standing pass: the member needs a
   # new call (see VerificationFlow.require_reverification). This also catches
   # a change an admin makes.
@@ -746,6 +749,16 @@ class User < ApplicationRecord
   end
 
   def identity_verified? = verification_status == "verified"
+
+  # US residency (see ResidencyFlow): us_resident, not_us_resident, pending
+  # or needs_check. Residency, never citizenship.
+  def us_residency_status = ResidencyFlow.status(self)
+
+  # true or false while a residency result stands, nil otherwise.
+  def us_resident? = ResidencyFlow.us_resident?(self)
+
+  # The date of the residency result that stands, or nil.
+  def us_residency_checked_on = ResidencyFlow.current_check(self)&.decided_at&.to_date
 
   # Full years of age today, or nil without a birthday.
   def age_in_years(on: Date.current)

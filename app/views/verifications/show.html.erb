@@ -80,6 +80,19 @@
               <p class="mt-1 text-sm text-orchid"><%= @form_errors[:id_document] %></p>
             <% end %>
           </div>
+          <fieldset class="space-y-2">
+            <legend class="block text-sm font-medium text-ink"><%= t("residency.page.submission_title") %></legend>
+            <p class="text-xs text-ink-faint"><%= t("residency.page.submission_hint") %></p>
+            <%= form.select :residency_evidence_type,
+                  ResidencyCheck::UPLOAD_EVIDENCE.map { |type| [t("residency.page.evidence.#{type}"), type] },
+                  { include_blank: t("residency.page.evidence_type"), selected: params[:residency_evidence_type] },
+                  aria: { label: t("residency.page.evidence_type") }, class: input_class %>
+            <%= form.file_field :residency_document, accept: "image/jpeg,image/png,image/heic,image/heif,.heic,.heif,application/pdf",
+                  aria: { label: t("residency.page.document") }, class: input_class %>
+            <% %i[residency_evidence_type residency_document].each do |key| %>
+              <% if @form_errors&.key?(key) %><p class="text-sm text-orchid"><%= @form_errors[key] %></p><% end %>
+            <% end %>
+          </fieldset>
           <div class="flex items-start gap-2">
             <%= form.check_box :data_notice_read, { required: true, class: "mt-1" }, "1", nil %>
             <%= form.label :data_notice_read, class: "text-sm text-ink" do %>
@@ -104,6 +117,8 @@
         <p class="text-sm text-ink-soft"><%= t("knot.member.name_change") %></p>
         <p class="text-sm text-ink-soft"><%= t("knot.member.notice") %></p>
       <% end %>
+
+      <%= render "verifications/residency", input_class:, link_class: %>
 
       <% if @attempts.size > 1 || @latest&.decided? %>
         <details>

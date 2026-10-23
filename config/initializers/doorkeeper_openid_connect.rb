@@ -213,5 +213,16 @@ Doorkeeper::OpenidConnect.configure do
     normal_claim :verification_status, scope: :verification, response: [:id_token, :user_info] do |user|
       user.verification_status
     end
+
+    # US residency, not citizenship (see ResidencyFlow): true or false while a
+    # result stands, omitted otherwise. Only apps with the residency scope get
+    # it. The state of residence is never sent.
+    normal_claim :us_resident, scope: :residency, response: [:id_token, :user_info] do |user|
+      user.us_resident?
+    end
+
+    normal_claim :us_residency_checked_on, scope: :residency, response: [:id_token, :user_info] do |user|
+      user.us_residency_checked_on&.iso8601
+    end
   end
 end

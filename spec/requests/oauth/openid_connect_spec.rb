@@ -16,7 +16,7 @@ RSpec.describe "OpenID Connect", type: :request do
     Doorkeeper::Application.create!(
       name: "Test Client",
       redirect_uri: redirect_uri,
-      scopes: "openid profile email phone admin slack groups roles verification",
+      scopes: "openid profile email phone admin slack groups roles verification residency",
       confidential: false
     )
   end
@@ -284,6 +284,16 @@ RSpec.describe "OpenID Connect", type: :request do
 
       expect(userinfo(scope: "openid verification")).to include("verification_status" => "verified")
       expect(userinfo(scope: "openid profile")).not_to include("verification_status")
+    end
+
+    it "gives the US residency result through the residency scope, never the state" do
+      ResidencyCheck.create!(user:, source: "identity_call", evidence_type: "id_document", status: "decided",
+                             us_resident: true, us_state: "WA", decided_at: Time.current)
+
+      claims = userinfo(scope: "openid residency")
+      expect(claims).to include("us_resident" => true, "us_residency_checked_on" => Date.current.iso8601)
+      expect(claims.to_json).not_to include("WA")
+      expect(userinfo(scope: "openid profile")).not_to include("us_resident")
     end
 
     describe "the groups claim" do

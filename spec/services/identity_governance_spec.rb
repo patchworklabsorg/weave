@@ -533,7 +533,8 @@ RSpec.describe IdentityGovernance do
         match_account!(verification.user, identifiers(verification.user))
         result = VerificationFlow.decide(verification, by:, outcome: "verified", reason: "Face matched the ID on the call.",
                                                        age_consistent: true, region_consistent: true,
-                                                       identifiers: identifiers(verification.user))
+                                                       identifiers: identifiers(verification.user),
+                                                       residency: { us_resident: true, us_state: "MA", evidence_type: "id_document" })
         result.errors.values.join(" ")
       end
 

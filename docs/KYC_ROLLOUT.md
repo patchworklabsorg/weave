@@ -24,8 +24,10 @@ The local branches, from bottom to top:
 | 7 | weave | `jaspermayone/kyc-key-custody` | Key custody: hardware keys, the split master key, sealed images, rotation |
 | 8 | weave | `jaspermayone/kyc-demographics-required` | Demographics required before the first grant: `demographics_answered` in the directory API, `return_to` on the form |
 | 9 | weave | `jaspermayone/kyc-roles` | Roles table: `roles` and `user_roles` replace the role booleans, grant rules in `config/roles.yml`, patch leads as scoped roles |
-| 10 | krater | `jaspermayone/demographics-gate` | Krater refuses a project submit until the submitter answered. Built on `claude/application-form` (krater PR #9) |
-| 11 | patchworklabs.org | `jaspermayone/your-data` | The page https://patchworklabs.org/your-data |
+| 10 | weave | `jaspermayone/kyc-us-residency` | US residency check: a yes/no result with the US state on each pass, a document review without a call, `us_resident` in the directory API and the `residency` scope |
+| 11 | krater | `jaspermayone/demographics-gate` | Krater refuses a project submit until the submitter answered. Built on `claude/application-form` (krater PR #9) |
+| 12 | krater | `jaspermayone/us-residency-ospool` (krater PR #10, with branch 11 in the same PR) | OSPool rule: `/reviews?us_residents=true`, the residency line on a project page, and `require_us_residents` for the OSPool job type |
+| 13 | patchworklabs.org | `jaspermayone/your-data` | The page https://patchworklabs.org/your-data |
 
 ## The order
 
@@ -205,8 +207,10 @@ The `CLAUDE.md` rule "No stacked PRs" applies: each PR targets `main`. `gh stack
 2. Wait for CI. Squash-merge it (`gh pr merge --squash`).
 3. Fetch `main`. Rebase the next branch onto `main`: `git rebase --onto origin/main <old tip of the branch below> <next branch>`.
 4. Push the next branch, open its PR against `main`, wait for CI, and squash-merge it.
-5. Do steps 3 and 4 again for each branch, up to branch 9.
-6. In the `krater` repo, merge branch 10 after krater PR #9 is on `main`. Rebase it onto krater `main`, push it, open its PR against `main`, and squash-merge it. Merge it only after branch 8 is in production: without `demographics_answered` from Weave, Krater lets every submit through and logs a warning.
+5. Do steps 3 and 4 again for each branch, up to branch 10.
+6. Krater PR #10 holds branch 11 (the demographics gate) and branch 12. Without `demographics_answered` from Weave, Krater lets every submit through and logs a warning.
+7. Branches 11 and 12 are one Krater PR (#10, already open). Merge it only after branches 8 and 10 are in production: until Weave sends `us_resident`, Krater counts nobody as a US resident.
+8. After branches 10 and 12 are in production, tell the OSPool contact that the US residency check is live (send the OSPool brief). Krater reads `us_resident` from the directory, so it needs no new scope. Give the `residency` scope only to an app that needs the claim at sign-in.
 
 Each push to `main` deploys staging (`.github/workflows/deploy-staging.yml`). A push to `main` does not deploy production.
 

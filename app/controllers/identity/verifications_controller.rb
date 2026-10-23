@@ -26,6 +26,7 @@ class Identity::VerificationsController < Identity::BaseController
     @excluded_ids = VerificationFlow.excluded_verifier_ids(@user)
     @team = User.identity_team.where.not(id: [current_user.id, @verification.user_id].compact).order(:first_name)
     @break_glass_records = @verification.break_glass_records.includes(:requested_by, :approvers).order(created_at: :desc)
+    @residency_check = ResidencyFlow.check_for(@verification)
   end
 
   def start_pre_review
@@ -47,6 +48,21 @@ class Identity::VerificationsController < Identity::BaseController
     end
 
     render_secure_image(data:, content_type: @verification.id_document.content_type, subject_id: @verification.public_id)
+  ensure
+    data&.replace("")
+  end
+
+  # The pre-reviewer opens the residency proof document that came with the
+  # ID, in the same secure viewer.
+  def residency_image
+    check = ResidencyFlow.check_for(@verification)
+    data = check && ResidencyFlow.pre_review_document(check, by: current_user)
+    if data.nil?
+      render_secure_image_error("Only the pre-reviewer can open the residency document, and only during pre-review.")
+      return
+    end
+
+    render_secure_image(data:, content_type: check.document.content_type, subject_id: @verification.public_id)
   ensure
     data&.replace("")
   end
@@ -100,7 +116,10 @@ class Identity::VerificationsController < Identity::BaseController
       second_verifier: (User.identity_team.find_by(p_id: params[:second_verifier]) if params[:second_verifier].present?),
       guardian_attended: params[:guardian_attended] == "1",
       identifiers: identifiers_from_params,
-      details_mismatch: params[:details_mismatch] == "1"
+      details_mismatch: params[:details_mismatch] == "1",
+      residency: { us_resident: yes_no(params[:us_resident]), us_state: params[:us_state].to_s,
+                   evidence_type: params[:residency_evidence].to_s
+}
     )
     if result.success?
       redirect_to identity_verification_path(@verification), notice: "Recorded the outcome: #{result.verification.status}."
@@ -151,6 +170,7 @@ class Identity::VerificationsController < Identity::BaseController
     {
       second_verifier: params[:second_verifier].to_s, guardian_attended: params[:guardian_attended] == "1",
       age_consistent: params[:age_consistent].to_s, region_consistent: params[:region_consistent].to_s,
+      us_resident: params[:us_resident].to_s, us_state: params[:us_state].to_s, residency_evidence: params[:residency_evidence].to_s,
       reason: params[:reason].to_s,
       identifiers: params[:identifiers].respond_to?(:permit) ? params[:identifiers].permit(*VerificationIdentifiers.members).to_h.symbolize_keys : {}
     }

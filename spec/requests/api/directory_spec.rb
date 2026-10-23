@@ -36,7 +36,8 @@ RSpec.describe "Directory API", type: :request do
         "sub" => reviewer.p_id, "name" => reviewer.full_name, "email" => reviewer.email,
         "email_verified" => true, "slack_id" => "U0REVIEW", "slack_member" => reviewer.slack_member?,
         "groups" => ["krater-reviewers"], "roles" => ["reviewer"], "active" => true, "minor" => false, "guardian_verified" => false,
-        "verification_status" => "needs_submission", "demographics_answered" => false
+        "verification_status" => "needs_submission", "us_resident" => nil, "us_residency_checked_on" => nil,
+        "demographics_answered" => false
       )
     end
 
@@ -56,6 +57,17 @@ RSpec.describe "Directory API", type: :request do
 
       expect(body).to include("verification_status" => "verified")
       expect(body.keys).not_to include("document_type", "document_number", "date_of_birth")
+    end
+
+    it "returns the US residency result, but not the state" do
+      create(:verification, :verified, user: reviewer)
+      ResidencyCheck.create!(user: reviewer, source: "identity_call", evidence_type: "id_document", status: "decided",
+                             us_resident: true, us_state: "NY", decided_at: Time.zone.local(2026, 10, 1))
+
+      body = directory_get(api_v1_directory_user_path(reviewer.p_id))
+
+      expect(body).to include("us_resident" => true, "us_residency_checked_on" => "2026-10-01")
+      expect(body.to_json).not_to include("NY")
     end
 
     it "says when a Weave admin verified the guardian" do

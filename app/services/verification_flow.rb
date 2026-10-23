@@ -45,9 +45,16 @@ module VerificationFlow
       nil
     end
 
-    # The member submits an ID image ahead of the call.
-    def submit(user, document:, document_type:, verification_method: "document_call")
+    # The member submits an ID image ahead of the call. A member whose ID
+    # is not a US driver's license, learner's permit or state ID with a
+    # current US address may add a residency proof document (see
+    # ResidencyFlow).
+    def submit(user, document:, document_type:, verification_method: "document_call", residency_document: nil,
+               residency_evidence_type: nil)
       verification = Verification.new(user:, verification_method:, document_type: document_type.presence)
+      if residency_document.present? && ResidencyCheck::UPLOAD_EVIDENCE.exclude?(residency_evidence_type.to_s)
+        return failure(verification, residency_evidence_type: I18n.t("residency.errors.evidence_type"))
+      end
       if verification.digital_id_call? && !DigitalIdProvider.available?
         return failure(verification, verification_method: I18n.t("verification.errors.digital_id_unavailable"))
       end
@@ -76,10 +83,17 @@ module VerificationFlow
         verification.save || raise(ActiveRecord::Rollback)
         VerificationEvent.record!(verification, :submitted, actor: user, verification_method:,
                                                             document_type: verification.document_type)
+        if residency_document.present?
+          ResidencyFlow.attach_to_submission!(verification, document: residency_document, evidence_type: residency_evidence_type)
+        end
       end
       return failure(verification, verification.errors.to_hash.transform_values(&:first)) unless verification.persisted?
 
       Result.new(verification:, errors: {})
+    rescue IdDocumentConverter::Refused, ActiveRecord::RecordInvalid => e
+      Rails.logger.info("Residency upload refused: #{e.message}")
+      failure(Verification.new(user:, verification_method:, document_type: document_type.presence),
+              residency_document: I18n.t("verification.errors.document_unsupported"))
     end
 
     # An identity team member takes the attempt for pre-review. Only they can
@@ -141,6 +155,7 @@ module VerificationFlow
         verification.reject_document!
         VerificationEvent.record!(verification, :document_rejected, actor: by, note:)
         IdDocumentVault.seal!(verification)
+        ResidencyFlow.identity_pre_review_ended!(verification, note:)
       end
       notify_member(verification)
       true
@@ -166,6 +181,7 @@ module VerificationFlow
         verification.approve_document!
         VerificationEvent.record!(verification, :document_approved, actor: by)
         IdDocumentVault.seal!(verification)
+        ResidencyFlow.identity_pre_review_ended!(verification)
       end
       notify_member(verification)
       true
@@ -204,8 +220,12 @@ module VerificationFlow
     # details_mismatch: true is the fail for "the details don't match the
     # account". A fail is always allowed: it needs no attestation and no
     # complete identifiers, and the reason starts with DETAILS_MISMATCH_REASON.
+    #
+    # residency is a Hash with :us_resident (true or false), :us_state and
+    # :evidence_type: the US residency result (see ResidencyFlow). A pass
+    # needs it, because every verified member gets a result.
     def decide(verification, by:, outcome:, reason:, age_consistent:, region_consistent:,
-               second_verifier: nil, guardian_attended: false, identifiers: nil, details_mismatch: false)
+               second_verifier: nil, guardian_attended: false, identifiers: nil, details_mismatch: false, residency: {})
       user = verification.user
       if details_mismatch
         return failure(verification, outcome: "must be failed for details that don't match the account") if outcome != "failed"
@@ -215,6 +235,10 @@ module VerificationFlow
       end
       errors = decision_errors(verification, user, by:, outcome:, reason:, age_consistent:, region_consistent:,
                                                    second_verifier:, guardian_attended:, identifiers:, details_mismatch:)
+      if outcome == "verified" && !errors.key?(:base)
+        errors.merge!(ResidencyFlow.call_errors(verification, us_resident: residency[:us_resident],
+                                                              us_state: residency[:us_state], evidence_type: residency[:evidence_type]))
+      end
       return failure(verification, errors) if errors.any?
 
       escalated = false
@@ -240,6 +264,12 @@ module VerificationFlow
           },
           age_consistent:, region_consistent:, details_mismatch:
         )
+        residency_check = ResidencyFlow.record_call!(verification, by:, outcome:, us_resident: residency[:us_resident],
+                                                                   us_state: residency[:us_state], evidence_type: residency[:evidence_type])
+        if residency_check&.decided?
+          VerificationEvent.record!(verification, :residency_recorded, actor: by, us_resident: residency_check.us_resident,
+                                                                       evidence_type: residency_check.evidence_type)
+        end
         if identifiers
           ActiveSupport::Notifications.instrument(VerificationIdentifiers::EVENT, verification:, outcome:, identifiers:)
         end

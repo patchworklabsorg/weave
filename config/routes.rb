@@ -420,7 +420,12 @@ Rails.application.routes.draw do
 
   # Identity verification for program resources (see VerificationFlow). The
   # member uploads an ID and follows the status here.
-  resource :verification, only: [:show, :create]
+  resource :verification, only: [:show, :create] do
+    # The US residency check without a call (see ResidencyFlow).
+    resource :residency, only: [:create], controller: "residency_checks" do
+      post :not_resident
+    end
+  end
 
   # Well-known routes for standard compliance
   get ".well-known/*path", to: "well_known#show", format: false
@@ -536,8 +541,19 @@ Rails.application.routes.draw do
         patch :schedule_call
         patch :decide
         patch :resolve_escalation
+        post :residency_image
       end
       resources :break_glass_records, only: [:create]
+    end
+
+    # US residency checks without a call (see ResidencyFlow).
+    resources :residency_checks, only: [:index, :show] do
+      member do
+        patch :start_pre_review
+        post :image
+        patch :reject_document
+        patch :decide
+      end
     end
 
     # Break-glass access to stored ID images (see BreakGlass).

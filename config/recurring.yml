@@ -55,7 +55,13 @@ nudge_stuck_slack_guests:
   class: NudgeStuckSlackGuestsJob
   schedule: every day at 3pm
 
-# Delete stored ID images when their time is up (see
+# Remind members whose US residency result ends soon (see
+# RenewResidencyChecksJob).
+renew_residency_checks:
+  class: RenewResidencyChecksJob
+  schedule: every day at 9am
+
+# Delete stored ID images and residency documents when their time is up (see
 # PurgeVerificationDocumentsJob and config/kyc/verification.yml).
 purge_verification_documents:
   class: PurgeVerificationDocumentsJob

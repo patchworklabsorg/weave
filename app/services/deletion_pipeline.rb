@@ -167,7 +167,18 @@ module DeletionPipeline
         verification.update_columns(document_purged_at: now) # rubocop:disable Rails/SkipsModelValidations
         VerificationEvent.record!(verification, :document_purged, reason: "account_deleted")
       end
-      verifications.update_all(account_deleted_at: now).positive? # rubocop:disable Rails/SkipsModelValidations
+      kept = verifications.update_all(account_deleted_at: now).positive? # rubocop:disable Rails/SkipsModelValidations
+      keep_residency_audit!(user, now) || kept
+    end
+
+    # The US residency checks stay like the verification audit records, and
+    # a stored proof document goes at once.
+    def keep_residency_audit!(user, now)
+      checks = ResidencyCheck.where(user_id: user.id)
+      checks.where(document_purged_at: nil).find_each do |check|
+        check.update_columns(document_purged_at: now) if ResidencyDocumentVault.purge!(check, later: true) # rubocop:disable Rails/SkipsModelValidations
+      end
+      checks.update_all(account_deleted_at: now).positive? # rubocop:disable Rails/SkipsModelValidations
     end
 
     # Rows a funder contract keeps stay with their bands and no link. The

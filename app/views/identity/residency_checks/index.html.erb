@@ -1,0 +1,43 @@
+<% content_for :title, "US residency checks" %>
+
+<div class="mb-6">
+  <h2 class="font-display text-2xl font-bold text-ink mb-2">US residency checks</h2>
+  <p class="text-ink-soft">
+    Members who already passed identity verification upload a proof document here. There is no call. Check where the member lives, never citizenship.
+    Checks on an identity call are decided on the verification page.
+  </p>
+</div>
+
+<% { "Waiting for pre-review" => @submitted, "In pre-review" => @in_pre_review }.each do |title, checks| %>
+  <h3 class="font-display text-lg font-bold text-ink mb-2"><%= title %></h3>
+  <div class="patch p-6 mb-6">
+    <% if checks.any? %>
+      <ul class="space-y-2 text-sm">
+        <% checks.each do |check| %>
+          <li>
+            <%= link_to check.public_id, identity_residency_check_path(check), class: "text-grape font-medium" %>:
+            <%= check.user&.full_name || "a deleted user" %>, <%= check.evidence_label.downcase %>, <%= check.created_at.to_fs(:long) %>
+            <%= "(pre-reviewer: #{check.pre_reviewer&.full_name || 'a deleted user'})" if check.pre_review? %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="text-sm text-ink-faint">Nothing here.</p>
+    <% end %>
+  </div>
+<% end %>
+
+<% if @recent.any? %>
+  <h3 class="font-display text-lg font-bold text-ink mb-2">Recent</h3>
+  <div class="patch p-6">
+    <ul class="space-y-2 text-sm">
+      <% @recent.each do |check| %>
+        <li>
+          <%= link_to check.public_id, identity_residency_check_path(check), class: "text-grape font-medium" %>:
+          <%= check.status.humanize %><%= check.us_resident.nil? ? "" : (check.us_resident ? ", yes (#{check.us_state_name})" : ", no") %>,
+          <%= check.decided_by&.full_name %> <%= check.updated_at.to_fs(:long) %>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>

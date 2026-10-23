@@ -24,7 +24,9 @@ class VerificationsController < ApplicationController
       current_user,
       document: params[:id_document],
       document_type: params[:document_type].to_s,
-      verification_method: params[:verification_method].presence || "document_call"
+      verification_method: params[:verification_method].presence || "document_call",
+      residency_document: params[:residency_document].presence,
+      residency_evidence_type: params[:residency_evidence_type].to_s
     )
     if result.success?
       redirect_to verification_path, notice: t("verification.submitted")
@@ -41,6 +43,10 @@ class VerificationsController < ApplicationController
     @status = current_user.verification_status
     @blocker = VerificationFlow.submission_blocker(current_user)
     @attempts = current_user.verifications.order(created_at: :desc).to_a
+    @residency_status = current_user.us_residency_status
+    @residency_check = ResidencyFlow.current_check(current_user)
+    @residency_latest = current_user.residency_checks.order(:created_at, :id).last
+    @residency_blocker = ResidencyFlow.submission_blocker(current_user)
   end
 
   def render_page_with_errors

@@ -30,6 +30,11 @@ class DirectoryUserSerializer
       # Identity verification: needs_submission, pending, verified or
       # ineligible (see User#verification_status).
       verification_status: @user.verification_status,
+      # US residency (not citizenship): true or false while a result stands,
+      # null otherwise. OSPool lets only US residents use its capacity. The
+      # state of residence stays in Weave.
+      us_resident: @user.us_resident?,
+      us_residency_checked_on: @user.us_residency_checked_on&.iso8601,
       # The member saved demographics answers. Never the answers themselves.
       # Krater asks for it before a member's first grant application.
       demographics_answered: DemographicsVault.answered?(@user)

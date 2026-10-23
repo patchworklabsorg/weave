@@ -28,6 +28,8 @@ module AdminNavHelper
       NavGroup.new("Identity", [
         (admin_nav_entry("Verification", identity_verifications_path, :id_card, "identity id check call review",
                          %w[verifications break_glass_records break_glass_notices], :identity) if user.identity_team),
+        (admin_nav_entry("US residency", identity_residency_checks_path, :map_pin, "us residency ospool document review",
+                         %w[residency_checks], :identity) if user.identity_team),
         (admin_nav_entry("Key custody", identity_key_custody_path, :key_square, "hardware keys yubikey ceremony break-glass",
                          %w[key_custody key_ceremonies hardware_keys key_sets], :identity) if KeyCustody.can_view?(user)),
         (admin_nav_entry("Governance", identity_governance_path, :landmark, "identity team board proposals nda",
