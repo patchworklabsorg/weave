@@ -1,0 +1,10 @@
+<%# The member's Thread Count, the internal trust score (see ThreadCount).
+    Staff only, and never on your own page: nobody sees their own score. %>
+<% if user != current_user %>
+  <div class="patch p-6">
+    <h2 class="font-display text-lg font-bold text-ink mb-4">Thread Count</h2>
+    <p class="font-display text-3xl font-bold text-ink"><%= thread_count_number(ThreadCount.score(user)) %></p>
+    <p class="text-xs text-ink-faint mt-1">Internal trust score. Never share it with the member.</p>
+    <%= link_to "Open Thread Count", admin_user_thread_count_path(user), class: "btn-stitch-ghost inline-block mt-3" %>
+  </div>
+<% end %>

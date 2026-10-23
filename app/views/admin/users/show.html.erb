@@ -298,6 +298,8 @@
     </section>
   </div>
 
+  <%= render "thread_count", user: @user %>
+
   <% session_map_data = @user.user_sessions.filter_map(&:map_data) %>
   <% if session_map_data.any? %>
     <section class="card">

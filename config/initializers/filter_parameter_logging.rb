@@ -12,5 +12,9 @@ Rails.application.config.filter_parameters += [
   # The uploaded ID image: its file name often holds the member's name.
   :id_document,
   # Self-reported answers for the demographics vault (see DemographicsVault).
-  :demographic
+  :demographic,
+  # The internal trust score ledger: the written reason, the evidence
+  # link, the "on behalf of" voucher and a project outcome must not reach the
+  # logs or the API usage rows.
+  :reason, :evidence_url, :voucher, :outcome
 ]

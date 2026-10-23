@@ -39,7 +39,7 @@ class Service::Key < ApplicationRecord
   # Associations
   belongs_to :service
   belongs_to :created_by, class_name: "User"
-  has_many :usages, class_name: "Service::Key::Usage", dependent: :destroy
+  has_many :usages, class_name: "Service::Key::Usage", foreign_key: :service_key_id, inverse_of: :service_key, dependent: :destroy
 
   # Validations
   validates :name, presence: true
@@ -54,7 +54,8 @@ class Service::Key < ApplicationRecord
   scope :usable, -> { where(status: %w[active deprecated]) }
 
   # Callbacks
-  before_create :generate_hash_key
+  # Before validation, so the presence check on hash_key passes on create.
+  before_validation :generate_hash_key, on: :create
 
   # Class methods
   def self.generate_api_key
