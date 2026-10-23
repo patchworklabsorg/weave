@@ -1,0 +1,7 @@
+<%= @record.requested_by&.full_name || "A deleted user" %> asks to decrypt a stored ID image (<%= @record.public_id %>).
+
+Reason: <%= @record.reason %>
+
+Two different key holders must approve. Approve only if the reason needs the image itself. Deny it with a reason if not.
+
+<%= @admin_url %>

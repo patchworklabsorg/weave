@@ -1,0 +1,9 @@
+<%= @decryption.viewer&.full_name || "A deleted user" %> decrypted a stored ID image at <%= @decryption.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>.
+
+Break-glass request: <%= @record.public_id %>
+Reason: <%= @record.reason %>
+Approved by: <%= @record.approvers.map(&:full_name).to_sentence %>
+
+You get this email because you are <%= @notice.recipient_kind == "lead" ? "the identity team lead" : "a key holder who approved the request" %>. If this decryption was not expected, tell the board.
+
+<%= @admin_url %>

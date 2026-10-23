@@ -1,0 +1,9 @@
+<%= t("verification.break_glass_notice.subject") %>
+
+<%= t("verification.break_glass_notice.body", first_name: @user.first_name, date: @decryption.created_at.to_date.to_fs(:long)) %>
+
+<%= t("verification.break_glass_notice.reason", reason: @record.reason) %>
+
+<%= t("verification.break_glass_notice.questions", email: Weave.mail_address) %>
+
+<%= t("verification.data_page_link") %>: <%= @data_page_url %>

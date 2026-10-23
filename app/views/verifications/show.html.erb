@@ -1,0 +1,118 @@
+<%# The member's identity verification page (see VerificationsController). %>
+<% content_for :title, t("verification.page.title") %>
+<%
+  link_class = "text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2"
+  input_class = "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors"
+  status_message =
+    if @latest.nil? then nil
+    elsif @latest.reverification_required? then t("verification.page.reverification_required", reason: t("verification.reverification_reasons.#{@latest.reverification_reason}"))
+    elsif @latest.ineligible? then t("verification.page.ineligible")
+    elsif @latest.escalation_open? then t("verification.page.escalated")
+    elsif @latest.failed? && @blocker == :cooldown then t("verification.page.failed", retry_date: @latest.retry_available_at.to_date.to_fs(:long))
+    elsif @latest.failed? then t("verification.page.failed_can_retry")
+    elsif @latest.needs_resubmission? then t("verification.page.needs_resubmission", note: @latest.resubmission_note)
+    elsif @latest.call_scheduled? then t("verification.page.call_scheduled", call_time: @latest.call_scheduled_for.utc.strftime("%B %-d, %Y at %H:%M UTC"))
+    else t("verification.page.#{@latest.status}")
+    end
+%>
+
+<div class="min-h-full flex items-center justify-center px-4 py-12">
+  <div class="patch patch-bound w-full max-w-lg">
+    <div class="quilt-binding"></div>
+
+    <div class="p-9 pb-5">
+      <h1 class="font-display text-3xl font-bold text-ink text-center"><%= t("verification.page.title") %></h1>
+      <p class="text-ink-soft mt-2"><%= t("verification.page.intro") %></p>
+    </div>
+
+    <div class="px-9 pb-9 space-y-6">
+      <div class="flex items-center justify-between gap-4">
+        <span class="text-sm text-ink-faint"><%= t("verification.page.status_label") %></span>
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= @status == 'verified' ? 'bg-teal-soft text-teal' : 'bg-grape-soft text-grape' %>">
+          <%= t("verification.statuses.#{@status}") %>
+        </span>
+      </div>
+
+      <% if status_message %>
+        <div class="patch border-2 border-grape bg-grape-soft/40 p-5">
+          <p class="text-sm text-ink"><%= status_message %></p>
+        </div>
+      <% end %>
+
+      <% if current_user.minor? && @status != "verified" %>
+        <p class="text-sm text-ink"><%= t("verification.page.guardian_needed") %></p>
+      <% end %>
+
+      <% if @blocker.nil? %>
+        <div>
+          <h2 class="font-display text-lg font-bold text-ink mb-2"><%= t("verification.page.steps_title") %></h2>
+          <ol class="list-decimal list-inside space-y-1 text-sm text-ink">
+            <% t("verification.page.steps").each do |step| %>
+              <li><%= step %></li>
+            <% end %>
+          </ol>
+          <p class="text-sm text-ink-soft mt-3">
+            <%= t("verification.page.data", days: VerificationSettings.purge_image_after_pass.in_days.to_i) %>
+            <%= link_to t("verification.data_page_link"), Weave.data_page_url, class: link_class, target: "_blank", rel: "noopener" %>
+          </p>
+        </div>
+
+        <%= form_with url: verification_path, method: :post, multipart: true, class: "space-y-4" do |form| %>
+          <% if @form_errors&.key?(:base) %>
+            <p class="text-sm text-orchid"><%= @form_errors[:base] %></p>
+          <% end %>
+          <div>
+            <%= form.label :document_type, t("verification.page.document_type"), class: "block text-sm font-medium text-ink" %>
+            <%= form.select :document_type,
+                  Verification::DOCUMENT_TYPES.map { |type| [t("verification.page.document_types.#{type}"), type] },
+                  { selected: params[:document_type] }, required: true, class: input_class %>
+            <% if @form_errors&.key?(:document_type) %>
+              <p class="mt-1 text-sm text-orchid"><%= @form_errors[:document_type] %></p>
+            <% end %>
+          </div>
+          <div>
+            <%= form.label :id_document, t("verification.page.document"), class: "block text-sm font-medium text-ink" %>
+            <%= form.file_field :id_document, required: true, accept: "image/jpeg,image/png,image/heic,image/heif,.heic,.heif,application/pdf",
+                  aria: { describedby: "id_document_hint" }, class: input_class %>
+            <p id="id_document_hint" class="mt-1 text-xs text-ink-faint"><%= t("verification.page.document_hint", megabytes: VerificationSettings.max_image_size / 1.megabyte) %></p>
+            <% if @form_errors&.key?(:id_document) %>
+              <p class="mt-1 text-sm text-orchid"><%= @form_errors[:id_document] %></p>
+            <% end %>
+          </div>
+          <div class="flex items-start gap-2">
+            <%= form.check_box :data_notice_read, { required: true, class: "mt-1" }, "1", nil %>
+            <%= form.label :data_notice_read, class: "text-sm text-ink" do %>
+              <%= t("verification.page.data_notice_read") %>
+              (<%= link_to t("verification.data_page_link"), Weave.data_page_url, class: link_class, target: "_blank", rel: "noopener" %>)
+            <% end %>
+          </div>
+          <% if @form_errors&.key?(:data_notice_read) %>
+            <p class="text-sm text-orchid"><%= @form_errors[:data_notice_read] %></p>
+          <% end %>
+          <%= form.submit(@latest ? t("verification.page.resubmit") : t("verification.page.submit"), class: "btn-stitch w-full justify-center") %>
+        <% end %>
+      <% elsif @latest.nil? || !@latest.verified? %>
+        <% if @form_errors&.key?(:base) %>
+          <p class="text-sm text-orchid"><%= @form_errors[:base] %></p>
+        <% elsif %i[no_birthday under_minimum_age].include?(@blocker) %>
+          <p class="text-sm text-ink"><%= t("verification.blockers.#{@blocker}") %></p>
+        <% end %>
+      <% end %>
+
+      <% if @attempts.size > 1 || @latest&.decided? %>
+        <details>
+          <summary class="text-sm text-ink-faint cursor-pointer"><%= t("verification.page.history") %></summary>
+          <ul class="mt-2 space-y-1 text-xs text-ink-faint">
+            <% @attempts.each do |attempt| %>
+              <li><%= attempt.created_at.to_date.to_fs(:long) %>: <%= attempt.status.humanize %></li>
+            <% end %>
+          </ul>
+        </details>
+      <% end %>
+
+      <p class="text-sm text-center">
+        <%= link_to t("verification.data_page_link"), Weave.data_page_url, class: link_class, target: "_blank", rel: "noopener" %>
+      </p>
+    </div>
+  </div>
+</div>

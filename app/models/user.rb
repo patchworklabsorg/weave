@@ -15,6 +15,9 @@
 #  email                    :string           not null
 #  email_confirmed_at       :datetime
 #  first_name               :string           not null
+#  identity_key_holder      :boolean          default(FALSE), not null
+#  identity_lead            :boolean          default(FALSE), not null
+#  identity_team            :boolean          default(FALSE), not null
 #  is_board                 :boolean          default(FALSE), not null
 #  is_contractor            :boolean          default(FALSE), not null
 #  is_staff                 :boolean          default(FALSE), not null
@@ -150,6 +153,25 @@ class User < ApplicationRecord
   # empties user_id, and PurgeGuardianConsentsJob removes them later.
   has_many :guardian_consents, dependent: nil, inverse_of: :user
   before_destroy :mark_guardian_consents_account_deleted
+
+  # Identity verification attempts (see Verification). They stay after the
+  # account is deleted: they are audit records, and the database empties
+  # user_id.
+  has_many :verifications, dependent: nil, inverse_of: :user
+  # A birthday or legal name change ends a standing pass: the member needs a
+  # new call (see VerificationFlow.require_reverification). This also catches
+  # a change an admin makes.
+  after_update :require_reverification_for_identity_change, if: :identity_attributes_changed?
+
+  # The identity team runs verification. Key holders approve break-glass
+  # access to stored ID images, and the lead gets every break-glass notice
+  # (see BreakGlass). Only an owner changes these (see
+  # Admin::UserIdentityTeamController).
+  scope :identity_team, -> { where(identity_team: true) }
+  scope :identity_key_holders, -> { identity_team.where(identity_key_holder: true) }
+  scope :identity_leads, -> { identity_team.where(identity_lead: true) }
+  validate :identity_roles_need_identity_team
+  validate :identity_key_holder_limit, if: -> { identity_key_holder && will_save_change_to_identity_key_holder? }
 
   # OAuth apps this user may use by a direct grant (see AppAccess).
   has_many :application_access_grants, as: :grantee, dependent: :destroy
@@ -573,6 +595,33 @@ class User < ApplicationRecord
   # The request that stands: pending or granted.
   def current_guardian_consent = guardian_consents.live.order(created_at: :desc).first
 
+  # Identity verification (see Verification). Derived from the attempts each
+  # time, never stored:
+  # - needs_submission: no attempt, or the last attempt needs a new document
+  #   or failed (the member submits again after the cooldown).
+  # - pending: an attempt is in progress, or a failed attempt waits for the
+  #   identity team lead.
+  # - needs_submission also when a trigger ended the last pass (a birthday
+  #   change, a legal name change or a blacklist review). A pass has no time
+  #   limit.
+  # - verified: the last attempt passed, and no trigger ended the pass.
+  # - ineligible: the identity team lead closed the last attempt.
+  VERIFICATION_STATUSES = %w[needs_submission pending verified ineligible].freeze
+
+  def latest_verification = verifications.order(:created_at, :id).last
+
+  def verification_status
+    latest = latest_verification
+    return "needs_submission" if latest.nil?
+    return "verified" if latest.standing_pass?
+    return "ineligible" if latest.ineligible?
+    return "pending" if latest.in_progress? || latest.escalation_open?
+
+    "needs_submission"
+  end
+
+  def identity_verified? = verification_status == "verified"
+
   # Where this person is in joining the Slack. Drives the /slack onboarding
   # page. Each step is the next thing the person must do.
   #
@@ -760,6 +809,15 @@ class User < ApplicationRecord
 
   # Starts the retention clock (GuardianConsent::KEEP_AFTER_ACCOUNT_DELETION).
   # The foreign key then empties user_id when the user row goes.
+  def identity_attributes_changed?
+    saved_change_to_birthday? || saved_change_to_legal_first_name? || saved_change_to_legal_last_name?
+  end
+
+  def require_reverification_for_identity_change
+    reason = saved_change_to_birthday? ? "birthday_changed" : "legal_name_changed"
+    VerificationFlow.require_reverification(self, reason:)
+  end
+
   def mark_guardian_consents_account_deleted
     guardian_consents.update_all(account_deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
@@ -791,6 +849,21 @@ class User < ApplicationRecord
   end
 
   private
+
+  def identity_roles_need_identity_team
+    return if identity_team
+
+    errors.add(:identity_key_holder, "needs identity team membership") if identity_key_holder
+    errors.add(:identity_lead, "needs identity team membership") if identity_lead
+  end
+
+  # The proposal names exactly two key holders, so a third can't be added.
+  def identity_key_holder_limit
+    others = User.identity_key_holders.where.not(id:).count
+    return if others < VerificationSettings.max_key_holders
+
+    errors.add(:identity_key_holder, "can't be added: there are already #{others} key holders")
+  end
 
   def birthday_plausible
     return if birthday.between?(Date.new(1900, 1, 1), Date.current)

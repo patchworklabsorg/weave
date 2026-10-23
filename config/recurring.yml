@@ -54,3 +54,20 @@ sync_system_groups:
 nudge_stuck_slack_guests:
   class: NudgeStuckSlackGuestsJob
   schedule: every day at 3pm
+
+# Delete stored ID images when their time is up (see
+# PurgeVerificationDocumentsJob and config/kyc/verification.yml).
+purge_verification_documents:
+  class: PurgeVerificationDocumentsJob
+  schedule: every day at 4:30am
+
+# Send break-glass notices that are due, such as the member notice after its
+# window (see BreakGlass). Each decryption also enqueues it at once.
+deliver_break_glass_notices:
+  class: DeliverBreakGlassNoticesJob
+  schedule: every 15 minutes
+
+# Email the board the break-glass report for the previous month.
+break_glass_board_report:
+  class: BreakGlassBoardReportJob
+  schedule: "0 9 1 * *"

@@ -14,6 +14,10 @@
       <%= nav_link "Users", admin_users_path, icon: :users %>
       <%= nav_link "Groups", admin_groups_path, icon: :users %>
       <%= nav_link "Consents", admin_guardian_consents_path, icon: :shield_check %>
+      <% if current_user&.identity_team %>
+        <%= nav_link "Verification", admin_verifications_path, icon: :id_card,
+              active: controller_name.in?(%w[verifications break_glass_records break_glass_reports]) %>
+      <% end %>
     </div>
     <div class="nav-section">
       <div class="nav-section-title">Apps</div>

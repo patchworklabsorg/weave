@@ -48,3 +48,6 @@ application.register("reveal", RevealController)
 
 import SearchController from "./search_controller"
 application.register("search", SearchController)
+
+import SecureImageController from "./secure_image_controller"
+application.register("secure-image", SecureImageController)

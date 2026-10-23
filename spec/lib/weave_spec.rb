@@ -41,6 +41,12 @@ RSpec.describe Weave do
     end
   end
 
+  describe ".data_page_url" do
+    it "is the public page about what Patchwork Labs does with member data" do
+      expect(described_class.data_page_url).to eq("https://patchworklabs.org/your-data")
+    end
+  end
+
   describe ".p_id_prefix" do
     it "is SPWL on staging, so sandbox IDs can't pass for real ones" do
       expect(described_class.p_id_prefix("WEAVE_ENV" => "staging")).to eq("SPWL")

@@ -26,7 +26,10 @@ class DirectoryUserSerializer
       minor: @user.minor?,
       # A Weave admin has a signed guardian form and spoke with the guardian.
       # Apps that hand out money or other risk (Krater budgets) ask for it.
-      guardian_verified: @user.guardian_verified?
+      guardian_verified: @user.guardian_verified?,
+      # Identity verification: needs_submission, pending, verified or
+      # ineligible (see User#verification_status).
+      verification_status: @user.verification_status
     }
   end
 

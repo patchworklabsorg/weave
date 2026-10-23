@@ -1,0 +1,46 @@
+# Values for identity verification (see VerificationSettings and
+# docs/KYC.md). Values marked LOCKED were decided on 2026-10-12. Counsel can
+# still change them here: no code change is necessary.
+shared: &shared
+  # Days a member waits after a failed call before they can submit again.
+  failed_call_cooldown_days: 14 # LOCKED
+
+  # Failed calls in a row before the attempt goes to the identity team lead
+  # for review, instead of another retry.
+  failed_calls_before_escalation: 2 # LOCKED
+
+  # Days after a pass before the stored ID image is purged.
+  purge_image_days_after_pass: 7 # LOCKED
+
+  # Days after an attempt closes without a pass (document problem or failed
+  # call) before its stored ID image is purged.
+  purge_image_days_after_close: 30 # LOCKED
+
+  # The largest ID image a member can upload, in megabytes.
+  max_image_megabytes: 10
+
+  break_glass:
+    # Approvals from different key holders that a request needs.
+    approvals_required: 2
+    # The most identity team members that can hold a key at one time. Any
+    # approvals_required of them approve a request (2 of 3).
+    max_key_holders: 3 # LOCKED
+    # Minutes a granted request lets the requester decrypt the image.
+    access_minutes: 30 # PLACEHOLDER
+    # Hours after a decryption before Weave tells the member, unless an
+    # identity team member records a fraud investigation delay.
+    member_notice_hours: 72 # LOCKED
+    # The longest time a fraud investigation can hold back the member notice,
+    # in days after the notice was first due. The delay needs a written
+    # reason and the sign-off of an owner or the identity team lead (never the
+    # person who asked for the delay or for the access).
+    max_fraud_delay_days: 30 # LOCKED
+
+development:
+  <<: *shared
+
+test:
+  <<: *shared
+
+production:
+  <<: *shared

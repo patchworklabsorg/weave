@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 class Admin::OauthApplicationsController < Admin::BaseController
-  before_action :set_application, only: [:show, :edit, :update, :destroy, :regenerate_secret, :access_policy, :code_of_conduct, :guardian_consent, :email_domains]
-  before_action :require_superadmin, only: [:access_policy, :code_of_conduct, :guardian_consent, :email_domains]
+  before_action :set_application, only: [:show, :edit, :update, :destroy, :regenerate_secret, :access_policy, :code_of_conduct, :guardian_consent, :email_domains, :verification]
+  before_action :require_superadmin, only: [:access_policy, :code_of_conduct, :guardian_consent, :email_domains, :verification]
   # The response holds a working client secret, which lets its holder act as
   # the app (an `introspect` app included). Only a superadmin may get one.
   before_action :require_superadmin_for_secret, only: [:regenerate_secret]
@@ -121,6 +121,17 @@ class Admin::OauthApplicationsController < Admin::BaseController
     RevokeLostAppAccessJob.perform_later(application_id: @application.id) if domains.any?
     redirect_to admin_oauth_application_path(@application),
                 notice: domains.any? ? "The email claim now comes from #{domains.to_sentence}." : "The email claim is the primary address again."
+  end
+
+  # Opts an app in to identity verification, or out (see AppAccess). Only
+  # apps that give program resources should require it. Superadmin only, like
+  # #code_of_conduct.
+  def verification
+    required = ActiveModel::Type::Boolean.new.cast(params.require(:required))
+    @application.update!(requires_verification: required)
+    RevokeLostAppAccessJob.perform_later(application_id: @application.id) if required
+    redirect_to admin_oauth_application_path(@application),
+                notice: required ? "Only verified members can use this app now." : "This app no longer requires identity verification."
   end
 
   private

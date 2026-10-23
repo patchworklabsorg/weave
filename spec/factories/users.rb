@@ -15,6 +15,9 @@
 #  email                    :string           not null
 #  email_confirmed_at       :datetime
 #  first_name               :string           not null
+#  identity_key_holder      :boolean          default(FALSE), not null
+#  identity_lead            :boolean          default(FALSE), not null
+#  identity_team            :boolean          default(FALSE), not null
 #  is_board                 :boolean          default(FALSE), not null
 #  is_contractor            :boolean          default(FALSE), not null
 #  is_staff                 :boolean          default(FALSE), not null
@@ -120,6 +123,24 @@ FactoryBot.define do
     # GuardianConsent).
     trait :minor do
       birthday { 15.years.ago.to_date }
+    end
+
+    # Runs identity verification (see Verification). The admin pages need the
+    # admin role too.
+    trait :identity_team do
+      role { :admin }
+      email_confirmed_at { Time.current }
+      identity_team { true }
+    end
+
+    trait :key_holder do
+      identity_team
+      identity_key_holder { true }
+    end
+
+    trait :identity_lead do
+      identity_team
+      identity_lead { true }
     end
 
     trait :with_magic_link do

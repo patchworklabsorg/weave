@@ -1,0 +1,107 @@
+<% content_for :title, "Break-glass" %>
+<% input_class = "flex-1 px-3 py-2 rounded-lg border-2 border-neutral-300 bg-paper text-sm" %>
+
+<div class="mb-6">
+  <%= link_to "All verifications", admin_verifications_path, class: "text-sm text-grape" %>
+  <h2 class="font-display text-2xl font-bold text-ink mt-2 mb-2">Break-glass access to ID images</h2>
+  <p class="text-ink-soft">
+    A stored ID image opens only with two approvals from different key holders. Each decryption tells the other key holder,
+    the identity team lead, the member after <%= VerificationSettings.member_notice_delay.inspect %>, and the board.
+  </p>
+</div>
+
+<% if @mine.any? %>
+  <h3 class="font-display text-lg font-bold text-ink mb-3">Granted to you</h3>
+  <div class="space-y-3 mb-8">
+    <% @mine.each do |record| %>
+      <div class="patch p-4 space-y-3">
+        <p class="text-sm text-ink"><%= record.public_id %>: <%= record.reason %>. Open until <%= record.expires_at.utc.strftime("%H:%M UTC") %>.</p>
+        <%= render "shared/secure_image_viewer", url: image_admin_break_glass_record_path(record), label: "Decrypt and show the image",
+              button_class: "btn-stitch", confirm: "This sends the notice ladder. Continue?" %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+<h3 class="font-display text-lg font-bold text-ink mb-3">Waiting for approval</h3>
+<div class="space-y-3 mb-8">
+  <% if @pending.any? %>
+    <% @pending.each do |record| %>
+      <div class="patch p-4 space-y-2">
+        <p class="text-sm text-ink">
+          <%= record.public_id %> for <%= link_to record.verification.public_id, admin_verification_path(record.verification), class: "font-mono text-grape" %>,
+          asked by <%= record.requested_by&.full_name || "a deleted user" %> <%= time_ago_in_words(record.created_at) %> ago.
+        </p>
+        <p class="text-sm text-ink-soft">Reason: <%= record.reason %></p>
+        <p class="text-xs text-ink-faint">Approvals: <%= record.approvers.map(&:full_name).to_sentence.presence || "none" %> (<%= VerificationSettings.break_glass_approvals_required %> needed)</p>
+        <% if BreakGlass.may_approve?(current_user, record) && record.approvers.exclude?(current_user) %>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <%= button_to "Approve", approve_admin_break_glass_record_path(record), method: :patch, class: "btn-stitch-ghost",
+                  data: { turbo_confirm: "Approve decryption of this ID image?" } %>
+            <%= form_with url: deny_admin_break_glass_record_path(record), method: :patch, class: "flex flex-1 gap-2" do |form| %>
+              <%= form.text_field :reason, required: true, placeholder: "Why deny?", aria: { label: "Why deny?" }, class: input_class %>
+              <%= form.submit "Deny", class: "btn-stitch-ghost" %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="patch p-4"><p class="text-sm text-ink-faint">Nothing waits.</p></div>
+  <% end %>
+</div>
+
+<h3 class="font-display text-lg font-bold text-ink mb-3">Member notices not sent yet</h3>
+<div class="space-y-3 mb-8">
+  <% if @member_notices.any? %>
+    <% @member_notices.each do |notice| %>
+      <div class="patch p-4 space-y-2">
+        <p class="text-sm text-ink">
+          <%= notice.break_glass_record.public_id %>: notice to <%= notice.recipient&.full_name || "a deleted user" %>,
+          due <%= notice.due_at.utc.strftime("%b %-d %H:%M UTC") %>.
+          <% if notice.delayed? %>
+            <strong>Delay asked</strong> by <%= notice.delayed_by&.full_name || "a deleted user" %>: <%= notice.delay_reason %>.
+            <% if notice.delay_signed_off? %>
+              Signed off by <%= notice.delay_signed_off_by&.full_name || "a deleted user" %>. The notice goes out on
+              <%= notice.delay_ends_at.utc.strftime("%b %-d %H:%M UTC") %> at the latest.
+            <% else %>
+              Not signed off yet: the notice goes out when it is due.
+            <% end %>
+          <% end %>
+        </p>
+        <% if notice.delayed? %>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <% if !notice.delay_signed_off? && BreakGlass.may_sign_off_delay?(current_user, notice) %>
+              <%= button_to "Sign off the delay", sign_off_delay_admin_break_glass_notice_path(notice), method: :patch, class: "btn-stitch-ghost",
+                    data: { turbo_confirm: "Sign off this delay? The board report lists it." } %>
+            <% end %>
+            <%= button_to "Lift the delay", lift_delay_admin_break_glass_notice_path(notice), method: :patch, class: "btn-stitch-ghost" %>
+          </div>
+        <% elsif notice.recipient_id != current_user.id %>
+          <%= form_with url: delay_admin_break_glass_notice_path(notice), method: :patch, class: "flex flex-col sm:flex-row gap-2" do |form| %>
+            <%= form.text_field :reason, required: true, placeholder: "Active fraud investigation: give the reason",
+                  aria: { label: "Reason for the delay" }, class: input_class %>
+            <%= form.submit "Delay the notice", class: "btn-stitch-ghost",
+                  data: { turbo_confirm: "Ask to delay this notice? An owner or the identity team lead must sign it off. The lead is told, and the board report lists it." } %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="patch p-4"><p class="text-sm text-ink-faint">None.</p></div>
+  <% end %>
+</div>
+
+<% if @recent.any? %>
+  <h3 class="font-display text-lg font-bold text-ink mb-3">Recent requests</h3>
+  <div class="patch overflow-hidden">
+    <ul class="divide-y divide-ink-soft/10">
+      <% @recent.each do |record| %>
+        <li class="px-6 py-3 text-sm text-ink">
+          <%= record.public_id %>: <%= record.status %>, asked by <%= record.requested_by&.full_name || "a deleted user" %>
+          <%= time_ago_in_words(record.created_at) %> ago. <%= "Denied: #{record.denial_reason}" if record.denied? %>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>

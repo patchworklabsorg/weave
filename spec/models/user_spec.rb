@@ -15,6 +15,9 @@
 #  email                    :string           not null
 #  email_confirmed_at       :datetime
 #  first_name               :string           not null
+#  identity_key_holder      :boolean          default(FALSE), not null
+#  identity_lead            :boolean          default(FALSE), not null
+#  identity_team            :boolean          default(FALSE), not null
 #  is_board                 :boolean          default(FALSE), not null
 #  is_contractor            :boolean          default(FALSE), not null
 #  is_staff                 :boolean          default(FALSE), not null

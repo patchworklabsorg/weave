@@ -52,6 +52,19 @@
     </div>
   </header>
 
+  <%# Identity verification gates program resources only, never the community. %>
+  <div class="patch p-5 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
+    <div class="flex-1">
+      <p class="font-semibold text-ink"><%= t("verification.page.title") %>: <%= t("verification.statuses.#{@user.verification_status}") %></p>
+      <p class="text-sm text-ink-soft mt-1">
+        <%= t("verification.page.intro") %>
+        <%= link_to t("verification.data_page_link"), Weave.data_page_url,
+              class: "text-grape underline decoration-dashed underline-offset-2", target: "_blank", rel: "noopener" %>
+      </p>
+    </div>
+    <%= link_to t("verification.page.title"), verification_path, class: "btn-stitch-ghost shrink-0 justify-center" %>
+  </div>
+
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <section class="card">
       <div class="card-header">

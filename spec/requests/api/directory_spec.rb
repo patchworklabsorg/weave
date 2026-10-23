@@ -35,8 +35,18 @@ RSpec.describe "Directory API", type: :request do
       expect(body).to eq(
         "sub" => reviewer.p_id, "name" => reviewer.full_name, "email" => reviewer.email,
         "email_verified" => true, "slack_id" => "U0REVIEW", "slack_member" => reviewer.slack_member?,
-        "groups" => ["krater-reviewers"], "roles" => ["reviewer"], "active" => true, "minor" => false, "guardian_verified" => false
+        "groups" => ["krater-reviewers"], "roles" => ["reviewer"], "active" => true, "minor" => false, "guardian_verified" => false,
+        "verification_status" => "needs_submission"
       )
+    end
+
+    it "gives the identity verification status, and no value from the ID" do
+      create(:verification, :verified, user: reviewer)
+
+      body = directory_get(api_v1_directory_user_path(reviewer.p_id))
+
+      expect(body).to include("verification_status" => "verified")
+      expect(body.keys).not_to include("document_type", "document_number", "date_of_birth")
     end
 
     it "says when a Weave admin verified the guardian" do

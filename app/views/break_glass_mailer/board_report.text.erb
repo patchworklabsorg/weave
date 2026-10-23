@@ -1,0 +1,18 @@
+Break-glass report for <%= @report.month.strftime("%B %Y") %>
+
+Requests: <%= @report.requests.size %>
+Decryptions: <%= @report.decryptions.size %>
+Pre-review image views: <%= @report.pre_review_views %>
+Member notices delayed now: <%= @report.delayed_notices.size %>
+
+<% @report.decryptions.each do |decryption| %>
+<% record = decryption.break_glass_record %>
+- <%= decryption.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>: <%= decryption.viewer&.full_name || "A deleted user" %> decrypted the image for <%= record.public_id %>.
+  Reason: <%= record.reason %>
+  Notices: <%= decryption.notices.map { |notice| "#{notice.recipient_kind} #{notice.sent? ? 'sent' : (notice.delayed? ? 'delayed' : 'waiting')}" }.join(", ") %>
+<% end %>
+<% @report.delayed_notices.each do |notice| %>
+- Delayed member notice for <%= notice.break_glass_record.public_id %> since <%= notice.delayed_at.utc.strftime("%Y-%m-%d") %>: <%= notice.delay_reason %> (<%= notice.delay_signed_off? ? "signed off, holds until #{notice.delay_ends_at.utc.strftime('%Y-%m-%d')} at the latest" : "not signed off" %>)
+<% end %>
+
+Full report: <%= @report_url %>

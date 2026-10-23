@@ -206,5 +206,12 @@ Doorkeeper::OpenidConnect.configure do
     normal_claim :roles, scope: :roles, response: [:id_token, :user_info] do |user, _scopes, access_token|
       AppAccess.role_keys(user, access_token.application)
     end
+
+    # Identity verification: needs_submission, pending, verified or
+    # ineligible (see User#verification_status). Derived each time, never
+    # stored. Holds no value from the ID.
+    normal_claim :verification_status, scope: :verification, response: [:id_token, :user_info] do |user|
+      user.verification_status
+    end
   end
 end

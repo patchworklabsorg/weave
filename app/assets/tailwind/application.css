@@ -1236,3 +1236,20 @@
   /* Turbo: dim a frame while it reloads */
   turbo-frame[busy] { opacity: 0.6; transition: opacity var(--duration-base) var(--ease-out); }
 }
+
+/* ── Secure ID image viewer (see app/javascript/lib/secure_viewer.js) ──
+   No select, no drag, no touch callout. It blurs when the window loses
+   focus, and print never shows it. */
+.secure-viewer {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.secure-viewer-canvas {
+  pointer-events: none;
+  transition: filter 120ms ease-out;
+}
+.secure-viewer-blurred .secure-viewer-canvas { filter: blur(24px); }
+@media print {
+  .secure-viewer, [data-controller~="secure-image"] { display: none !important; }
+}

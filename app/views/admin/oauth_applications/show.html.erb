@@ -212,6 +212,29 @@
           <% end %>
         </div>
 
+        <div class="record flex-wrap">
+          <div class="record-main text-sm text-ink-soft">
+            <% if @application.requires_verification %>
+              Only members who passed identity verification can use this app.
+            <% else %>
+              This app does not require identity verification. Require it only for apps that give program resources (compute, servers, grant money).
+            <% end %>
+          </div>
+          <% if current_user.superadmin? %>
+            <div class="record-actions">
+              <% if @application.requires_verification %>
+                <%= button_to "Stop requiring verification", verification_admin_oauth_application_path(@application),
+                    method: :patch, params: { required: false }, class: "btn btn-secondary btn-sm",
+                    data: { turbo_confirm: "Let members who are not verified use #{@application.name}?" } %>
+              <% else %>
+                <%= button_to "Require identity verification", verification_admin_oauth_application_path(@application),
+                    method: :patch, params: { required: true }, class: "btn btn-secondary btn-sm",
+                    data: { turbo_confirm: "Members who are not verified will lose access to #{@application.name}. Continue?" } %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+
         <div class="record flex-wrap items-end">
           <div class="record-main text-sm text-ink-soft min-w-64">
             <% if AppAccess.email_domain_required?(@application) %>
