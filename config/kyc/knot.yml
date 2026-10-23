@@ -1,0 +1,38 @@
+# Values for the Knot and the program grants it records (see KnotSettings and
+# docs/KYC.md). Values marked LOCKED were decided on 2026-10-12. Counsel and
+# the program leads can still change them here: no code change is necessary.
+shared: &shared
+  # How long Weave keeps a Knot. Null means for ever: a Knot has no expiry,
+  # and no job deletes it. The one-grant-for-life cap and the blacklist flag
+  # (which never fades) both depend on it. LOCKED (2026-10-13).
+  keep_years: ~ # LOCKED: kept for ever
+
+  # Programs that give grants. Each key is the program key that a
+  # ProgramGrant stores.
+  programs:
+    ganymede:
+      name: Project Ganymede
+      # The most grants one person (one Knot) can receive from this program,
+      # for life. Leave it empty (null) for no cap.
+      grant_cap: 1 # LOCKED: one grant per person per program, for life
+      # The patch lead of the program, as Patchwork Labs IDs (User#p_id).
+      # The patch lead records grants and asks for a grant over the cap. A
+      # board member signs off the override. Ganymede: Adam.
+      # Empty outside production. LOCKED for production below.
+      patch_lead_p_ids: []
+
+development:
+  <<: *shared
+
+test:
+  <<: *shared
+
+production:
+  <<: *shared
+  programs:
+    ganymede:
+      name: Project Ganymede
+      grant_cap: 1 # LOCKED: one grant per person per program, for life
+      # Adam (PWL8724F96B89), the Ganymede patch lead. A production p_id:
+      # other deployments use their own IDs. LOCKED (2026-10-13).
+      patch_lead_p_ids: ["PWL8724F96B89"] # LOCKED

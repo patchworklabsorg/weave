@@ -19,6 +19,7 @@ require "rails_helper"
 #  escalation_resolution     :string
 #  escalation_resolved_at    :datetime
 #  guardian_attended         :boolean          default(FALSE), not null
+#  knot_review_reason        :string
 #  pre_review_started_at     :datetime
 #  pre_reviewed_at           :datetime
 #  region_consistent         :boolean
@@ -30,6 +31,7 @@ require "rails_helper"
 #  call_scheduled_by_id      :bigint
 #  escalation_resolved_by_id :bigint
 #  guardian_consent_id       :bigint
+#  knot_id                   :bigint
 #  pre_reviewer_id           :bigint
 #  previous_attempt_id       :bigint
 #  second_verifier_id        :bigint
@@ -41,6 +43,7 @@ require "rails_helper"
 #  index_verifications_on_call_scheduled_by_id       (call_scheduled_by_id)
 #  index_verifications_on_escalation_resolved_by_id  (escalation_resolved_by_id)
 #  index_verifications_on_guardian_consent_id        (guardian_consent_id)
+#  index_verifications_on_knot_id                    (knot_id)
 #  index_verifications_on_pre_reviewer_id            (pre_reviewer_id)
 #  index_verifications_on_previous_attempt_id        (previous_attempt_id)
 #  index_verifications_on_second_verifier_id         (second_verifier_id)
@@ -53,6 +56,7 @@ require "rails_helper"
 #  fk_rails_...  (call_scheduled_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (escalation_resolved_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (guardian_consent_id => guardian_consents.id) ON DELETE => nullify
+#  fk_rails_...  (knot_id => knots.id) ON DELETE => nullify
 #  fk_rails_...  (pre_reviewer_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (previous_attempt_id => verifications.id) ON DELETE => nullify
 #  fk_rails_...  (second_verifier_id => users.id) ON DELETE => nullify

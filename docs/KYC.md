@@ -109,8 +109,8 @@ A pass has no time limit. Weave has no expiry job and no expiry value in config.
 | Trigger | Reason | Where it fires |
 | --- | --- | --- |
 | The birthday changes | `birthday_changed` | `User` `after_update` callback, for every change (member, admin, console). |
-| The legal name changes | `legal_name_changed` | `User` `after_update` callback on `legal_first_name` or `legal_last_name`. |
-| A blacklist review | `blacklist_review` | The Knot (a later part), when a two-key change to the blacklist flag is applied. |
+| The legal name changes | `legal_name_changed` | `User` `after_update` callback on `legal_first_name` or `legal_last_name`, and `KnotChanges.sign_off` of a Knot name change. |
+| A blacklist review | `blacklist_review` | `KnotChanges.sign_off`, when a two-key change to the blacklist flag (set or clear) is applied. A declined request is not a trigger. |
 
 ```mermaid
 flowchart LR
@@ -140,7 +140,19 @@ A pass needs all of these:
 - a yes for age consistency and a yes for region consistency;
 - for a member under 18, a granted guardian consent (`User#guardian_consent_missing?` is false);
 - for a member under 18, a parent or guardian on the call. The verifier ticks "A parent or guardian attended" in the outcome form (`guardian_attended`). A minor can't pass without it. A minor can still fail without a guardian. "Under 18" is `User#minor?`, the same rule as guardian consent;
-- for a document call, the identifiers for the Knot (see below).
+- for a document call, the identifiers for the Knot (see below);
+- for a document call, a legal name and a date of birth that match the account (see "Name and birthday match").
+
+### Name and birthday match
+
+The verifier types the legal name and the date of birth from the ID. The form does not show the account values. On a pass, `VerificationFlow.account_mismatches` compares them with the account:
+
+- The name must match `User#legal_full_name` (the preferred name when the account has no legal name) after `KnotHasher.normalize_name`. Case, accents, punctuation and word order do not count.
+- The date of birth must match `users.birthday` exactly.
+
+A mismatch blocks the pass. The form shows again with what the verifier typed and says which field differs (the name, the birthday or both). It never shows the account value. The verifier can correct the entry, or fail the call with "Failed: details don't match the account" (`details_mismatch`). A fail is always allowed: this fail needs no attestation, and its reason starts with `VerificationFlow::DETAILS_MISMATCH_REASON`. The `decided` event records `details_mismatch`.
+
+Weave keeps document and national ID numbers only as one-way hashes for the fraud check (the Knot). It does not store the typed name or birth date.
 
 ### Age and region consistency
 
@@ -148,7 +160,7 @@ The verifier answers yes or no: the self-reported age, and the self-reported reg
 
 ### Identifiers for the Knot
 
-The Knot (a later part) needs the document type, issuing country, document number, national identity number (where present), legal name and date of birth. Weave never stores these values.
+The Knot (see "The Knot" below) needs the document type, issuing country, document number, national identity number (where present), legal name and date of birth. Weave never stores these values.
 
 ```mermaid
 sequenceDiagram
@@ -266,3 +278,142 @@ The values are in `config/kyc/verification.yml`. Values marked `LOCKED` were dec
 | `break_glass.max_fraud_delay_days` | 30 | Locked |
 
 The retention window for verification audit records is part of the retention question in the proposal. The deletion part sets it.
+
+## The Knot
+
+Proposal section 06, "The Knot". The Knot is a one-way fingerprint of a verified person. It identifies nobody, Weave can't reverse it into the identifiers behind it, and it stays after account deletion. It lets deletion be real for honest members and still stops a person from coming back under a new account to get a second grant.
+
+### What a Knot holds
+
+| Table | Holds | Never holds |
+| --- | --- | --- |
+| `knots` | `user_id` (only while the account is live) and `blacklisted` (yes or no) | a reason, a history, a name, timestamps |
+| `knot_hashes` | `kind` and `digest` (a keyed HMAC) | a document number, a name, a birth date |
+| `program_grants` | `program` and `granted_at`, keyed to the Knot | an amount, a reason, a user |
+
+The Knot carries exactly two pieces of state: the blacklist flag and the program grants received. There is no return capsule. A returning member starts fresh, and the Knot gives back only the flag and the grants. `Knot` has no paper trail on purpose, because a history of the flag is a history. A spec checks the columns.
+
+### Hashes
+
+`KnotHasher` turns the identifiers that the verifier types at the decision (`VerificationIdentifiers`) into digests:
+
+| Kind | Strength | Input |
+| --- | --- | --- |
+| `document` | strong | document type + issuing country + document number |
+| `national_id` | strong | issuing country + national identity number (only where the country issues one for life) |
+| `soft` | soft | normalized legal name + date of birth |
+
+- Each digest is `HMAC-SHA256(pepper, kind + fields)`, never a plain hash. A plain hash of a passport number can be reversed by trying every number.
+- The pepper is `knot.pepper` in the credentials of the deployment. Production refuses to pass a verification without it (`KnotHasher::MissingPepper`). Development and test derive a pepper from `Rails.application.key_generator`. **Set the pepper once and never rotate it.** A new pepper orphans every stored digest, and there is no plain value to hash again. Staging has its own credentials, so staging Knots never match production Knots.
+- A strong digest belongs to one Knot only (a partial unique index). Many Knots can share a soft digest.
+
+Normalization (tested in `spec/services/knot_hasher_spec.rb`):
+
+| Field | Rule |
+| --- | --- |
+| Document and national ID numbers | Unicode NFKC (full-width digits become ASCII), upper case, remove each character that is not a letter or a digit |
+| Legal name | Unicode NFKD, remove combining marks (diacritics), map the letters NFKD does not split (`ø`, `ł`, `đ`, `æ`, `œ`, `þ`, `ı`, `ħ`), Unicode case folding (`ß` becomes `ss`), make each run of other characters one space, sort the words |
+| Date of birth | ISO 8601 |
+| Issuing country | upper case |
+
+The name rule makes "Zoë Ångström", "ZOE ANGSTROM" and "Angstrom, Zoe" the same. It does not transliterate: "Иван Петров" and "Ivan Petrov" are different. `ü` becomes `u`, not `ue`.
+
+### Matching at a pass
+
+```mermaid
+flowchart TD
+  A[Verifier records a pass with identifiers] --> B[KnotLinker.pass_errors]
+  B --> C{Strong match to the Knot of another live account?}
+  C -- yes --> D[Pass stops. Attempt stays call_scheduled. Event knot_duplicate_account]
+  C -- no --> E{Flagged strong match, own Knot flagged, or soft-only match?}
+  E -- yes --> F[knot_review_reason set on the attempt. Event knot_review_required]
+  F --> G{Second verifier selected?}
+  G -- no --> H[Pass waits for a second verifier. Never a fail]
+  G -- yes --> I[Decision saved]
+  E -- no --> I
+  I --> J[Subscriber: KnotLinker.decision_made]
+  J --> K[Adopt or join detached Knots with a strong match]
+  K --> L[Add the new hashes. Old hashes stay]
+  L --> M[Link the chain of attempts. Event knot_linked]
+```
+
+- The member's own live Knot never counts as a match.
+- **Strong match** to a detached Knot: the same person. The member gets that Knot back, or it joins the member's Knot. Hashes, grants and the flag carry over, and its attempts link to the same history (`verifications.knot_id`). The per-program caps then apply.
+- **Strong match** to the Knot of another live account: one person, one account. The pass stops. The verifier can still fail the call with a written reason. The Knot never fails anyone.
+- **Soft-only match**: it routes the pass to manual review with a second verifier. That is all it can do. It never fails, blocks, flags or links. It also never carries a flag over, and the verifier does not learn whether the soft-matched Knot has the flag. A spec proves that a soft-only match can't produce a fail or a block.
+- **Flagged match** (a strong match to a blacklisted Knot, or the member's own Knot is blacklisted): the pass needs a second verifier (extra scrutiny).
+- The review reason stays on the attempt. Typing other identifiers does not remove it.
+- A fail stores nothing. A digital ID pass with no identifiers stores nothing.
+- The subscriber runs inside the decision transaction (`config/initializers/knot.rb`). An error rolls back the pass, so a pass never lands without its hashes.
+
+### Accretion
+
+The set grows. When a live member verifies again with a new document, the new hash joins the set and the old one stays. A member's set grows over their time with us. Deletion keeps the set, never the identity behind it.
+
+### Two-key changes
+
+`KnotChanges` handles every change to a Knot. One person asks with a written reason. A second, different person signs off. Nobody signs off their own request or a change to their own Knot.
+
+```mermaid
+sequenceDiagram
+  participant A as Requester
+  participant W as Weave
+  participant S as Signer
+  A->>W: Request with a written reason
+  W->>W: KnotChangeRequest row + audit row (knot_change_requested)
+  S->>W: Sign off (or decline with a reason)
+  W->>W: Apply the change + audit row (knot_change_signed_off)
+  W->>W: Delete the request row
+```
+
+| Change | Requester | Signer |
+| --- | --- | --- |
+| Set or clear the fraud flag | identity team member | another identity team member |
+| Legal name change | identity team member, after a continuity check | another identity team member |
+| Grant over the cap | the program's patch lead | a board member (`is_board`) |
+
+- The reason goes into the verification audit record (`VerificationEvent` on `Knot#audit_verification`, the newest decided attempt linked to the Knot), never onto the Knot. A Knot with no audit record left can't change.
+- The request row is deleted after the sign-off or the decline, so the Knot keeps no history.
+- A signed-off change to the fraud flag (set or clear) is a blacklist review. The member's pass stops standing, and the member needs a new call (see "Re-verification").
+- A signed-off Knot name change ends the pass too (`legal_name_changed`), as does a change to `users.legal_first_name` or `users.legal_last_name`. Only a standing pass can end, so one name change fires the trigger once, also when both paths see it.
+- A name change keeps only the new digests on the request, never the name. The member shows the new document or the change-of-name record. At the sign-off, the new hashes join the set. The old hashes, the flag and the grants stay.
+- The queue is `/admin/knots`. The identity team, board members and patch leads can open it. The Knot page (`/admin/knots/:id`) is for the identity team only.
+- Board members and patch leads must also have an admin role, because every `/admin` page needs one.
+- When the audit record of a waiting request is destroyed (the retention window), the foreign key deletes the request too.
+
+### Program grants and caps
+
+`KnotGrants` records grants on the Knot and applies the caps in `config/kyc/knot.yml`.
+
+- A grant needs a Knot (a passed verification), no fraud flag, and room under the cap. A cap of `null` means no cap.
+- The program's patch lead records a grant from the admin user page. An owner can too.
+- Only the identity team sees the fraud flag on the admin user page. A patch lead or an owner sees only the eligibility text.
+- Over the cap, the patch lead asks for an override with a written reason, and a board member signs it off. An override never lifts the fraud flag.
+- Because grants are keyed to the Knot, a member who deletes the account and comes back with the same document has the same grant count.
+
+### Account deletion
+
+The deletion pipeline calls `KnotLinker.write_record_and_detach!(user)` as step 2 of 4, before it severs the identity. The flag and the grants are already on the Knot, so the call drops the requests that need a live member (name change, grant override), empties `user_id` and returns a `KnotLinker::Record` (Knot, flag, grants received) for the deletion receipt. If a user row is deleted without the call, the foreign key empties `user_id` and the Knot stays.
+
+### How long a Knot is kept
+
+A Knot is kept for ever (`keep_years: ~`, locked). It has no expiry, and no job deletes it. The one-grant-for-life cap and the blacklist flag (which never fades) both depend on it. The Knot holds only one-way hashes, the flag and the grants, never a name or a reason.
+
+### Two passes at the same time
+
+The check before a pass and the write of the hashes are two steps. If another account takes the same document between them, the write raises `KnotLinker::DuplicateAccount`. `VerificationFlow.decide` rolls the pass back and returns the duplicate-account error. The attempt stays `call_scheduled`.
+
+### Fraud-evidence hold
+
+`Verification.under_fraud_hold` lists the attempts linked to a blacklisted Knot. A pass links the whole chain of attempts, failed calls too. The deletion part exempts these attempts from the 3-year retention window while the flag stands. When the flag is cleared, the normal window applies.
+
+### Open values
+
+The values are in `config/kyc/knot.yml`.
+
+| Key | Value | State |
+| --- | --- | --- |
+| `programs.ganymede.grant_cap` | 1 | Locked: one grant per person per program, for life |
+| `keep_years` | null (kept for ever) | Locked: a Knot has no expiry |
+| `programs.ganymede.patch_lead_p_ids` | `["PWL8724F96B89"]` (Adam) in `production`, empty elsewhere | Locked |
+| `knot.pepper` (credentials) | not set | Must be set in production before the first pass |

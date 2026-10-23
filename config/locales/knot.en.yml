@@ -1,0 +1,28 @@
+# Text for the Knot and program grants (see Knot, KnotLinker, KnotGrants and
+# docs/KYC.md). Members see the "member" text. Keep all text in ASD-STE100
+# Simplified Technical English.
+en:
+  knot:
+    member:
+      notice: "When you pass, we keep a one-way fingerprint of your ID, called the Knot. It is a set of keyed hashes. Nobody can read your name or your document number from it. It stays after you delete your account, with only two facts: the program grants you received, and a yes or no flag for fraud. It lets us give each person one grant per program."
+      name_change: "Did your legal name change? Contact our identity team. Show your new document or your change-of-name record. Your verification and your grants stay the same."
+    errors:
+      duplicate_account: "This ID matches the Knot of another live account. One person can have one account. Do not record a pass. Tell the identity team lead."
+      second_verifier_required:
+        soft_match: "The legal name and birth date match an earlier Knot. This is not proof of anything. It only sends the pass to manual review: a second verifier must attend the call and be selected here."
+        flagged_match: "This ID matches a Knot with the fraud flag. A second verifier must attend the call and be selected here. Read the attempt history before you decide."
+    review_reasons:
+      soft_match: "Soft match (name and birth date). A second verifier must attend. A soft match can never fail or block the member."
+      flagged_match: "Match to a Knot with the fraud flag. A second verifier must attend."
+    changes:
+      set_blacklist: "Set the fraud flag"
+      clear_blacklist: "Clear the fraud flag"
+      name_change: "Legal name change"
+      grant_override: "Grant over the cap"
+    grants:
+      eligible: "Can receive a grant."
+      unknown_program: "This program does not exist."
+      not_verified: "The member has not passed identity verification."
+      blacklisted: "The member's Knot has the fraud flag. No grant can be recorded."
+      cap_reached: "The member already received the most grants this program allows."
+      override_not_needed: "The member is under the cap. Record the grant. An override is not necessary."

@@ -44,6 +44,8 @@ class VerificationEvent < ApplicationRecord
     break_glass_requested break_glass_approved break_glass_granted break_glass_denied document_decrypted
     member_notice_delayed member_notice_delay_signed_off member_notice_delay_lifted
     member_notice_delay_expired reverification_required
+    knot_review_required knot_duplicate_account knot_linked
+    knot_change_requested knot_change_signed_off knot_change_declined program_grant_recorded
   ].freeze
 
   class ImmutableError < StandardError; end

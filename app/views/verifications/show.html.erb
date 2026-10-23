@@ -55,6 +55,7 @@
             <%= t("verification.page.data", days: VerificationSettings.purge_image_after_pass.in_days.to_i) %>
             <%= link_to t("verification.data_page_link"), Weave.data_page_url, class: link_class, target: "_blank", rel: "noopener" %>
           </p>
+          <p class="text-sm text-ink-soft mt-3"><%= t("knot.member.notice") %></p>
         </div>
 
         <%= form_with url: verification_path, method: :post, multipart: true, class: "space-y-4" do |form| %>
@@ -97,6 +98,11 @@
         <% elsif %i[no_birthday under_minimum_age].include?(@blocker) %>
           <p class="text-sm text-ink"><%= t("verification.blockers.#{@blocker}") %></p>
         <% end %>
+      <% end %>
+
+      <% if @latest&.verified? %>
+        <p class="text-sm text-ink-soft"><%= t("knot.member.name_change") %></p>
+        <p class="text-sm text-ink-soft"><%= t("knot.member.notice") %></p>
       <% end %>
 
       <% if @attempts.size > 1 || @latest&.decided? %>

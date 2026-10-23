@@ -5,14 +5,17 @@ require "rails_helper"
 RSpec.describe VerificationFlow do
   include ActiveJob::TestHelper
 
-  let(:member) { create(:user, :verified) }
+  # The account matches the identifiers below (see .account_mismatches).
+  let(:member) { create(:user, :verified, legal_first_name: "Erika", legal_last_name: "Mustermann", birthday: Date.new(1990, 8, 12)) }
+
+  def verification_versions = PaperTrail::Version.where(item_type: "Verification")
   let(:verifier) { create(:user, :identity_team) }
 
   def image = Rack::Test::UploadedFile.new(Rails.root.join("spec/fixtures/files/id_document.png"), "image/png")
 
   def identifiers
     VerificationIdentifiers.new(document_type: "passport", issuing_country: "DE", document_number: "C01X00T47",
-                                national_id: nil, legal_name: "Erika Mustermann", date_of_birth: Date.new(1990, 8, 12))
+                                national_id: nil, legal_name: "Erika Mustermann", date_of_birth: member.reload.birthday)
   end
 
   def decide(verification, by: verifier, outcome: "verified", **overrides)
@@ -225,6 +228,51 @@ RSpec.describe VerificationFlow do
       expect(member.verification_status).to eq("verified")
     end
 
+    it "passes when the typed name matches the account after normalization" do
+      typed = identifiers.with(legal_name: "MUSTERMANN, Érika")
+
+      expect(decide(verification, identifiers: typed)).to be_success
+    end
+
+    it "blocks a pass when the legal name or the birthday differs from the account, and says which" do
+      result = decide(verification, identifiers: identifiers.with(legal_name: "Erika Musterfrau"))
+      expect(result.errors.keys).to eq([:identifiers_legal_name])
+      expect(result.errors.values.join).not_to include("Mustermann")
+
+      result = decide(verification, identifiers: identifiers.with(date_of_birth: Date.new(1990, 8, 13)))
+      expect(result.errors.keys).to eq([:identifiers_date_of_birth])
+      expect(result.errors.values.join).not_to include("1990")
+
+      result = decide(verification, identifiers: identifiers.with(legal_name: "Max Mustermann", date_of_birth: Date.new(1991, 1, 1)))
+      expect(result.errors.keys).to contain_exactly(:identifiers_legal_name, :identifiers_date_of_birth)
+      expect(verification.reload).to be_call_scheduled
+    end
+
+    it "compares with the preferred name when the account has no legal name" do
+      member.update_columns(legal_first_name: nil, legal_last_name: nil, first_name: "Erika", last_name: "Mustermann")
+
+      expect(decide(verification)).to be_success
+    end
+
+    it "always allows a fail, also with a mismatch" do
+      typed = identifiers.with(legal_name: "Someone Else")
+
+      expect(decide(verification, outcome: "failed", identifiers: typed)).to be_success
+    end
+
+    it "fails the call for details that don't match the account, with no attestation needed" do
+      result = described_class.decide(verification, by: verifier, outcome: "failed", reason: "", age_consistent: nil,
+                                                    region_consistent: nil, identifiers: identifiers.with(legal_name: "X"),
+                                                    details_mismatch: true)
+
+      expect(result).to be_success
+      expect(verification.reload).to have_attributes(status: "failed", decision_reason: described_class::DETAILS_MISMATCH_REASON)
+      expect(verification.events.find_by!(kind: "decided").data).to include("details_mismatch" => true)
+      expect(described_class.decide(create(:verification, :call_scheduled, user: create(:user)), by: verifier, outcome: "verified",
+                                                                                                     reason: "x", age_consistent: true, region_consistent: true, details_mismatch: true))
+        .not_to be_success
+    end
+
     it "gives the identifiers to the hook and stores none of them" do
       received = nil
       subscriber = ActiveSupport::Notifications.subscribe(VerificationIdentifiers::EVENT) { |event| received = event.payload }
@@ -233,7 +281,7 @@ RSpec.describe VerificationFlow do
 
       expect(received).to include(verification:, outcome: "verified", identifiers:)
       stored = [Verification.where(id: verification.id).to_a.to_json, VerificationEvent.all.to_a.to_json,
-                PaperTrail::Version.all.to_a.to_json]
+                verification_versions.to_a.to_json]
       %w[C01X00T47 Mustermann 1990-08-12].each { |value| expect(stored.join).not_to include(value) }
     ensure
       ActiveSupport::Notifications.unsubscribe(subscriber)

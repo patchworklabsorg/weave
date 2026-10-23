@@ -162,6 +162,10 @@ class User < ApplicationRecord
   # new call (see VerificationFlow.require_reverification). This also catches
   # a change an admin makes.
   after_update :require_reverification_for_identity_change, if: :identity_attributes_changed?
+  # The Knot: the one-way hash set of this member's IDs (see Knot). It stays
+  # after the account is deleted. The deletion pipeline calls
+  # KnotLinker.write_record_and_detach!, and the database empties user_id.
+  has_one :knot, dependent: nil, inverse_of: :user
 
   # The identity team runs verification. Key holders approve break-glass
   # access to stored ID images, and the lead gets every break-glass notice
@@ -621,6 +625,10 @@ class User < ApplicationRecord
   end
 
   def identity_verified? = verification_status == "verified"
+
+  # The blacklist flag of the member's Knot (see Knot). Program grants check
+  # it (see KnotGrants).
+  def knot_blacklisted? = knot&.blacklisted || false
 
   # Where this person is in joining the Slack. Drives the /slack onboarding
   # page. Each step is the next thing the person must do.

@@ -1,0 +1,42 @@
+<%# The member's Knot and program grants (see Knot and KnotGrants), on the
+    admin user page. %>
+<% knot = user.knot %>
+<% input_class = "w-full px-3 py-2 rounded-lg border-2 border-neutral-300 bg-paper text-xs" %>
+<div class="mb-4 pb-4 border-b border-ink-soft/10">
+  <p class="text-sm font-medium text-ink">Knot and program grants</p>
+  <% if knot.nil? %>
+    <p class="text-xs text-ink-faint mt-1">No Knot: the member has not passed identity verification. No grant can be recorded.</p>
+  <% else %>
+    <%# Only the identity team sees the fraud flag. A patch lead or an owner
+        learns it only through the grant eligibility text below. %>
+    <% if current_user.identity_team %>
+      <p class="text-xs text-ink-faint mt-1">
+        Fraud flag: <%= knot.blacklisted ? "yes" : "no" %>.
+        <%= link_to "Open the Knot", admin_knot_path(knot), class: "underline" %>
+      </p>
+    <% end %>
+    <ul class="text-xs text-ink mt-2 space-y-2">
+      <% KnotSettings.programs.each do |program| %>
+        <% received = knot.grants_received(program.key) %>
+        <li>
+          <%= program.name %>: <%= received %> received<%= program.grant_cap ? " of #{program.grant_cap} allowed" : ", no cap" %>.
+          <% if user != current_user && (current_user.owner? || KnotGrants.patch_lead?(current_user, program.key)) %>
+            <% if KnotGrants.eligible?(user, program.key) %>
+              <%= button_to "Record a grant", admin_user_program_grants_path(user, program: program.key), method: :post,
+                    class: "btn-stitch-ghost mt-1", data: { turbo_confirm: "Record a #{program.name} grant?" } %>
+            <% elsif KnotGrants.eligibility(user, program.key) == :cap_reached && KnotGrants.patch_lead?(current_user, program.key) %>
+              <%= form_with url: override_admin_user_program_grants_path(user), method: :post, class: "mt-1 space-y-1" do |form| %>
+                <%= form.hidden_field :program, value: program.key %>
+                <%= form.text_area :reason, required: true, rows: 2, placeholder: "Why this case needs a grant over the cap",
+                      aria: { label: "Reason for the override" }, class: input_class %>
+                <%= form.submit "Ask a board member to sign off an override", class: "btn-stitch-ghost" %>
+              <% end %>
+            <% else %>
+              <span class="text-ink-faint"><%= t("knot.grants.#{KnotGrants.eligibility(user, program.key)}") %></span>
+            <% end %>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</div>

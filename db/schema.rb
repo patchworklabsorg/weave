@@ -500,6 +500,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.index ["user_id"], name: "index_impersonations_on_user_id"
   end
 
+  create_table "knot_change_requests", force: :cascade do |t|
+    t.bigint "knot_id", null: false
+    t.bigint "verification_id", null: false
+    t.bigint "requested_by_id"
+    t.string "kind", null: false
+    t.string "program"
+    t.jsonb "digests", default: [], null: false
+    t.datetime "created_at", null: false
+    t.index ["knot_id"], name: "index_knot_change_requests_on_knot_id"
+    t.index ["requested_by_id"], name: "index_knot_change_requests_on_requested_by_id"
+    t.index ["verification_id"], name: "index_knot_change_requests_on_verification_id"
+  end
+
+  create_table "knot_hashes", force: :cascade do |t|
+    t.bigint "knot_id", null: false
+    t.string "kind", null: false
+    t.string "digest", null: false
+    t.index ["kind", "digest"], name: "index_knot_hashes_on_kind_and_digest"
+    t.index ["kind", "digest"], name: "index_knot_hashes_on_strong_digest", unique: true, where: "((kind)::text <> 'soft'::text)"
+    t.index ["knot_id", "kind", "digest"], name: "index_knot_hashes_on_knot_id_and_kind_and_digest", unique: true
+  end
+
+  create_table "knots", force: :cascade do |t|
+    t.bigint "user_id"
+    t.boolean "blacklisted", default: false, null: false
+    t.index ["user_id"], name: "index_knots_on_user_id", unique: true
+  end
+
   create_table "lockbox_audits", force: :cascade do |t|
     t.string "subject_type"
     t.bigint "subject_id"
@@ -575,6 +603,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["searchable_type", "searchable_id"], name: "index_pg_search_documents_on_searchable"
+  end
+
+  create_table "program_grants", force: :cascade do |t|
+    t.bigint "knot_id", null: false
+    t.string "program", null: false
+    t.datetime "granted_at", null: false
+    t.index ["knot_id", "program"], name: "index_program_grants_on_knot_id_and_program"
+    t.index ["knot_id"], name: "index_program_grants_on_knot_id"
   end
 
   create_table "rollups", force: :cascade do |t|
@@ -832,9 +868,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.string "reverification_reason"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "knot_id"
+    t.string "knot_review_reason"
     t.index ["call_scheduled_by_id"], name: "index_verifications_on_call_scheduled_by_id"
     t.index ["escalation_resolved_by_id"], name: "index_verifications_on_escalation_resolved_by_id"
     t.index ["guardian_consent_id"], name: "index_verifications_on_guardian_consent_id"
+    t.index ["knot_id"], name: "index_verifications_on_knot_id"
     t.index ["pre_reviewer_id"], name: "index_verifications_on_pre_reviewer_id"
     t.index ["previous_attempt_id"], name: "index_verifications_on_previous_attempt_id"
     t.index ["second_verifier_id"], name: "index_verifications_on_second_verifier_id"
@@ -890,11 +929,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   add_foreign_key "impersonation_actions", "impersonations", on_delete: :cascade
   add_foreign_key "impersonations", "users", column: "admin_id", on_delete: :nullify
   add_foreign_key "impersonations", "users", on_delete: :nullify
+  add_foreign_key "knot_change_requests", "knots"
+  add_foreign_key "knot_change_requests", "users", column: "requested_by_id", on_delete: :nullify
+  add_foreign_key "knot_change_requests", "verifications", on_delete: :cascade
+  add_foreign_key "knot_hashes", "knots"
+  add_foreign_key "knots", "users", on_delete: :nullify
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_grants", "users", column: "resource_owner_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "users", column: "resource_owner_id"
   add_foreign_key "oauth_openid_requests", "oauth_access_grants", column: "access_grant_id", on_delete: :cascade
+  add_foreign_key "program_grants", "knots"
   add_foreign_key "service_key_usages", "service_keys"
   add_foreign_key "service_keys", "services"
   add_foreign_key "service_keys", "users", column: "created_by_id"
@@ -910,6 +955,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   add_foreign_key "verification_events", "users", on_delete: :nullify
   add_foreign_key "verification_events", "verifications"
   add_foreign_key "verifications", "guardian_consents", on_delete: :nullify
+  add_foreign_key "verifications", "knots", on_delete: :nullify
   add_foreign_key "verifications", "users", column: "call_scheduled_by_id", on_delete: :nullify
   add_foreign_key "verifications", "users", column: "escalation_resolved_by_id", on_delete: :nullify
   add_foreign_key "verifications", "users", column: "pre_reviewer_id", on_delete: :nullify
