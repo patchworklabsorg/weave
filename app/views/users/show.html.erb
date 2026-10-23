@@ -53,17 +53,23 @@
   </header>
 
   <%# Identity verification gates program resources only, never the community. %>
-  <div class="patch p-5 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
-    <div class="flex-1">
-      <p class="font-semibold text-ink"><%= t("verification.page.title") %>: <%= t("verification.statuses.#{@user.verification_status}") %></p>
-      <p class="text-sm text-ink-soft mt-1">
-        <%= t("verification.page.intro") %>
-        <%= link_to t("verification.data_page_link"), Weave.data_page_url,
-              class: "text-grape underline decoration-dashed underline-offset-2", target: "_blank", rel: "noopener" %>
-      </p>
+  <section class="card mb-6">
+    <div class="card-header">
+      <div class="min-w-0 flex-1">
+        <h2 class="card-title flex flex-wrap items-center gap-2">
+          <%= t("verification.page.title") %>
+          <%= badge(t("verification.statuses.#{@user.verification_status}"), tone: @user.verification_status == "verified" ? :success : :grape) %>
+        </h2>
+        <p class="card-lede">
+          <%= t("verification.page.intro") %>
+          <%= link_to t("verification.data_page_link"), Weave.data_page_url, class: "link", target: "_blank", rel: "noopener" %>
+        </p>
+      </div>
+      <%= link_to verification_path, class: "btn btn-secondary shrink-0" do %>
+        <%= icon(:id_card) %><%= t("verification.page.title") %>
+      <% end %>
     </div>
-    <%= link_to t("verification.page.title"), verification_path, class: "btn-stitch-ghost shrink-0 justify-center" %>
-  </div>
+  </section>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <section class="card">
@@ -129,20 +135,25 @@
   </div>
 
   <%# Takeout and deletion (see Takeout and DeletionReview). %>
-  <div class="patch p-5 mt-6 flex flex-col sm:flex-row sm:items-center gap-4">
-    <div class="flex-1">
-      <p class="font-semibold text-ink"><%= t("data_handling.profile.title") %></p>
-      <p class="text-sm text-ink-soft mt-1">
-        <%= t("data_handling.profile.intro") %>
-        <%= link_to t("data_handling.data_page_link"), Weave.data_page_url,
-              class: "text-grape underline decoration-dashed underline-offset-2", target: "_blank", rel: "noopener noreferrer" %>
-      </p>
+  <section class="card mt-6">
+    <div class="card-header">
+      <div class="min-w-0 flex-1">
+        <h2 class="card-title"><%= t("data_handling.profile.title") %></h2>
+        <p class="card-lede">
+          <%= t("data_handling.profile.intro") %>
+          <%= link_to t("data_handling.data_page_link"), Weave.data_page_url, class: "link", target: "_blank", rel: "noopener noreferrer" %>
+        </p>
+      </div>
+      <div class="btn-row shrink-0">
+        <%= link_to takeout_path, class: "btn btn-secondary" do %>
+          <%= icon(:download) %><%= t("data_handling.profile.export") %>
+        <% end %>
+        <%= link_to deletion_request_path, class: "btn btn-danger" do %>
+          <%= icon(:trash_2) %><%= t("data_handling.profile.delete") %>
+        <% end %>
+      </div>
     </div>
-    <div class="flex flex-col gap-2 shrink-0">
-      <%= link_to t("data_handling.profile.export"), takeout_path, class: "btn-stitch-ghost text-sm justify-center" %>
-      <%= link_to t("data_handling.profile.delete"), deletion_request_path, class: "btn-stitch-ghost text-sm justify-center" %>
-    </div>
-  </div>
+  </section>
 
   <p class="text-xs text-ink-faint mt-6 text-center">This is a read-only view of your account. Some details sync automatically from Slack.</p>
 </div>
