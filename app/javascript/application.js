@@ -1,5 +1,3 @@
-// Configure your import map in config/importmap.rb. Read more: https://github.com/rails/importmap-rails
+// Entry point for the JS bundle (rollup.config.js builds app/assets/builds/application.js).
 import "@hotwired/turbo-rails"
-import "mapkick/bundle"
-import "chartkick/chart.js"
 import "./controllers"

@@ -3,7 +3,7 @@
 class HomeController < ApplicationController
   # before_action :authenticate_user
   skip_before_action :authenticate_user!, only: [:index]
-  layout false
+  layout "sessions"
 
   def index
     # Signed-in members land on their account dashboard, not the

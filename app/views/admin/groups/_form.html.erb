@@ -1,58 +1,51 @@
-<%= form_with model: [:admin, group], local: true, class: "space-y-6" do |form| %>
-  <% if group.errors.any? %>
-    <div class="patch border-2 border-orchid bg-orchid-soft/40 text-ink p-4">
-      <h3 class="text-sm font-medium text-orchid">
-        There were <%= pluralize(group.errors.count, "error") %> with your submission:
-      </h3>
-      <ul class="mt-2 list-disc pl-5 space-y-1 text-sm text-ink">
-        <% group.errors.full_messages.each do |message| %>
-          <li><%= message %></li>
-        <% end %>
-      </ul>
+<%= form_with model: [:admin, group], local: true, class: "card" do |form| %>
+  <div class="card-body space-y-5">
+    <%= form_errors(group) %>
+
+    <div class="field-group">
+      <%= form.label :name, class: "field-label" %>
+      <%= form.text_field :name, class: "field", placeholder: "Engineering" %>
     </div>
-  <% end %>
 
-  <div>
-    <%= form.label :name, class: "block text-sm font-medium text-ink" %>
-    <%= form.text_field :name, class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint", placeholder: "Engineering" %>
-  </div>
+    <div class="field-group">
+      <%= form.label :slug, class: "field-label" %>
+      <% if group.persisted? %>
+        <span class="field-static mono"><%= group.slug %></span>
+        <p class="field-hint">The slug can't be changed after the group is created.</p>
+      <% else %>
+        <%= form.text_field :slug, class: "field", placeholder: "engineering" %>
+        <p class="field-hint">
+          Lowercase letters, numbers and dashes. Apps will see this name. Leave it empty to make one from the name.
+          You can't change it later.
+        </p>
+      <% end %>
+    </div>
 
-  <div>
-    <%= form.label :slug, class: "block text-sm font-medium text-ink" %>
-    <% if group.persisted? %>
-      <p class="mt-1 text-sm font-mono text-ink"><%= group.slug %></p>
-      <p class="mt-2 text-sm text-ink-faint">The slug can't be changed after the group is created.</p>
-    <% else %>
-      <%= form.text_field :slug, class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint", placeholder: "engineering" %>
-      <p class="mt-2 text-sm text-ink-faint">
-        Lowercase letters, numbers and dashes. Apps will see this name. Leave it empty to make one from the name.
-        You can't change it later.
-      </p>
-    <% end %>
-  </div>
+    <div class="field-group">
+      <%= form.label :description, class: "field-label" %>
+      <%= form.text_area :description, rows: 3, class: "field" %>
+    </div>
 
-  <div>
-    <%= form.label :description, class: "block text-sm font-medium text-ink" %>
-    <%= form.text_area :description, rows: 3, class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-  </div>
+    <div class="well">
+      <fieldset class="space-y-3">
+        <legend class="field-label">Sponsored project</legend>
+        <p class="field-hint">
+          Use these for a sponsored project, such as HackBoston. They apply to every member of this group. Do not use them for Patchwork members.
+        </p>
+        <label class="choice">
+          <%= form.check_box :waives_code_of_conduct, class: "checkbox" %>
+          <span>Members do not need to accept the Patchwork Code of Conduct to use apps.</span>
+        </label>
+        <label class="choice">
+          <%= form.check_box :waives_slack, class: "checkbox" %>
+          <span>Members do not need to join the Patchwork Slack. This needs the Code of Conduct waiver too.</span>
+        </label>
+      </fieldset>
+    </div>
 
-  <fieldset class="space-y-3">
-    <legend class="block text-sm font-medium text-ink">Sponsored project</legend>
-    <p class="text-sm text-ink-faint">
-      Use these for a sponsored project, such as HackBoston. They apply to every member of this group. Do not use them for Patchwork members.
-    </p>
-    <label class="flex items-start gap-3 text-sm text-ink">
-      <%= form.check_box :waives_code_of_conduct, class: "mt-1" %>
-      <span>Members do not need to accept the Patchwork Code of Conduct to use apps.</span>
-    </label>
-    <label class="flex items-start gap-3 text-sm text-ink">
-      <%= form.check_box :waives_slack, class: "mt-1" %>
-      <span>Members do not need to join the Patchwork Slack. This needs the Code of Conduct waiver too.</span>
-    </label>
-  </fieldset>
-
-  <div class="flex justify-end space-x-3">
-    <%= link_to "Cancel", group.persisted? ? admin_group_path(group) : admin_groups_path, class: "btn-stitch-ghost" %>
-    <%= form.submit group.persisted? ? "Save Group" : "Create Group", class: "btn-stitch" %>
+    <div class="form-actions">
+      <%= link_to "Cancel", group.persisted? ? admin_group_path(group) : admin_groups_path, class: "btn btn-secondary" %>
+      <%= form.submit group.persisted? ? "Save Group" : "Create Group", class: "btn btn-primary" %>
+    </div>
   </div>
 <% end %>

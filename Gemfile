@@ -11,7 +11,6 @@ gem "rails", "~> 8.1"
 gem "pg", "~> 1.5", ">= 1.5.9"           # PostgreSQL database
 gem "puma", ">= 5.0"                     # Web server
 gem "bootsnap", require: false           # Reduces boot times through caching
-gem "kamal", require: false              # Docker container deployment
 gem "thruster", require: false           # HTTP asset caching/compression and X-Sendfile acceleration
 gem "faraday"                            # Web requests
 gem "okcomputer" # Health checks
@@ -21,7 +20,6 @@ gem "benchmark" # Removed from Ruby 4.0 default gems; okcomputer requires it in 
 # FRONTEND & UI
 ###############################################################################
 gem "propshaft"                          # Modern asset pipeline
-gem "importmap-rails"                    # JavaScript with ESM import maps
 gem "turbo-rails"                        # Hotwire's SPA-like page accelerator
 gem "stimulus-rails"                     # Hotwire's modest JavaScript framework
 gem "tailwindcss-rails", "~> 4.2"        # CSS framework
@@ -37,7 +35,6 @@ gem "webauthn", "~> 3.4" # Passkey sign-in (WebAuthn)
 gem "doorkeeper"                         # OAuth 2.0 provider
 gem "doorkeeper-openid_connect"          # OIDC id_tokens on top of Doorkeeper
 gem "rack-attack"                        # Rate limiting
-gem "rack-cors"                          # CORS management
 gem "validates_email_format_of"          # Email validation
 gem "disposable_mail"                    # Block disposable email domains
 gem "lockbox"                            # Encryption
@@ -57,7 +54,6 @@ gem "mission_control-jobs"               # Job monitoring
 ###############################################################################
 # DATABASE TOOLS
 ###############################################################################
-gem "pg_search"                          # Full-text search
 gem "acts_as_paranoid"                   # Soft deletions
 gem "paper_trail"                        # Track changes to models
 gem "strong_migrations", "~> 2.3"        # Safer database migrations
@@ -65,35 +61,29 @@ gem "strong_migrations", "~> 2.3"        # Safer database migrations
 ###############################################################################
 # URL & IDENTIFICATION
 ###############################################################################
-gem "encoded_ids", "~> 1.1"              # Stripe-style public IDs
-gem "friendly_id"                        # URL slugs
+gem "encoded_ids", "~> 1.1" # Stripe-style public IDs
 
 ###############################################################################
 # STATE MACHINES & ERROR HANDLING
 ###############################################################################
-gem "aasm"                               # State machines
-gem "safely_block"                       # Error handling
+gem "aasm" # State machines
 
 ###############################################################################
 # FILE & IMAGE PROCESSING
 ###############################################################################
-gem "image_processing", "~> 1.2" # Active Storage image transformations
 gem "active_storage_validations" # File validations
-gem "rqrcode" # QR code generation
 
 ###############################################################################
 # EMAIL & COMMUNICATION
 ###############################################################################
 gem "premailer-rails"                    # CSS to inline styles for emails
-gem "email_reply_parser"                 # Parse email replies
 gem "slack-ruby-client"                  # Slack API integration
 gem "resend"                             # Transactional email delivery (production)
 
 ###############################################################################
 # BROWSER & SECURITY
 ###############################################################################
-gem "browser", "~> 6.2"                  # Browser detection
-gem "invisible_captcha"                  # Bot protection
+gem "browser", "~> 6.2" # Browser detection
 
 ###############################################################################
 # MONITORING & ANALYTICS
@@ -111,18 +101,11 @@ gem "irb"                                # IRB (was pinned for Console1984 compa
 gem "flipper"                            # Feature flags
 gem "flipper-active_record"              # ActiveRecord adapter for Flipper
 gem "flipper-ui"                         # UI for Flipper
-gem "dotenv-rails"                       # Environment variables
 
 ###############################################################################
 # PLATFORM COMPATIBILITY
 ###############################################################################
 gem "tzinfo-data", platforms: %i[windows jruby]
-
-##############################################################################
-# API Documentation
-##############################################################################
-gem "rswag"
-gem "rspec-rails"
 
 ###############################################################################
 # DEVELOPMENT & TEST DEPENDENCIES
@@ -131,22 +114,21 @@ group :development, :test do
   # Debugging
   gem "debug"
 
-  # Test data & matchers
+  # Environment variables from .env files
+  gem "dotenv-rails"
+
+  # Test framework, data and matchers
+  gem "rspec-rails"
   gem "factory_bot_rails"
   gem "shoulda-matchers"
 
   # Security & Code Quality
   gem "brakeman", require: false # Security analysis
   gem "rubocop-rails-omakase", require: false # Ruby styling
-  gem "rubocop-capybara", "~> 2.22", ">= 2.22.1"
+  gem "rubocop-capybara", "~> 3.1"
   gem "relaxed-rubocop"
-  gem "overcommit", require: false # Git hooks
   gem "rubocop-rspec_rails", "~> 2.31"
   gem "rubocop-rspec", "~> 3.6"
-
-
-  # Performance
-  gem "query_count" # SQL query counter
 
   # Code Quality
   gem "bullet" # N+1 query detection
@@ -157,16 +139,8 @@ group :development do
   gem "actual_db_schema"                 # Rolls back phantom migrations
   gem "annotaterb"                       # Annotate models
   gem "web-console"                      # Interactive console
-  gem "listen", "~> 3.9"                 # File watcher
   gem "letter_opener_web"                # Preview emails
-  gem "foreman"                          # Process manager
-  gem "awesome_print"                    # Pretty print objects
-  gem "rack-mini-profiler", "~> 4.0", require: false # Performance profiling
-
-  # IDE Support
-  gem "solargraph" # Ruby language server
-  gem "solargraph-rails", "~> 1.2.4", require: false
-  gem "htmlbeautifier", require: false # ERB formatting
+  gem "rack-mini-profiler", "~> 5.0", require: false # Performance profiling
 end
 
 group :test do
@@ -178,8 +152,6 @@ group :test do
   gem "rails-controller-testing"
 end
 
-gem "stackprof"
-
 # Analytics/ML gems - commented out to reduce bloat
 # Uncomment and implement when needed for specific use cases:
 # gem "rollups"              # Time-series data aggregation
@@ -188,6 +160,7 @@ gem "stackprof"
 # gem "breakout-detection"   # Detect breakouts/shifts in metrics
 # gem "disco"                # Recommendations engine
 
-gem "chartkick"
 gem "mapkick-rb"
 gem "phonelib"
+
+gem "lucide-rails", "~> 0.7.4"

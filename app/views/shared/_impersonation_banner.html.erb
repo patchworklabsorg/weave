@@ -1,0 +1,11 @@
+<%# Shown on every page while an admin is signed in as someone else. %>
+<% if impersonating? %>
+  <div class="banner-warning" role="status">
+    <%= icon(:eye) %>
+    <span>
+      You are signed in as <strong><%= current_user.full_name %></strong>
+      (<%= current_user.p_id %>) as <%= admin_user&.full_name || "an admin" %>.
+    </span>
+    <%= button_to "Stop impersonating", stop_impersonating_admin_users_path, method: :delete, class: "btn", form_class: "inline-block" %>
+  </div>
+<% end %>

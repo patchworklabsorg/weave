@@ -15,10 +15,10 @@ class Admin::UsersController < Admin::BaseController
     @users = User.all
 
     if params[:search].present?
-      search_term = "%#{params[:search]}%"
+      search_term = "%#{User.sanitize_sql_like(params[:search].to_s.strip)}%"
       @users = @users.where(
-        "first_name ILIKE ? OR last_name ILIKE ? OR email ILIKE ? OR p_id ILIKE ?",
-        search_term, search_term, search_term, search_term
+        "first_name ILIKE :t OR last_name ILIKE :t OR email ILIKE :t OR p_id ILIKE :t OR (first_name || ' ' || last_name) ILIKE :t",
+        t: search_term
       )
     end
 
@@ -50,7 +50,7 @@ class Admin::UsersController < Admin::BaseController
     if privileged_attributes_allowed && @user.save
       redirect_to admin_users_path, notice: "User was successfully created."
     else
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   end
 
@@ -66,7 +66,7 @@ class Admin::UsersController < Admin::BaseController
       PushSlackProfileFieldsJob.perform_later(@user.id) if @user.slack_profile_fields_need_push?
       redirect_to admin_user_path(@user), notice: "User was successfully updated."
     else
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     end
   end
 

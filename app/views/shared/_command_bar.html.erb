@@ -1,0 +1,102 @@
+<%# The ⌘K command bar. Rendered once per page for signed-in users by the
+    application and admin layouts. Static commands are plain buttons the
+    controller filters; admins also get live results from Admin::SearchController.
+    Open it with ⌘K / Ctrl+K or any element carrying data-command-bar-trigger. %>
+<% return unless current_user %>
+<%
+  pages = [
+    ["Your account", profile_path, :user, "profile me"],
+    ["Sessions", profile_sessions_path, :monitor, "devices sign-ins"],
+    ["Passkeys", passkeys_path, :fingerprint, "webauthn security key"],
+    ["Password", password_path, :lock, "change password"],
+    ["Join the Slack", slack_onboarding_path, :message_circle, "onboarding invite"]
+  ]
+  admin_pages = current_user.admin? ? [
+    ["Admin dashboard", admin_root_path, :layout_dashboard, "admin home"],
+    ["Users", admin_users_path, :users, "admin people members"],
+    ["Groups", admin_groups_path, :users, "admin teams"],
+    ["Consents", admin_guardian_consents_path, :shield_check, "admin guardian minors review queue"],
+    ["OAuth apps", admin_oauth_applications_path, :app_window, "admin applications clients"],
+    ["Jobs", "/admin/jobs", :activity, "admin mission control queue"],
+    ["Feature flags", "/admin/flipper", :flag, "admin flipper"],
+    ["Blazer", "/admin/blazer", :database, "admin sql queries reports"],
+    ["Console audits", "/admin/console", :terminal, "admin audits1984"],
+    ["Console sign-in", admin_console_access_path, :key_round, "admin production console dbconsole code"]
+  ] : []
+  admin_actions = current_user.admin? ? [
+    ["New user", new_admin_user_path, :plus, "create add"],
+    ["New group", new_admin_group_path, :plus, "create add"],
+    ["New OAuth app", new_admin_oauth_application_path, :plus, "create add application"]
+  ] : []
+%>
+<div data-controller="command-bar"
+     data-action="keydown@window->command-bar#keydown click@window->command-bar#trigger"
+     <% if current_user.admin? %>data-command-bar-search-url-value="<%= admin_search_path(format: :json) %>"<% end %>>
+  <dialog class="cmdk" data-command-bar-target="dialog" data-action="click->command-bar#backdrop" aria-label="Search and commands">
+    <div class="cmdk-input-row">
+      <%= icon(:search, size: 18) %>
+      <input type="text" class="cmdk-input" placeholder="Search or jump to…" autocomplete="off" spellcheck="false"
+             id="command_bar_input" aria-label="Search or jump to"
+             data-command-bar-target="input" data-action="input->command-bar#input keydown->command-bar#navigate">
+      <span class="kbd">esc</span>
+    </div>
+    <div class="cmdk-list" data-command-bar-target="list" role="listbox">
+      <div data-command-bar-target="static">
+        <div class="cmdk-section" data-recent hidden></div>
+        <% [["Pages", pages + admin_pages], ["Actions", admin_actions]].each do |title, items| %>
+          <% next if items.empty? %>
+          <div class="cmdk-section">
+            <div class="cmdk-section-title"><%= title %></div>
+            <% items.each do |label, href, glyph, keywords| %>
+              <button type="button" class="cmdk-item" role="option" data-href="<%= href %>" data-keywords="<%= keywords %>"
+                      data-action="click->command-bar#choose mousemove->command-bar#hover">
+                <%= icon(glyph) %>
+                <span class="cmdk-item-label"><%= label %></span>
+              </button>
+            <% end %>
+          </div>
+        <% end %>
+        <div class="cmdk-section">
+          <div class="cmdk-section-title">Preferences</div>
+          <button type="button" class="cmdk-item" role="option" data-command="theme" data-keywords="dark light mode appearance"
+                  data-action="click->command-bar#choose mousemove->command-bar#hover">
+            <%= icon(:moon) %>
+            <span class="cmdk-item-label">Theme: device, light or dark</span>
+          </button>
+          <button type="button" class="cmdk-item" role="option" data-command="signout" data-keywords="log out exit"
+                  data-action="click->command-bar#choose mousemove->command-bar#hover">
+            <%= icon(:log_out) %>
+            <span class="cmdk-item-label">Sign out</span>
+          </button>
+        </div>
+      </div>
+      <div data-command-bar-target="results"></div>
+      <p class="cmdk-empty" data-command-bar-target="empty" hidden>Nothing matches.</p>
+    </div>
+    <div class="cmdk-foot">
+      <span><span class="kbd">↑</span><span class="kbd">↓</span> move</span>
+      <span><span class="kbd">↵</span> open</span>
+      <span><span class="kbd">esc</span> close</span>
+    </div>
+  </dialog>
+
+  <%# Result rows for the live search. The controller clones these. %>
+  <template data-result-type="user" data-result-title="Users">
+    <button type="button" class="cmdk-item" role="option" data-action="click->command-bar#choose mousemove->command-bar#hover">
+      <%= icon(:user) %><span class="cmdk-item-label" data-label></span><span class="cmdk-item-hint" data-hint></span>
+    </button>
+  </template>
+  <template data-result-type="group" data-result-title="Groups">
+    <button type="button" class="cmdk-item" role="option" data-action="click->command-bar#choose mousemove->command-bar#hover">
+      <%= icon(:users) %><span class="cmdk-item-label" data-label></span><span class="cmdk-item-hint" data-hint></span>
+    </button>
+  </template>
+  <template data-result-type="application" data-result-title="OAuth apps">
+    <button type="button" class="cmdk-item" role="option" data-action="click->command-bar#choose mousemove->command-bar#hover">
+      <%= icon(:app_window) %><span class="cmdk-item-label" data-label></span><span class="cmdk-item-hint" data-hint></span>
+    </button>
+  </template>
+
+  <%= form_with url: logout_path, method: :delete, data: { command_bar_target: "signout", turbo: false }, class: "hidden" do %>
+  <% end %>
+</div>

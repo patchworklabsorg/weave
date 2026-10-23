@@ -1,0 +1,26 @@
+<%# Everything every layout puts in <head>, after its own <title>. %>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Weave">
+<meta name="application-name" content="Weave">
+<meta name="author" content="Patchwork Labs Inc">
+<meta name="theme-color" content="#f7f5fb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16112a" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/icon.png" type="image/png">
+<link rel="apple-touch-icon" href="/icon.png">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#2a2050">
+
+<%= csrf_meta_tags %>
+<%= csp_meta_tag %>
+
+<%# Sets data-theme before first paint; the stylesheet keys everything off it. %>
+<%= render "shared/theme" %>
+<%# Brand fonts are self-hosted and declared with @font-face in the compiled stylesheet. %>
+<%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+<%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+<%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
+<%= yield :head %>

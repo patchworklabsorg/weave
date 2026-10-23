@@ -1,3 +1,1 @@
-<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= group.system? ? 'bg-sky-soft text-sky' : 'bg-grape-soft text-ink-soft' %>">
-  <%= group.system? ? "System" : "Manual" %>
-</span>
+<%= badge(group.system? ? "System" : "Manual", tone: group.system? ? :info : :neutral) %>

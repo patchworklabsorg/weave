@@ -100,7 +100,7 @@ RSpec.describe "Admin OAuth application roles", type: :request do
 
       get admin_user_path(member)
 
-      expect(response.body).to include("App Roles", "Krater", "reviewer")
+      expect(response.body).to include("App roles", "Krater", "reviewer")
     end
   end
 end

@@ -25,7 +25,7 @@ class UsersController < ApplicationController
       @user.signing_up = true
     rescue ActiveRecord::RecordInvalid => e
       @user = e.record
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
       return
     end
 
@@ -36,7 +36,7 @@ class UsersController < ApplicationController
       if @user.errors[:base]&.any? { |message| message.include?("snafu") }
         redirect_to username_conflict_path
       else
-        render :new, status: :unprocessable_entity
+        render :new, status: :unprocessable_content
       end
     end
   end
@@ -51,7 +51,7 @@ class UsersController < ApplicationController
 
   def sessions
     @user = current_user
-    @sessions = @user.user_sessions.order(created_at: :desc)
+    @sessions = @user.user_sessions.includes(:impersonated_by).order(created_at: :desc)
   end
 
   def edit
@@ -104,11 +104,11 @@ class UsersController < ApplicationController
       if @user.update(sanitized)
         redirect_to root_path, notice: "Account successfully updated!"
       else
-        render :edit, status: :unprocessable_entity
+        render :edit, status: :unprocessable_content
       end
     rescue ActiveRecord::RecordInvalid => e
       @user = e.record
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     end
   end
 

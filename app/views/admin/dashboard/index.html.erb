@@ -1,65 +1,47 @@
-<div class="container mx-auto px-4 py-8">
-  <div class="flex justify-between items-center mb-6">
-    <h1 class="font-display text-2xl font-bold text-ink">Admin Dashboard</h1>
-  </div>
+<% content_for :title, "Dashboard" %>
 
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-    <!-- Stats Cards -->
-    <div class="bg-paper overflow-hidden shadow-lg shadow-grape/10 rounded-lg border border-violet/20">
-      <div class="p-5">
-        <div class="flex items-center">
-          <div class="flex-shrink-0">
-            <div class="text-lg font-medium text-ink-soft">Total Users</div>
-          </div>
-        </div>
-        <div class="mt-1 text-3xl font-semibold text-grape">
-          <%= @users_count %>
-        </div>
-      </div>
+<%= page_header "Dashboard", lede: "Accounts at a glance, and the tools you reach for most." %>
+
+<div class="space-y-6">
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="card stat">
+      <span class="stat-label">Total users</span>
+      <span class="stat-value"><%= @users_count %></span>
     </div>
-
-    <div class="bg-paper overflow-hidden shadow-lg shadow-grape/10 rounded-lg border border-violet/20">
-      <div class="p-5">
-        <div class="flex items-center">
-          <div class="flex-shrink-0">
-            <div class="text-lg font-medium text-ink-soft">Admins</div>
-          </div>
-        </div>
-        <div class="mt-1 text-3xl font-semibold text-grape">
-          <%= @admin_count %>
-        </div>
-      </div>
+    <div class="card stat">
+      <span class="stat-label">Admins</span>
+      <span class="stat-value"><%= @admin_count %></span>
     </div>
-
-    <div class="bg-paper overflow-hidden shadow-lg shadow-grape/10 rounded-lg border border-violet/20">
-      <div class="p-5">
-        <div class="flex items-center">
-          <div class="flex-shrink-0">
-            <div class="text-lg font-medium text-ink-soft">Active Sessions</div>
-          </div>
-        </div>
-        <div class="mt-1 text-3xl font-semibold text-grape">
-          <%= User.currently_online.count %>
-        </div>
-      </div>
+    <div class="card stat">
+      <span class="stat-label">Online now</span>
+      <span class="stat-value"><%= User.currently_online.count %></span>
     </div>
   </div>
 
-    <!-- Quick Actions -->
-    <div class="bg-paper shadow-lg shadow-grape/10 rounded-lg border border-violet/20">
-      <div class="px-4 py-5 sm:p-6">
-        <h3 class="font-display text-lg leading-6 font-medium text-ink mb-4">Quick Actions</h3>
-        <div class="space-y-2">
-          <%= link_to "Manage Users", admin_users_path,
-              class: "block w-full text-left px-4 py-2 text-sm text-grape hover:bg-grape-soft hover:text-ink rounded transition-colors" %>
-          <%= link_to "OAuth Applications", admin_oauth_applications_path,
-              class: "block w-full text-left px-4 py-2 text-sm text-grape hover:bg-grape-soft hover:text-ink rounded transition-colors" %>
-          <%= link_to "Query Database Data", '/admin/blazer',
-              class: "block w-full text-left px-4 py-2 text-sm text-grape hover:bg-grape-soft hover:text-ink rounded transition-colors" %>
-          <%= link_to "Feature Flags", '/admin/flipper',
-              class: "block w-full text-left px-4 py-2 text-sm text-grape hover:bg-grape-soft hover:text-ink rounded transition-colors" %>
-        </div>
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Quick actions</h2>
+    </div>
+    <div class="card-body">
+      <div class="record-list">
+        <% [
+          ["Manage users", admin_users_path, :users, "Search, view, edit and impersonate accounts"],
+          ["OAuth apps", admin_oauth_applications_path, :app_window, "Apps that sign in with Weave"],
+          ["Query the database", "/admin/blazer", :database, "Blazer queries and dashboards"],
+          ["Feature flags", "/admin/flipper", :flag, "Turn features on for users or groups"]
+        ].each do |title, path, icon_name, meta| %>
+          <%= link_to path, class: "record link-quiet" do %>
+            <span class="flex items-center gap-3 min-w-0 flex-1">
+              <span class="text-grape"><%= icon(icon_name, size: 18) %></span>
+              <span class="record-main">
+                <span class="record-title block"><%= title %></span>
+                <span class="record-meta block"><%= meta %></span>
+              </span>
+            </span>
+            <%= icon(:chevron_right, class: "text-ink-faint") %>
+          <% end %>
+        <% end %>
       </div>
     </div>
-  </div>
+  </section>
 </div>

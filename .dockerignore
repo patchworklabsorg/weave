@@ -7,12 +7,17 @@
 # Ignore bundler config.
 /.bundle
 
-# Ignore all environment files.
-/.env*
+# Ignore all environment files, at any depth.
+**/.env*
 
-# Ignore all default key files.
-/config/master.key
-/config/credentials/*.key
+# Ignore all key files, at any depth.
+**/master.key
+**/*.key
+**/*.pem
+
+# Ignore all local credential files. The image needs only the encrypted ones.
+/config/credentials/*
+!/config/credentials/*.yml.enc
 
 # Ignore all logfiles and tempfiles.
 /log/*
@@ -49,3 +54,23 @@
 # Ignore Docker-related files
 /.dockerignore
 /Dockerfile*
+
+# Ignore local worktrees and agent files. They hold other branches and their
+# key files, and bin/deploy-local builds from the main checkout.
+/.claude
+/.worktrees
+/.agents
+/.playwright-mcp
+/.idea
+/.ruby-lsp
+/vendor/bundle
+
+# Ignore files the image does not need at runtime.
+/spec
+/test
+/docs
+/coverage
+/bin/deploy-local
+
+# Ignore macOS folder metadata.
+**/.DS_Store

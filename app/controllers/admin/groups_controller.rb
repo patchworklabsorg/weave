@@ -13,11 +13,20 @@ class Admin::GroupsController < Admin::BaseController
 
   def index
     @groups = Group.order(:name)
+    if params[:search].present?
+      term = "%#{Group.sanitize_sql_like(params[:search].to_s.strip)}%"
+      @groups = @groups.where("name ILIKE :t OR slug ILIKE :t OR description ILIKE :t", t: term)
+    end
     @member_counts = Group::Membership.active.group(:group_id).count
   end
 
   def show
     @memberships = @group.memberships.includes(:user, :added_by).order(:created_at)
+    if params[:search].present?
+      term = "%#{Group.sanitize_sql_like(params[:search].to_s.strip)}%"
+      @memberships = @memberships.joins(:user)
+                                 .where("users.first_name ILIKE :t OR users.last_name ILIKE :t OR users.email ILIKE :t OR users.p_id ILIKE :t", t: term)
+    end
     @membership = @group.memberships.build
   end
 
@@ -31,7 +40,7 @@ class Admin::GroupsController < Admin::BaseController
     if @group.save
       redirect_to admin_group_path(@group), notice: "Group was successfully created."
     else
-      render :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_content
     end
   end
 
@@ -42,7 +51,7 @@ class Admin::GroupsController < Admin::BaseController
     if @group.update(group_params.except(:slug))
       redirect_to admin_group_path(@group), notice: "Group was successfully updated."
     else
-      render :edit, status: :unprocessable_entity
+      render :edit, status: :unprocessable_content
     end
   end
 

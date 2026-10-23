@@ -1,55 +1,49 @@
 <% content_for :title, "No access" %>
 
-<div class="absolute inset-0 flex items-center justify-center p-6">
-  <div class="patch patch-tilt-l w-full max-w-md">
-    <div class="p-9 pb-5 text-center">
-      <p class="text-sm font-medium text-ink-faint uppercase tracking-wide">Weave &middot; Patchwork Labs</p>
-      <h1 class="font-display text-3xl font-bold text-ink mt-2">You don't have access</h1>
-    </div>
+<div class="min-h-full flex items-center justify-center p-6">
+  <div class="patch patch-bound patch-tilt-l w-full max-w-md">
+    <div class="quilt-binding"></div>
+    <div class="p-8 sm:p-9 space-y-6">
+      <div class="text-center space-y-2">
+        <%= render "shared/wordmark", size: :lg, href: nil %>
+        <h1 class="font-display text-2xl font-bold text-ink">You don't have access</h1>
+      </div>
 
-    <div class="px-9 pb-9 space-y-6">
-      <div class="patch border-2 border-red-400 bg-red-50 p-5">
-        <p class="text-sm text-ink">
-          Your account can't use <strong class="text-grape"><%= @application.name %></strong>.
-        </p>
+      <div class="callout callout-danger">
+        <%= icon(:lock, size: 18) %>
+        <div class="callout-body">
+          <p>Your account can't use <strong><%= @application.name %></strong>.</p>
+        </div>
       </div>
 
       <% if @decision&.reason == :under_minimum_age %>
-        <p class="text-xs text-ink-faint text-center">
+        <p class="text-sm text-ink-soft text-center">
           <%= t("birthday.under_minimum_age", email: Weave.mail_address) %>
         </p>
       <% elsif @decision&.reason == :guardian_consent %>
-        <p class="text-xs text-ink-faint text-center">
+        <p class="text-sm text-ink-soft text-center">
           Members under 18 need consent from a parent or guardian before they can use Patchwork Labs apps.
         </p>
 
-        <div class="text-center">
-          <%= link_to "Ask a parent or guardian", slack_onboarding_path, class: "btn-stitch" %>
-        </div>
+        <%= link_to "Ask a parent or guardian", slack_onboarding_path, class: "btn btn-primary btn-block" %>
       <% elsif @decision&.reason == :code_of_conduct %>
-        <p class="text-xs text-ink-faint text-center">
+        <p class="text-sm text-ink-soft text-center">
           Patchwork Labs apps are for members who have accepted the Code of Conduct.
         </p>
 
-        <div class="text-center">
-          <%= link_to "Accept the Code of Conduct", slack_onboarding_path, class: "btn-stitch" %>
-        </div>
+        <%= link_to "Accept the Code of Conduct", slack_onboarding_path, class: "btn btn-primary btn-block" %>
       <% elsif @decision&.reason == :email_domain %>
-        <p class="text-xs text-ink-faint text-center">
+        <p class="text-sm text-ink-soft text-center">
           <%= @application.name %> needs a confirmed address on <%= @application.email_domains.to_sentence(two_words_connector: " or ", last_word_connector: " or ") %> in your Weave account. Ask a Weave admin for help.
         </p>
 
-        <div class="text-center">
-          <%= link_to "Go to your Weave account", root_path, class: "btn-stitch-ghost" %>
-        </div>
+        <%= link_to "Go to your Weave account", root_path, class: "btn btn-secondary btn-block" %>
       <% else %>
-        <p class="text-xs text-ink-faint text-center">
+        <p class="text-sm text-ink-soft text-center">
           Access to this app is limited to some people and groups. If you need it, ask a Weave admin to give you access.
         </p>
 
-        <div class="text-center">
-          <%= link_to "Go to your Weave account", root_path, class: "btn-stitch-ghost" %>
-        </div>
+        <%= link_to "Go to your Weave account", root_path, class: "btn btn-secondary btn-block" %>
       <% end %>
     </div>
   </div>

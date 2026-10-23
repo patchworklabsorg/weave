@@ -1,48 +1,64 @@
 <% content_for :title, "Console sign-in" %>
 
-<div class="mb-6">
-  <h2 class="font-display text-2xl font-bold text-ink mb-4">Sign in a console</h2>
-  <p class="text-ink-soft">
-    A production console (<code>bin/rails console</code> or <code>bin/rails dbconsole</code>) shows a code and waits.
-    Enter the code so that Weave records the console session under your name. Enter only the code of a console that you started.
-  </p>
-</div>
+<%= page_header "Sign in a console",
+      lede: "A production console (bin/rails console or bin/rails dbconsole) shows a code and waits. Enter the code so that Weave records the console session under your name. Enter only the code of a console that you started." %>
 
-<div class="patch p-6 mb-10">
-  <%= form_with url: lookup_admin_console_access_path, method: :post, class: "flex flex-col sm:flex-row gap-2" do |form| %>
-    <%= form.text_field :code, required: true, autocomplete: "off", autocapitalize: "characters", spellcheck: false,
-          placeholder: "ABCD-1234", aria: { label: "Console code" },
-          class: "flex-1 px-3 py-2 rounded-lg border-2 border-neutral-300 bg-paper text-sm font-mono uppercase" %>
-    <%= form.submit "Continue", class: "btn-stitch" %>
+<div class="space-y-6">
+  <div class="card">
+    <div class="card-body">
+      <%= form_with url: lookup_admin_console_access_path, method: :post, class: "flex flex-col sm:flex-row gap-2" do |form| %>
+        <div class="field-group flex-1">
+          <%= form.label :code, "Console code", class: "sr-only" %>
+          <%= form.text_field :code, required: true, autocomplete: "off", autocapitalize: "characters", spellcheck: false,
+                placeholder: "ABCD-1234", class: "field mono uppercase" %>
+        </div>
+        <%= form.submit "Continue", class: "btn btn-primary" %>
+      <% end %>
+    </div>
+  </div>
+
+  <% if @recent.any? %>
+    <div class="card card-flush">
+      <div class="card-header">
+        <h2 class="card-title">Recent consoles</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Console</th>
+              <th scope="col">Host</th>
+              <th scope="col">Status</th>
+              <th scope="col">Signed in by</th>
+              <th scope="col">Requested</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @recent.each do |request| %>
+              <tr>
+                <td><%= request.kind == "sql" ? "SQL" : "Rails" %></td>
+                <td class="mono"><%= request.host %></td>
+                <td>
+                  <% if request.expired? %>
+                    <%= badge "Expired" %>
+                  <% elsif request.confirmed? %>
+                    <%= badge "Confirmed", tone: :success %>
+                  <% elsif request.rejected? %>
+                    <%= badge "Rejected", tone: :danger %>
+                  <% else %>
+                    <%= badge "Waiting", tone: :info %>
+                  <% end %>
+                  <% if request.claimed_at %>
+                    <span class="table-sub">opened</span>
+                  <% end %>
+                </td>
+                <td><%= request.user&.full_name %></td>
+                <td class="text-ink-faint"><%= request.created_at.strftime("%b %-d, %Y %H:%M") %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
   <% end %>
 </div>
-
-<% if @recent.any? %>
-  <h3 class="font-display text-lg font-bold text-ink mb-3">Recent consoles</h3>
-  <div class="patch overflow-hidden">
-    <table class="min-w-full divide-y divide-ink-soft/20">
-      <thead>
-        <tr>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Console</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Host</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Status</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Signed in by</th>
-          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Requested</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-ink-soft/10">
-        <% @recent.each do |request| %>
-          <tr>
-            <td class="px-6 py-3 text-sm text-ink"><%= request.kind == "sql" ? "SQL" : "Rails" %></td>
-            <td class="px-6 py-3 text-sm text-ink font-mono"><%= request.host %></td>
-            <td class="px-6 py-3 text-sm text-ink">
-              <%= request.expired? ? "expired" : request.status %><%= " (opened)" if request.claimed_at %>
-            </td>
-            <td class="px-6 py-3 text-sm text-ink"><%= request.user&.full_name %></td>
-            <td class="px-6 py-3 text-sm text-ink-faint"><%= request.created_at.strftime("%b %-d, %Y %H:%M") %></td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  </div>
-<% end %>

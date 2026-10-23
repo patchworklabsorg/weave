@@ -1,17 +1,19 @@
 <% content_for :title, t("doorkeeper.authorizations.error.title") %>
 
-<div class="absolute inset-0 flex items-center justify-center p-6">
-  <div class="patch patch-tilt-l w-full max-w-md">
-    <div class="p-9 pb-5 text-center">
-      <p class="text-sm font-medium text-ink-faint uppercase tracking-wide">Weave &middot; Patchwork Labs</p>
-      <h1 class="font-display text-3xl font-bold text-ink mt-2"><%= t("doorkeeper.authorizations.error.title") %></h1>
-    </div>
+<div class="min-h-full flex items-center justify-center p-6">
+  <div class="patch patch-bound patch-tilt-r w-full max-w-md">
+    <div class="quilt-binding"></div>
+    <div class="p-8 sm:p-9 space-y-6">
+      <div class="text-center space-y-2">
+        <%= render "shared/wordmark", size: :lg, href: nil %>
+        <h1 class="font-display text-2xl font-bold text-ink"><%= t("doorkeeper.authorizations.error.title") %></h1>
+      </div>
 
-    <div class="px-9 pb-9 space-y-6">
-      <div class="patch border-2 border-red-400 bg-red-50 p-5">
-        <p class="text-sm text-ink">
-          <%= (local_assigns[:error_response] ? error_response : @pre_auth.error_response).body[:error_description] %>
-        </p>
+      <div class="callout callout-danger" role="alert">
+        <%= icon(:circle_x, size: 18) %>
+        <div class="callout-body">
+          <p><%= (local_assigns[:error_response] ? error_response : @pre_auth.error_response).body[:error_description] %></p>
+        </div>
       </div>
 
       <p class="text-xs text-ink-faint text-center">

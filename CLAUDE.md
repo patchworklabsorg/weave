@@ -120,7 +120,6 @@ After migrations, always run: `bundle exec annotaterb models`
 - Sensitive data encrypted with Lockbox
 - Rate limiting via Rack::Attack (configured in `config/initializers/rack_attack.rb`)
 - OAuth redirect URIs are strictly validated
-- CORS configured per-environment in `config/initializers/cors.rb`
 
 ### Feature Flags
 Use Flipper for feature rollouts. Check flags with:
@@ -157,16 +156,16 @@ System tests use Capybara + Selenium WebDriver.
 ### Audit Logging
 All console access is audited via Console1984. In production and staging, `bin/rails console` and `bin/rails dbconsole` wait until the person who started them signs them in at `/admin/console_access`, and the session is recorded under that person. The app's database role (`weave_app`) cannot delete or rewrite the audit tables. `dbconsole` opens an audited SQL console, not psql. Details: `docs/CONSOLE_ACCESS.md`. Reviewers read the sessions at `/admin/console` (Audits1984).
 
-## Color Palette
-UI components use the defined color palette:
-- **Deep Purple** (#4B006E): Primary brand, bold accents
-- **Lavender Purple** (#C7B7E2): Soft highlights, secondary elements
-- **Clean White** (#FFFFFF): Backgrounds, contrast
-- **Dark Grayish-Blue** (#2C3440): Text, subtle elements
-- **Near-Black** (#18181A): Primary text, grounding elements
+## UI
+Weave is the reference implementation of the Patchwork design system. Read `docs/UI.md` before you touch a view. The guide (principles, tokens, components, icons) is in internal-docs under `design/`.
+
+- Tokens and component classes: `app/assets/tailwind/application.css`. Use token utilities (`bg-paper`, `text-ink-soft`, `border-hairline`), never a hex or a raw Tailwind palette color.
+- Helpers: `page_header`, `badge`, `nav_link`, `empty_state`, `form_errors`, `copy_button`, `avatar`, `dl_row` (`app/helpers/ui_helper.rb`) and `icon(:name)` (Lucide, `app/helpers/icon_helper.rb`). No emoji in the interface.
+- One `btn-primary` per view. Danger actions confirm first. Every page works at 390px and in dark mode.
+- Admin pages go in the sidebar (`shared/_sidebar`) and the command bar (`shared/_command_bar`).
 
 ## Deployment
-Production runs as Docker containers on the `alastor` NixOS host, not Kamal. Ignore `config/deploy.yml` and `.kamal/`: they are unused leftovers. Thruster handles HTTP acceleration inside the image.
+Production runs as Docker containers on the `alastor` NixOS host. The image is built on Ruby Alpine (`Dockerfile`). Thruster handles HTTP acceleration inside the image.
 
 - The infra repo (`~/dev/infra`, module `modules/weave/default.nix`) defines the containers. Deploy infra changes with `deploy .#alastor --remote-build --skip-checks`.
 - Production deploys are manual: `bin/deploy-local` (primary) or `gh workflow run deploy.yml` (fallback). A push to `main` does not deploy production.

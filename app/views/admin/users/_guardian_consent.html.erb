@@ -5,9 +5,9 @@
 <% if user.minor? || consents.any? %>
   <% current = consents.find { |consent| consent.pending? || consent.granted? } %>
   <% can_manage = admin_permissions_for(user).manage? %>
-  <div class="mb-4 pb-4 border-b border-ink-soft/10">
-    <p class="text-sm font-medium text-ink">Guardian consent</p>
-    <p class="text-xs text-ink-faint mt-1">
+  <div class="space-y-2">
+    <h3 class="section-title">Guardian consent</h3>
+    <p class="record-meta">
       <% if !user.minor? %>
         Not needed: this member is 18 or older, or has no birthday on file.
       <% elsif current&.granted? %>
@@ -22,7 +22,7 @@
     </p>
 
     <% if current&.granted? %>
-      <p class="text-xs mt-1 text-ink-faint">
+      <p class="record-meta">
         <% if current.verified? %>
           Verified guardian: <%= current.verified_at.strftime("%b %-d, %Y") %> by <%= current.verified_by&.full_name || "a deleted user" %>. <%= current.verification_note %>
         <% else %>
@@ -30,14 +30,14 @@
         <% end %>
       </p>
       <% if !current.verified? && current_user.superadmin? && can_manage %>
-        <details class="mt-2">
-          <summary class="text-xs text-grape cursor-pointer">Record a verified guardian</summary>
-          <%= form_with url: verify_admin_user_guardian_consent_path(user, current), method: :patch, class: "mt-2 space-y-2" do |form| %>
-            <p class="text-xs text-ink-faint">You need a signed guardian form and a call or video check with the guardian.</p>
+        <details>
+          <summary class="link text-sm cursor-pointer">Record a verified guardian</summary>
+          <%= form_with url: verify_admin_user_guardian_consent_path(user, current), method: :patch, class: "well mt-2 space-y-2" do |form| %>
+            <p class="field-hint">You need a signed guardian form and a call or video check with the guardian.</p>
             <%= form.text_area :note, required: true, rows: 2, placeholder: "Where is the signed form? How and when did you speak with the guardian?",
                   aria: { label: "Where is the signed form, and how did you speak with the guardian?" },
-                  class: "w-full px-3 py-2 rounded-lg border-2 border-neutral-300 bg-paper text-sm" %>
-            <%= form.submit "Record verified guardian", class: "btn-stitch-ghost",
+                  class: "field field-sm" %>
+            <%= form.submit "Record verified guardian", class: "btn btn-secondary btn-sm",
                   data: { turbo_confirm: "Record that you have a signed form and spoke with #{current.guardian_name}?" } %>
           <% end %>
         </details>
@@ -45,48 +45,55 @@
     <% end %>
 
     <% if current&.granted? && current.flags.any? %>
-      <p class="text-xs mt-1 <%= current.reviewed_at ? 'text-ink-faint' : 'text-orchid' %>">
-        <% if current.reviewed_at %>
+      <% if current.reviewed_at %>
+        <p class="record-meta">
           Checked <%= current.reviewed_at.strftime("%b %-d, %Y") %> by <%= current.reviewed_by&.full_name || "a deleted user" %>: <%= current.review_note %>
-        <% else %>
-          Needs a check: <%= current.flags.map { |flag| GuardianConsentSignals.describe(flag) }.join(" ") %>
-          <%= link_to "Open the review queue", admin_guardian_consents_path, class: "underline" %>
-        <% end %>
-      </p>
+        </p>
+      <% else %>
+        <div class="callout callout-warning">
+          <%= icon(:triangle_alert, size: 18) %>
+          <div class="callout-body text-sm">
+            Needs a check: <%= current.flags.map { |flag| GuardianConsentSignals.describe(flag) }.join(" ") %>
+            <%= link_to "Open the review queue", admin_guardian_consents_path, class: "link" %>
+          </div>
+        </div>
+      <% end %>
     <% end %>
 
-    <div class="flex flex-wrap gap-2 mt-2">
-      <% if current&.pending? && can_manage %>
-        <%= button_to "Send the request again", resend_admin_user_guardian_consent_path(user, current),
-              class: "btn-stitch-ghost" %>
-      <% end %>
-      <% if current&.granted? && current_user.superadmin? && can_manage %>
-        <%= button_to "Revoke consent", revoke_admin_user_guardian_consent_path(user, current), method: :patch,
-              class: "btn-stitch-ghost",
-              data: { turbo_confirm: "#{user.full_name} will lose access to apps that require guardian consent. Continue?" } %>
-      <% end %>
-    </div>
+    <% if (current&.pending? && can_manage) || (current&.granted? && current_user.superadmin? && can_manage) %>
+      <div class="btn-row">
+        <% if current&.pending? && can_manage %>
+          <%= button_to "Send the request again", resend_admin_user_guardian_consent_path(user, current),
+                class: "btn btn-secondary btn-sm" %>
+        <% end %>
+        <% if current&.granted? && current_user.superadmin? && can_manage %>
+          <%= button_to "Revoke consent", revoke_admin_user_guardian_consent_path(user, current), method: :patch,
+                class: "btn btn-danger btn-sm",
+                data: { turbo_confirm: "#{user.full_name} will lose access to apps that require guardian consent. Continue?" } %>
+        <% end %>
+      </div>
+    <% end %>
 
     <% if user.guardian_consent_missing? && current_user.superadmin? && can_manage && user != current_user %>
-      <details class="mt-3">
-        <summary class="text-xs text-grape cursor-pointer">Record consent given offline</summary>
-        <%= form_with url: admin_user_guardian_consents_path(user), method: :post, class: "mt-2 space-y-2" do |form| %>
+      <details>
+        <summary class="link text-sm cursor-pointer">Record consent given offline</summary>
+        <%= form_with url: admin_user_guardian_consents_path(user), method: :post, class: "well mt-2 space-y-2" do |form| %>
           <%= form.text_field :guardian_name, placeholder: "Guardian's full name", required: true, maxlength: 100,
-                aria: { label: "Guardian's full name" }, class: "w-full px-3 py-2 rounded-lg border-2 border-neutral-300 bg-paper text-sm" %>
+                aria: { label: "Guardian's full name" }, class: "field field-sm" %>
           <%= form.email_field :guardian_email, placeholder: "Guardian's email", required: true, maxlength: 100,
-                aria: { label: "Guardian's email" }, class: "w-full px-3 py-2 rounded-lg border-2 border-neutral-300 bg-paper text-sm" %>
+                aria: { label: "Guardian's email" }, class: "field field-sm" %>
           <%= form.text_area :note, placeholder: "Where is the signed form?", required: true, rows: 2,
-                aria: { label: "Where is the signed form?" }, class: "w-full px-3 py-2 rounded-lg border-2 border-neutral-300 bg-paper text-sm" %>
-          <%= form.submit "Record consent", class: "btn-stitch-ghost",
+                aria: { label: "Where is the signed form?" }, class: "field field-sm" %>
+          <%= form.submit "Record consent", class: "btn btn-secondary btn-sm",
                 data: { turbo_confirm: "Record that a parent or guardian gave consent for #{user.full_name}?" } %>
         <% end %>
       </details>
     <% end %>
 
     <% if consents.size > 1 %>
-      <details class="mt-3">
-        <summary class="text-xs text-ink-faint cursor-pointer">History</summary>
-        <ul class="mt-2 space-y-1 text-xs text-ink-faint">
+      <details>
+        <summary class="link text-sm cursor-pointer">History</summary>
+        <ul class="well mt-2 space-y-1 text-xs text-ink-soft">
           <% consents.each do |consent| %>
             <li><%= consent.created_at.strftime("%b %-d, %Y") %>: <%= consent.status %>, <%= consent.guardian_email %></li>
           <% end %>

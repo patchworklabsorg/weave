@@ -1,205 +1,144 @@
-<div class="container mx-auto px-4 py-8">
-  <div class="max-w-2xl mx-auto">
-    <div class="flex justify-between items-center mb-6">
-      <div>
-        <h1 class="font-display text-2xl font-bold text-ink">Edit Profile</h1>
-        <p class="text-ink-soft">Update your account information and addresses</p>
+<% content_for :title, "Edit profile" %>
+
+<div class="page page-narrow">
+  <%= page_header("Edit profile", lede: "Update your account information and addresses") %>
+
+  <%= form_with(model: @user, url: profile_path, method: :patch, local: true, class: "space-y-6", data: { controller: "address-sync" }) do |form| %>
+    <%= form.hidden_field :billing_same_as_shipping, data: { address_sync_target: "flag" } %>
+    <%= form_errors(@user) %>
+
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Personal information</h2>
       </div>
-      <%= link_to 'Back to Profile', profile_path, class: 'btn-stitch-ghost' %>
-    </div>
-
-    <%= form_with(model: @user, url: profile_path, method: :patch, local: true, class: "space-y-6") do |form| %>
-      <%= form.hidden_field :billing_same_as_shipping %>
-      <% if @user.errors.any? %>
-        <div class="patch border-2 border-orchid bg-orchid-soft/40 text-ink p-4">
-          <h3 class="text-sm font-medium text-ink">There were <%= pluralize(@user.errors.count, "error") %> with your submission:</h3>
-          <div class="mt-2 text-sm text-ink-soft">
-            <ul role="list" class="list-disc space-y-1 pl-5">
-              <% @user.errors.full_messages.each do |message| %>
-                <li><%= message %></li>
-              <% end %>
-            </ul>
+      <div class="card-body">
+        <div class="form-grid form-grid-2">
+          <div class="field-group">
+            <%= form.label :first_name, "Preferred first name", class: "field-label" %>
+            <%= form.text_field :first_name, class: "field" %>
           </div>
-        </div>
-      <% end %>
-
-      <div class="patch p-6">
-        <h2 class="font-display text-lg font-medium text-ink mb-4">Personal Information</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <%= form.label :first_name, "Preferred first name", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :first_name,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+          <div class="field-group">
+            <%= form.label :last_name, "Preferred last name", class: "field-label" %>
+            <%= form.text_field :last_name, class: "field" %>
           </div>
-          <div>
-            <%= form.label :last_name, "Preferred last name", class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :last_name,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+          <div class="field-group">
+            <%= form.label :legal_first_name, class: "field-label" %>
+            <%= form.text_field :legal_first_name, maxlength: 100, placeholder: "Same as preferred name", class: "field" %>
           </div>
-          <div>
-            <%= form.label :legal_first_name, class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :legal_first_name,
-                maxlength: 100,
-                placeholder: "Same as preferred name",
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+          <div class="field-group">
+            <%= form.label :legal_last_name, class: "field-label" %>
+            <%= form.text_field :legal_last_name, maxlength: 100, placeholder: "Same as preferred name", class: "field" %>
           </div>
-          <div>
-            <%= form.label :legal_last_name, class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :legal_last_name,
-                maxlength: 100,
-                placeholder: "Same as preferred name",
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
+          <p class="field-hint span-2 -mt-2">Leave the legal name fields blank if they match your preferred name. Your legal name is only used where it's legally required.</p>
+          <div class="field-group">
+            <span class="field-label">Email</span>
+            <span class="field-static"><%= @user.email %></span>
+            <p class="field-hint">Manage your email addresses in the section below.</p>
           </div>
-          <div class="md:col-span-2 -mt-2">
-            <p class="text-xs text-ink-faint">Leave the legal name fields blank if they match your preferred name. Your legal name is only used where it's legally required.</p>
+          <div class="field-group">
+            <%= form.label :phone_number, class: "field-label" %>
+            <%= form.telephone_field :phone_number, placeholder: "(802) 555-0123", class: "field" %>
+            <p class="field-hint">Include your area code. International numbers need a country code (e.g. +44).</p>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-ink mb-1">Email</label>
-            <div class="w-full rounded-lg border-2 border-neutral-300 bg-quilt px-4 py-3 text-sm text-ink-soft">
-              <%= @user.email %>
-            </div>
-            <p class="mt-1 text-xs text-ink-faint">Manage your email addresses in the section below.</p>
-          </div>
-          <div>
-            <%= form.label :phone_number, class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.telephone_field :phone_number,
-                placeholder: "(802) 555-0123",
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-            <p class="mt-1 text-xs text-ink-faint">Include your area code. International numbers need a country code (e.g. +44).</p>
-          </div>
-          <div>
-            <%= form.label :pronouns, class: "block text-sm font-medium text-ink mb-1" %>
-            <%= form.text_field :pronouns,
-                placeholder: "e.g. they/them",
-                maxlength: User::PRONOUNS_MAX_LENGTH,
-                class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-            <p class="mt-1 text-xs text-ink-faint">Shared with your Slack profile. To remove your pronouns, clear them here. Clearing them in Slack does not clear them here.</p>
+          <div class="field-group">
+            <%= form.label :pronouns, class: "field-label" %>
+            <%= form.text_field :pronouns, placeholder: "e.g. they/them", maxlength: User::PRONOUNS_MAX_LENGTH, class: "field" %>
+            <p class="field-hint">Shared with your Slack profile. To remove your pronouns, clear them here. Clearing them in Slack does not clear them here.</p>
           </div>
           <% if @user.birthday.blank? %>
-            <div>
-              <%= form.label :birthday, class: "block text-sm font-medium text-ink mb-1" %>
-              <%= form.date_field :birthday,
-                  class: "w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-              <p class="mt-1 text-xs text-ink-faint">Birthday can only be set once. Contact an administrator to change it later.</p>
+            <div class="field-group">
+              <%= form.label :birthday, class: "field-label" %>
+              <%= form.date_field :birthday, class: "field" %>
+              <p class="field-hint">Birthday can only be set once. Contact an administrator to change it later.</p>
             </div>
           <% else %>
-            <div>
-              <label class="block text-sm font-medium text-ink mb-1">Birthday</label>
-              <div class="w-full rounded-lg border-2 border-neutral-300 bg-quilt px-4 py-3 text-sm text-ink-soft">
-                <%= @user.birthday.strftime("%B %d, %Y") %>
-              </div>
-              <p class="mt-1 text-xs text-ink-faint">Birthday cannot be changed. Contact an administrator if you need to update it.</p>
+            <div class="field-group">
+              <span class="field-label">Birthday</span>
+              <span class="field-static"><%= @user.birthday.strftime("%B %d, %Y") %></span>
+              <p class="field-hint">Birthday cannot be changed. Contact an administrator if you need to update it.</p>
             </div>
           <% end %>
         </div>
       </div>
+    </section>
 
-      <div class="patch p-6">
-        <h2 class="font-display text-lg font-medium text-ink mb-4">Shipping Address</h2>
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Shipping address</h2>
+      </div>
+      <div class="card-body">
         <%= form.fields_for :shipping_address, (@user.shipping_address || @user.build_shipping_address) do |address_form| %>
           <%= render "address_form", form: address_form, address_type: "shipping" %>
         <% end %>
       </div>
+    </section>
 
-      <div class="patch p-6">
-        <h2 class="font-display text-lg font-medium text-ink mb-4">Billing Address</h2>
-        <div class="mb-4">
-          <label class="inline-flex items-center">
-            <input type="checkbox" id="sameas" class="rounded border-2 border-neutral-300 text-grape focus:ring-grape h-4 w-4">
-            <span class="ml-2 text-sm text-ink-soft">Billing address same as shipping</span>
-          </label>
-        </div>
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Billing address</h2>
+      </div>
+      <div class="card-body space-y-4">
+        <%# No name attribute: the toggle is not posted; the hidden flag above is. %>
+        <label class="choice">
+          <input type="checkbox" class="checkbox" data-address-sync-target="toggle" data-action="change->address-sync#sync">
+          <span>Billing address same as shipping</span>
+        </label>
         <%= form.fields_for :billing_address, (@user.billing_address || @user.build_billing_address) do |address_form| %>
           <%= render "address_form", form: address_form, address_type: "billing" %>
         <% end %>
       </div>
+    </section>
 
-      <div class="flex justify-end space-x-3">
-        <%= link_to 'Cancel', profile_path, class: 'btn-stitch-ghost' %>
-        <%= form.submit "Save", class: 'btn-stitch' %>
+    <div class="form-actions">
+      <%= link_to "Cancel", profile_path, class: "btn btn-secondary" %>
+      <%= form.submit "Save", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+
+  <section class="card mt-6">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">Email addresses</h2>
+        <p class="card-lede">You can sign in with any confirmed email. Your primary email is where we send account notifications.</p>
       </div>
-    <% end %>
-
-    <div class="patch p-6 mt-6">
-      <h2 class="font-display text-lg font-medium text-ink mb-1">Email Addresses</h2>
-      <p class="text-sm text-ink-soft mb-4">You can sign in with any confirmed email. Your primary email is where we send account notifications.</p>
-
-      <ul class="divide-y divide-neutral-200">
+    </div>
+    <div class="card-body space-y-4">
+      <div class="record-list">
         <% @user.email_addresses.order(is_primary: :desc, created_at: :asc).each do |email_address| %>
-          <li class="py-3 flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-2 min-w-0">
-              <span class="text-sm text-ink truncate"><%= email_address.email %></span>
-              <% if email_address.primary? %>
-                <span class="inline-flex items-center rounded-full bg-grape px-2 py-0.5 text-xs font-medium text-white">Primary</span>
-              <% end %>
-              <% if email_address.confirmed? %>
-                <span class="inline-flex items-center rounded-full bg-orchid-soft/60 px-2 py-0.5 text-xs font-medium text-ink">Confirmed</span>
-              <% else %>
-                <span class="inline-flex items-center rounded-full bg-quilt px-2 py-0.5 text-xs font-medium text-ink-soft">Unconfirmed</span>
-              <% end %>
+          <div class="record flex-wrap">
+            <div class="record-main">
+              <div class="record-title flex flex-wrap items-center gap-2">
+                <span class="min-w-0 break-all"><%= email_address.email %></span>
+                <%= badge("Primary", tone: :solid) if email_address.primary? %>
+                <% if email_address.confirmed? %>
+                  <%= badge("Confirmed", tone: :success) %>
+                <% else %>
+                  <%= badge("Unconfirmed", tone: :neutral) %>
+                <% end %>
+              </div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="record-actions">
               <% unless email_address.confirmed? %>
-                <%= button_to "Resend confirmation", resend_confirmation_email_address_path(email_address), method: :post, class: "btn-stitch-ghost text-xs" %>
+                <%= button_to "Resend confirmation", resend_confirmation_email_address_path(email_address), method: :post, class: "btn btn-quiet btn-sm" %>
               <% end %>
               <% if email_address.confirmed? && !email_address.primary? %>
-                <%= button_to "Make primary", make_primary_email_address_path(email_address), method: :patch, class: "btn-stitch-ghost text-xs" %>
+                <%= button_to "Make primary", make_primary_email_address_path(email_address), method: :patch, class: "btn btn-quiet btn-sm" %>
               <% end %>
               <% unless email_address.primary? %>
                 <%= button_to "Remove", email_address_path(email_address), method: :delete,
-                    data: { turbo_confirm: "Remove #{email_address.email} from your account?" },
-                    class: "btn-stitch-ghost text-xs" %>
+                      data: { turbo_confirm: "Remove #{email_address.email} from your account?" },
+                      class: "btn btn-danger btn-sm" %>
               <% end %>
             </div>
-          </li>
+          </div>
         <% end %>
-      </ul>
+      </div>
 
-      <%= form_with url: email_addresses_path, scope: :email_address, method: :post, class: "mt-4 flex gap-2" do |email_form| %>
-        <%= email_form.email_field :email, placeholder: "you@example.com", required: true,
-            class: "flex-1 px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-        <%= email_form.submit "Add email", class: "btn-stitch" %>
+      <%= form_with url: email_addresses_path, scope: :email_address, method: :post, class: "flex flex-wrap gap-2" do |email_form| %>
+        <%= email_form.label :email, "Add an email address", class: "sr-only" %>
+        <%= email_form.email_field :email, placeholder: "you@example.com", required: true, class: "field flex-1 min-w-0 basis-56" %>
+        <%= email_form.submit "Add email", class: "btn btn-secondary" %>
       <% end %>
     </div>
-  </div>
+  </section>
 </div>
-
-<script nonce="<%= content_security_policy_nonce %>">
-document.addEventListener('DOMContentLoaded', function() {
-  // inline js fuck logic
-  const sameas = document.getElementById('sameas');
-  const sin = document.querySelectorAll('[name*="shipping_address"]');
-  const bin = document.querySelectorAll('[name*="billing_address"]');
-  const originalNames = Array.from(bin).map(bi => bi.name);
-
-  sameas.addEventListener('change', function() {
-    document.getElementById('user_billing_same_as_shipping').value = this.checked ? '1' : '0';
-    if (this.checked) {
-      bin.forEach((bi, index) => {
-        bi.name = '';
-        bi.readOnly = true;
-        bi.classList.add('bg-quilt');
-      });
-    } else {
-      bin.forEach((bi, index) => {
-        bi.name = originalNames[index];
-        bi.readOnly = false;
-        bi.classList.remove('bg-quilt');
-      });
-    }
-  });
-
-  let allSame = true;
-  sin.forEach((si, index) => {
-    const bi = bin[index];
-    if (bi && si.value !== bi.value) {
-      allSame = false;
-    }
-  });
-  if (allSame && sin.length > 0) {
-    sameas.checked = true;
-    document.getElementById('user_billing_same_as_shipping').value = '1';
-    sameas.dispatchEvent(new Event('change'));
-  }
-});
-</script>

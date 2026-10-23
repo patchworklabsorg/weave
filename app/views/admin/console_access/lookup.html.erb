@@ -1,31 +1,29 @@
 <% content_for :title, "Console sign-in" %>
 
-<div class="mb-6">
-  <h2 class="font-display text-2xl font-bold text-ink mb-4">Is this your console?</h2>
-  <p class="text-ink-soft">
-    Confirm only if you started this console and it shows the code <code class="font-mono"><%= @code.upcase %></code>.
-    The console session is recorded under your name and PWL id.
-  </p>
-</div>
+<%= page_header "Is this your console?" do %>
+  <%= link_to "Back", admin_console_access_path, class: "btn btn-secondary" %>
+<% end %>
 
-<div class="patch p-6">
-  <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-    <div>
-      <dt class="text-ink-faint">Console</dt>
-      <dd class="text-ink font-semibold"><%= @console_request.kind == "sql" ? "SQL console (dbconsole)" : "Rails console" %></dd>
+<div class="page-narrow space-y-6">
+  <div class="callout callout-warning">
+    <%= icon(:triangle_alert, size: 18) %>
+    <div class="callout-body">
+      Confirm only if you started this console and it shows the code <code class="code-chip"><%= @code.upcase %></code>.
+      The console session is recorded under your name and PWL id.
     </div>
-    <div>
-      <dt class="text-ink-faint">Host</dt>
-      <dd class="text-ink font-mono"><%= @console_request.host %></dd>
-    </div>
-    <div>
-      <dt class="text-ink-faint">Started</dt>
-      <dd class="text-ink"><%= @console_request.created_at.strftime("%b %-d, %Y %H:%M:%S") %></dd>
-    </div>
-  </dl>
+  </div>
 
-  <div class="mt-6 flex gap-2">
-    <%= button_to "Yes, it is mine", confirm_admin_console_access_path, params: { code: @code, answer: "mine" }, class: "btn-stitch" %>
-    <%= button_to "No, it is not mine", confirm_admin_console_access_path, params: { code: @code, answer: "not_mine" }, class: "btn-stitch-ghost" %>
+  <div class="card">
+    <div class="card-body">
+      <dl class="dl">
+        <%= dl_row "Console", @console_request.kind == "sql" ? "SQL console (dbconsole)" : "Rails console" %>
+        <%= dl_row("Host") { tag.span(@console_request.host, class: "mono") } %>
+        <%= dl_row "Started", @console_request.created_at.strftime("%b %-d, %Y %H:%M:%S") %>
+      </dl>
+    </div>
+    <div class="card-footer btn-row">
+      <%= button_to "Yes, it is mine", confirm_admin_console_access_path, params: { code: @code, answer: "mine" }, class: "btn btn-primary" %>
+      <%= button_to "No, it is not mine", confirm_admin_console_access_path, params: { code: @code, answer: "not_mine" }, class: "btn btn-secondary" %>
+    </div>
   </div>
 </div>

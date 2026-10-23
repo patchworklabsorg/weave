@@ -44,7 +44,7 @@ members have none of these.
 - **PostgreSQL 17** (pgvector) · **Redis 7**
 - **Solid Queue / Cache / Cable** for jobs, caching, and websockets
 - **Doorkeeper** (OAuth 2.0) · **Lockbox** (encryption) · **AASM** (state machines)
-- **Propshaft** · **Tailwind CSS** · **Turbo** · **Stimulus** · **importmap**
+- **Propshaft** · **Tailwind CSS** · **Turbo** · **Stimulus** · **jsbundling (Rollup on Bun)**
 - **Resend** for transactional email · **Flipper** feature flags · **Blazer** BI
 
 ## Quick start

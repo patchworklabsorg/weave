@@ -1,422 +1,1238 @@
 @import "tailwindcss";
 @import "./fonts.css";
 
-@theme {
-  /* ─────────────────────────────────────────────────────────────
-     Patchwork "quilt" palette — shared with patchworklabs.org.
-     A quilt of purples with one blue patch, one teal patch, and
-     deep stitch-purple outlines. Keep this file and the website's
-     globals.css in sync.
-     ───────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────
+   Patchwork "quilt" design tokens.
 
-  /* Grounds & ink */
-  --color-quilt: #f7f5fb;        /* page background — lavender-tinted paper */
-  --color-paper: #fefdff;        /* card surface */
-  --color-ink: #2a2050;          /* primary text — the stitch color */
-  --color-ink-soft: #5d5584;     /* secondary text */
-  --color-ink-faint: #8a83a8;    /* muted text, captions */
+   The palette is shared with patchworklabs.org: a quilt of purples
+   with one blue patch, one teal patch, and deep stitch-purple
+   outlines. Keep the hex values in sync with the website's
+   globals.css. The canonical reference lives in internal-docs,
+   design/tokens.md.
+
+   Every color is declared once with light-dark(). The <html>
+   element carries color-scheme (set by shared/_theme before first
+   paint, or by the OS when scripts are off), and the browser picks
+   the side. Utilities such as bg-paper, text-ink and border-seam
+   resolve through these variables, so the whole app re-themes from
+   this block alone.
+   ───────────────────────────────────────────────────────────── */
+
+@theme {
+  /* Grounds */
+  --color-quilt: light-dark(#f7f5fb, #16112a);   /* page background */
+  --color-paper: light-dark(#fefdff, #1f1938);   /* cards, tables, inputs */
+  --color-panel: light-dark(#f1edf8, #1a1430);   /* sidebars, table heads, wells */
+
+  /* Ink */
+  --color-ink: light-dark(#2a2050, #e9e4f7);        /* primary text, the stitch color */
+  --color-ink-soft: light-dark(#5d5584, #a79ecb);   /* secondary text */
+  --color-ink-faint: light-dark(#8a83a8, #7d74a1);  /* captions, placeholders */
+
+  /* Lines */
+  --color-seam: light-dark(rgb(42 32 80 / 0.24), rgb(233 228 247 / 0.2));      /* dashed stitch lines */
+  --color-hairline: light-dark(rgb(42 32 80 / 0.1), rgb(233 228 247 / 0.1));   /* solid dividers */
 
   /* Patches */
-  --color-grape: #6c3ec1;        /* primary — the main purple patches */
-  --color-grape-soft: #ebe3f9;
-  --color-violet: #9b7fd4;       /* light violet patch */
-  --color-violet-soft: #f0ebfb;
-  --color-orchid: #a44fc8;       /* magenta-leaning patch */
-  --color-orchid-soft: #f4e6f9;
-  --color-sky: #2f7cd6;          /* blue patch */
-  --color-sky-soft: #dfebfa;
-  --color-teal: #2aa187;         /* teal "L" patch */
-  --color-teal-soft: #daf1ea;
+  --color-grape: light-dark(#6c3ec1, #a988e9);        /* primary */
+  --color-grape-deep: light-dark(#5a31a6, #9271d6);   /* primary, pressed or hovered */
+  --color-grape-soft: light-dark(#ebe3f9, #322557);
+  --color-violet: light-dark(#9b7fd4, #b8a1e4);
+  --color-violet-soft: light-dark(#f0ebfb, #2c2349);
+  --color-orchid: light-dark(#a44fc8, #cd8ce6);
+  --color-orchid-soft: light-dark(#f4e6f9, #3a214c);
+  --color-sky: light-dark(#2f7cd6, #74a9eb);
+  --color-sky-soft: light-dark(#dfebfa, #1d2c49);
+  --color-teal: light-dark(#2aa187, #4fc4a9);
+  --color-teal-soft: light-dark(#daf1ea, #163a32);
 
-  /* Fonts (see the <link> in layouts; CSP font-src allows https) */
+  /* Semantic. Success is the teal patch and info is the sky patch;
+     warning and danger are the only colors from outside the quilt. */
+  --color-success: light-dark(#1f8a73, #4fc4a9);
+  --color-success-soft: light-dark(#daf1ea, #163a32);
+  --color-info: light-dark(#2f7cd6, #74a9eb);
+  --color-info-soft: light-dark(#dfebfa, #1d2c49);
+  --color-warning: light-dark(#a65d05, #f0b45a);
+  --color-warning-soft: light-dark(#fdf1dc, #3d2a0f);
+  --color-danger: light-dark(#c53a57, #f28aa0);
+  --color-danger-soft: light-dark(#fbe6ea, #47202b);
+
+  /* Text on a grape fill */
+  --color-on-grape: light-dark(#ffffff, #16112a);
+
+  /* Fonts. Geist carries the interface; Shantell Sans is the
+     display voice for the wordmark and the big headings on the
+     focus pages only. */
   --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-display: "Shantell Sans", "Geist", ui-sans-serif, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
-  /* ── Legacy brand tokens, repointed to the quilt system ──
-     Existing views reference the brand and neutral scales and the
-     named purples. Rather than break them, we re-map the values
-     onto the new palette so they shift on-brand automatically. */
-  --color-deep-purple: #6c3ec1;      /* was #4B006E → grape */
-  --color-lavender-purple: #c7b7e2;
-  --color-light-purple: #9b7fd4;
-  --color-clean-white: #fefdff;      /* → paper */
-  --color-dark-grayish-blue: #5d5584;/* → ink-soft */
-  --color-near-black: #2a2050;       /* → ink */
+  /* Radii */
+  --radius-control: 0.625rem;  /* 10px: buttons, inputs, badges that are not pills */
+  --radius-card: 0.875rem;     /* 14px: cards, dialogs */
 
-  --color-brand-50:  #f5f1fc;
-  --color-brand-100: #ebe3f9;   /* grape-soft */
-  --color-brand-200: #d9c9f2;
-  --color-brand-300: #bfa4e6;
-  --color-brand-400: #9b7fd4;   /* violet */
-  --color-brand-500: #6c3ec1;   /* grape — main */
-  --color-brand-600: #5a31a6;
-  --color-brand-700: #47277f;
-  --color-brand-800: #362063;
-  --color-brand-900: #2a2050;   /* ink */
+  /* Shadows. Both carry an offset and a blur: the card sits on the
+     quilt, the patch lifts off it like a corner of fabric. */
+  --shadow-card: 0 1px 2px light-dark(rgb(42 32 80 / 0.05), rgb(0 0 0 / 0.3)),
+                 0 8px 20px -12px light-dark(rgb(42 32 80 / 0.25), rgb(0 0 0 / 0.6));
+  --shadow-patch: 4px 6px 0 -1px light-dark(rgb(42 32 80 / 0.1), rgb(0 0 0 / 0.35)),
+                  4px 10px 24px -10px light-dark(rgb(42 32 80 / 0.3), rgb(0 0 0 / 0.6));
+  --shadow-overlay: 0 24px 60px -20px light-dark(rgb(42 32 80 / 0.45), rgb(0 0 0 / 0.8)),
+                    0 2px 6px light-dark(rgb(42 32 80 / 0.1), rgb(0 0 0 / 0.5));
 
-  --color-neutral-50:  #fefdff;
-  --color-neutral-100: #f7f5fb; /* quilt */
-  --color-neutral-200: #efeaf9;
-  --color-neutral-300: #e3ddf1;
-  --color-neutral-400: #c9c1de;
-  --color-neutral-500: #8a83a8; /* ink-faint */
-  --color-neutral-600: #5d5584; /* ink-soft */
-  --color-neutral-700: #3f3866;
-  --color-neutral-800: #2a2050; /* ink */
-  --color-neutral-900: #1c1638;
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+}
+
+/* Theme switch. shared/_theme sets data-theme before first paint.
+   Without scripts the OS preference applies through "light dark". */
+:root { color-scheme: light dark; }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+/* Plumbing the motifs need outside of Tailwind utilities */
+:root {
+  --lattice-line: light-dark(rgb(108 62 193 / 0.045), rgb(169 136 233 / 0.05));
+  --focus-ring: 0 0 0 3px light-dark(rgb(155 127 212 / 0.55), rgb(169 136 233 / 0.5));
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Dark mode — "the quilt at night".
-   The whole app styles itself through the tokens above, so dark
-   mode is a re-mapping of those tokens. Values and mechanism are
-   shared with patchworklabs.org's globals.css (keep in sync):
-   an explicit [data-theme] wins, otherwise the OS preference
-   applies. The toggle (shared/_theme_toggle) sets data-theme on
-   <html> and persists it in localStorage.
+   Base: the parts of the page nobody draws but everyone sees.
    ───────────────────────────────────────────────────────────── */
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background-color: var(--color-quilt);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-variant-numeric: tabular-nums;
+    accent-color: var(--color-grape);
+  }
 
-:root {
-  color-scheme: light;
+  body { min-height: 100dvh; }
 
-  /* Motif plumbing — colors the stitch components need that
-     aren't Tailwind tokens. Light values here, dark below. */
-  --shadow-stitch: rgb(42 32 80 / 0.12);     /* patch drop shadow */
-  --shadow-stitch-strong: rgb(42 32 80 / 0.18);
-  --lattice-line: rgb(108 62 193 / 0.045);   /* quilt-bg grid */
-  --weave-line: rgb(108 62 193 / 0.05);      /* weave-bg grid */
-  --btn-stitch-ink: #fff;                    /* text on grape buttons */
-  --btn-stitch-seam: rgb(255 255 255 / 0.55);
-}
+  ::selection {
+    background-color: var(--color-grape);
+    color: var(--color-on-grape);
+  }
 
-/* The dark token set exists twice below — once for the manual
-   override, once for the system preference. Keep them identical. */
-[data-theme="dark"] {
-  color-scheme: dark;
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+    border-radius: var(--radius-control);
+  }
 
-  /* Grounds & ink (shared with patchworklabs.org) */
-  --color-quilt: #16112a;
-  --color-paper: #1f1938;
-  --color-ink: #e9e4f7;
-  --color-ink-soft: #a79ecb;
-  --color-ink-faint: #7d74a1;
+  code, kbd, pre, samp { font-family: var(--font-mono); }
 
-  /* Patches (shared with patchworklabs.org) */
-  --color-grape: #a988e9;
-  --color-grape-soft: #322557;
-  --color-violet: #b8a1e4;
-  --color-violet-soft: #2c2349;
-  --color-orchid: #cd8ce6;
-  --color-orchid-soft: #3a214c;
-  --color-sky: #74a9eb;
-  --color-sky-soft: #1d2c49;
-  --color-teal: #4fc4a9;
-  --color-teal-soft: #163a32;
+  /* Thin, tinted scrollbars on overflowing panels */
+  .scroll-x, .table-wrap, .cmdk-list, .sidebar-nav {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-seam) transparent;
+  }
 
-  /* Legacy tokens follow their quilt partners */
-  --color-deep-purple: #a988e9;
-  --color-lavender-purple: #c7b7e2;
-  --color-light-purple: #b8a1e4;
-  --color-clean-white: #1f1938;
-  --color-dark-grayish-blue: #a79ecb;
-  --color-near-black: #e9e4f7;
+  /* Turbo frames are inline by default, which lets a wide table inside one
+     push the page sideways instead of scrolling inside .table-wrap. */
+  turbo-frame { display: block; }
 
-  /* Brand scale — inverted: low numbers are surfaces, high are text */
-  --color-brand-50:  #241d43;
-  --color-brand-100: #322557;
-  --color-brand-200: #453371;
-  --color-brand-300: #5f4795;
-  --color-brand-400: #8a68c9;
-  --color-brand-500: #a988e9;
-  --color-brand-600: #9271d6;
-  --color-brand-700: #bfa5f0;
-  --color-brand-800: #d4c3f6;
-  --color-brand-900: #e9ddfb;
+  details > summary { cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
 
-  /* Neutral scale — inverted the same way */
-  --color-neutral-50:  #1f1938;
-  --color-neutral-100: #16112a;
-  --color-neutral-200: #292250;
-  --color-neutral-300: #383063;
-  --color-neutral-400: #524878;
-  --color-neutral-500: #7d74a1;
-  --color-neutral-600: #a79ecb;
-  --color-neutral-700: #cbc3e3;
-  --color-neutral-800: #e9e4f7;
-  --color-neutral-900: #f7f5fb;
-
-  /* Motif plumbing — grape is brighter in the dark, so buttons
-     stitch with dark ink instead of white */
-  --shadow-stitch: rgb(0 0 0 / 0.4);
-  --shadow-stitch-strong: rgb(0 0 0 / 0.5);
-  --lattice-line: rgb(169 136 233 / 0.05);
-  --weave-line: rgb(169 136 233 / 0.06);
-  --btn-stitch-ink: #16112a;
-  --btn-stitch-seam: rgb(22 17 42 / 0.5);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-
-    /* Grounds & ink (shared with patchworklabs.org) */
-    --color-quilt: #16112a;
-    --color-paper: #1f1938;
-    --color-ink: #e9e4f7;
-    --color-ink-soft: #a79ecb;
-    --color-ink-faint: #7d74a1;
-
-    /* Patches (shared with patchworklabs.org) */
-    --color-grape: #a988e9;
-    --color-grape-soft: #322557;
-    --color-violet: #b8a1e4;
-    --color-violet-soft: #2c2349;
-    --color-orchid: #cd8ce6;
-    --color-orchid-soft: #3a214c;
-    --color-sky: #74a9eb;
-    --color-sky-soft: #1d2c49;
-    --color-teal: #4fc4a9;
-    --color-teal-soft: #163a32;
-
-    /* Legacy tokens follow their quilt partners */
-    --color-deep-purple: #a988e9;
-    --color-lavender-purple: #c7b7e2;
-    --color-light-purple: #b8a1e4;
-    --color-clean-white: #1f1938;
-    --color-dark-grayish-blue: #a79ecb;
-    --color-near-black: #e9e4f7;
-
-    /* Brand scale — inverted: low numbers are surfaces, high are text */
-    --color-brand-50:  #241d43;
-    --color-brand-100: #322557;
-    --color-brand-200: #453371;
-    --color-brand-300: #5f4795;
-    --color-brand-400: #8a68c9;
-    --color-brand-500: #a988e9;
-    --color-brand-600: #9271d6;
-    --color-brand-700: #bfa5f0;
-    --color-brand-800: #d4c3f6;
-    --color-brand-900: #e9ddfb;
-
-    /* Neutral scale — inverted the same way */
-    --color-neutral-50:  #1f1938;
-    --color-neutral-100: #16112a;
-    --color-neutral-200: #292250;
-    --color-neutral-300: #383063;
-    --color-neutral-400: #524878;
-    --color-neutral-500: #7d74a1;
-    --color-neutral-600: #a79ecb;
-    --color-neutral-700: #cbc3e3;
-    --color-neutral-800: #e9e4f7;
-    --color-neutral-900: #f7f5fb;
-
-    /* Motif plumbing — grape is brighter in the dark, so buttons
-       stitch with dark ink instead of white */
-    --shadow-stitch: rgb(0 0 0 / 0.4);
-    --shadow-stitch-strong: rgb(0 0 0 / 0.5);
-    --lattice-line: rgb(169 136 233 / 0.05);
-    --weave-line: rgb(169 136 233 / 0.06);
-    --btn-stitch-ink: #16112a;
-    --btn-stitch-seam: rgb(22 17 42 / 0.5);
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Stitch motifs — the visual signature of the Patchwork brand.
+   Components. The vocabulary is documented in internal-docs,
+   design/components.md, with an ERB example for each class. Add a
+   class here, then add it there, in the same pull request.
    ───────────────────────────────────────────────────────────── */
+@layer components {
 
-/* Dashed "stitch" outline used on patch cards and buttons */
-.stitch {
-  border: 2px dashed currentColor;
-  border-radius: 0.75rem;
-}
+  /* ── Grounds ────────────────────────────────────────────── */
 
-/* A patch: a stitched card sitting slightly askew on the quilt,
-   with a soft offset shadow like fabric lifting off the surface. */
-.patch {
-  background-color: var(--color-paper);
-  border: 2px dashed var(--color-ink-soft);
-  border-radius: 0.75rem;
-  box-shadow: 4px 5px 0 var(--shadow-stitch);
-}
+  /* A faint diamond quilting lattice over the lavender paper, for
+     the focus pages (sign in, consent, onboarding). Operating pages
+     use the flat bg-quilt so tables stay crisp. */
+  .quilt-bg {
+    background-color: var(--color-quilt);
+    background-image:
+      repeating-linear-gradient(45deg,  var(--lattice-line) 0 1px, transparent 1px 34px),
+      repeating-linear-gradient(-45deg, var(--lattice-line) 0 1px, transparent 1px 34px);
+    background-size: 48px 48px;
+    background-attachment: fixed;
+  }
 
-.patch-tilt-l { transform: rotate(-1.2deg); }
-.patch-tilt-r { transform: rotate(1.1deg); }
+  /* ── Wordmark ───────────────────────────────────────────── */
 
-/* Primary "stitched" button — grape fill, dashed seam, lifts on hover. */
-.btn-stitch {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  background-color: var(--color-grape);
-  color: var(--btn-stitch-ink);
-  font-weight: 600;
-  border: 2px dashed var(--btn-stitch-seam);
-  border-radius: 0.6rem;
-  padding: 0.65rem 1.25rem;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-}
-.btn-stitch:hover { background-color: var(--color-brand-600); transform: translateY(-1px); box-shadow: 3px 4px 0 var(--shadow-stitch-strong); }
-.btn-stitch:focus-visible { outline: 3px solid var(--color-violet); outline-offset: 2px; }
+  .wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.25rem;
+    line-height: 1;
+    color: var(--color-ink);
+    text-decoration: none;
+    letter-spacing: -0.01em;
+  }
+  .wordmark-lg { font-size: 1.75rem; }
 
-/* Secondary — outline only, ink seam on paper. */
-.btn-stitch-ghost {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  background-color: transparent;
-  color: var(--color-ink);
-  font-weight: 600;
-  border: 2px dashed var(--color-ink-soft);
-  border-radius: 0.6rem;
-  padding: 0.65rem 1.25rem;
-  cursor: pointer;
-  transition: transform 0.15s ease, background-color 0.15s ease;
-}
-.btn-stitch-ghost:hover { background-color: var(--color-grape-soft); transform: translateY(-1px); }
-.btn-stitch-ghost:focus-visible { outline: 3px solid var(--color-violet); outline-offset: 2px; }
+  /* The grandmother's-flower-garden quilt block: four patches in a
+     rosette. The only ornament in the system. */
+  .rosette {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    flex: none;
+    vertical-align: -0.15em;
+    background:
+      radial-gradient(circle at 50% 27%, var(--color-grape) 0 22%, transparent 23%),
+      radial-gradient(circle at 27% 63%, var(--color-violet) 0 22%, transparent 23%),
+      radial-gradient(circle at 73% 63%, var(--color-sky) 0 22%, transparent 23%),
+      radial-gradient(circle at 50% 50%, var(--color-teal) 0 20%, transparent 21%);
+  }
 
-@media (prefers-reduced-motion: reduce) {
-  .btn-stitch, .btn-stitch-ghost { transition: none; }
-  .btn-stitch:hover, .btn-stitch-ghost:hover { transform: none; }
-}
+  /* ── Surfaces ───────────────────────────────────────────── */
 
-/* ── Theme toggle ──
-   A little stitched patch pinned to the corner. Rendered by
-   shared/_theme_toggle; the head script in shared/_theme sets
-   data-theme on <html> before first paint, so the icons can key
-   off it directly. */
-.theme-toggle {
-  position: fixed;
-  bottom: 1rem;
-  right: 1rem;
-  z-index: 40;
-  width: 2.75rem;
-  height: 2.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  background-color: var(--color-paper);
-  color: var(--color-ink-soft);
-  border: 2px dashed var(--color-ink-soft);
-  box-shadow: 2px 3px 0 var(--shadow-stitch);
-  cursor: pointer;
-  transition: transform 0.15s ease, color 0.15s ease;
-}
-.theme-toggle:hover { color: var(--color-grape); transform: translateY(-1px); }
-.theme-toggle:focus-visible { outline: 3px solid var(--color-violet); outline-offset: 2px; }
-.theme-toggle .tt-sun { display: none; }
-[data-theme="dark"] .theme-toggle .tt-sun { display: block; }
-[data-theme="dark"] .theme-toggle .tt-moon { display: none; }
-@media (prefers-reduced-motion: reduce) {
-  .theme-toggle { transition: none; }
-  .theme-toggle:hover { transform: none; }
-}
+  /* The workhorse container. One elevation signal: the soft shadow.
+     The dashed seam is the brand, kept at hairline weight. */
+  .card {
+    background-color: var(--color-paper);
+    border: 1px dashed var(--color-seam);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+  .card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--color-hairline);
+  }
+  .card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--color-ink);
+  }
+  .card-lede {
+    margin-top: 0.125rem;
+    font-size: 0.875rem;
+    color: var(--color-ink-soft);
+  }
+  .card-body { padding: 1.25rem; }
+  .card-footer {
+    padding: 0.875rem 1.25rem;
+    border-top: 1px solid var(--color-hairline);
+    background-color: var(--color-panel);
+    border-radius: 0 0 var(--radius-card) var(--radius-card);
+  }
+  .card-flush > .table-wrap { border-radius: 0 0 var(--radius-card) var(--radius-card); }
 
-/* ── Quilted ground ──
-   A faint diamond quilting lattice over the lavender paper — the hand-stitched
-   grid of a quilt, kept low-contrast so text stays crisp. Use in place of the
-   flat `bg-quilt` on page bodies. */
-.quilt-bg {
-  background-color: var(--color-quilt);
-  background-image:
-    repeating-linear-gradient(45deg,  var(--lattice-line) 0 1px, transparent 1px 34px),
-    repeating-linear-gradient(-45deg, var(--lattice-line) 0 1px, transparent 1px 34px);
-  background-size: 48px 48px;
-  background-attachment: fixed;
-}
+  /* A patch: the hero card for the focus pages. Heavier seam, lifted
+     shadow, and a slight tilt like fabric laid by hand. */
+  .patch {
+    background-color: var(--color-paper);
+    border: 2px dashed var(--color-ink-soft);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-patch);
+  }
+  .patch-tilt-l { transform: rotate(-1.2deg); }
+  .patch-tilt-r { transform: rotate(1.1deg); }
+  @media (max-width: 40rem) {
+    .patch-tilt-l, .patch-tilt-r { transform: none; }
+  }
 
-/* A woven over-under basket-weave — a subtle nod to the "Weave" name, for
-   surfaces that want a little more texture than the lattice. */
-.weave-bg {
-  background-color: var(--color-quilt);
-  background-image:
-    linear-gradient(90deg, var(--weave-line) 50%, transparent 50%),
-    linear-gradient(var(--weave-line) 50%, transparent 50%);
-  background-size: 16px 16px;
-  background-position: 0 0, 8px 8px;
-}
+  /* A strip of stitched pastel patches, like the bound edge of a
+     quilt. Place it as the first child of .patch-bound. */
+  .quilt-binding {
+    height: 10px;
+    position: relative;
+    background-image: repeating-linear-gradient(
+      90deg,
+      var(--color-grape)  0 26px,
+      var(--color-violet) 26px 52px,
+      var(--color-sky)    52px 78px,
+      var(--color-teal)   78px 104px,
+      var(--color-orchid) 104px 130px
+    );
+  }
+  .quilt-binding::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(90deg, rgb(255 255 255 / 0.5) 0 4px, transparent 4px 10px);
+    opacity: 0.5;
+    mix-blend-mode: overlay;
+  }
+  .patch-bound { overflow: hidden; }
+  .patch-bound > .quilt-binding { margin: -2px -2px 0; width: calc(100% + 4px); }
 
-/* ── Patchwork binding ──
-   A strip of stitched pastel patches, like the bound edge of a quilt. Drop it
-   at the top of a hero card or page section. */
-.quilt-binding {
-  height: 10px;
-  border-radius: 6px 6px 0 0;
-  background-image: repeating-linear-gradient(
-    90deg,
-    var(--color-grape)   0 26px,
-    var(--color-violet)  26px 52px,
-    var(--color-sky)     52px 78px,
-    var(--color-teal)    78px 104px,
-    var(--color-orchid)  104px 130px
-  );
-  /* dashed "stitch" running along the binding */
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.25);
-  position: relative;
-}
-.quilt-binding::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: repeating-linear-gradient(90deg, rgb(255 255 255 / 0.5) 0 4px, transparent 4px 10px);
-  opacity: 0.5;
-  mix-blend-mode: overlay;
-}
+  /* A well: a recessed, tinted area inside a card for a highlighted
+     group of fields or a summary. */
+  .well {
+    background-color: var(--color-panel);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-control);
+    padding: 1rem;
+  }
 
-/* A patch that wears a binding along its top edge. Pair with `.patch`. */
-.patch-bound { overflow: hidden; padding-top: 0; }
-.patch-bound > .quilt-binding { margin: -1px -1px 0; border-radius: 0; width: calc(100% + 2px); }
+  /* ── Page structure ─────────────────────────────────────── */
 
-/* ── Hexagon "flower-garden" rosette ──
-   A tiny decorative quilt-block accent (grandmother's-flower-garden motif),
-   for eyebrows and empty states. Purely ornamental. */
-.rosette {
-  display: inline-block;
-  width: 1em; height: 1em;
-  vertical-align: -0.15em;
-  background:
-    radial-gradient(circle at 50% 27%, var(--color-grape) 0 22%, transparent 23%),
-    radial-gradient(circle at 27% 63%, var(--color-violet) 0 22%, transparent 23%),
-    radial-gradient(circle at 73% 63%, var(--color-sky) 0 22%, transparent 23%),
-    radial-gradient(circle at 50% 50%, var(--color-teal) 0 20%, transparent 21%);
-}
+  /* width: 100% matters: as a flex item with auto side margins the page
+     would size to its content and a wide table would push it past the
+     viewport instead of scrolling inside .table-wrap. */
+  .page { width: 100%; max-width: 72rem; margin-inline: auto; padding: 1.5rem 1rem 4rem; }
+  .page-narrow { max-width: 44rem; }
+  .page-wide { max-width: 88rem; }
+  @media (min-width: 40rem) { .page { padding: 2rem 1.5rem 5rem; } }
 
-/* Staging marker: a yellow and black hazard-stripe frame around the viewport and a
-   STAGING tab. Both are fixed, ignore the pointer, take no space and do not animate. */
-.staging-frame {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  box-sizing: border-box;
-  padding: 8px;
-  pointer-events: none;
-  background: repeating-linear-gradient(45deg, #facc15 0 12px, #111 12px 24px);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-}
+  .page-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .page-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+    text-wrap: balance;
+  }
+  .page-lede {
+    margin-top: 0.375rem;
+    max-width: 65ch;
+    color: var(--color-ink-soft);
+  }
+  .page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
 
-.staging-tab {
-  position: fixed;
-  top: 0;
-  left: 50%;
-  z-index: 61;
-  transform: translateX(-50%);
-  pointer-events: none;
-  user-select: none;
-  padding: 2px 16px 4px;
-  border: 2px solid #111;
-  border-top: 0;
-  border-radius: 0 0 8px 8px;
-  background: #facc15;
-  color: #000;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  .section-title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-ink-faint);
+    margin-bottom: 0.75rem;
+  }
+
+  /* ── Buttons ────────────────────────────────────────────── */
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 2.5rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: nowrap;
+    cursor: pointer;
+    text-decoration: none;
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out),
+      transform var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out);
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled, .btn[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .btn svg { width: 1rem; height: 1rem; flex: none; }
+
+  /* Primary: a grape patch with a white stitch seam. One per view. */
+  .btn-primary {
+    background-color: var(--color-grape);
+    color: var(--color-on-grape);
+    border: 1px dashed light-dark(rgb(255 255 255 / 0.55), rgb(22 17 42 / 0.5));
+    box-shadow: 0 1px 2px light-dark(rgb(42 32 80 / 0.15), rgb(0 0 0 / 0.4));
+  }
+  .btn-primary:hover { background-color: var(--color-grape-deep); }
+
+  /* Secondary: ink seam on paper. The default for everything else. */
+  .btn-secondary {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    border: 1px dashed var(--color-seam);
+  }
+  .btn-secondary:hover { background-color: var(--color-grape-soft); border-color: var(--color-grape); }
+
+  /* Quiet: no chrome until hovered. For toolbars and table rows. */
+  .btn-quiet {
+    background-color: transparent;
+    color: var(--color-ink-soft);
+  }
+  .btn-quiet:hover { background-color: var(--color-grape-soft); color: var(--color-ink); }
+
+  /* Danger: a quiet red that fills on hover. Confirm before the action. */
+  .btn-danger {
+    background-color: transparent;
+    color: var(--color-danger);
+    border: 1px dashed color-mix(in oklab, var(--color-danger) 45%, transparent);
+  }
+  .btn-danger:hover { background-color: var(--color-danger-soft); border-color: var(--color-danger); }
+  .btn-danger-solid {
+    background-color: var(--color-danger);
+    color: #fff;
+  }
+  .btn-danger-solid:hover { background-color: color-mix(in oklab, var(--color-danger) 85%, black); }
+
+  .btn-sm { min-height: 2rem; padding: 0.25rem 0.75rem; font-size: 0.8125rem; }
+  .btn-sm svg { width: 0.875rem; height: 0.875rem; }
+  .btn-lg { min-height: 2.875rem; padding: 0.75rem 1.5rem; font-size: 0.9375rem; }
+  .btn-block { width: 100%; }
+  .btn-icon { padding: 0; width: 2.5rem; }
+  .btn-icon.btn-sm { width: 2rem; }
+
+  /* A toolbar of buttons: wraps, keeps gaps even */
+  .btn-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+
+  /* ── Links ──────────────────────────────────────────────── */
+
+  .link {
+    color: var(--color-grape);
+    font-weight: 500;
+    text-decoration: underline;
+    text-decoration-style: dashed;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+  .link:hover { color: var(--color-ink); }
+  .link-quiet { color: inherit; text-decoration: none; }
+  .link-quiet:hover { color: var(--color-grape); text-decoration: underline; text-decoration-style: dashed; text-underline-offset: 3px; }
+
+  /* ── Forms ──────────────────────────────────────────────── */
+
+  .field-group { display: flex; flex-direction: column; gap: 0.375rem; }
+  .field-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-ink);
+  }
+  .field-label .optional { font-weight: 400; color: var(--color-ink-faint); }
+  .field {
+    display: block;
+    width: 100%;
+    min-height: 2.5rem;
+    padding: 0.5rem 0.75rem;
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    border: 1px solid var(--color-seam);
+    border-radius: var(--radius-control);
+    font: inherit;
+    font-size: 0.9375rem;
+    line-height: 1.4;
+    transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+  }
+  .field::placeholder { color: var(--color-ink-faint); }
+  .field:hover { border-color: var(--color-ink-faint); }
+  .field:focus { outline: none; border-color: var(--color-grape); box-shadow: var(--focus-ring); }
+  .field:disabled, .field[readonly] {
+    background-color: var(--color-panel);
+    color: var(--color-ink-soft);
+    cursor: default;
+  }
+  .field[aria-invalid="true"], .field-group.is-invalid .field {
+    border-color: var(--color-danger);
+  }
+  textarea.field { min-height: 5rem; resize: vertical; }
+  select.field {
+    appearance: none;
+    padding-right: 2.25rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a83a8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.625rem center;
+    background-size: 1rem;
+  }
+  .field-sm { min-height: 2rem; padding: 0.25rem 0.625rem; font-size: 0.875rem; }
+  .field-hint { font-size: 0.8125rem; color: var(--color-ink-faint); }
+  .field-error { font-size: 0.8125rem; color: var(--color-danger); }
+  .field-static {
+    display: block;
+    width: 100%;
+    min-height: 2.5rem;
+    padding: 0.5rem 0.75rem;
+    background-color: var(--color-panel);
+    color: var(--color-ink-soft);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-control);
+    font-size: 0.9375rem;
+    line-height: 1.4;
+  }
+
+  .checkbox, .radio {
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+    margin-top: 0.125rem;
+    border: 1px solid var(--color-seam);
+    border-radius: 0.25rem;
+    background-color: var(--color-paper);
+    accent-color: var(--color-grape);
+  }
+  .radio { border-radius: 9999px; }
+  .choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    font-size: 0.875rem;
+    color: var(--color-ink);
+    cursor: pointer;
+  }
+  .choice-hint { display: block; margin-top: 0.125rem; color: var(--color-ink-soft); font-weight: 400; }
+
+  /* Fields side by side on wide screens */
+  .form-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+  @media (min-width: 40rem) {
+    .form-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .form-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .form-grid .span-2 { grid-column: span 2; }
+  }
+  .form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+  }
+
+  /* Search box: an input with a leading icon */
+  .search {
+    position: relative;
+    display: block;
+  }
+  .search > svg {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    width: 1rem;
+    height: 1rem;
+    transform: translateY(-50%);
+    color: var(--color-ink-faint);
+    pointer-events: none;
+  }
+  .search > .field { padding-left: 2.25rem; }
+  .search > .field::-webkit-search-cancel-button { cursor: pointer; }
+
+  /* ── Badges ─────────────────────────────────────────────── */
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+    white-space: nowrap;
+    background-color: var(--color-panel);
+    color: var(--color-ink-soft);
+    border: 1px solid transparent;
+  }
+  .badge svg { width: 0.75rem; height: 0.75rem; }
+  .badge-grape   { background-color: var(--color-grape-soft);   color: var(--color-grape); }
+  .badge-violet  { background-color: var(--color-violet-soft);  color: light-dark(#6b4fb3, #cdbdf0); }
+  .badge-orchid  { background-color: var(--color-orchid-soft);  color: light-dark(#8a3dab, #e0a8f0); }
+  .badge-sky     { background-color: var(--color-sky-soft);     color: light-dark(#2463ad, #97bff2); }
+  .badge-teal    { background-color: var(--color-teal-soft);    color: light-dark(#1f7d69, #7bd6bf); }
+  .badge-success { background-color: var(--color-success-soft); color: var(--color-success); }
+  .badge-info    { background-color: var(--color-info-soft);    color: light-dark(#2463ad, #97bff2); }
+  .badge-warning { background-color: var(--color-warning-soft); color: var(--color-warning); }
+  .badge-danger  { background-color: var(--color-danger-soft);  color: var(--color-danger); }
+  .badge-solid   { background-color: var(--color-grape); color: var(--color-on-grape); }
+  .badge-outline { background-color: transparent; border-color: var(--color-seam); color: var(--color-ink-soft); }
+
+  /* A keyboard key, for shortcuts in menus and the command bar */
+  .kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5rem;
+    height: 1.375rem;
+    padding: 0 0.375rem;
+    border: 1px solid var(--color-hairline);
+    border-bottom-width: 2px;
+    border-radius: 0.375rem;
+    background-color: var(--color-panel);
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-ink-faint);
+  }
+
+  /* ── Callouts ───────────────────────────────────────────── */
+
+  .callout {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--color-hairline);
+    background-color: var(--color-panel);
+    color: var(--color-ink);
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  .callout > svg { width: 1.125rem; height: 1.125rem; flex: none; margin-top: 0.125rem; }
+  .callout-title { font-weight: 600; }
+  .callout-body { flex: 1; min-width: 0; }
+  .callout-body p + p { margin-top: 0.375rem; }
+  .callout-info    { background-color: var(--color-info-soft);    border-color: color-mix(in oklab, var(--color-info) 30%, transparent);    }
+  .callout-info > svg    { color: var(--color-info); }
+  .callout-success { background-color: var(--color-success-soft); border-color: color-mix(in oklab, var(--color-success) 30%, transparent); }
+  .callout-success > svg { color: var(--color-success); }
+  .callout-warning { background-color: var(--color-warning-soft); border-color: color-mix(in oklab, var(--color-warning) 35%, transparent); }
+  .callout-warning > svg { color: var(--color-warning); }
+  .callout-danger  { background-color: var(--color-danger-soft);  border-color: color-mix(in oklab, var(--color-danger) 35%, transparent);  }
+  .callout-danger > svg  { color: var(--color-danger); }
+  .callout-grape   { background-color: var(--color-grape-soft);   border-color: color-mix(in oklab, var(--color-grape) 35%, transparent);   }
+  .callout-grape > svg   { color: var(--color-grape); }
+
+  /* ── Tables ─────────────────────────────────────────────── */
+
+  .table-wrap { overflow-x: auto; }
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  .table th {
+    padding: 0.625rem 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-ink-faint);
+    background-color: var(--color-panel);
+    border-bottom: 1px solid var(--color-hairline);
+    white-space: nowrap;
+  }
+  .table td {
+    padding: 0.75rem 1rem;
+    vertical-align: top;
+    color: var(--color-ink);
+    border-bottom: 1px solid var(--color-hairline);
+  }
+  .table tbody tr:last-child td { border-bottom: 0; }
+  .table tbody tr:hover td { background-color: color-mix(in oklab, var(--color-grape-soft) 45%, transparent); }
+  .table tr.is-current td { background-color: color-mix(in oklab, var(--color-teal-soft) 55%, transparent); }
+  .table .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .table .actions { text-align: right; white-space: nowrap; }
+  .table .actions form { display: inline-block; }
+  .table .actions > * + * { margin-left: 0.25rem; }
+  .table-sub { display: block; margin-top: 0.125rem; font-size: 0.75rem; color: var(--color-ink-faint); }
+  .table-empty { padding: 2.5rem 1rem; text-align: center; color: var(--color-ink-faint); font-size: 0.875rem; }
+
+  /* Mono values in tables and lists: ids, slugs, hashes */
+  .mono { font-family: var(--font-mono); font-size: 0.8125em; }
+  .code-chip {
+    display: inline-block;
+    max-width: 100%;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.375rem;
+    background-color: var(--color-panel);
+    border: 1px solid var(--color-hairline);
+    font-family: var(--font-mono);
+    font-size: 0.8125em;
+    color: var(--color-ink);
+    overflow-wrap: anywhere;
+  }
+  .code-block {
+    display: block;
+    padding: 0.75rem 0.875rem;
+    border-radius: var(--radius-control);
+    background-color: var(--color-panel);
+    border: 1px solid var(--color-hairline);
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: var(--color-ink);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  /* A value with a copy button beside it */
+  .copyable {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+  .copyable > .code-chip { flex: 1; min-width: 0; padding: 0.375rem 0.625rem; white-space: nowrap; overflow-x: auto; }
+
+  /* ── Description lists ──────────────────────────────────── */
+
+  /* Rows of label and value. Stacks on narrow screens. */
+  .dl { display: flex; flex-direction: column; }
+  .dl-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.125rem 1rem;
+    padding: 0.625rem 0;
+    border-bottom: 1px solid var(--color-hairline);
+  }
+  .dl-row:last-child { border-bottom: 0; }
+  .dl dt { font-size: 0.8125rem; color: var(--color-ink-faint); }
+  .dl dd { font-size: 0.875rem; color: var(--color-ink); overflow-wrap: anywhere; }
+  @media (min-width: 40rem) {
+    .dl-row { grid-template-columns: 11rem minmax(0, 1fr); align-items: baseline; }
+  }
+  .dl-stack .dl-row { grid-template-columns: 1fr; }
+
+  /* ── Stats ──────────────────────────────────────────────── */
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 1rem 1.25rem;
+  }
+  .stat-label { font-size: 0.8125rem; font-weight: 500; color: var(--color-ink-soft); }
+  .stat-value { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; color: var(--color-ink); }
+  .stat-note { font-size: 0.75rem; color: var(--color-ink-faint); }
+
+  /* ── Empty states ───────────────────────────────────────── */
+
+  .empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.375rem;
+    padding: 2.5rem 1.5rem;
+  }
+  .empty > svg { width: 1.75rem; height: 1.75rem; color: var(--color-ink-faint); margin-bottom: 0.25rem; }
+  .empty-title { font-weight: 600; color: var(--color-ink); }
+  .empty-body { max-width: 40ch; font-size: 0.875rem; color: var(--color-ink-soft); }
+  .empty .btn { margin-top: 0.75rem; }
+
+  /* ── Lists of records ───────────────────────────────────── */
+
+  .record-list { display: flex; flex-direction: column; }
+  .record {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--color-hairline);
+  }
+  .record:last-child { border-bottom: 0; }
+  .record-main { min-width: 0; flex: 1; }
+  .record-title { font-size: 0.875rem; font-weight: 500; color: var(--color-ink); }
+  .record-meta { font-size: 0.8125rem; color: var(--color-ink-faint); }
+  .record-actions { display: flex; flex: none; align-items: center; gap: 0.25rem; }
+  .card-body > .record-list > .record:first-child { padding-top: 0; }
+  .card-body > .record-list > .record:last-child { padding-bottom: 0; }
+
+  /* ── Avatars ────────────────────────────────────────────── */
+
+  .avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 9999px;
+    background-color: var(--color-grape-soft);
+    color: var(--color-grape);
+    font-weight: 600;
+    font-size: 0.875rem;
+    object-fit: cover;
+    overflow: hidden;
+  }
+  .avatar-sm { width: 1.75rem; height: 1.75rem; font-size: 0.6875rem; }
+  .avatar-lg { width: 4rem; height: 4rem; font-size: 1.375rem; }
+  .avatar-xl { width: 5rem; height: 5rem; font-size: 1.75rem; }
+
+  /* ── Steps (onboarding) ─────────────────────────────────── */
+
+  .steps { display: flex; flex-direction: column; gap: 0.625rem; }
+  .step { display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; color: var(--color-ink-faint); }
+  .step-marker {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 1.625rem;
+    height: 1.625rem;
+    border-radius: 9999px;
+    background-color: var(--color-panel);
+    color: var(--color-ink-faint);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .step-marker svg { width: 0.875rem; height: 0.875rem; }
+  .step.is-done { color: var(--color-ink); }
+  .step.is-done .step-marker { background-color: var(--color-success-soft); color: var(--color-success); }
+  .step.is-current { color: var(--color-ink); font-weight: 600; }
+  .step.is-current .step-marker { background-color: var(--color-grape); color: var(--color-on-grape); }
+
+  /* ── App shell: top bar (member pages) ──────────────────── */
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background-color: color-mix(in oklab, var(--color-quilt) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--color-hairline);
+  }
+  .topbar-inner {
+    max-width: 72rem;
+    margin-inline: auto;
+    padding: 0 1rem;
+    height: 3.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  @media (min-width: 40rem) { .topbar-inner { padding: 0 1.5rem; } }
+  .topbar-nav { display: none; align-items: center; gap: 0.125rem; margin-left: 0.5rem; }
+  @media (min-width: 48rem) { .topbar-nav { display: flex; } }
+  .topbar-end { margin-left: auto; display: flex; align-items: center; gap: 0.25rem; }
+
+  .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.625rem;
+    border-radius: var(--radius-control);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-ink-soft);
+    text-decoration: none;
+    transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+  }
+  .nav-link svg { width: 1rem; height: 1rem; flex: none; }
+  .nav-link:hover { background-color: var(--color-grape-soft); color: var(--color-ink); }
+  .nav-link[aria-current="page"] { background-color: var(--color-grape-soft); color: var(--color-grape); }
+
+  /* The mobile nav sheet under the top bar */
+  .topbar-sheet {
+    display: none;
+    padding: 0.5rem 1rem 0.75rem;
+    border-top: 1px solid var(--color-hairline);
+  }
+  .topbar-sheet[data-open="true"] { display: grid; gap: 0.125rem; }
+  @media (min-width: 48rem) { .topbar-sheet[data-open="true"] { display: none; } }
+  .topbar-menu-btn { display: inline-flex; }
+  @media (min-width: 48rem) { .topbar-menu-btn { display: none; } }
+
+  /* ── App shell: sidebar (admin) ─────────────────────────── */
+
+  .admin-shell { display: flex; min-height: 100dvh; }
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 15.5rem;
+    flex: none;
+    background-color: var(--color-panel);
+    border-right: 1px solid var(--color-hairline);
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 40;
+    transform: translateX(-100%);
+    transition: transform var(--duration-base) var(--ease-out);
+  }
+  .sidebar[data-open="true"] { transform: none; box-shadow: var(--shadow-overlay); }
+  .sidebar-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 39;
+    background-color: light-dark(rgb(42 32 80 / 0.35), rgb(0 0 0 / 0.55));
+    display: none;
+  }
+  .sidebar-scrim[data-open="true"] { display: block; }
+  @media (min-width: 64rem) {
+    .sidebar { position: sticky; top: 0; height: 100dvh; transform: none; box-shadow: none; }
+    .sidebar-scrim, .sidebar-scrim[data-open="true"] { display: none; }
+  }
+  .sidebar-brand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    height: 3.5rem;
+    padding: 0 1rem 0 1.25rem;
+    border-bottom: 1px solid var(--color-hairline);
+  }
+  .sidebar-nav { flex: 1; overflow-y: auto; padding: 0.75rem; }
+  .sidebar-nav .nav-link { display: flex; width: 100%; padding: 0.5rem 0.625rem; }
+  .sidebar-nav .nav-link[aria-current="page"] { background-color: var(--color-paper); color: var(--color-grape); box-shadow: var(--shadow-card); }
+  .nav-section { margin-bottom: 1rem; }
+  .nav-section-title {
+    padding: 0 0.625rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-ink-faint);
+  }
+  .sidebar-foot {
+    padding: 0.75rem;
+    border-top: 1px solid var(--color-hairline);
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+  .sidebar-user {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.375rem 0.5rem;
+    min-width: 0;
+  }
+  .sidebar-user-name { font-size: 0.875rem; font-weight: 600; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sidebar-user-role { font-size: 0.75rem; color: var(--color-ink-faint); }
+
+  .admin-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .admin-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    height: 3.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1rem;
+    background-color: color-mix(in oklab, var(--color-quilt) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--color-hairline);
+  }
+  @media (min-width: 40rem) { .admin-topbar { padding: 0 1.5rem; } }
+  .admin-topbar-crumb { font-size: 0.875rem; color: var(--color-ink-soft); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .admin-topbar-crumb strong { color: var(--color-ink); font-weight: 600; }
+  .admin-topbar-end { margin-left: auto; display: flex; align-items: center; gap: 0.25rem; }
+  .sidebar-menu-btn { display: inline-flex; }
+  @media (min-width: 64rem) { .sidebar-menu-btn { display: none; } }
+
+  /* The command-bar trigger that lives in both top bars */
+  .cmdk-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.25rem;
+    padding: 0 0.625rem 0 0.75rem;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--color-hairline);
+    background-color: var(--color-paper);
+    color: var(--color-ink-faint);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+  }
+  .cmdk-trigger:hover { border-color: var(--color-seam); color: var(--color-ink-soft); }
+  .cmdk-trigger svg { width: 1rem; height: 1rem; }
+  .cmdk-trigger-label { display: none; }
+  .cmdk-trigger .kbd { display: none; }
+  @media (min-width: 40rem) {
+    .cmdk-trigger { min-width: 13rem; }
+    .cmdk-trigger-label { display: inline; flex: 1; text-align: left; }
+    .cmdk-trigger .kbd { display: inline-flex; }
+  }
+
+  /* ── Banners ────────────────────────────────────────────── */
+
+  /* The impersonation banner: loud on purpose, never dismissible */
+  .banner-warning {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem 1rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--color-warning);
+    color: light-dark(#fff, #16112a);
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  .banner-warning svg { width: 1rem; height: 1rem; }
+  .banner-warning .btn { min-height: 2rem; padding: 0.25rem 0.75rem; font-size: 0.8125rem; background-color: light-dark(rgb(255 255 255 / 0.2), rgb(22 17 42 / 0.2)); color: inherit; border: 1px solid light-dark(rgb(255 255 255 / 0.5), rgb(22 17 42 / 0.4)); }
+  .banner-warning .btn:hover { background-color: light-dark(rgb(255 255 255 / 0.3), rgb(22 17 42 / 0.3)); }
+
+  /* ── Toasts (flash) ─────────────────────────────────────── */
+
+  .toasts {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    left: 1rem;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    pointer-events: none;
+  }
+  @media (min-width: 40rem) { .toasts { left: auto; width: 24rem; } }
+  .toast {
+    pointer-events: auto;
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    width: 100%;
+    padding: 0.75rem 2.25rem 0.75rem 0.875rem;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--color-hairline);
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    box-shadow: var(--shadow-overlay);
+    font-size: 0.875rem;
+    line-height: 1.4;
+    overflow: hidden;
+    animation: toast-in var(--duration-base) var(--ease-out);
+  }
+  .toast > svg { width: 1.125rem; height: 1.125rem; flex: none; margin-top: 0.0625rem; }
+  .toast-success > svg { color: var(--color-success); }
+  .toast-danger > svg { color: var(--color-danger); }
+  .toast-warning > svg { color: var(--color-warning); }
+  .toast-info > svg { color: var(--color-info); }
+  .toast-close {
+    position: absolute;
+    top: 0.375rem;
+    right: 0.375rem;
+    display: inline-flex;
+    padding: 0.25rem;
+    border-radius: 0.375rem;
+    color: var(--color-ink-faint);
+    cursor: pointer;
+  }
+  .toast-close:hover { background-color: var(--color-panel); color: var(--color-ink); }
+  .toast-close svg { width: 0.875rem; height: 0.875rem; }
+  .toast-bar {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 2px;
+    width: 100%;
+    background-color: var(--color-grape);
+    transform-origin: left;
+    animation: toast-bar var(--toast-duration, 6s) linear forwards;
+  }
+  .toast-success .toast-bar { background-color: var(--color-success); }
+  .toast-danger .toast-bar { background-color: var(--color-danger); }
+  .toast-warning .toast-bar { background-color: var(--color-warning); }
+  .toast.is-leaving { animation: toast-out var(--duration-base) var(--ease-out) forwards; }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(-0.5rem); } }
+  @keyframes toast-out { to { opacity: 0; transform: translateY(-0.25rem); } }
+  @keyframes toast-bar { to { transform: scaleX(0); } }
+
+  /* ── Theme toggle ───────────────────────────────────────── */
+
+  /* Sits inline in a top bar, or pinned to the corner on focus pages */
+  .theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: var(--radius-control);
+    color: var(--color-ink-soft);
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+  }
+  .theme-toggle:hover { background-color: var(--color-grape-soft); color: var(--color-ink); }
+  .theme-toggle svg { width: 1.125rem; height: 1.125rem; }
+  /* One icon shows: the monitor while the theme follows the device, the
+     sun or the moon once it is pinned. shared/_theme sets both attributes. */
+  .theme-toggle .tt-sun, .theme-toggle .tt-moon { display: none; }
+  :root[data-theme-source="manual"] .theme-toggle .tt-system { display: none; }
+  :root[data-theme-source="manual"][data-theme="light"] .theme-toggle .tt-sun { display: block; }
+  :root[data-theme-source="manual"][data-theme="dark"] .theme-toggle .tt-moon { display: block; }
+  .theme-toggle-floating {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 40;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 9999px;
+    background-color: var(--color-paper);
+    border: 1px dashed var(--color-seam);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* ── Command bar (⌘K) ───────────────────────────────────── */
+
+  .cmdk {
+    width: min(40rem, calc(100vw - 2rem));
+    max-height: min(32rem, calc(100dvh - 4rem));
+    margin: 10vh auto auto;
+    padding: 0;
+    border: 1px dashed var(--color-seam);
+    border-radius: var(--radius-card);
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    box-shadow: var(--shadow-overlay);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .cmdk[open] { display: flex; animation: cmdk-in var(--duration-base) var(--ease-out); }
+  .cmdk::backdrop {
+    background-color: light-dark(rgb(42 32 80 / 0.35), rgb(0 0 0 / 0.6));
+    backdrop-filter: blur(2px);
+  }
+  @keyframes cmdk-in { from { opacity: 0; transform: translateY(-0.5rem) scale(0.985); } }
+  .cmdk-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--color-hairline);
+  }
+  .cmdk-input-row > svg { width: 1.125rem; height: 1.125rem; color: var(--color-ink-faint); flex: none; }
+  .cmdk-input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 1rem;
+    color: var(--color-ink);
+  }
+  .cmdk-input:focus { outline: none; box-shadow: none; }
+  .cmdk-input::placeholder { color: var(--color-ink-faint); }
+  .cmdk-list { overflow-y: auto; padding: 0.5rem; flex: 1; }
+  .cmdk-section-title {
+    padding: 0.5rem 0.625rem 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-ink-faint);
+  }
+  .cmdk-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.5rem 0.625rem;
+    border-radius: var(--radius-control);
+    text-align: left;
+    font-size: 0.875rem;
+    color: var(--color-ink);
+    cursor: pointer;
+    scroll-margin: 0.5rem;
+  }
+  .cmdk-item > svg { width: 1rem; height: 1rem; flex: none; color: var(--color-ink-faint); }
+  .cmdk-item[aria-selected="true"] { background-color: var(--color-grape-soft); }
+  .cmdk-item[aria-selected="true"] > svg { color: var(--color-grape); }
+  .cmdk-item-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cmdk-item-hint { font-size: 0.75rem; color: var(--color-ink-faint); white-space: nowrap; }
+  .cmdk-empty { padding: 2rem 1rem; text-align: center; font-size: 0.875rem; color: var(--color-ink-faint); }
+  .cmdk-foot {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 1rem;
+    border-top: 1px solid var(--color-hairline);
+    background-color: var(--color-panel);
+    font-size: 0.75rem;
+    color: var(--color-ink-faint);
+  }
+  .cmdk-foot span { display: inline-flex; align-items: center; gap: 0.25rem; }
+
+  /* ── Tabs ───────────────────────────────────────────────── */
+
+  .tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--color-hairline); margin-bottom: 1.25rem; overflow-x: auto; }
+  .tab {
+    padding: 0.5rem 0.75rem;
+    margin-bottom: -1px;
+    border-bottom: 2px solid transparent;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-ink-soft);
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  .tab:hover { color: var(--color-ink); }
+  .tab[aria-current="page"] { color: var(--color-grape); border-bottom-color: var(--color-grape); }
+
+  /* ── Staging marker ─────────────────────────────────────── */
+
+  /* A yellow and black hazard-stripe frame around the viewport and a
+     tab at the top. Fixed, ignores the pointer, takes no space. */
+  .staging-frame {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    box-sizing: border-box;
+    padding: 8px;
+    pointer-events: none;
+    background: repeating-linear-gradient(45deg, #facc15 0 12px, #111 12px 24px);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  }
+  .staging-tab {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    z-index: 71;
+    transform: translateX(-50%);
+    pointer-events: none;
+    user-select: none;
+    padding: 2px 16px 4px;
+    border: 2px solid #111;
+    border-top: 0;
+    border-radius: 0 0 8px 8px;
+    background: #facc15;
+    color: #000;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* ── Loading ────────────────────────────────────────────── */
+
+  .spinner { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .skeleton {
+    border-radius: 0.375rem;
+    background: linear-gradient(90deg, var(--color-panel) 25%, var(--color-grape-soft) 50%, var(--color-panel) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+  /* Turbo: dim a frame while it reloads */
+  turbo-frame[busy] { opacity: 0.6; transition: opacity var(--duration-base) var(--ease-out); }
 }

@@ -1,58 +1,61 @@
 <%# Admin only: what an admin did while signed in as this user. Never render this on user-facing pages. %>
-<div class="container mx-auto px-4 py-8">
-  <div class="flex justify-between items-center mb-6">
-    <div>
-      <h1 class="font-display text-2xl font-bold text-ink">Impersonation of <%= @user.full_name %></h1>
-      <p class="text-ink-soft">
-        By <%= @impersonation.admin&.full_name || "a deleted admin" %>,
-        started <%= l(@impersonation.started_at, format: :long) %>.
-        <% if @impersonation.active? %>
-          Not ended.
-        <% elsif @impersonation.duration %>
-          Lasted <%= distance_of_time_in_words(@impersonation.duration) %>.
-        <% end %>
-      </p>
-    </div>
-    <%= link_to "Back to #{@user.full_name}", admin_user_path(@user, anchor: "impersonations"), class: "btn-stitch-ghost" %>
-  </div>
+<% content_for :title, "Impersonation of #{@user.full_name}" %>
+<% summary = capture do %>
+  By <%= @impersonation.admin&.full_name || "a deleted admin" %>,
+  started <%= l(@impersonation.started_at, format: :long) %>.
+  <% if @impersonation.active? %>
+    Not ended.
+  <% elsif @impersonation.duration %>
+    Lasted <%= distance_of_time_in_words(@impersonation.duration) %>.
+  <% end %>
+<% end %>
 
-  <div class="patch" id="impersonation-actions">
-    <div class="px-6 py-4 border-b-2 border-dashed border-ink-soft/30">
-      <h2 class="font-display text-lg font-bold text-ink">Requests</h2>
-      <p class="text-sm text-ink-faint">Pages the admin opened and every change they submitted. Sensitive values are filtered.</p>
+<p class="mb-2 text-sm">
+  <%= link_to admin_user_path(@user, anchor: "impersonations"), class: "link-quiet inline-flex items-center gap-1 text-ink-soft" do %>
+    <%= icon(:arrow_left, size: 14) %><%= @user.full_name %>
+  <% end %>
+</p>
+
+<%= page_header "Impersonation of #{@user.full_name}", lede: summary %>
+
+<div class="space-y-6">
+  <section class="card card-flush" id="impersonation-actions">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">Requests</h2>
+        <p class="card-lede">Pages the admin opened and every change they submitted. Sensitive values are filtered.</p>
+      </div>
     </div>
-    <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-ink-soft/20">
-        <thead class="bg-grape-soft">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Time</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Method</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Path</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Action</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Status</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Params</th>
-          </tr>
-        </thead>
-        <tbody class="bg-paper divide-y divide-ink-soft/10">
-          <% if @actions.any? %>
+    <% if @actions.any? %>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Method</th>
+              <th>Path</th>
+              <th>Action</th>
+              <th>Status</th>
+              <th>Params</th>
+            </tr>
+          </thead>
+          <tbody>
             <% @actions.each do |action| %>
               <tr>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-ink-soft" title="<%= action.created_at.iso8601 %>">
+                <td class="whitespace-nowrap text-ink-soft" title="<%= action.created_at.iso8601 %>">
                   <%= l(action.created_at, format: :short) %>
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm">
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= action.state_changing? ? 'bg-orange-100 text-orange-800' : 'bg-grape-soft text-ink-soft' %>">
-                    <%= action.http_method %>
-                  </span>
+                <td class="whitespace-nowrap">
+                  <%= badge action.http_method, tone: (action.state_changing? ? :warning : :neutral) %>
                 </td>
-                <td class="px-4 py-3 text-sm font-mono text-ink break-all"><%= action.path %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm font-mono text-ink-soft"><%= action.controller_action %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-ink-soft"><%= action.status || "—" %></td>
-                <td class="px-4 py-3 text-sm text-ink-soft">
+                <td class="mono break-all"><%= action.path %></td>
+                <td class="whitespace-nowrap mono text-ink-soft"><%= action.controller_action %></td>
+                <td class="whitespace-nowrap text-ink-soft"><%= action.status || "—" %></td>
+                <td class="text-ink-soft">
                   <% if action.params.present? %>
                     <details>
-                      <summary class="cursor-pointer text-grape">Show</summary>
-                      <pre class="mt-2 text-xs font-mono whitespace-pre-wrap break-all"><%= JSON.pretty_generate(action.params) %></pre>
+                      <summary class="link text-sm cursor-pointer">Show</summary>
+                      <pre class="code-block mt-2 text-xs"><%= JSON.pretty_generate(action.params) %></pre>
                     </details>
                   <% else %>
                     —
@@ -60,48 +63,46 @@
                 </td>
               </tr>
             <% end %>
-          <% else %>
-            <tr>
-              <td colspan="6" class="px-4 py-8 text-center text-sm text-ink-faint">No requests were recorded.</td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  </div>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <%= empty_state "No requests were recorded.", icon: :list %>
+    <% end %>
+  </section>
 
-  <div class="mt-8 patch" id="impersonation-versions">
-    <div class="px-6 py-4 border-b-2 border-dashed border-ink-soft/30">
-      <h2 class="font-display text-lg font-bold text-ink">Record changes</h2>
-      <p class="text-sm text-ink-faint">Records the admin created, changed or deleted during this impersonation.</p>
+  <section class="card card-flush" id="impersonation-versions">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">Record changes</h2>
+        <p class="card-lede">Records the admin created, changed or deleted during this impersonation.</p>
+      </div>
     </div>
-    <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-ink-soft/20">
-        <thead class="bg-grape-soft">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Time</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Event</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-grape uppercase tracking-wider">Record</th>
-          </tr>
-        </thead>
-        <tbody class="bg-paper divide-y divide-ink-soft/10">
-          <% if @versions.any? %>
+    <% if @versions.any? %>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Event</th>
+              <th>Record</th>
+            </tr>
+          </thead>
+          <tbody>
             <% @versions.each do |version| %>
               <tr>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-ink-soft" title="<%= version.created_at&.iso8601 %>">
+                <td class="whitespace-nowrap text-ink-soft" title="<%= version.created_at&.iso8601 %>">
                   <%= version.created_at ? l(version.created_at, format: :short) : "—" %>
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-ink"><%= version.event %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm font-mono text-ink-soft"><%= version.item_type %> #<%= version.item_id %></td>
+                <td class="whitespace-nowrap"><%= version.event %></td>
+                <td class="whitespace-nowrap mono text-ink-soft"><%= version.item_type %> #<%= version.item_id %></td>
               </tr>
             <% end %>
-          <% else %>
-            <tr>
-              <td colspan="3" class="px-4 py-8 text-center text-sm text-ink-faint">No records were changed.</td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  </div>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <%= empty_state "No records were changed.", icon: :history %>
+    <% end %>
+  </section>
 </div>

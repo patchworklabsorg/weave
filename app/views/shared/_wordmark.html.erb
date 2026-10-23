@@ -1,0 +1,13 @@
+<%# The Weave wordmark: rosette + name in the display face.
+    render "shared/wordmark"                       -> links to the root page
+    render "shared/wordmark", size: :lg, href: nil -> static, larger (focus pages) %>
+<% size = local_assigns.fetch(:size, :md) %>
+<% href = local_assigns.fetch(:href, root_path) %>
+<% classes = ["wordmark", ("wordmark-lg" if size == :lg)].compact.join(" ") %>
+<% if href %>
+  <%= link_to href, class: classes, "aria-label": "Weave home" do %>
+    <span class="rosette" aria-hidden="true"></span>Weave
+  <% end %>
+<% else %>
+  <span class="<%= classes %>"><span class="rosette" aria-hidden="true"></span>Weave</span>
+<% end %>

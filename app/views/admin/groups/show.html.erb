@@ -1,122 +1,130 @@
 <% content_for :title, @group.name %>
 <% can_change = current_user.superadmin? && @group.editable? %>
 
-<div class="mb-6">
-  <div class="flex justify-between items-center mb-4">
-    <div>
-      <h2 class="font-display text-2xl font-bold text-ink"><%= @group.name %></h2>
-      <p class="text-ink-soft font-mono text-sm"><%= @group.slug %></p>
-    </div>
-    <div class="flex space-x-3">
-      <%= link_to "Back to Groups", admin_groups_path, class: "btn-stitch-ghost" %>
-      <% if can_change %>
-        <%= link_to "Edit", edit_admin_group_path(@group), class: "btn-stitch" %>
-        <%= button_to "Delete", admin_group_path(@group), method: :delete,
-            class: "btn-stitch-ghost text-red-600",
-            data: { turbo_confirm: "Delete #{@group.name}? All members will be removed from it." } %>
-      <% end %>
-    </div>
+<header class="page-header">
+  <div>
+    <p class="text-sm"><%= link_to "Groups", admin_groups_path, class: "link-quiet text-ink-soft" %></p>
+    <h1 class="page-title"><%= @group.name %></h1>
+    <p class="page-lede mono"><%= @group.slug %></p>
   </div>
-</div>
+  <% if can_change %>
+    <div class="page-actions">
+      <%= link_to edit_admin_group_path(@group), class: "btn btn-secondary" do %><%= icon(:pencil) %>Edit<% end %>
+      <%= button_to admin_group_path(@group), method: :delete, class: "btn btn-danger",
+          data: { turbo_confirm: "Delete #{@group.name}? All members will be removed from it." } do %>
+        <%= icon(:trash_2) %>Delete
+      <% end %>
+    </div>
+  <% end %>
+</header>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-  <div class="patch p-6">
-    <h3 class="font-display text-lg font-bold text-ink mb-4">Details</h3>
-    <dl class="space-y-4">
-      <div>
-        <dt class="text-sm font-medium text-ink-faint">Type</dt>
-        <dd class="mt-1"><%= render "kind_badge", group: @group %></dd>
-      </div>
-      <% if @group.system? %>
-        <div>
-          <dd class="text-sm text-ink-soft">Weave keeps this group in sync from user attributes. You can't change it by hand.</dd>
-        </div>
-      <% end %>
-      <% if @group.description.present? %>
-        <div>
-          <dt class="text-sm font-medium text-ink-faint">Description</dt>
-          <dd class="mt-1 text-sm text-ink"><%= @group.description %></dd>
-        </div>
-      <% end %>
-      <% if @group.waives_code_of_conduct || @group.waives_slack %>
-        <div>
-          <dt class="text-sm font-medium text-ink-faint">Sponsored project waivers</dt>
-          <dd class="mt-1 text-sm text-ink">
-            <%= [("Code of Conduct" if @group.waives_code_of_conduct), ("Slack" if @group.waives_slack)].compact.to_sentence %>
-          </dd>
-        </div>
-      <% end %>
-      <div>
-        <dt class="text-sm font-medium text-ink-faint">Created</dt>
-        <dd class="mt-1 text-sm text-ink">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Details</h2>
+    </div>
+    <div class="card-body">
+      <dl class="dl">
+        <%= dl_row("Type") { render "kind_badge", group: @group } %>
+        <% if @group.description.present? %>
+          <%= dl_row "Description", @group.description %>
+        <% end %>
+        <% if @group.waives_code_of_conduct || @group.waives_slack %>
+          <%= dl_row "Sponsored project waivers",
+                [("Code of Conduct" if @group.waives_code_of_conduct), ("Slack" if @group.waives_slack)].compact.to_sentence %>
+        <% end %>
+        <%= dl_row("Created") do %>
           <%= @group.created_at.strftime("%B %d, %Y") %>
           <% if @group.created_by %>by <%= @group.created_by.full_name %><% end %>
-        </dd>
-      </div>
-    </dl>
+        <% end %>
+      </dl>
+      <% if @group.system? %>
+        <p class="mt-3 text-sm text-ink-soft">Weave keeps this group in sync from user attributes. You can't change it by hand.</p>
+      <% end %>
+    </div>
   </div>
 
-  <div class="patch p-6 lg:col-span-2">
-    <h3 class="font-display text-lg font-bold text-ink mb-4">Members (<%= @memberships.count(&:active?) %>)</h3>
+  <div class="card card-flush lg:col-span-2">
+    <div class="card-header">
+      <div class="flex items-center gap-2">
+        <h2 class="card-title">Members</h2>
+        <%= badge(@memberships.count(&:active?).to_s) %>
+      </div>
+      <%= render "shared/search_form", url: admin_group_path(@group), frame: "group_members", placeholder: "Search members" %>
+    </div>
 
     <% if can_change %>
-      <%= form_with model: @membership, scope: :group_membership, url: admin_group_memberships_path(@group), local: true,
-          class: "flex flex-wrap items-end gap-3 mb-6" do |form| %>
-        <div class="flex-1 min-w-48">
-          <%= form.label :email, "Email", class: "block text-sm font-medium text-ink" %>
-          <%= form.email_field :email, required: true, class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint", placeholder: "person@example.com" %>
-        </div>
-        <div>
-          <%= form.label :expires_at, "Expires (optional)", class: "block text-sm font-medium text-ink" %>
-          <%= form.datetime_local_field :expires_at, class: "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors placeholder-ink-faint" %>
-        </div>
-        <%= form.submit "Add Member", class: "btn-stitch" %>
-      <% end %>
+      <div class="px-5 pt-4">
+        <%= form_with model: @membership, scope: :group_membership, url: admin_group_memberships_path(@group), local: true,
+            class: "well grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_auto] items-end gap-3" do |form| %>
+          <div class="field-group">
+            <%= form.label :email, "Email", class: "field-label" %>
+            <%= form.email_field :email, required: true, class: "field", placeholder: "person@example.com" %>
+          </div>
+          <div class="field-group">
+            <%= form.label :expires_at, class: "field-label" do %>Expires <span class="optional">(optional)</span><% end %>
+            <%= form.datetime_local_field :expires_at, class: "field" %>
+          </div>
+          <%= form.submit "Add Member", class: "btn btn-primary" %>
+        <% end %>
+      </div>
     <% end %>
 
-    <% if @memberships.any? %>
-      <table class="min-w-full divide-y divide-ink-soft/20">
-        <thead>
-          <tr>
-            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-grape uppercase tracking-wider">User</th>
-            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-grape uppercase tracking-wider">Added</th>
-            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-grape uppercase tracking-wider">Expires</th>
-            <th scope="col" class="relative px-4 py-2"><span class="sr-only">Actions</span></th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-ink-soft/10">
-          <% @memberships.each do |membership| %>
-            <tr>
-              <td class="px-4 py-3 text-sm text-ink">
-                <%= link_to membership.user.full_name, admin_user_path(membership.user), class: "font-medium hover:text-grape" %>
-                <div class="text-xs text-ink-faint"><%= membership.user.email %></div>
-              </td>
-              <td class="px-4 py-3 text-sm text-ink-soft">
-                <%= time_ago_in_words(membership.created_at) %> ago
-                <% if membership.added_by %><div class="text-xs text-ink-faint">by <%= membership.added_by.full_name %></div><% end %>
-              </td>
-              <td class="px-4 py-3 text-sm">
-                <% if membership.expired? %>
-                  <span class="text-red-600">Expired</span>
-                <% elsif membership.expires_at %>
-                  <span class="text-ink"><%= membership.expires_at.strftime("%b %d, %Y %I:%M %p") %></span>
-                <% else %>
-                  <span class="text-ink-faint">Never</span>
-                <% end %>
-              </td>
-              <td class="px-4 py-3 text-right text-sm">
-                <% if can_change && membership.manual? %>
-                  <%= button_to "Remove", admin_group_membership_path(@group, membership), method: :delete,
-                      class: "text-red-600 hover:text-red-900",
-                      data: { turbo_confirm: "Remove #{membership.user.full_name} from #{@group.name}?" } %>
-                <% end %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    <% else %>
-      <p class="text-sm text-ink-faint">This group has no members.</p>
+    <%= turbo_frame_tag "group_members", target: "_top" do %>
+      <% if params[:search].present? %>
+        <p class="px-5 py-3 text-sm text-ink-soft border-b border-hairline">
+          <%= pluralize(@memberships.size, "member") %> <%= @memberships.size == 1 ? "matches" : "match" %> “<%= params[:search] %>”
+        </p>
+      <% end %>
+
+      <% if @memberships.any? %>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">User</th>
+                <th scope="col">Added</th>
+                <th scope="col">Expires</th>
+                <th scope="col" class="actions"><span class="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @memberships.each do |membership| %>
+                <tr>
+                  <td>
+                    <%= link_to membership.user.full_name, admin_user_path(membership.user), class: "link-quiet font-medium" %>
+                    <span class="table-sub"><%= membership.user.email %></span>
+                  </td>
+                  <td class="text-ink-soft">
+                    <%= time_ago_in_words(membership.created_at) %> ago
+                    <% if membership.added_by %><span class="table-sub">by <%= membership.added_by.full_name %></span><% end %>
+                  </td>
+                  <td class="whitespace-nowrap">
+                    <% if membership.expired? %>
+                      <%= badge "Expired", tone: :danger %>
+                    <% elsif membership.expires_at %>
+                      <%= membership.expires_at.strftime("%b %d, %Y %I:%M %p") %>
+                    <% else %>
+                      <span class="text-ink-faint">Never</span>
+                    <% end %>
+                  </td>
+                  <td class="actions">
+                    <% if can_change && membership.manual? %>
+                      <%= button_to "Remove", admin_group_membership_path(@group, membership), method: :delete,
+                          class: "btn btn-danger btn-sm",
+                          data: { turbo_confirm: "Remove #{membership.user.full_name} from #{@group.name}?" } %>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% elsif params[:search].present? %>
+        <%= empty_state("No members match “#{params[:search]}”", body: "Search by name, email or Weave ID.", icon: :search) %>
+      <% else %>
+        <%= empty_state("This group has no members.", icon: :users) %>
+      <% end %>
     <% end %>
   </div>
 </div>

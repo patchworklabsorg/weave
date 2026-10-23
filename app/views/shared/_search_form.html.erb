@@ -1,0 +1,18 @@
+<%# A search box that reloads a turbo frame as you type.
+    render "shared/search_form", url: admin_groups_path, frame: "groups_table", placeholder: "Search groups"
+    Optional: param (default :search), value (default params[param]), autofocus. %>
+<% param = local_assigns.fetch(:param, :search) %>
+<% value = local_assigns.fetch(:value, params[param]) %>
+<%= form_with url: url, method: :get, local: true, class: "flex flex-wrap items-center gap-2",
+      data: { controller: "search", turbo_frame: frame, turbo_action: "advance" } do |form| %>
+  <label class="search flex-1 min-w-56">
+    <span class="sr-only"><%= placeholder %></span>
+    <%= icon(:search) %>
+    <%= form.search_field param, value: value, placeholder: placeholder, class: "field", autocomplete: "off",
+          autofocus: local_assigns[:autofocus], data: { search_target: "input", action: "input->search#search" } %>
+  </label>
+  <% if value.present? %>
+    <%# A full visit, so the input itself is reset too. %>
+    <%= link_to "Clear", url, class: "btn btn-quiet btn-sm" %>
+  <% end %>
+<% end %>

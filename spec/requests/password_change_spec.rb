@@ -36,7 +36,7 @@ RSpec.describe "Changing a password", type: :request do
     it "refuses a wrong current password" do
       change_password(current: "wrong", new: "New-password-2")
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("current password is not correct")
     end
 
@@ -45,7 +45,7 @@ RSpec.describe "Changing a password", type: :request do
 
       change_password(current: "Ad-password-1", new: "short")
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("does not meet the Patchwork password policy")
     end
 
@@ -145,7 +145,7 @@ RSpec.describe "Changing a password", type: :request do
 
       patch admin_user_path(user), params: { user: { first_name: "Changed", password: "short", password_confirmation: "short" } }
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("does not meet the Active Directory password policy")
       expect(user.reload.first_name).not_to eq("Changed")
     end

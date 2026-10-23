@@ -4,14 +4,29 @@
 
 import { application } from "./application"
 
+import AddressSyncController from "./address_sync_controller"
+application.register("address-sync", AddressSyncController)
+
 import ClipboardController from "./clipboard_controller"
 application.register("clipboard", ClipboardController)
+
+import CommandBarController from "./command_bar_controller"
+application.register("command-bar", CommandBarController)
+
+import ConfirmSubmitController from "./confirm_submit_controller"
+application.register("confirm-submit", ConfirmSubmitController)
 
 import CountdownController from "./countdown_controller"
 application.register("countdown", CountdownController)
 
+import DrawerController from "./drawer_controller"
+application.register("drawer", DrawerController)
+
 import FingerprintController from "./fingerprint_controller"
 application.register("fingerprint", FingerprintController)
+
+import FlashController from "./flash_controller"
+application.register("flash", FlashController)
 
 import LoginFormController from "./login_form_controller"
 application.register("login-form", LoginFormController)
