@@ -7,9 +7,9 @@ RSpec.describe VerificationFlow do
 
   # The account matches the identifiers below (see .account_mismatches).
   let(:member) { create(:user, :verified, legal_first_name: "Erika", legal_last_name: "Mustermann", birthday: Date.new(1990, 8, 12)) }
+  let(:verifier) { create(:user, :identity_team) }
 
   def verification_versions = PaperTrail::Version.where(item_type: "Verification")
-  let(:verifier) { create(:user, :identity_team) }
 
   # The end of pre-review seals the image (see IdDocumentVault).
   before { active_key_set_without_holders }
@@ -150,7 +150,7 @@ RSpec.describe VerificationFlow do
       expect(member.verification_status).to eq("pending")
     end
 
-    it "lets another identity team member take over the pre-review, and logs the hand-over" do
+    it "lets another identity team member take over the pre-review, and logs the hand-over" do # rubocop:disable RSpec/MultipleExpectations
       described_class.start_pre_review(verification, by: verifier)
       other = create(:user, :identity_team)
 
@@ -253,7 +253,7 @@ RSpec.describe VerificationFlow do
     end
 
     it "compares with the preferred name when the account has no legal name" do
-      member.update_columns(legal_first_name: nil, legal_last_name: nil, first_name: "Erika", last_name: "Mustermann")
+      member.update_columns(legal_first_name: nil, legal_last_name: nil, first_name: "Erika", last_name: "Mustermann") # rubocop:disable Rails/SkipsModelValidations
 
       expect(decide(verification)).to be_success
     end

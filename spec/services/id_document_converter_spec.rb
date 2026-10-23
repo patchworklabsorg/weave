@@ -69,7 +69,7 @@ RSpec.describe IdDocumentConverter do
   end
 
   it "refuses a type it does not accept, by its bytes and not its name" do
-    expect { described_class.convert(fixture("id_document.webp")) }.to raise_error(described_class::Refused, %r{image/webp})
+    expect { described_class.convert(fixture("id_document.webp")) }.to raise_error(described_class::Refused, /image\/webp/)
     expect { described_class.convert(fixture("not_an_image.txt")) }.to raise_error(described_class::Refused)
   end
 

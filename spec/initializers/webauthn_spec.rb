@@ -4,7 +4,7 @@ require "rails_helper"
 
 # Passkey sign-in and key custody share one WebAuthn relying party
 # (config/initializers/webauthn.rb).
-RSpec.describe "WebAuthn configuration" do
+RSpec.describe "WebAuthn configuration" do # rubocop:disable RSpec/DescribeClass
   it "uses localhost on port 3000 in test" do
     expect(WebAuthn.configuration.rp_id).to eq("localhost")
     expect(WebAuthn.configuration.allowed_origins).to eq(["http://localhost:3000"])

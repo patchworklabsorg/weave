@@ -26,33 +26,53 @@ module AdminNavHelper
     admin = user.admin?
     groups = [
       NavGroup.new("Identity", [
-        (admin_nav_entry("Verification", identity_verifications_path, :id_card, "identity id check call review",
-                         %w[verifications break_glass_records break_glass_notices], :identity) if user.identity_team),
-        (admin_nav_entry("US residency", identity_residency_checks_path, :map_pin, "us residency ospool document review",
-                         %w[residency_checks], :identity) if user.identity_team),
-        (admin_nav_entry("Key custody", identity_key_custody_path, :key_square, "hardware keys yubikey ceremony break-glass",
-                         %w[key_custody key_ceremonies hardware_keys key_sets], :identity) if KeyCustody.can_view?(user)),
-        (admin_nav_entry("Governance", identity_governance_path, :landmark, "identity team board proposals",
-                         %w[governance governance_proposals team_removals], :identity) if IdentityGovernance.can_view?(user)),
-        (admin_nav_entry("Knot", admin_knots_path, :link, "knot hash program grants",
-                         %w[knots knot_change_requests], :admin) if admin && knot_nav?(user))
-      ]),
+                     (if user.identity_team
+                        admin_nav_entry("Verification", identity_verifications_path, :id_card, "identity id check call review",
+                                        %w[verifications break_glass_records break_glass_notices], :identity)
+                      end),
+                     (if user.identity_team
+                        admin_nav_entry("US residency", identity_residency_checks_path, :map_pin, "us residency ospool document review",
+                                        %w[residency_checks], :identity)
+                      end),
+                     (if KeyCustody.can_view?(user)
+                        admin_nav_entry("Key custody", identity_key_custody_path, :key_square, "hardware keys yubikey ceremony break-glass",
+                                        %w[key_custody key_ceremonies hardware_keys key_sets], :identity)
+                      end),
+                     (if IdentityGovernance.can_view?(user)
+                        admin_nav_entry("Governance", identity_governance_path, :landmark, "identity team board proposals",
+                                        %w[governance governance_proposals team_removals], :identity)
+                      end),
+                     (if admin && knot_nav?(user)
+                        admin_nav_entry("Knot", admin_knots_path, :link, "knot hash program grants",
+                                        %w[knots knot_change_requests], :admin)
+                      end)
+                   ]),
       NavGroup.new("People", [
-        (admin_nav_entry("Users", admin_users_path, :users, "admin people members", %w[users user_*], :admin) if admin),
-        (admin_nav_entry("Staff and contractors", admin_role_assignments_path, :briefcase, "admin roles staff contractors",
-                         %w[role_assignments], :admin) if admin),
-        (admin_nav_entry("Groups", admin_groups_path, :users_round, "admin teams", %w[groups group_memberships], :admin) if admin),
-        (admin_nav_entry("Consents", admin_guardian_consents_path, :shield_check, "admin guardian minors review queue",
-                         %w[guardian_consents], :admin) if admin)
-      ]),
+                     (admin_nav_entry("Users", admin_users_path, :users, "admin people members", %w[users user_*], :admin) if admin),
+                     (if admin
+                        admin_nav_entry("Staff and contractors", admin_role_assignments_path, :briefcase, "admin roles staff contractors",
+                                        %w[role_assignments], :admin)
+                      end),
+                     (admin_nav_entry("Groups", admin_groups_path, :users_round, "admin teams", %w[groups group_memberships], :admin) if admin),
+                     (if admin
+                        admin_nav_entry("Consents", admin_guardian_consents_path, :shield_check, "admin guardian minors review queue",
+                                        %w[guardian_consents], :admin)
+                      end)
+                   ]),
       NavGroup.new("Data", [
-        (admin_nav_entry("Deletion", admin_deletion_requests_path, :trash_2, "deletion requests takeout retention",
-                         %w[deletion_requests delete_time_aggregates], :admin) if admin && user.identity_team),
-        (admin_nav_entry("Demographics", admin_demographics_path, :chart_pie, "demographics vault report",
-                         %w[demographics], :admin) if admin),
-        (admin_nav_entry("Funder reports", admin_funder_reports_path, :file_chart_column, "funder report aggregates",
-                         %w[funder_reports], :admin) if admin)
-      ]),
+                     (if admin && user.identity_team
+                        admin_nav_entry("Deletion", admin_deletion_requests_path, :trash, "deletion requests takeout retention",
+                                        %w[deletion_requests delete_time_aggregates], :admin)
+                      end),
+                     (if admin
+                        admin_nav_entry("Demographics", admin_demographics_path, :chart_pie, "demographics vault report",
+                                        %w[demographics], :admin)
+                      end),
+                     (if admin
+                        admin_nav_entry("Funder reports", admin_funder_reports_path, :file_chart_column, "funder report aggregates",
+                                        %w[funder_reports], :admin)
+                      end)
+                   ]),
       NavGroup.new("System", admin ? system_links : [])
     ]
     groups.map { |group| group.with(links: group.links.compact) }.reject { |group| group.links.empty? }

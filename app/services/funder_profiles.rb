@@ -201,6 +201,7 @@ module FunderProfiles
           unless KnotSettings.program_keys.include?(program.to_s)
             raise InvalidConfig, "program_funders: #{program} is not a program in config/kyc/knot.yml"
           end
+
           missing = list - known
           raise InvalidConfig, "program_funders.#{program}: no funder profile #{missing.join(', ')}" if missing.any?
         end

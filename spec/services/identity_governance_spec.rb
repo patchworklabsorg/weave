@@ -251,17 +251,18 @@ RSpec.describe IdentityGovernance do
   describe "key holder changes" do
     let(:member) { verified_member }
 
+    before do
+      owner
+      board_member
+      other_board_member
+    end
+
     it "refuses a key holder who is not verified" do
       result = described_class.propose(kind: "add_key_holder", subject: create(:user, :identity_team), by: owner, reason: "x")
 
       expect(result.message).to include("must be verified")
     end
 
-    before do
-      owner
-      board_member
-      other_board_member
-    end
 
     it "needs every board member at proposal time, and applies only after the last approval" do
       proposal = propose("add_key_holder", member)
@@ -584,7 +585,7 @@ RSpec.describe IdentityGovernance do
       described_class.propose(kind: "add_patch_lead", subject:, by:, reason: "Leads Ganymede.", scope:)
     end
 
-    it "needs an owner to propose with a program and a different board member to approve" do
+    it "needs an owner to propose with a program and a different board member to approve" do # rubocop:disable RSpec/MultipleExpectations
       result = propose_lead
       expect(result).to be_success
       proposal = result.record

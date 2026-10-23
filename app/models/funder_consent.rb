@@ -58,6 +58,7 @@ class FunderConsent < ApplicationRecord
 
     # The members who consent now to this funder.
     def user_ids_for(funder) = live.where(funder: funder.to_s).select(:user_id)
+
   end
 
 end

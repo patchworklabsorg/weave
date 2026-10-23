@@ -9,7 +9,7 @@ RSpec.describe UserRole do
   let(:user) { create(:user, :verified) }
   let(:actor) { create(:user, :owner, :verified) }
 
-  def connection = ActiveRecord::Base.connection
+  delegate :connection, to: :'ActiveRecord::Base'
 
   def refused(sql, pattern = /user_roles/)
     expect { connection.transaction(requires_new: true) { connection.execute(sql) } }
@@ -28,7 +28,7 @@ RSpec.describe UserRole do
     expect(scoped.errors[:scope].first).to include("ganymede")
   end
 
-  it "allows one active assignment of a role and scope for each person" do
+  it "allows one active assignment of a role and scope for each person" do # rubocop:disable RSpec/NoExpectationExample
     RoleGrants.grant!(user, "staff")
 
     refused(<<~SQL.squish, /index_user_roles_one_active_assignment/)
@@ -104,7 +104,7 @@ RSpec.describe UserRole do
       expect(row.reload).to have_attributes(revoke_reason: "Left", revoked_by_id: actor.id)
     end
 
-    it "refuses revoke fields without revoked_at" do
+    it "refuses revoke fields without revoked_at" do # rubocop:disable RSpec/NoExpectationExample
       refused("UPDATE user_roles SET revoke_reason = 'x' WHERE id = #{row.id}", /user_roles_revoke_fields_need_revoked_at/)
     end
 

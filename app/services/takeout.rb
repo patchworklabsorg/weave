@@ -101,13 +101,15 @@ module Takeout
         # credential id.
         "passkeys"        => user.passkeys.order(:created_at).map do |passkey|
           { "nickname" => passkey.nickname, "created_at" => passkey.created_at.iso8601,
-            "last_used_at" => passkey.last_used_at&.iso8601 }
+            "last_used_at" => passkey.last_used_at&.iso8601
+}
         end,
         "groups"          => user.groups.map(&:name),
         "authorized_apps" => user.oauth_access_tokens.includes(:application).filter_map { |token| token.application&.name }.uniq,
         "funder_consents" => user.funder_consents.order(:given_at).map do |consent|
           { "funder" => consent.profile&.name || consent.funder, "given_at" => consent.given_at.iso8601,
-            "withdrawn_at" => consent.withdrawn_at&.iso8601 }
+            "withdrawn_at" => consent.withdrawn_at&.iso8601
+}
         end
       }
     end

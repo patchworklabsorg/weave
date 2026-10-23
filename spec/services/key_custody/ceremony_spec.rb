@@ -11,7 +11,7 @@ RSpec.describe KeyCustody::Ceremony do
   let!(:board) { create(:user, is_board: true) }
 
   describe ".start!" do
-    it "lists the holders and their keys, and binds one challenge to the ceremony" do
+    it "lists the holders and their keys, and binds one challenge to the ceremony" do # rubocop:disable RSpec/MultipleExpectations
       options = described_class.start!(by: operator)
 
       expect(options[:holders].pluck(:id)).to match_array(holders.map(&:public_id))
@@ -122,7 +122,8 @@ RSpec.describe KeyCustody::Ceremony do
       split = KeyCustody::Shamir.split(private_key, share_count: 3, threshold: 2)
       entries = keys.each_with_index.map do |(holder, fakes), index|
         { holder_id: holder.public_id, x: split[index].getbyte(-1), digest: KeyCustody::Crypto.share_digest(split[index], public_key:),
-          wrapped: fakes.map { |fake| { credential_id: fake.external_id, sealed: seal_for(fake, split[index], key_set_public_key_b64: public_b64, holder:) } } }
+          wrapped: fakes.map { |fake| { credential_id: fake.external_id, sealed: seal_for(fake, split[index], key_set_public_key_b64: public_b64, holder:) } }
+}
       end
 
       expect do
@@ -147,7 +148,8 @@ RSpec.describe KeyCustody::Ceremony do
       options = described_class.start!(by: operator)
       entries = holders.each_with_index.map do |holder, index|
         { holder_id: holder.public_id, x: index + 1, digest: "a" * 64,
-          wrapped: keys[holder].map { |fake| { credential_id: fake.external_id, sealed: b64url("short") } } }
+          wrapped: keys[holder].map { |fake| { credential_id: fake.external_id, sealed: b64url("short") } }
+}
       end
 
       expect do
@@ -172,7 +174,7 @@ RSpec.describe KeyCustody::Ceremony do
   end
 
   describe "activation" do
-    it "activates only after all three holders give their own share" do
+    it "activates only after all three holders give their own share" do # rubocop:disable RSpec/MultipleExpectations
       result = run_ceremony(operator:, keys:)
 
       expect(submit_activation(holders[0], keys[holders[0]].first, result.key_set)).to eq(:waiting)

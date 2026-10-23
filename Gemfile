@@ -31,7 +31,7 @@ gem "jsbundling-rails", "~> 1.0"
 # SECURITY & AUTHENTICATION
 ###############################################################################
 gem "bcrypt", "~> 3.1.7" # Secure password hashing
-gem "webauthn", "~> 3.4"                   # Passkey sign-in and break-glass hardware keys (KeyCustody)
+gem "webauthn", "~> 3.4" # Passkey sign-in and break-glass hardware keys (KeyCustody)
 gem "doorkeeper"                         # OAuth 2.0 provider
 gem "doorkeeper-openid_connect"          # OIDC id_tokens on top of Doorkeeper
 gem "rack-attack"                        # Rate limiting
@@ -72,7 +72,7 @@ gem "aasm" # State machines
 ###############################################################################
 # FILE & IMAGE PROCESSING
 ###############################################################################
-gem "ruby-vips", "~> 2.2"               # libvips for ID uploads (IdDocumentConverter)
+gem "ruby-vips", "~> 2.2" # libvips for ID uploads (IdDocumentConverter)
 gem "active_storage_validations" # File validations
 
 ###############################################################################

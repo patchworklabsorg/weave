@@ -11,7 +11,7 @@ RSpec.describe PrivilegedAttributeChange do
 
   def rows_for(person) = described_class.where(user_id: person.id).order(:id)
 
-  def connection = ActiveRecord::Base.connection
+  delegate :connection, to: :'ActiveRecord::Base'
 
   def summary_rows(person) = rows_for(person).map { |row| [row.attribute_name, row.old_value, row.new_value, row.operation] }
 

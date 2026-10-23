@@ -24,12 +24,14 @@ class Identity::HardwareKeysController < Identity::BaseController
                                                        seal_public_key: params[:seal_public_key].presence)
     if key.sealable?
       render json: { message: "Enrolled the #{key.role} hardware key with its seal key. It is ready to hold your share.",
-                     one_touch: true }
+                     one_touch: true
+}
     else
       render json: { message: "Enrolled the #{key.role} hardware key. Touch it again to set up its seal key.",
                      one_touch: false,
                      seal: KeyCustody::Enrollment.seal_key_options(current_user, key),
-                     seal_url: seal_key_identity_hardware_key_path(key) }
+                     seal_url: seal_key_identity_hardware_key_path(key)
+}
     end
   end
 

@@ -27,12 +27,12 @@ module RoleGrants
   end
 
   RULE_TEXT = {
-    "owner_proposes_board_approves" => "An owner proposes. A different board member approves.",
+    "owner_proposes_board_approves"    => "An owner proposes. A different board member approves.",
     "owner_proposes_all_board_approve" => "An owner proposes. Every board member approves.",
-    "owner" => "One owner, at once.",
-    "any_owner" => "One owner, at once, for any person, other owners too.",
-    "admin" => "Any admin, at once.",
-    "owner_or_identity_lead" => "One owner or identity lead, at once."
+    "owner"                            => "One owner, at once.",
+    "any_owner"                        => "One owner, at once, for any person, other owners too.",
+    "admin"                            => "Any admin, at once.",
+    "owner_or_identity_lead"           => "One owner or identity lead, at once."
   }.freeze
 
   class << self

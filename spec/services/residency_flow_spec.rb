@@ -56,7 +56,7 @@ RSpec.describe ResidencyFlow do
       expect(result.errors).to include(:evidence_type)
     end
 
-    it "lets only the pre-reviewer open the document, and records a yes with the state" do
+    it "lets only the pre-reviewer open the document, and records a yes with the state" do # rubocop:disable RSpec/MultipleExpectations
       check = review_in_pre_review
       other = create(:user, :identity_team)
 
@@ -175,7 +175,7 @@ RSpec.describe ResidencyFlow do
                                             region_consistent: true, guardian_attended: true, identifiers:, residency:)
     end
 
-    it "takes the proof document with the ID, seals it at Document OK, and records the result at the pass" do
+    it "takes the proof document with the ID, seals it at Document OK, and records the result at the pass" do # rubocop:disable RSpec/MultipleExpectations
       verification = submit_with_residency
       check = described_class.check_for(verification)
       expect(check).to have_attributes(source: "identity_call", status: "submitted", evidence_type: "school_enrollment")

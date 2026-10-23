@@ -43,7 +43,7 @@ module RoleRegistry
   class << self
     def definitions = @definitions ||= parse(load_file)
 
-    def keys = definitions.keys
+    delegate :keys, to: :definitions
 
     def fetch(key)
       definitions.fetch(key.to_s) { raise ArgumentError, "Unknown role #{key.inspect}. Known roles: #{keys.join(', ')}." }

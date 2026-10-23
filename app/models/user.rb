@@ -202,12 +202,12 @@ class User < ApplicationRecord
   # ignored, so a stray user.is_board reads the role and never the stale
   # column. Do not query them with where(is_board: true): use the scopes.
   LEGACY_ROLE_COLUMNS = {
-    "identity_team" => "verifier",
-    "identity_lead" => "identity_lead",
+    "identity_team"       => "verifier",
+    "identity_lead"       => "identity_lead",
     "identity_key_holder" => "key_holder",
-    "is_board" => "board",
-    "is_staff" => "staff",
-    "is_contractor" => "contractor"
+    "is_board"            => "board",
+    "is_staff"            => "staff",
+    "is_contractor"       => "contractor"
   }.freeze
   self.ignored_columns += LEGACY_ROLE_COLUMNS.keys
 
@@ -1036,7 +1036,7 @@ class User < ApplicationRecord
     @pending_role_changes = nil
     reload_roles!
     grants, revokes = changes.partition { |_key, value| value }
-    revokes.each { |key, _value| RoleGrants.revoke!(self, key, reason: "set through User##{LEGACY_ROLE_COLUMNS.key(key)}=") }
+    revokes.map(&:first).each { |key| RoleGrants.revoke!(self, key, reason: "set through User##{LEGACY_ROLE_COLUMNS.key(key)}=") }
     grants.map(&:first).sort_by { |key| RoleRegistry.fetch(key).requires.size }.each do |key|
       RoleGrants.grant!(self, key, reason: "set through User##{LEGACY_ROLE_COLUMNS.key(key)}=")
     end

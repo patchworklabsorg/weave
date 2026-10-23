@@ -6,7 +6,7 @@ require Rails.root.join("db/migrate/20261020130100_migrate_role_booleans_to_user
 # The data migration: each true role boolean becomes a user_roles row, and the
 # production patch lead p_ids become patch_lead roles scoped to ganymede.
 RSpec.describe MigrateRoleBooleansToUserRoles do
-  def connection = ActiveRecord::Base.connection
+  delegate :connection, to: :'ActiveRecord::Base'
 
   # The old columns are ignored by User, so set them with SQL.
   def set_columns(user, **columns)
@@ -18,7 +18,7 @@ RSpec.describe MigrateRoleBooleansToUserRoles do
 
   def rows = UserRole.active.includes(:role).map { |row| [row.user_id, row.role.key, row.scope, row.reason, row.granted_by_id] }
 
-  it "copies each true boolean into a role row with no grantor and the column in the reason" do
+  it "copies each true boolean into a role row with no grantor and the column in the reason" do # rubocop:disable RSpec/ExampleLength
     verifier = create(:user, :verified)
     set_columns(verifier, identity_team: true, identity_key_holder: true, identity_lead: true)
     staff = create(:user, :verified)

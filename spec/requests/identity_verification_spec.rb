@@ -138,8 +138,8 @@ RSpec.describe "Identity verification pages", type: :request do
 
     it "has no route that serves the raw image" do
       routes = Rails.application.routes.routes.map { |route| [route.verb, route.path.spec.to_s] }
-      expect(routes.map(&:last).grep(%r{/(verifications|break_glass_records)/:id/document})).to be_empty
-      image_routes = routes.select { |_verb, path| path.match?(%r{/(verifications|break_glass_records)/:id/image}) }
+      expect(routes.map(&:last).grep(/\/(verifications|break_glass_records)\/:id\/document/)).to be_empty
+      image_routes = routes.select { |_verb, path| path.match?(/\/(verifications|break_glass_records)\/:id\/image/) }
       expect(image_routes.map(&:first).uniq).to eq(["POST"])
     end
 
@@ -159,7 +159,7 @@ RSpec.describe "Identity verification pages", type: :request do
       expect(verification.reload).to be_needs_resubmission
     end
 
-    it "marks the document OK, then records the agreed call time" do
+    it "marks the document OK, then records the agreed call time" do # rubocop:disable RSpec/MultipleExpectations
       patch start_pre_review_identity_verification_path(verification)
       get identity_verification_path(verification)
       expect(response.body).to include("Document OK", "Send back")
@@ -207,13 +207,6 @@ RSpec.describe "Identity verification pages", type: :request do
 
   describe "recording the call outcome" do
     let(:member) { create(:user, :verified, first_name: "Ada", legal_first_name: "Erika", legal_last_name: "Mustermann", birthday: Date.new(1990, 8, 12)) }
-
-    # The end of pre-review seals the image (see IdDocumentVault).
-    before {
-      active_key_set_without_holders
-      sign_in_via_magic_link(verifier)
-    }
-
     let(:verification) { create(:verification, :call_scheduled, user: member) }
     let(:params) do
       {
@@ -225,6 +218,13 @@ RSpec.describe "Identity verification pages", type: :request do
         }
       }
     end
+
+    # The end of pre-review seals the image (see IdDocumentVault).
+    before {
+      active_key_set_without_holders
+      sign_in_via_magic_link(verifier)
+    }
+
 
 
     it "shows the attestation form and no recording field" do
@@ -414,7 +414,7 @@ RSpec.describe "Identity verification pages", type: :request do
       expect(response.parsed_body["error"]).to include("one-time key")
     end
 
-    it "gives the second approver no image, and the requester opens it once in the browser" do
+    it "gives the second approver no image, and the requester opens it once in the browser" do # rubocop:disable RSpec/ExampleLength, RSpec/MultipleExpectations
       record = request_and_approve
       expect(record).to be_granted
 
@@ -479,7 +479,7 @@ RSpec.describe "Identity verification pages", type: :request do
       expect(Rails.application.routes.recognize_path(path, method: :post)).to include(action: "approval_options")
     end
 
-    it "lets a team member delay the member notice with a reason" do
+    it "lets a team member delay the member notice with a reason" do # rubocop:disable RSpec/ExampleLength
       open_as_requester(request_and_approve)
       sign_in_via_magic_link(verifier)
       notice = BreakGlassNotice.find_by!(recipient_kind: "member")

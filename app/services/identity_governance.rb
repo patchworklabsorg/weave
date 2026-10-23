@@ -151,6 +151,7 @@ module IdentityGovernance
       role_key, = kind_role(kind)
       rule = kind_rule(kind)
       return failure(base: "This change does not need a proposal: #{RoleGrants.rule_text(*kind_role(kind))}") unless rule.proposal?
+
       unless RoleRegistry.valid_scope?(role_key, scope)
         return failure(scope: "must be one of: #{RoleRegistry.scopes_for(role_key).join(', ')}") if RoleRegistry.fetch(role_key).scopable?
 

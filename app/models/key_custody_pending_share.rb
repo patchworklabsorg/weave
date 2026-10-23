@@ -56,6 +56,6 @@ class KeyCustodyPendingShare < ApplicationRecord
 
   def self.bound(memory_key, share) = tag(memory_key) + share.b
 
-  def self.tag(memory_key) = OpenSSL::Digest::SHA256.digest("weave pending share v1:#{memory_key}")
+  def self.tag(memory_key) = OpenSSL::Digest.digest("SHA256", "weave pending share v1:#{memory_key}")
 
 end

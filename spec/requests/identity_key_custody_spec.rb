@@ -115,7 +115,7 @@ RSpec.describe "Key custody pages", type: :request do
       expect(KeyCustodyEvent.where(kind: "seal_key_registered", subject: holder)).to exist
     end
 
-    it "registers the key and its seal key in one request when the key gave PRF at creation" do
+    it "registers the key and its seal key in one request when the key gave PRF at creation" do # rubocop:disable RSpec/ExampleLength
       sign_in_via_magic_link(holder)
       post options_identity_hardware_keys_path, as: :json
       options = response.parsed_body
@@ -177,7 +177,7 @@ RSpec.describe "Key custody pages", type: :request do
     let!(:keys) { key_holders_with_keys }
     let(:holders) { keys.keys }
 
-    it "makes a pending key set from the browser's public key and sealed shares, with one touch of the operator's key" do # rubocop:disable RSpec/ExampleLength
+    it "makes a pending key set from the browser's public key and sealed shares, with one touch of the operator's key" do # rubocop:disable RSpec/ExampleLength, RSpec/MultipleExpectations
       operator = holders.first
       operator.update!(email_confirmed_at: Time.current)
       sign_in_via_magic_link(operator)
@@ -206,7 +206,8 @@ RSpec.describe "Key custody pages", type: :request do
       operator_share = open_own_sealed_share(signer, shares, operator, public_b64, split[options["holders"].index { |item| item["id"] == operator.public_id }])
       post identity_key_ceremony_path, params: { ceremony: options["ceremony"], public_key: public_b64, shares:,
                                                  credential: signer.assert(options.dig("request", "challenge")),
-                                                 operator_share: b64url(operator_share) }, as: :json
+                                                 operator_share: b64url(operator_share)
+}, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body["message"]).to include("Your share is given")
@@ -240,7 +241,7 @@ RSpec.describe "Key custody pages", type: :request do
       expect(key_set.reload).to be_active
     end
 
-    it "shows each holder's activation status, and hides the activate button from a holder who gave their share" do
+    it "shows each holder's activation status, and hides the activate button from a holder who gave their share" do # rubocop:disable RSpec/MultipleExpectations
       key_set = run_ceremony(operator: holders.first, keys:).key_set
       submit_activation(holders.first, keys[holders.first].first, key_set)
       expect(KeyCustody::Activation.waiting_holder_ids(key_set)).to eq([holders.first.id])
@@ -311,7 +312,7 @@ RSpec.describe "Key custody pages", type: :request do
       expect(key.reload).to be_active
     end
 
-    it "revokes a lost key and seals the share for a new key, with no touch of the new key" do # rubocop:disable RSpec/ExampleLength
+    it "revokes a lost key and seals the share for a new key, with no touch of the new key" do
       sign_in_via_magic_link(holder)
       patch revoke_identity_hardware_key_path(keys[holder].first.record), params: { reason: "Lost on the train" }
       expect(flash[:notice]).to include("board is told")
