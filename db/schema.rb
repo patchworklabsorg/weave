@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 # This file is auto-generated from the current state of the database. Instead
 # of editing this file, please use the migrations feature of Active Record to
 # incrementally modify your database, and then regenerate this schema definition.
@@ -23,24 +21,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   create_enum "status", ["active", "suspended", "deactivated"]
 
   create_table "active_storage_attachments", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "record_type", null: false
+    t.bigint "record_id", null: false
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
-    t.string "name", null: false
-    t.bigint "record_id", null: false
-    t.string "record_type", null: false
     t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
     t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
   end
 
   create_table "active_storage_blobs", force: :cascade do |t|
-    t.bigint "byte_size", null: false
-    t.string "checksum"
-    t.string "content_type"
-    t.datetime "created_at", null: false
-    t.string "filename", null: false
     t.string "key", null: false
+    t.string "filename", null: false
+    t.string "content_type"
     t.text "metadata"
     t.string "service_name", null: false
+    t.bigint "byte_size", null: false
+    t.string "checksum"
+    t.datetime "created_at", null: false
     t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
   end
 
@@ -51,30 +49,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   end
 
   create_table "addresses", force: :cascade do |t|
-    t.enum "address_type", default: "Shipping", null: false, enum_type: "address_type"
-    t.bigint "addressable_id", null: false
-    t.string "addressable_type", null: false
-    t.string "city"
-    t.string "contact_email"
+    t.string "type", default: "Address", null: false
+    t.string "nickname"
+    t.string "contact_name"
     t.string "contact_first_name"
     t.string "contact_last_name"
-    t.string "contact_name"
+    t.string "contact_email"
     t.string "contact_phone_number"
-    t.string "country", limit: 2
-    t.datetime "created_at", null: false
-    t.float "latitude"
+    t.enum "address_type", default: "Shipping", null: false, enum_type: "address_type"
     t.string "line1"
     t.string "line2"
     t.string "line3"
-    t.float "longitude"
-    t.string "nickname"
-    t.string "postal_code"
-    t.boolean "residential", default: false, null: false
-    t.text "shipping_notes"
+    t.string "city"
     t.string "state"
+    t.string "country", limit: 2
+    t.string "postal_code"
+    t.float "latitude"
+    t.float "longitude"
+    t.boolean "residential", default: false, null: false
     t.boolean "supports_weekend_deliveries", default: false, null: false
-    t.string "type", default: "Address", null: false
+    t.string "addressable_type", null: false
+    t.bigint "addressable_id", null: false
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "shipping_notes"
     t.index ["addressable_id"], name: "index_addresses_on_addressable_id"
     t.index ["addressable_type", "addressable_id", "type", "address_type"], name: "unique_address_per_addressable_type_and_address_type", unique: true
     t.index ["addressable_type", "addressable_id"], name: "index_addresses_on_addressable"
@@ -89,11 +87,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   end
 
   create_table "ahoy_events", force: :cascade do |t|
+    t.bigint "visit_id"
+    t.bigint "user_id"
     t.string "name"
     t.jsonb "properties"
     t.datetime "time"
-    t.bigint "user_id"
-    t.bigint "visit_id"
     t.index ["name", "time"], name: "index_ahoy_events_on_name_and_time"
     t.index ["properties"], name: "index_ahoy_events_on_properties", opclass: :jsonb_path_ops, using: :gin
     t.index ["user_id"], name: "index_ahoy_events_on_user_id"
@@ -101,45 +99,45 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   end
 
   create_table "ahoy_messages", force: :cascade do |t|
-    t.string "campaign"
-    t.string "mailer"
-    t.datetime "sent_at"
-    t.text "subject"
-    t.string "to_bidx"
-    t.text "to_ciphertext"
-    t.bigint "user_id"
     t.string "user_type"
+    t.bigint "user_id"
+    t.text "to_ciphertext"
+    t.string "to_bidx"
+    t.string "mailer"
+    t.text "subject"
+    t.datetime "sent_at"
+    t.string "campaign"
     t.index ["campaign"], name: "index_ahoy_messages_on_campaign"
     t.index ["to_bidx"], name: "index_ahoy_messages_on_to_bidx"
     t.index ["user_type", "user_id"], name: "index_ahoy_messages_on_user"
   end
 
   create_table "ahoy_visits", force: :cascade do |t|
-    t.string "app_version"
-    t.string "browser"
-    t.string "city"
-    t.string "country"
-    t.string "device_type"
-    t.string "ip"
-    t.text "landing_page"
-    t.float "latitude"
-    t.float "longitude"
-    t.string "os"
-    t.string "os_version"
-    t.string "platform"
-    t.text "referrer"
-    t.string "referring_domain"
-    t.string "region"
-    t.datetime "started_at"
-    t.text "user_agent"
-    t.bigint "user_id"
-    t.string "utm_campaign"
-    t.string "utm_content"
-    t.string "utm_medium"
-    t.string "utm_source"
-    t.string "utm_term"
     t.string "visit_token"
     t.string "visitor_token"
+    t.bigint "user_id"
+    t.string "ip"
+    t.text "user_agent"
+    t.text "referrer"
+    t.string "referring_domain"
+    t.text "landing_page"
+    t.string "browser"
+    t.string "os"
+    t.string "device_type"
+    t.string "country"
+    t.string "region"
+    t.string "city"
+    t.float "latitude"
+    t.float "longitude"
+    t.string "utm_source"
+    t.string "utm_medium"
+    t.string "utm_term"
+    t.string "utm_content"
+    t.string "utm_campaign"
+    t.string "app_version"
+    t.string "os_version"
+    t.string "platform"
+    t.datetime "started_at"
     t.index ["user_id"], name: "index_ahoy_visits_on_user_id"
     t.index ["visit_token"], name: "index_ahoy_visits_on_visit_token", unique: true
     t.index ["visitor_token", "started_at"], name: "index_ahoy_visits_on_visitor_token_and_started_at"
@@ -147,10 +145,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
 
   create_table "application_access_grants", force: :cascade do |t|
     t.bigint "application_id", null: false
-    t.datetime "created_at", null: false
-    t.bigint "created_by_id"
-    t.bigint "grantee_id", null: false
     t.string "grantee_type", null: false
+    t.bigint "grantee_id", null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["application_id", "grantee_type", "grantee_id"], name: "index_application_access_grants_uniqueness", unique: true
     t.index ["created_by_id"], name: "index_application_access_grants_on_created_by_id"
@@ -158,11 +156,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   end
 
   create_table "application_role_assignments", force: :cascade do |t|
-    t.bigint "assignee_id", null: false
-    t.string "assignee_type", null: false
-    t.datetime "created_at", null: false
-    t.bigint "created_by_id"
     t.bigint "role_id", null: false
+    t.string "assignee_type", null: false
+    t.bigint "assignee_id", null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["assignee_type", "assignee_id"], name: "index_application_role_assignments_on_assignee"
     t.index ["created_by_id"], name: "index_application_role_assignments_on_created_by_id"
@@ -171,123 +169,123 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
 
   create_table "application_roles", force: :cascade do |t|
     t.bigint "application_id", null: false
-    t.datetime "created_at", null: false
-    t.bigint "created_by_id"
-    t.text "description"
     t.string "key", null: false
     t.string "name", null: false
+    t.text "description"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["application_id", "key"], name: "index_application_roles_on_application_id_and_key", unique: true
     t.index ["created_by_id"], name: "index_application_roles_on_created_by_id"
   end
 
   create_table "audits1984_audits", force: :cascade do |t|
-    t.bigint "auditor_id", null: false
-    t.datetime "created_at", null: false
+    t.integer "status", default: 0, null: false
     t.text "notes"
     t.bigint "session_id", null: false
-    t.integer "status", default: 0, null: false
+    t.bigint "auditor_id", null: false
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["auditor_id"], name: "index_audits1984_audits_on_auditor_id"
     t.index ["session_id"], name: "index_audits1984_audits_on_session_id"
   end
 
   create_table "blazer_audits", force: :cascade do |t|
-    t.datetime "created_at"
-    t.string "data_source"
+    t.bigint "user_id"
     t.bigint "query_id"
     t.text "statement"
-    t.bigint "user_id"
+    t.string "data_source"
+    t.datetime "created_at"
     t.index ["query_id"], name: "index_blazer_audits_on_query_id"
     t.index ["user_id"], name: "index_blazer_audits_on_user_id"
   end
 
   create_table "blazer_checks", force: :cascade do |t|
-    t.string "check_type"
-    t.datetime "created_at", null: false
     t.bigint "creator_id"
-    t.text "emails"
-    t.datetime "last_run_at"
-    t.text "message"
     t.bigint "query_id"
-    t.string "schedule"
-    t.text "slack_channels"
     t.string "state"
+    t.string "schedule"
+    t.text "emails"
+    t.text "slack_channels"
+    t.string "check_type"
+    t.text "message"
+    t.datetime "last_run_at"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["creator_id"], name: "index_blazer_checks_on_creator_id"
     t.index ["query_id"], name: "index_blazer_checks_on_query_id"
   end
 
   create_table "blazer_dashboard_queries", force: :cascade do |t|
-    t.datetime "created_at", null: false
     t.bigint "dashboard_id"
-    t.integer "position"
     t.bigint "query_id"
+    t.integer "position"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["dashboard_id"], name: "index_blazer_dashboard_queries_on_dashboard_id"
     t.index ["query_id"], name: "index_blazer_dashboard_queries_on_query_id"
   end
 
   create_table "blazer_dashboards", force: :cascade do |t|
-    t.datetime "created_at", null: false
     t.bigint "creator_id"
     t.string "name"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["creator_id"], name: "index_blazer_dashboards_on_creator_id"
   end
 
   create_table "blazer_queries", force: :cascade do |t|
-    t.datetime "created_at", null: false
     t.bigint "creator_id"
-    t.string "data_source"
-    t.text "description"
     t.string "name"
+    t.text "description"
     t.text "statement"
+    t.string "data_source"
     t.string "status"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["creator_id"], name: "index_blazer_queries_on_creator_id"
   end
 
   create_table "blazer_uploads", force: :cascade do |t|
-    t.datetime "created_at", null: false
     t.bigint "creator_id"
-    t.text "description"
     t.string "table"
+    t.text "description"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["creator_id"], name: "index_blazer_uploads_on_creator_id"
   end
 
   create_table "console1984_commands", force: :cascade do |t|
-    t.datetime "created_at", null: false
+    t.text "statements"
     t.bigint "sensitive_access_id"
     t.bigint "session_id", null: false
-    t.text "statements"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["sensitive_access_id"], name: "index_console1984_commands_on_sensitive_access_id"
     t.index ["session_id", "created_at", "sensitive_access_id"], name: "on_session_and_sensitive_chronologically"
   end
 
   create_table "console1984_sensitive_accesses", force: :cascade do |t|
-    t.datetime "created_at", null: false
     t.text "justification"
     t.bigint "session_id", null: false
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["session_id"], name: "index_console1984_sensitive_accesses_on_session_id"
   end
 
   create_table "console1984_sessions", force: :cascade do |t|
-    t.datetime "created_at", null: false
     t.text "reason"
-    t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.index ["created_at"], name: "index_console1984_sessions_on_created_at"
     t.index ["user_id", "created_at"], name: "index_console1984_sessions_on_user_id_and_created_at"
   end
 
   create_table "console1984_users", force: :cascade do |t|
+    t.string "username", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "username", null: false
     t.index ["username"], name: "index_console1984_users_on_username"
   end
 
@@ -308,14 +306,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   end
 
   create_table "email_addresses", force: :cascade do |t|
-    t.datetime "confirmation_sent_at"
-    t.string "confirmation_token"
-    t.datetime "confirmed_at"
-    t.datetime "created_at", null: false
+    t.bigint "user_id", null: false
     t.string "email", null: false
     t.boolean "is_primary", default: false, null: false
+    t.datetime "confirmed_at"
+    t.string "confirmation_token"
+    t.datetime "confirmation_sent_at"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "user_id", null: false
     t.index ["confirmation_token"], name: "index_email_addresses_on_confirmation_token", unique: true
     t.index ["email"], name: "index_email_addresses_on_email", unique: true
     t.index ["user_id"], name: "index_email_addresses_on_user_id"
@@ -323,40 +321,40 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   end
 
   create_table "flipper_features", force: :cascade do |t|
-    t.datetime "created_at", null: false
     t.string "key", null: false
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["key"], name: "index_flipper_features_on_key", unique: true
   end
 
   create_table "flipper_gates", force: :cascade do |t|
-    t.datetime "created_at", null: false
     t.string "feature_key", null: false
     t.string "key", null: false
-    t.datetime "updated_at", null: false
     t.text "value"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.index ["feature_key", "key", "value"], name: "index_flipper_gates_on_feature_key_and_key_and_value", unique: true
   end
 
   create_table "friendly_id_slugs", force: :cascade do |t|
-    t.datetime "created_at"
-    t.string "scope"
     t.string "slug", null: false
     t.integer "sluggable_id", null: false
     t.string "sluggable_type", limit: 50
+    t.string "scope"
+    t.datetime "created_at"
     t.index ["slug", "sluggable_type", "scope"], name: "index_friendly_id_slugs_on_slug_and_sluggable_type_and_scope", unique: true
     t.index ["slug", "sluggable_type"], name: "index_friendly_id_slugs_on_slug_and_sluggable_type"
     t.index ["sluggable_type", "sluggable_id"], name: "index_friendly_id_slugs_on_sluggable_type_and_sluggable_id"
   end
 
   create_table "group_memberships", force: :cascade do |t|
-    t.bigint "added_by_id"
-    t.datetime "created_at", null: false
-    t.datetime "expires_at"
     t.bigint "group_id", null: false
-    t.string "source", default: "manual", null: false
-    t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
+    t.bigint "added_by_id"
+    t.string "source", default: "manual", null: false
+    t.datetime "expires_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.index ["added_by_id"], name: "index_group_memberships_on_added_by_id"
     t.index ["expires_at"], name: "index_group_memberships_on_expires_at", where: "(expires_at IS NOT NULL)"
     t.index ["group_id", "user_id"], name: "index_group_memberships_on_group_id_and_user_id", unique: true
@@ -364,13 +362,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   end
 
   create_table "groups", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.bigint "created_by_id"
-    t.datetime "deleted_at"
-    t.text "description"
-    t.string "kind", default: "manual", null: false
     t.string "name", null: false
     t.string "slug", null: false
+    t.text "description"
+    t.string "kind", default: "manual", null: false
+    t.bigint "created_by_id"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "waives_code_of_conduct", default: false, null: false
     t.boolean "waives_slack", default: false, null: false
@@ -381,33 +379,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   end
 
   create_table "guardian_consents", force: :cascade do |t|
-    t.datetime "account_deleted_at"
-    t.datetime "created_at", null: false
+    t.bigint "user_id"
+    t.string "status", default: "pending", null: false
+    t.text "guardian_name_ciphertext"
+    t.text "guardian_email_ciphertext"
+    t.text "signed_name_ciphertext"
+    t.string "token_digest"
+    t.datetime "sent_at"
     t.datetime "expires_at"
-    t.jsonb "flags", default: [], null: false
     t.datetime "granted_at"
-    t.string "granted_fingerprint"
     t.string "granted_ip"
     t.string "granted_user_agent"
-    t.text "guardian_email_ciphertext"
-    t.text "guardian_name_ciphertext"
-    t.text "note"
-    t.bigint "recorded_by_id"
-    t.text "review_note"
-    t.datetime "reviewed_at"
-    t.bigint "reviewed_by_id"
+    t.string "text_version"
     t.datetime "revoked_at"
     t.bigint "revoked_by_id"
-    t.datetime "sent_at"
-    t.text "signed_name_ciphertext"
-    t.string "status", default: "pending", null: false
-    t.string "text_version"
-    t.string "token_digest"
+    t.bigint "recorded_by_id"
+    t.text "note"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "user_id"
-    t.text "verification_note"
+    t.string "granted_fingerprint"
+    t.jsonb "flags", default: [], null: false
+    t.datetime "reviewed_at"
+    t.text "review_note"
+    t.bigint "reviewed_by_id"
     t.datetime "verified_at"
+    t.text "verification_note"
     t.bigint "verified_by_id"
+    t.datetime "account_deleted_at"
     t.index ["recorded_by_id"], name: "index_guardian_consents_on_recorded_by_id"
     t.index ["reviewed_by_id"], name: "index_guardian_consents_on_reviewed_by_id"
     t.index ["revoked_by_id"], name: "index_guardian_consents_on_revoked_by_id"
@@ -417,70 +415,70 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   end
 
   create_table "impersonation_actions", force: :cascade do |t|
-    t.string "controller_action"
-    t.datetime "created_at", null: false
-    t.string "http_method", null: false
     t.bigint "impersonation_id", null: false
-    t.jsonb "params", default: {}, null: false
+    t.string "http_method", null: false
     t.string "path", null: false
+    t.string "controller_action"
     t.integer "status"
+    t.jsonb "params", default: {}, null: false
+    t.datetime "created_at", null: false
     t.index ["impersonation_id"], name: "index_impersonation_actions_on_impersonation_id"
   end
 
   create_table "impersonations", force: :cascade do |t|
     t.bigint "admin_id"
-    t.datetime "created_at", null: false
-    t.boolean "denied", default: false, null: false
-    t.string "end_reason"
-    t.datetime "ended_at"
-    t.string "ip"
-    t.datetime "started_at", null: false
-    t.datetime "updated_at", null: false
-    t.string "user_agent"
     t.bigint "user_id"
+    t.datetime "started_at", null: false
+    t.datetime "ended_at"
+    t.string "end_reason"
+    t.boolean "denied", default: false, null: false
+    t.string "ip"
+    t.string "user_agent"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.index ["admin_id"], name: "index_impersonations_on_admin_id"
     t.index ["user_id"], name: "index_impersonations_on_user_id"
   end
 
   create_table "lockbox_audits", force: :cascade do |t|
-    t.string "context"
-    t.datetime "created_at"
-    t.jsonb "data"
-    t.string "ip"
-    t.bigint "subject_id"
     t.string "subject_type"
-    t.bigint "viewer_id"
+    t.bigint "subject_id"
     t.string "viewer_type"
+    t.bigint "viewer_id"
+    t.jsonb "data"
+    t.string "context"
+    t.string "ip"
+    t.datetime "created_at"
     t.index ["subject_type", "subject_id"], name: "index_lockbox_audits_on_subject"
     t.index ["viewer_type", "viewer_id"], name: "index_lockbox_audits_on_viewer"
   end
 
   create_table "oauth_access_grants", force: :cascade do |t|
+    t.bigint "resource_owner_id", null: false
     t.bigint "application_id", null: false
-    t.string "code_challenge"
-    t.string "code_challenge_method"
-    t.datetime "created_at", null: false
+    t.string "token", null: false
     t.integer "expires_in", null: false
     t.text "redirect_uri", null: false
-    t.bigint "resource_owner_id", null: false
-    t.datetime "revoked_at"
     t.string "scopes", default: "", null: false
-    t.string "token", null: false
+    t.datetime "created_at", null: false
+    t.datetime "revoked_at"
+    t.string "code_challenge"
+    t.string "code_challenge_method"
     t.index ["application_id"], name: "index_oauth_access_grants_on_application_id"
     t.index ["resource_owner_id"], name: "index_oauth_access_grants_on_resource_owner_id"
     t.index ["token"], name: "index_oauth_access_grants_on_token", unique: true
   end
 
   create_table "oauth_access_tokens", force: :cascade do |t|
-    t.bigint "application_id", null: false
-    t.datetime "created_at", null: false
-    t.integer "expires_in"
-    t.string "previous_refresh_token", default: "", null: false
-    t.string "refresh_token"
     t.bigint "resource_owner_id"
-    t.datetime "revoked_at"
-    t.string "scopes"
+    t.bigint "application_id", null: false
     t.string "token", null: false
+    t.string "refresh_token"
+    t.integer "expires_in"
+    t.string "scopes"
+    t.datetime "created_at", null: false
+    t.datetime "revoked_at"
+    t.string "previous_refresh_token", default: "", null: false
     t.index ["application_id"], name: "index_oauth_access_tokens_on_application_id"
     t.index ["refresh_token"], name: "index_oauth_access_tokens_on_refresh_token", unique: true
     t.index ["resource_owner_id"], name: "index_oauth_access_tokens_on_resource_owner_id"
@@ -488,18 +486,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   end
 
   create_table "oauth_applications", force: :cascade do |t|
-    t.string "access_policy", default: "everyone", null: false
+    t.string "name", null: false
+    t.string "uid", null: false
+    t.string "secret", null: false
+    t.text "redirect_uri", null: false
+    t.string "scopes", default: "", null: false
     t.boolean "confidential", default: true, null: false
     t.datetime "created_at", null: false
-    t.string "email_domains", default: [], null: false, array: true
-    t.string "name", null: false
-    t.text "redirect_uri", null: false
+    t.datetime "updated_at", null: false
+    t.string "access_policy", default: "everyone", null: false
     t.boolean "requires_code_of_conduct", default: true, null: false
     t.boolean "requires_guardian_consent", default: true, null: false
-    t.string "scopes", default: "", null: false
-    t.string "secret", null: false
-    t.string "uid", null: false
-    t.datetime "updated_at", null: false
+    t.string "email_domains", default: [], null: false, array: true
     t.index ["uid"], name: "index_oauth_applications_on_uid", unique: true
   end
 
@@ -511,38 +509,38 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
 
   create_table "pg_search_documents", force: :cascade do |t|
     t.text "content"
-    t.datetime "created_at", null: false
-    t.bigint "searchable_id"
     t.string "searchable_type"
+    t.bigint "searchable_id"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["searchable_type", "searchable_id"], name: "index_pg_search_documents_on_searchable"
   end
 
   create_table "rollups", force: :cascade do |t|
-    t.jsonb "dimensions", default: {}, null: false
-    t.string "interval", null: false
     t.string "name", null: false
+    t.string "interval", null: false
     t.datetime "time", null: false
+    t.jsonb "dimensions", default: {}, null: false
     t.float "value"
     t.index ["name", "interval", "time", "dimensions"], name: "index_rollups_on_name_and_interval_and_time_and_dimensions", unique: true
   end
 
   create_table "service_key_usages", force: :cascade do |t|
-    t.datetime "created_at", null: false
+    t.bigint "service_key_id", null: false
+    t.string "request_path"
+    t.string "request_method"
+    t.integer "response_code"
     t.integer "duration_ms"
     t.string "ip_address"
-    t.text "request_body"
-    t.text "request_headers"
-    t.string "request_method"
-    t.string "request_path"
-    t.datetime "requested_at"
-    t.text "response_body"
-    t.integer "response_code"
-    t.text "response_headers"
-    t.bigint "service_key_id", null: false
-    t.datetime "updated_at", null: false
     t.string "user_agent"
+    t.text "request_headers"
+    t.text "request_body"
+    t.text "response_headers"
+    t.text "response_body"
     t.integer "user_id"
+    t.datetime "requested_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.index ["requested_at"], name: "index_service_key_usages_on_requested_at"
     t.index ["response_code"], name: "index_service_key_usages_on_response_code"
     t.index ["service_key_id", "requested_at"], name: "index_service_key_usages_on_service_key_id_and_requested_at"
@@ -550,15 +548,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   end
 
   create_table "service_keys", force: :cascade do |t|
-    t.string "api_key_digest", null: false
-    t.datetime "created_at", null: false
-    t.bigint "created_by_id", null: false
-    t.datetime "expires_at"
-    t.string "hash_key", null: false
-    t.datetime "last_used_at"
-    t.string "name", null: false
     t.bigint "service_id", null: false
+    t.string "name", null: false
+    t.string "api_key_digest", null: false
+    t.string "hash_key", null: false
     t.string "status", default: "active", null: false
+    t.datetime "last_used_at"
+    t.datetime "expires_at"
+    t.bigint "created_by_id", null: false
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["api_key_digest"], name: "index_service_keys_on_api_key_digest", unique: true
     t.index ["created_by_id"], name: "index_service_keys_on_created_by_id"
@@ -568,16 +566,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   end
 
   create_table "service_webhooks", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.bigint "created_by_id", null: false
-    t.string "event_type", null: false
-    t.integer "failure_count", default: 0
-    t.datetime "last_triggered_at"
-    t.string "secret_token"
     t.bigint "service_id", null: false
-    t.string "status", default: "active", null: false
-    t.datetime "updated_at", null: false
     t.string "url", null: false
+    t.string "event_type", null: false
+    t.string "secret_token"
+    t.string "status", default: "active", null: false
+    t.datetime "last_triggered_at"
+    t.integer "failure_count", default: 0
+    t.bigint "created_by_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.index ["created_by_id"], name: "index_service_webhooks_on_created_by_id"
     t.index ["service_id", "event_type"], name: "index_service_webhooks_on_service_id_and_event_type"
     t.index ["service_id"], name: "index_service_webhooks_on_service_id"
@@ -585,11 +583,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   end
 
   create_table "services", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.bigint "created_by_id", null: false
-    t.text "description"
     t.string "name", null: false
+    t.text "description"
     t.string "status", default: "active", null: false
+    t.bigint "created_by_id", null: false
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["created_by_id"], name: "index_services_on_created_by_id"
     t.index ["name"], name: "index_services_on_name", unique: true
@@ -597,37 +595,38 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   end
 
   create_table "sessions", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.text "data"
     t.string "session_id", null: false
+    t.text "data"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["session_id"], name: "index_sessions_on_session_id", unique: true
     t.index ["updated_at"], name: "index_sessions_on_updated_at"
   end
 
   create_table "user_magic_links", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.datetime "expires_at", null: false
-    t.string "requested_ip"
-    t.string "token_digest", null: false
-    t.datetime "updated_at", null: false
-    t.datetime "used_at"
     t.bigint "user_id", null: false
+    t.string "token_digest", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "used_at"
+    t.string "requested_ip"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "delivered_to"
     t.index ["expires_at"], name: "index_user_magic_links_on_expires_at"
     t.index ["token_digest"], name: "index_user_magic_links_on_token_digest", unique: true
     t.index ["user_id"], name: "index_user_magic_links_on_user_id"
   end
 
   create_table "user_passkeys", force: :cascade do |t|
-    t.datetime "compromised_at"
-    t.datetime "created_at", null: false
+    t.bigint "user_id", null: false
     t.string "external_id", null: false
-    t.datetime "last_used_at"
-    t.string "nickname"
     t.text "public_key", null: false
     t.bigint "sign_count", default: 0, null: false
+    t.string "nickname"
+    t.datetime "last_used_at"
+    t.datetime "compromised_at"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "user_id", null: false
     t.index ["external_id"], name: "index_user_passkeys_on_external_id", unique: true
     t.index ["user_id"], name: "index_user_passkeys_on_user_id"
   end
@@ -638,87 +637,86 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   end
 
   create_table "user_sessions", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.string "device_info"
-    t.datetime "expiration_at", null: false
-    t.string "fingerprint"
+    t.bigint "user_id", null: false
     t.bigint "impersonated_by_id"
+    t.string "session_token_ciphertext"
+    t.string "session_token_bidx"
+    t.string "fingerprint"
+    t.string "device_info"
+    t.string "string"
+    t.string "os_info"
+    t.string "timezone"
     t.string "ip"
+    t.datetime "expiration_at", null: false
     t.datetime "last_seen_at"
+    t.datetime "signed_out_at"
     t.float "latitude"
     t.float "longitude"
-    t.string "os_info"
-    t.string "session_token_bidx"
-    t.string "session_token_ciphertext"
-    t.datetime "signed_out_at"
-    t.string "string"
-    t.string "timezone"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "user_id", null: false
     t.index ["impersonated_by_id"], name: "index_user_sessions_on_impersonated_by_id"
     t.index ["user_id"], name: "index_user_sessions_on_user_id"
   end
 
   create_table "users", force: :cascade do |t|
-    t.datetime "acknowledged_over_13_at"
-    t.date "birthday"
-    t.boolean "code_of_conduct_exempt", default: false, null: false
-    t.datetime "confirmation_sent_at"
-    t.string "confirmation_token"
-    t.datetime "created_at", null: false
-    t.datetime "directory_linked_at"
-    t.string "directory_object_guid"
-    t.string "email", null: false
-    t.datetime "email_confirmed_at"
     t.string "first_name", null: false
-    t.boolean "is_board", default: false, null: false
-    t.boolean "is_contractor", default: false, null: false
-    t.boolean "is_staff", default: false, null: false
     t.string "last_name", null: false
+    t.string "p_id", null: false
+    t.integer "role", default: 0, null: false
+    t.string "email", null: false
+    t.datetime "acknowledged_over_13_at"
+    t.datetime "slack_joined_at"
+    t.string "slack_id"
+    t.string "password_digest", null: false
+    t.integer "session_duration_seconds", default: 2592000, null: false
+    t.enum "status", default: "active", null: false, enum_type: "status"
+    t.datetime "locked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.date "birthday"
+    t.string "phone_number"
+    t.datetime "email_confirmed_at"
+    t.string "confirmation_token"
+    t.datetime "confirmation_sent_at"
+    t.string "slack_pronouns"
+    t.string "slack_display_name"
+    t.string "slack_status_text"
+    t.string "slack_status_emoji"
+    t.string "slack_phone"
+    t.date "slack_start_date"
+    t.text "slack_role_description"
+    t.string "slack_website"
+    t.string "slack_github"
+    t.string "slack_linkedin"
+    t.date "slack_birthday"
+    t.string "slack_profile_image_url"
+    t.string "slack_title"
+    t.string "slack_city"
+    t.string "slack_state"
+    t.string "slack_country"
+    t.string "slack_manager_id"
+    t.string "slack_organization"
+    t.string "slack_division"
+    t.string "slack_department"
+    t.string "slack_cost_center"
+    t.datetime "slack_profile_synced_at"
+    t.boolean "is_staff", default: false, null: false
+    t.boolean "is_contractor", default: false, null: false
+    t.bigint "manager_id"
+    t.boolean "is_board", default: false, null: false
+    t.datetime "slack_invited_at"
+    t.datetime "slack_coc_accepted_at"
+    t.string "pronouns"
     t.string "legal_first_name"
     t.string "legal_last_name"
-    t.datetime "locked_at"
-    t.bigint "manager_id"
-    t.string "p_id", null: false
-    t.string "password_digest", null: false
-    t.string "phone_number"
-    t.string "pronouns"
+    t.string "slack_membership", default: "pending", null: false
+    t.datetime "slack_coc_requested_at"
+    t.boolean "code_of_conduct_exempt", default: false, null: false
+    t.jsonb "slack_coc_messages", default: [], null: false
+    t.string "webauthn_id"
+    t.datetime "directory_linked_at"
     t.string "referral_source"
     t.string "referral_source_detail"
-    t.integer "role", default: 0, null: false
-    t.integer "session_duration_seconds", default: 2592000, null: false
-    t.date "slack_birthday"
-    t.string "slack_city"
-    t.datetime "slack_coc_accepted_at"
-    t.jsonb "slack_coc_messages", default: [], null: false
-    t.datetime "slack_coc_requested_at"
-    t.string "slack_cost_center"
-    t.string "slack_country"
-    t.string "slack_department"
-    t.string "slack_display_name"
-    t.string "slack_division"
-    t.string "slack_github"
-    t.string "slack_id"
-    t.datetime "slack_invited_at"
-    t.datetime "slack_joined_at"
-    t.string "slack_linkedin"
-    t.string "slack_manager_id"
-    t.string "slack_membership", default: "pending", null: false
-    t.string "slack_organization"
-    t.string "slack_phone"
-    t.string "slack_profile_image_url"
-    t.datetime "slack_profile_synced_at"
-    t.string "slack_pronouns"
-    t.text "slack_role_description"
-    t.date "slack_start_date"
-    t.string "slack_state"
-    t.string "slack_status_emoji"
-    t.string "slack_status_text"
-    t.string "slack_title"
-    t.string "slack_website"
-    t.enum "status", default: "active", null: false, enum_type: "status"
-    t.datetime "updated_at", null: false
-    t.string "webauthn_id"
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["manager_id"], name: "index_users_on_manager_id"
@@ -727,13 +725,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   end
 
   create_table "versions", force: :cascade do |t|
+    t.string "whodunnit"
     t.datetime "created_at"
-    t.string "event", null: false
-    t.bigint "impersonation_id"
     t.bigint "item_id", null: false
     t.string "item_type", null: false
+    t.string "event", null: false
     t.text "object"
-    t.string "whodunnit"
+    t.bigint "impersonation_id"
     t.index ["impersonation_id"], name: "index_versions_on_impersonation_id"
     t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
   end
@@ -752,11 +750,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   add_foreign_key "group_memberships", "users"
   add_foreign_key "group_memberships", "users", column: "added_by_id", on_delete: :nullify
   add_foreign_key "groups", "users", column: "created_by_id", on_delete: :nullify
-  add_foreign_key "guardian_consents", "users", on_delete: :nullify
   add_foreign_key "guardian_consents", "users", column: "recorded_by_id", on_delete: :nullify
   add_foreign_key "guardian_consents", "users", column: "reviewed_by_id", on_delete: :nullify
   add_foreign_key "guardian_consents", "users", column: "revoked_by_id", on_delete: :nullify
   add_foreign_key "guardian_consents", "users", column: "verified_by_id", on_delete: :nullify
+  add_foreign_key "guardian_consents", "users", on_delete: :nullify
   add_foreign_key "impersonation_actions", "impersonations", on_delete: :cascade
   add_foreign_key "impersonations", "users", column: "admin_id", on_delete: :nullify
   add_foreign_key "impersonations", "users", on_delete: :nullify

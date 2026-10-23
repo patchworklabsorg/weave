@@ -6,6 +6,7 @@
 # Database name: primary
 #
 #  id           :bigint           not null, primary key
+#  delivered_to :string
 #  expires_at   :datetime         not null
 #  requested_ip :string
 #  token_digest :string           not null
