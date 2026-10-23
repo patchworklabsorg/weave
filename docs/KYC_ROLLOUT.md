@@ -25,9 +25,14 @@ The local branches, from bottom to top:
 | 8 | weave | `jaspermayone/kyc-demographics-required` | Demographics required before the first grant: `demographics_answered` in the directory API, `return_to` on the form |
 | 9 | weave | `jaspermayone/kyc-roles` | Roles table: `roles` and `user_roles` replace the role booleans, grant rules in `config/roles.yml`, patch leads as scoped roles |
 | 10 | weave | `jaspermayone/kyc-us-residency` | US residency check: a yes/no result with the US state on each pass, a document review without a call, `us_resident` in the directory API and the `residency` scope |
-| 11 | krater | `jaspermayone/demographics-gate` | Krater refuses a project submit until the submitter answered. Built on `claude/application-form` (krater PR #9) |
-| 12 | krater | `jaspermayone/us-residency-ospool` (krater PR #10, with branch 11 in the same PR) | OSPool rule: `/reviews?us_residents=true`, the residency line on a project page, and `require_us_residents` for the OSPool job type |
-| 13 | patchworklabs.org | `jaspermayone/your-data` | The page https://patchworklabs.org/your-data |
+| 11 | weave | `jaspermayone/kyc-ui` | The KYC pages on the design system of PR #227, and no NDA records in Weave |
+| 12 | krater | `jaspermayone/demographics-gate` | Krater refuses a project submit until the submitter answered. Built on `claude/application-form` (krater PR #9) |
+| 13 | krater | `jaspermayone/us-residency-ospool` (krater PR #10, with branch 12 in the same PR) | OSPool rule: `/reviews?us_residents=true`, the residency line on a project page, and `require_us_residents` for the OSPool job type |
+| 14 | patchworklabs.org | `jaspermayone/your-data` |
+| 15 | infra | `jaspermayone/weave-permanent-log-owner` | `weave_audit` owns the permanent log, and an event trigger keeps its capture triggers |
+
+On 2026-10-23 each Weave branch was squashed to one commit and rebased onto `main` 5c34223 (after #224 Alpine, #225 console sign-in and #227 the UI overhaul). The old branch heads are kept under `refs/backup/kyc-2026-10-23/`. The Weave branches are now 11 commits, one for each PR.
+ The page https://patchworklabs.org/your-data |
 
 ## The order
 
@@ -46,6 +51,8 @@ flowchart TD
 
 ### 1. Final review on the local branches
 
+Done on 2026-10-23 for the rebase onto `main` 5c34223: the full suite passes on the top branch. Do it again only if `main` moves before the push.
+
 - Read each branch diff against its parent. Do not push to get a review.
 - Run the full suite on the top branch with a private database:
 
@@ -61,16 +68,16 @@ flowchart TD
 
 ### 2. Fill the placeholder values and the page windows
 
-Each value below is marked `PLACEHOLDER` in its file, or shows as a bracketed marker on the page. Decide each value, then change it on the lowest branch that owns the file and rebase the branches above.
+Done on 2026-10-23. Jasper confirmed the Thread Count values and the demographics fields, and the rollout date is 2026-10-23. No `PLACEHOLDER` is left in `config/`, and the page has no marker. The tables below stay as the record of the decisions.
 
 **Weave config**
 
 | File | Key | Now | Owner branch |
 | --- | --- | --- | --- |
-| `config/demographics.yml` | `fields` (other funder fields) | only `gender_identity`. Ask counsel first for GDPR Article 9 data. | demographics |
-| `config/thread_count.yml` | `moderation_case_weights.major` | -25 (the locked range is -10 to -40) | thread-count |
-| `config/thread_count.yml` | `external_signal_weights` | `github_student` 5, `other_program` 3 | thread-count |
-| `config/thread_count.yml` | `project_event_services` | `[]` (add the real service, for example Krater) | thread-count |
+| `config/demographics.yml` | `fields` (other funder fields) | only `gender_identity` (LOCKED 2026-10-23). Ask counsel first for GDPR Article 9 data. | demographics |
+| `config/thread_count.yml` | `moderation_case_weights.major` | -25 (LOCKED 2026-10-23) | thread-count |
+| `config/thread_count.yml` | `external_signal_weights` | `github_student` 5, `other_program` 3 (LOCKED 2026-10-23) | thread-count |
+| `config/thread_count.yml` | `project_event_services` | `[]` (LOCKED 2026-10-23; add Krater when it sends project events) | thread-count |
 
 These are locked now and need no decision: `purge_image_days_after_close` (30), the Ganymede patch lead (Adam, `PWL8724F96B89`, in production: the migration `MigrateRoleBooleansToUserRoles` makes it a `patch_lead` role scoped to `ganymede`), the role grant rules in `config/roles.yml`, the Knot is kept for ever, `age_band_starts` (`[0, 13, 16, 18, 25, 35]`), `takeout.download_days` (7), `takeout.cooldown_hours` (24), `key_custody.pending_share_minutes` (60) and `amount_band_starts` (`[0, 1, 100, 250, 500, 1000, 2500, 5000]`). `funders` and `program_funders` stay empty until a funder signs: see "When the first funder signs" below.
 
@@ -80,9 +87,9 @@ A Vercel production build fails while a marker is on the page. To list them: `gr
 
 | Marker | Where | Depends on |
 | --- | --- | --- |
-| `[DATE: rollout day]` | `src/app/your-data/page.tsx` | The rollout date |
+| `[DATE: rollout day]` | `src/app/your-data/page.tsx` | Set to October 23, 2026 |
 
-Also change the "Last updated" date on `src/app/privacy/page.tsx`, because the guardian retention text changed.
+The "Last updated" date on `src/app/privacy/page.tsx` is also October 23, 2026.
 
 #### When the first funder signs
 
@@ -104,6 +111,26 @@ Do these steps before the first verification pass in production. Secrets go in a
 
 - Set `knot.pepper` in the production and staging credentials. Never rotate it. Without it, each pass fails with `KnotHasher::MissingPepper`.
 - Generate the demographics key pairs. Put each public key in the production and staging credentials (`demographics.public_key`). Keep each private key off the server. Add a one-off unit that mounts the private key only for a report run.
+- Re-key the staging credentials. The staging key leaked in the public ghcr images (2026-10-21), and it still opened `staging.yml.enc`. Also give staging the `active_record_encryption` keys that Console1984 needs.
+
+One script does the three steps. It prints key names only, never values. Run it from the main checkout:
+
+```bash
+cd .worktrees/rollout-credentials   # branch jaspermayone/rollout-credentials, from main
+bundle exec ruby ~/weave-rollout/creds.rb   # the script stays outside the repo
+```
+
+It writes:
+
+- `config/credentials/production.yml.enc`: adds `knot.pepper` and `demographics.public_key`. The production key does not change.
+- `config/credentials/staging.yml.enc`: the same keys plus `active_record_encryption`, encrypted with a NEW staging key. The new key is in `config/credentials/staging.key` in the main checkout (gitignored). The leaked key no longer opens the file.
+- `~/weave-demographics-key/production/private.pem` and `~/weave-demographics-key/staging/private.pem` (mode 600). Move each to the password manager, then delete the files.
+
+Then, in this order:
+
+1. In the infra repo, set `RAILS_MASTER_KEY` in `secrets/weave-staging-env.age` to the new staging key (`agenix -e secrets/weave-staging-env.age`). Deploy infra.
+2. Open a PR for `jaspermayone/rollout-credentials` and merge it. Staging deploys with the new file and the new key. Check `/up`.
+3. The re-key protects new values only. Every secret value that was in the old staging file leaked. Rotate each one at its provider (for example the staging Slack, Resend and OAuth client secrets), and put the new values in the staging credentials.
 - Restart the containers after a secret change. A container reads its env file only at start.
 - Seed the roles and bootstrap the identity team. See "Seed the roles and bootstrap the identity team" below.
 - Run the key ceremony. See "The key ceremony" below.
@@ -120,13 +147,14 @@ The Lockbox master key (`lockbox.master_key`) is still needed for the pre-review
 
 Do these steps in production after the deploy (step 6) and before the first member submits an ID. Do them on staging first, with test accounts.
 
-Nobody is verified on day one, so nobody can meet the verifier preconditions (verified by another person, 18 or older, signed NDA). The bootstrap adds the first three verifiers at once. They then verify each other in a circle. The bootstrap runs one time only. It refuses to run a second time, and it refuses to run after any member of the identity team is verified.
+Nobody is verified on day one, so nobody can meet the verifier preconditions (verified by another person, 18 or older). The bootstrap adds the first three verifiers at once.
+
+Each verifier signs the identity team NDA before they start. NDAs are signed with Adobe Acrobat Sign, outside Weave. Weave keeps no NDA record (decided 2026-10-23). Kieran signs Jasper's NDA for Patchwork Labs, and Jasper signs Kieran's and Adam's. They then verify each other in a circle. The bootstrap runs one time only. It refuses to run a second time, and it refuses to run after any member of the identity team is verified.
 
 ```mermaid
 flowchart TD
-  A[1. Mark the board: Jasper, Kieran, Dominic] --> B[2. Sign the NDAs in Mercury]
-  B --> C[3. Owner records each NDA on /identity/governance]
-  C --> D[4. bin/rails identity:bootstrap]
+  A[1. Mark the board: Jasper, Kieran, Dominic] --> B[2. Sign the NDAs with Adobe Acrobat Sign]
+  B --> D[4. bin/rails identity:bootstrap]
   D --> E[5. Each submits an ID on /verification]
   E --> F[6. Circle: Adam verifies Jasper, Jasper verifies Kieran, Kieran verifies Adam]
   F --> G[7. bin/rails identity:bootstrap_status: all verified, bootstrap closed]
@@ -144,8 +172,8 @@ The production p_ids of the people below (production values only; staging and de
 | Adam | `PWL8724F96B89` | no | yes (also the Ganymede patch lead) |
 
 1. Check the board roles. The migration `MigrateRoleBooleansToUserRoles` copies each old `is_board` value into a `board` role. On `/identity/governance` (section "Roles"), the board must be Jasper (`PWL7A1CE1F3CB`), Kieran (`PWL0667B785FD`) and Dominic (`PWL908148D41E`). Adam (`PWL8724F96B89`) is not on the board. If the board is not right, an owner grants or revokes the board role in the roles section of `/admin/users/:id`. Only an owner sees this form, and any owner can change it for any person. Each change is logged and emailed to the board. The board group drives the governance approvals, so do this first. A key holder change needs at least 2 board members.
-2. Jasper (`PWL7A1CE1F3CB`), Kieran (`PWL0667B785FD`) and Adam (`PWL8724F96B89`) sign the NDA in Mercury.
-3. An owner opens `/identity/governance` and records each signed NDA: the date, the NDA version and the Mercury reference. Do not upload the document.
+2. Jasper (`PWL7A1CE1F3CB`), Kieran (`PWL0667B785FD`) and Adam (`PWL8724F96B89`) sign the NDA (version `IDT-NDA-2026-10-23`) with Adobe Acrobat Sign. Keep the signed copies in Adobe. Weave does not record them.
+3. (No step. Weave keeps no NDA record.)
 4. Run the bootstrap in a one-off container, with the members in circle order:
 
    ```bash
@@ -167,7 +195,7 @@ The production p_ids of the people below (production values only; staging and de
 9. Make the three key holders (Jasper `PWL7A1CE1F3CB`, Kieran `PWL0667B785FD`, Adam `PWL8724F96B89`): an owner proposes `add_key_holder` for each one (the form takes the p_id), and every board member (Jasper, Kieran, Dominic `PWL908148D41E`) approves each proposal.
 
    Each key holder change marks the current key set compromised (see `docs/KYC.md`, "Key custody"). Before the ceremony there is no key set, so this has no effect. Thus make the three key holders before the ceremony.
-10. Add any later verifier through a proposal: an owner proposes `add_member`, and a different board member approves. The candidate must be verified, 18 or older, and have an NDA on record at the approval.
+10. Add any later verifier through a proposal: an owner proposes `add_member`, and a different board member approves. The candidate must be verified and 18 or older at the approval. Before the approval, the approver confirms that the candidate signed the NDA in Adobe Acrobat Sign.
 
 #### The key ceremony
 
@@ -207,10 +235,11 @@ The `CLAUDE.md` rule "No stacked PRs" applies: each PR targets `main`. `gh stack
 2. Wait for CI. Squash-merge it (`gh pr merge --squash`).
 3. Fetch `main`. Rebase the next branch onto `main`: `git rebase --onto origin/main <old tip of the branch below> <next branch>`.
 4. Push the next branch, open its PR against `main`, wait for CI, and squash-merge it.
-5. Do steps 3 and 4 again for each branch, up to branch 10.
-6. Krater PR #10 holds branch 11 (the demographics gate) and branch 12. Without `demographics_answered` from Weave, Krater lets every submit through and logs a warning.
-7. Branches 11 and 12 are one Krater PR (#10, already open). Merge it only after branches 8 and 10 are in production: until Weave sends `us_resident`, Krater counts nobody as a US resident.
-8. After branches 10 and 12 are in production, tell the OSPool contact that the US residency check is live (send the OSPool brief). Krater reads `us_resident` from the directory, so it needs no new scope. Give the `residency` scope only to an app that needs the claim at sign-in.
+5. Do steps 3 and 4 again for each branch, up to branch 11. The branches are one commit each, so `git rebase --onto origin/main <old tip of the branch below> <next branch>` moves one commit.
+6. Krater PR #10 holds branch 12 (the demographics gate) and branch 13. Without `demographics_answered` from Weave, Krater lets every submit through and logs a warning.
+7. Merge Krater PR #10 only after Weave branches 8 and 10 are in production: until Weave sends `us_resident`, Krater counts nobody as a US resident.
+8. After Weave branch 10 and Krater #10 are in production, tell the OSPool contact that the US residency check is live (send the OSPool brief). Krater reads `us_resident` from the directory, so it needs no new scope. Give the `residency` scope only to an app that needs the claim at sign-in.
+9. Push the infra branch `jaspermayone/weave-permanent-log-owner`, open its PR, merge it and deploy infra (`deploy .#alastor --remote-build --skip-checks`). Either order with the Weave stack works. Database roles are on for staging only. Production still signs in as the superuser until its own database roles step.
 
 Each push to `main` deploys staging (`.github/workflows/deploy-staging.yml`). A push to `main` does not deploy production.
 
@@ -219,7 +248,7 @@ Each push to `main` deploys staging (`.github/workflows/deploy-staging.yml`). A 
 Staging is `weave-staging.patchworklabs.org` (see `docs/STAGING.md`). After branch 9 is on `main` and staging has deployed:
 
 - Run the migrations, then check `/up`.
-- The Docker image needs two system packages for ID uploads (`IdDocumentConverter`, see `docs/KYC.md`, "Upload conversion"): `poppler-utils` (already in the image, for `pdftoppm`) and `libheif-plugin-libde265` (added to the runtime stage of the Dockerfile, so libvips can decode HEIC). Build the image once before the rollout and check that `apt-get` finds the package for the image's Debian release.
+- The image is Ruby Alpine (PR #224). ID uploads (`IdDocumentConverter`, see `docs/KYC.md`, "Upload conversion") need `vips`, `vips-heif`, `libheif-libde265` and `poppler-utils` in the base stage, and the `ruby-vips` gem. Branch 1 adds them. On 2026-10-23 a local build of the top branch converted the HEIC fixture to JPEG and the PDF fixture to PNG, with no EXIF, and refused a text file. The image held no key file and no worktree.
 - Upload one HEIC photo and one PDF with a test account. Check that each is stored as an image (JPEG or PNG) with no EXIF or GPS data.
 - Check the roles: run `bin/rails roles:sync`. It must list the 7 roles of `config/roles.yml`. Check that each staging account that had a role boolean before the deploy now has the same role on `/identity/governance` (section "Roles").
 - Check the permanent log: grant the board role to a test account in the roles section of `/admin/users/:id`, and check that the row `grant role board` shows on `/identity/governance` with your name as the actor. In a console, run `RoleGrants.revoke!(User.find_by(email: "<test email>"), "board")`, and check that a row with the label `console <name>` shows too.
