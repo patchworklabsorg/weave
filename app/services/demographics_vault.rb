@@ -14,6 +14,8 @@
 #   member leaves  -> fold! (envelope parked without a link to the person)
 #                  -> next reporting run counts it into the departed totals
 module DemographicsVault
+  # Earlier records can hold this answer. The form no longer offers it: a
+  # member answers every question before their first grant application.
   PREFER_NOT_TO_SAY = "prefer_not_to_say"
   SELF_DESCRIBE = "self_describe"
   NOT_ANSWERED = "not_answered"
@@ -61,7 +63,7 @@ module DemographicsVault
     def options_for(field)
       options = Array(field[:options]).map(&:to_s)
       options << SELF_DESCRIBE if field[:self_describe]
-      options << PREFER_NOT_TO_SAY
+      options
     end
 
     # Strong-parameter keys for the member form.
@@ -87,12 +89,10 @@ module DemographicsVault
       upper ? "#{starts[index]}-#{upper - 1}" : "#{starts[index]}+"
     end
 
-    # Seals and stores the member's answers, replacing the ones before. The
-    # member must agree each time. Returns a Result whose errors are keyed by
-    # field.
-    def record(user, answers, consent:)
+    # Seals and stores the member's answers, replacing the ones before. Every
+    # field needs an answer. Returns a Result whose errors are keyed by field.
+    def record(user, answers)
       raise NotConfigured, "No demographics public key is set" unless available?
-      return Result.new(errors: { consent: I18n.t("demographics.form.consent_error") }) unless consent
 
       normalized, errors = normalize(answers.to_h.stringify_keys)
       return Result.new(errors:) if errors.any?
@@ -110,6 +110,10 @@ module DemographicsVault
     # When the member last saved answers, or nil. This says nothing about the
     # answers.
     def answered_at(user) = DemographicRecord.where(user:).pick(:updated_at)
+
+    # Apps read this as `demographics_answered` in the directory API. Krater
+    # asks for it before a member's first grant application.
+    def answered?(user) = DemographicRecord.exists?(user:)
 
     # The delete-time step (see the deletion pipeline in docs/KYC.md). Moves
     # the member's sealed envelope to the fold queue, with no link to the
@@ -151,7 +155,6 @@ module DemographicsVault
 
     def normalize_choice(field, value, errors)
       value = value.to_s.strip.presence
-      return nil if value.nil?
       return value if options_for(field).include?(value)
 
       errors[field[:key].to_sym] = I18n.t("demographics.form.invalid")
@@ -160,13 +163,10 @@ module DemographicsVault
 
     def normalize_multi(field, values, errors)
       values = Array(values).map { |value| value.to_s.strip }.compact_blank.uniq
-      return nil if values.empty?
+      return values if values.any? && (values - options_for(field)).empty?
 
-      unless (values - options_for(field)).empty?
-        errors[field[:key].to_sym] = I18n.t("demographics.form.invalid")
-        return nil
-      end
-      values.include?(PREFER_NOT_TO_SAY) ? [PREFER_NOT_TO_SAY] : values
+      errors[field[:key].to_sym] = I18n.t("demographics.form.invalid")
+      nil
     end
 
   end

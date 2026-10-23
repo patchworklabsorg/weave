@@ -20,7 +20,7 @@ RSpec.describe FunderReport do
 
   def member(gender, funder:, consent: false)
     user = create(:user, :verified, birthday: 20.years.ago.to_date)
-    DemographicsVault.record(user, { "gender_identity" => gender }, consent: true)
+    DemographicsVault.record(user, { "gender_identity" => gender })
     ProgramParticipation.record!(user, program: "ganymede", outcome: "granted", funder:)
     FunderConsent.give!(user, "consent_funder") if consent
     user
@@ -30,7 +30,7 @@ RSpec.describe FunderReport do
 
   it "counts only the funder's members and only its report fields" do
     4.times { member("woman", funder: "open_funder") }
-    create(:user, :verified).then { |user| DemographicsVault.record(user, { "gender_identity" => "man" }, consent: true) }
+    create(:user, :verified).then { |user| DemographicsVault.record(user, { "gender_identity" => "man" }) }
     run!
 
     report = described_class.build("open_funder")

@@ -11,6 +11,7 @@
   <div class="patch patch-bound p-6 space-y-3">
     <h1 class="font-display text-2xl font-bold text-ink"><%= t("demographics.form.title") %></h1>
     <p class="text-sm text-ink"><%= t("demographics.form.intro") %></p>
+    <p class="text-sm text-ink"><%= t("demographics.form.required") %></p>
     <p class="text-sm text-ink-soft"><%= t("demographics.form.sealed") %></p>
     <p class="text-sm text-ink-soft"><%= t("demographics.form.age_band") %></p>
     <p class="text-sm">
@@ -24,6 +25,7 @@
   <% if @available %>
     <div class="patch p-6">
       <%= form_with url: demographics_path, method: :patch, class: "space-y-6" do |form| %>
+        <%= hidden_field_tag :return_to, @return_to if @return_to %>
         <% DemographicsVault.fields.each do |field| %>
           <% key = field[:key] %>
           <fieldset>
@@ -34,7 +36,7 @@
                   <% if field[:type] == "multi" %>
                     <%= check_box_tag "demographics[#{key}][]", option, Array(submitted[key]).include?(option), id: "demographics_#{key}_#{option}" %>
                   <% else %>
-                    <%= radio_button_tag "demographics[#{key}]", option, submitted[key] == option, id: "demographics_#{key}_#{option}" %>
+                    <%= radio_button_tag "demographics[#{key}]", option, submitted[key] == option, id: "demographics_#{key}_#{option}", required: true %>
                   <% end %>
                   <%= demographic_option_label(key, option) %>
                 </label>
@@ -56,15 +58,7 @@
           </fieldset>
         <% end %>
 
-        <div>
-          <label class="flex items-start gap-2 text-sm text-ink">
-            <%= check_box_tag :consent, "1", params[:consent] == "1", class: "mt-1" %>
-            <span><%= t("demographics.form.consent") %></span>
-          </label>
-          <% if @form_errors&.key?(:consent) %>
-            <p class="mt-1 text-sm text-orchid"><%= @form_errors[:consent] %></p>
-          <% end %>
-        </div>
+        <p class="text-sm text-ink-soft"><%= t("demographics.form.why") %></p>
 
         <%= form.submit t("demographics.form.submit"), class: "btn-stitch w-full justify-center" %>
       <% end %>

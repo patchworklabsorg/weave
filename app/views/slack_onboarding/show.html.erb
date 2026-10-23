@@ -196,11 +196,6 @@
         <% end %>
       </div>
 
-      <%# Optional, and never a step: the community is not gated on it. %>
-      <% if current_user && !%i[add_birthday under_minimum_age].include?(@step) && !impersonating? %>
-        <%= render "demographics/prompt", user: current_user %>
-      <% end %>
-
       <% if current_user %>
         <p class="text-center text-sm">
           <%= link_to "Go to your account", profile_path, class: "link" %>

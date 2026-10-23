@@ -53,7 +53,7 @@ RSpec.describe DeletionPipeline, "retention matrix" do # rubocop:disable RSpec/S
   end
 
   it "demographics vault record: banded into the departed totals, then deleted" do
-    DemographicsVault.record(user, { "gender_identity" => "woman" }, consent: true)
+    DemographicsVault.record(user, { "gender_identity" => "woman" })
     create(:program_participation, user:, year: 2026)
 
     run!
