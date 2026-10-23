@@ -32,8 +32,8 @@ module AdminNavHelper
                          %w[residency_checks], :identity) if user.identity_team),
         (admin_nav_entry("Key custody", identity_key_custody_path, :key_square, "hardware keys yubikey ceremony break-glass",
                          %w[key_custody key_ceremonies hardware_keys key_sets], :identity) if KeyCustody.can_view?(user)),
-        (admin_nav_entry("Governance", identity_governance_path, :landmark, "identity team board proposals nda",
-                         %w[governance governance_proposals ndas team_removals], :identity) if IdentityGovernance.can_view?(user)),
+        (admin_nav_entry("Governance", identity_governance_path, :landmark, "identity team board proposals",
+                         %w[governance governance_proposals team_removals], :identity) if IdentityGovernance.can_view?(user)),
         (admin_nav_entry("Knot", admin_knots_path, :link, "knot hash program grants",
                          %w[knots knot_change_requests], :admin) if admin && knot_nav?(user))
       ]),

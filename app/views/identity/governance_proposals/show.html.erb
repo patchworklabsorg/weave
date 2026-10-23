@@ -46,7 +46,7 @@
             <li class="record items-start justify-start">
               <%= badge(check.met ? "Met" : "Not met", tone: check.met ? :success : :danger, icon: check.met ? :check : :x) %>
               <div class="record-main">
-                <p class="record-title"><%= { verified: "verified by another verifier", adult: "#{IdentityGovernanceSettings.verifier_minimum_age} or older", nda: "signed NDA on record" }.fetch(check.key) %>.</p>
+                <p class="record-title"><%= { verified: "verified by another verifier", adult: "#{IdentityGovernanceSettings.verifier_minimum_age} or older" }.fetch(check.key) %>.</p>
                 <p class="record-meta"><%= check.detail %></p>
               </div>
             </li>
@@ -89,14 +89,24 @@
       </ul>
     </div>
     <% if @proposal.open? && IdentityGovernance.can_approve?(@proposal, current_user) %>
-      <div class="card-footer flex flex-col sm:flex-row sm:items-center gap-3">
-        <%= form_with url: approve_identity_governance_proposal_path(@proposal), method: :patch do |form| %>
-          <%= form.submit "Approve", class: "btn btn-primary", data: { turbo_confirm: "Approve: #{@proposal.description}?" } %>
+      <div class="card-footer space-y-3">
+        <% if %w[add_member add_key_holder].include?(@proposal.kind) %>
+          <div class="callout callout-info">
+            <%= icon(:info, size: 18) %>
+            <div class="callout-body">
+              <p>Before you approve, confirm that this person signed the identity team NDA. NDAs are signed with Adobe Acrobat Sign, outside Weave.</p>
+            </div>
+          </div>
         <% end %>
-        <%= form_with url: reject_identity_governance_proposal_path(@proposal), method: :patch, class: "flex flex-1 flex-col sm:flex-row gap-2" do |form| %>
-          <%= form.text_field :reason, required: true, placeholder: "Why reject?", aria: { label: "Why reject?" }, class: "field sm:flex-1" %>
-          <%= form.submit "Reject", class: "btn btn-secondary" %>
-        <% end %>
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+          <%= form_with url: approve_identity_governance_proposal_path(@proposal), method: :patch do |form| %>
+            <%= form.submit "Approve", class: "btn btn-primary", data: { turbo_confirm: "Approve: #{@proposal.description}?" } %>
+          <% end %>
+          <%= form_with url: reject_identity_governance_proposal_path(@proposal), method: :patch, class: "flex flex-1 flex-col sm:flex-row gap-2" do |form| %>
+            <%= form.text_field :reason, required: true, placeholder: "Why reject?", aria: { label: "Why reject?" }, class: "field sm:flex-1" %>
+            <%= form.submit "Reject", class: "btn btn-secondary" %>
+          <% end %>
+        </div>
       </div>
     <% end %>
   </section>

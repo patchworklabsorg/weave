@@ -32,11 +32,7 @@
                     <% if member.identity_lead %><span class="text-ink-soft font-normal">· lead</span><% end %>
                   </p>
                 </div>
-                <p class="text-sm text-ink-soft">
-                  <%= member.verification_status.humanize %>.
-                  <% nda = member.current_identity_nda %>
-                  <%= nda ? "NDA #{nda.nda_version}, signed #{nda.signed_on.iso8601}." : "No NDA on record." %>
-                </p>
+                <p class="text-sm text-ink-soft"><%= member.verification_status.humanize %>.</p>
               </div>
               <% if IdentityGovernance.can_remove?(current_user, member) %>
                 <%= form_with url: identity_team_removals_path, method: :post, class: "flex flex-col sm:flex-row gap-2" do |form| %>
@@ -121,66 +117,34 @@
   </section>
 
   <% if IdentityGovernance.can_propose?(current_user) %>
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-      <section class="card">
-        <div class="card-header">
-          <h2 class="card-title">Propose a change</h2>
-        </div>
-        <div class="card-body">
-          <%= form_with url: identity_governance_proposals_path, method: :post, class: "space-y-4" do |form| %>
-            <div class="field-group">
-              <%= form.label :person, "Person (Weave ID or email)", class: "field-label" %>
-              <%= form.text_field :person, required: true, class: "field" %>
-            </div>
-            <div class="field-group">
-              <%= form.label :kind, "Change", class: "field-label" %>
-              <%= form.select :kind, IdentityGovernance.proposable_kinds.map { |kind| [IdentityGovernanceProposal.describe(kind, "this person").upcase_first, kind] },
-                    {}, class: "field" %>
-            </div>
-            <div class="field-group">
-              <%= form.label :scope, "Program (for a patch lead only)", class: "field-label" %>
-              <%= form.select :scope, KnotSettings.programs.map { |program| [program.name, program.key] }, { include_blank: "None" },
-                    class: "field" %>
-            </div>
-            <div class="field-group">
-              <%= form.label :reason, "Reason", class: "field-label" %>
-              <%= form.text_area :reason, required: true, rows: 3, class: "field" %>
-            </div>
-            <%= form.submit "Propose", class: "btn btn-primary" %>
-          <% end %>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="card-header">
-          <div>
-            <h2 class="card-title">Record a signed NDA</h2>
-            <p class="card-lede">NDAs are signed in Mercury. Record the date, the version and the Mercury reference. Do not upload the document.</p>
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Propose a change</h2>
+      </div>
+      <div class="card-body">
+        <%= form_with url: identity_governance_proposals_path, method: :post, class: "space-y-4" do |form| %>
+          <div class="field-group">
+            <%= form.label :person, "Person (Weave ID or email)", class: "field-label" %>
+            <%= form.text_field :person, required: true, class: "field" %>
           </div>
-        </div>
-        <div class="card-body">
-          <%= form_with url: identity_ndas_path, method: :post, class: "space-y-4" do |form| %>
-            <div class="field-group">
-              <%= form.label :person, "Person (Weave ID or email)", for: "nda_person", class: "field-label" %>
-              <%= form.text_field :person, id: "nda_person", required: true, class: "field" %>
-            </div>
-            <div class="field-group">
-              <%= form.label :signed_on, "Signed on", class: "field-label" %>
-              <%= form.date_field :signed_on, required: true, max: Date.current, class: "field" %>
-            </div>
-            <div class="field-group">
-              <%= form.label :nda_version, "NDA version", class: "field-label" %>
-              <%= form.text_field :nda_version, required: true, class: "field" %>
-            </div>
-            <div class="field-group">
-              <%= form.label :mercury_reference, "Mercury reference", class: "field-label" %>
-              <%= form.text_field :mercury_reference, required: true, class: "field" %>
-            </div>
-            <%= form.submit "Record the NDA", class: "btn btn-secondary" %>
-          <% end %>
-        </div>
-      </section>
-    </div>
+          <div class="field-group">
+            <%= form.label :kind, "Change", class: "field-label" %>
+            <%= form.select :kind, IdentityGovernance.proposable_kinds.map { |kind| [IdentityGovernanceProposal.describe(kind, "this person").upcase_first, kind] },
+                  {}, class: "field" %>
+          </div>
+          <div class="field-group">
+            <%= form.label :scope, "Program (for a patch lead only)", class: "field-label" %>
+            <%= form.select :scope, KnotSettings.programs.map { |program| [program.name, program.key] }, { include_blank: "None" },
+                  class: "field" %>
+          </div>
+          <div class="field-group">
+            <%= form.label :reason, "Reason", class: "field-label" %>
+            <%= form.text_area :reason, required: true, rows: 3, class: "field" %>
+          </div>
+          <%= form.submit "Propose", class: "btn btn-primary" %>
+        <% end %>
+      </div>
+    </section>
   <% end %>
 
   <section class="card">
@@ -202,30 +166,6 @@
       </div>
     <% else %>
       <p class="card-body text-sm text-ink-faint">None yet.</p>
-    <% end %>
-  </section>
-
-  <section class="card">
-    <div class="card-header">
-      <h2 class="card-title">NDA records</h2>
-    </div>
-    <% if @ndas.any? %>
-      <div class="card-body">
-        <ul class="record-list">
-          <% @ndas.each do |nda| %>
-            <li class="record">
-              <div class="record-main">
-                <p class="record-title"><%= nda.user&.full_name || "A deleted user" %>: version <%= nda.nda_version %>, signed <%= nda.signed_on.iso8601 %></p>
-                <p class="record-meta">
-                  <%= nda.mercury_reference %>. Recorded by <%= nda.recorded_by&.full_name || "a deleted user" %> on <%= nda.created_at.utc.strftime("%Y-%m-%d") %>.
-                </p>
-              </div>
-            </li>
-          <% end %>
-        </ul>
-      </div>
-    <% else %>
-      <p class="card-body text-sm text-ink-faint">No NDA recorded yet.</p>
     <% end %>
   </section>
 

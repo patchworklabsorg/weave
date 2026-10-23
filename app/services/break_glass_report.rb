@@ -34,8 +34,7 @@ class BreakGlassReport
   end
 
   # Every identity team governance step in the month (see
-  # IdentityGovernance): proposals, approvals, removals, NDA records and the
-  # bootstrap.
+  # IdentityGovernance): proposals, approvals, removals and the bootstrap.
   def governance_events
     IdentityGovernanceEvent.where(created_at: range).includes(:actor, :subject).order(:created_at, :id)
   end

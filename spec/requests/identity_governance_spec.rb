@@ -12,7 +12,6 @@ RSpec.describe "Identity team governance pages", type: :request do
   def ready_candidate
     user = create(:user, :verified, first_name: "Cara")
     create(:verification, :verified, user:)
-    create(:identity_nda, user:)
     user
   end
 
@@ -23,7 +22,8 @@ RSpec.describe "Identity team governance pages", type: :request do
       get identity_governance_path
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Identity team governance", "Propose a change", "Record a signed NDA")
+      expect(response.body).to include("Identity team governance", "Propose a change")
+      expect(response.body).not_to include("NDA records", "Record a signed NDA")
     end
 
     it "lets a board member without the admin role in, read only" do
@@ -97,7 +97,6 @@ RSpec.describe "Identity team governance pages", type: :request do
         [:patch, approve_identity_governance_proposal_path(proposal)],
         [:patch, reject_identity_governance_proposal_path(proposal), { reason: "x" }],
         [:patch, withdraw_identity_governance_proposal_path(proposal)],
-        [:post, identity_ndas_path, { person: candidate.email, signed_on: Date.current.iso8601, nda_version: "v1", signature_reference: "m" }],
         [:post, identity_team_removals_path, { user_id: create(:user, :identity_team).p_id, reason: "x" }]
       ]
     end
@@ -112,8 +111,7 @@ RSpec.describe "Identity team governance pages", type: :request do
     def expect_nothing_changed
       expect(proposal.reload).to be_pending
       expect(candidate.reload.identity_team).to be(false)
-      expect(IdentityGovernanceEvent.where(kind: %w[member_removed approved nda_recorded])).to be_empty
-      expect(IdentityNda.where(user: candidate).count).to eq(1)
+      expect(IdentityGovernanceEvent.where(kind: %w[member_removed approved])).to be_empty
       expect(IdentityGovernanceApproval.count).to eq(0)
       expect(verification.reload).to be_call_scheduled
       expect(BreakGlassRecord.where(reason: "x")).to be_empty
@@ -152,8 +150,8 @@ RSpec.describe "Identity team governance pages", type: :request do
       expect(response).to redirect_to(identity_governance_proposal_path(proposal))
 
       get identity_governance_proposal_path(proposal)
-      expect(response.body).to include("Preconditions", "verified by another verifier", "signed NDA on record")
-      expect(response.body).not_to include('value="Approve"')
+      expect(response.body).to include("Preconditions", "verified by another verifier")
+      expect(response.body).not_to include('value="Approve"', "signed NDA on record", "signed the identity team NDA")
 
       patch approve_identity_governance_proposal_path(proposal)
       expect(candidate.reload.identity_team).to be(false)
@@ -165,7 +163,7 @@ RSpec.describe "Identity team governance pages", type: :request do
       sign_in_via_magic_link(board_member)
 
       get identity_governance_proposal_path(proposal)
-      expect(response.body).to include('value="Approve"')
+      expect(response.body).to include('value="Approve"', "confirm that this person signed the identity team NDA", "Adobe Acrobat Sign")
       patch approve_identity_governance_proposal_path(proposal)
 
       expect(candidate.reload.identity_team).to be(true)
@@ -218,25 +216,6 @@ RSpec.describe "Identity team governance pages", type: :request do
       patch withdraw_identity_governance_proposal_path(proposal)
 
       expect(proposal.reload).to be_withdrawn
-    end
-  end
-
-  describe "NDA records" do
-    it "lets an owner record an NDA by hand" do
-      person = create(:user, :verified)
-      sign_in_via_magic_link(owner)
-
-      post identity_ndas_path, params: { person: person.email, signed_on: "2026-10-01", nda_version: "v1", signature_reference: "Adobe agreement 7" }
-
-      expect(person.current_identity_nda).to have_attributes(signed_on: Date.new(2026, 10, 1), signature_reference: "Adobe agreement 7")
-    end
-
-    it "does not let a board member record one" do
-      sign_in_via_magic_link(board_member)
-
-      post identity_ndas_path, params: { person: create(:user).email, signed_on: "2026-10-01", nda_version: "v1", signature_reference: "x" }
-
-      expect(IdentityNda.count).to eq(0)
     end
   end
 

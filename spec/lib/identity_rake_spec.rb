@@ -21,8 +21,6 @@ RSpec.describe "identity rake tasks", type: :task do
   end
 
   it "adds the first verifiers and prints the circle" do
-    members.each { |user| create(:identity_nda, user:) }
-
     expect { run("identity:bootstrap", "BY" => owner.email, "MEMBERS" => members.map(&:email).join(",")) }
       .to output(/#{members.last.full_name} \(#{members.last.email}\) verifies #{members.first.full_name}/).to_stdout
 
@@ -30,7 +28,6 @@ RSpec.describe "identity rake tasks", type: :task do
   end
 
   it "refuses once a team member is verified" do
-    members.each { |user| create(:identity_nda, user:) }
     create(:verification, :verified, user: create(:user, :identity_team))
 
     expect { run("identity:bootstrap", "BY" => owner.email, "MEMBERS" => members.map(&:email).join(",")) }
@@ -39,14 +36,12 @@ RSpec.describe "identity rake tasks", type: :task do
   end
 
   it "shows the bootstrap status" do
-    members.each { |user| create(:identity_nda, user:) }
     IdentityGovernance.bootstrap!(members, by: owner)
 
     expect { run("identity:bootstrap_status", {}) }.to output(/planned verifier .*The bootstrap is closed/m).to_stdout
   end
 
   it "refuses after its first run" do
-    members.each { |user| create(:identity_nda, user:) }
     IdentityGovernance.bootstrap!(members.first(2), by: owner)
 
     expect { run("identity:bootstrap", "BY" => owner.email, "MEMBERS" => members.map(&:email).join(",")) }

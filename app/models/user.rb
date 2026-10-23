@@ -233,9 +233,6 @@ class User < ApplicationRecord
   # Account deletion revokes every role first, so the rows stay as history
   # (the database refuses to delete them).
   before_destroy :revoke_roles_for_deletion
-  # Signed NDAs, recorded by hand by an owner (see IdentityNda). The rows
-  # stay after the account is deleted: the database empties user_id.
-  has_many :identity_ndas, dependent: nil
   # The hardware keys (YubiKeys) of a key holder (see KeyCustody). Staff
   # records: the database deletes them with the account.
   has_many :identity_hardware_keys, dependent: nil
@@ -768,9 +765,6 @@ class User < ApplicationRecord
     years -= 1 if on < birthday.next_year(years)
     years
   end
-
-  # The newest signed NDA on record (see IdentityNda).
-  def current_identity_nda = identity_ndas.newest_first.first
 
   # The blacklist flag of the member's Knot (see Knot). Program grants check
   # it (see KnotGrants).

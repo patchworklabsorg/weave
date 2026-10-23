@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_23_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -659,17 +659,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_100000) do
     t.index ["external_id"], name: "index_identity_hardware_keys_on_external_id", unique: true
     t.index ["revoked_by_id"], name: "index_identity_hardware_keys_on_revoked_by_id"
     t.index ["user_id"], name: "index_identity_hardware_keys_on_user_id"
-  end
-
-  create_table "identity_ndas", force: :cascade do |t|
-    t.bigint "user_id"
-    t.date "signed_on", null: false
-    t.string "nda_version", null: false
-    t.string "signature_reference", null: false
-    t.bigint "recorded_by_id"
-    t.datetime "created_at", null: false
-    t.index ["recorded_by_id"], name: "index_identity_ndas_on_recorded_by_id"
-    t.index ["user_id"], name: "index_identity_ndas_on_user_id"
   end
 
   create_table "impersonation_actions", force: :cascade do |t|
@@ -1383,8 +1372,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_100000) do
   add_foreign_key "identity_governance_proposals", "users", column: "subject_id", on_delete: :nullify
   add_foreign_key "identity_hardware_keys", "users", column: "revoked_by_id", on_delete: :nullify
   add_foreign_key "identity_hardware_keys", "users", on_delete: :cascade
-  add_foreign_key "identity_ndas", "users", column: "recorded_by_id", on_delete: :nullify
-  add_foreign_key "identity_ndas", "users", on_delete: :nullify
   add_foreign_key "impersonation_actions", "impersonations", on_delete: :cascade
   add_foreign_key "impersonations", "users", column: "admin_id", on_delete: :nullify
   add_foreign_key "impersonations", "users", on_delete: :nullify

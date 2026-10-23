@@ -39,9 +39,10 @@
 #                      of any person, other owners too.
 #     preconditions_at_proposal, preconditions_at_approval
 #                      Checks on the person: verified_by_another (verified by
-#                      another verifier), adult (at least
-#                      identity_governance.verifier_minimum_age) and nda (a
-#                      signed NDA on record).
+#                      another verifier) and adult (at least
+#                      identity_governance.verifier_minimum_age). NDAs are
+#                      signed outside Weave (Adobe Acrobat Sign), so no
+#                      precondition checks them.
 roles:
   verifier:
     name: Verifier
@@ -49,7 +50,7 @@ roles:
     scopable: false
     grant:
       rule: owner_proposes_board_approves
-      preconditions_at_approval: [verified_by_another, adult, nda]
+      preconditions_at_approval: [verified_by_another, adult]
     revoke:
       rule: owner_or_identity_lead
 

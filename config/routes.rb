@@ -584,7 +584,6 @@ Rails.application.routes.draw do
       end
     end
     resources :team_removals, only: [:create]
-    resources :ndas, only: [:create]
 
     # Key custody of stored ID images (see KeyCustody): hardware keys, the
     # ceremony, recovery and rotation.

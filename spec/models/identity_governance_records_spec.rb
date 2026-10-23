@@ -2,34 +2,8 @@
 
 require "rails_helper"
 
-# The governance log and the NDA records are append-only.
+# The governance log is append-only.
 RSpec.describe "Identity governance records", type: :model do
-  describe IdentityNda do
-    let(:nda) { create(:identity_nda) }
-
-    it "can't change or be deleted" do
-      expect { nda.update!(nda_version: "v9") }.to raise_error(ActiveRecord::ReadOnlyRecord)
-      expect { nda.destroy! }.to raise_error(IdentityNda::ImmutableError)
-      expect(nda.reload.nda_version).to eq("2026-10")
-    end
-
-    it "refuses a signing date in the future" do
-      expect(build(:identity_nda, signed_on: 1.day.from_now.to_date)).not_to be_valid
-    end
-
-    it "has no column for a document" do
-      expect(described_class.column_names).to contain_exactly(
-        "id", "user_id", "signed_on", "nda_version", "signature_reference", "recorded_by_id", "created_at"
-      )
-    end
-
-    it "stays when the account is deleted, without the link to it" do
-      nda.user.destroy!
-
-      expect(nda.reload.user_id).to be_nil
-    end
-  end
-
   describe IdentityGovernanceEvent do
     let(:event) { described_class.record!(:member_removed, actor: create(:user, :owner), subject: create(:user), reason: "Left.") }
 
