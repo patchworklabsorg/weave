@@ -21,7 +21,9 @@ module AdminNavHelper
 
   # The groups the user can see, each with at least one link.
   def admin_nav_groups(user = current_user)
-    return [] if user.nil?
+    # An impersonating admin acts as the member, and the identity area
+    # refuses impersonation, so the links would only refuse.
+    return [] if user.nil? || impersonating?
 
     admin = user.admin?
     groups = [
@@ -79,6 +81,26 @@ module AdminNavHelper
   end
 
   def admin_nav_link_active?(link) = link.active?(controller_path, request.path)
+
+  # The identity area entry for the top bar and the home page, as
+  # [label, path, icon], or nil.
+  def identity_home_link(user = current_user)
+    return if user.nil? || impersonating?
+
+    if user.identity_team
+      ["Verification", identity_verifications_path, :id_card]
+    elsif IdentityGovernance.can_view?(user)
+      ["Identity governance", identity_governance_path, :landmark]
+    end
+  end
+
+  # Where the wordmark and the first crumb of the admin and identity layout
+  # go. A verifier who is not an admin can't open the admin dashboard.
+  def admin_home_path(user = current_user)
+    return admin_root_path if user&.admin?
+
+    identity_home_link(user)&.second || root_path
+  end
 
   private
 

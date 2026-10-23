@@ -22,7 +22,7 @@
             <%= icon(:menu, size: 18) %>
           </button>
           <div class="admin-topbar-crumb">
-            <%= link_to "Admin", admin_root_path, class: "link-quiet" %>
+            <%= link_to (controller_path.start_with?("identity/") ? "Identity" : "Admin"), admin_home_path, class: "link-quiet" %>
             <% if content_for?(:title) %>
               <span class="mx-1 text-ink-faint">/</span>
               <strong><%= content_for(:title) %></strong>

@@ -70,6 +70,25 @@ RSpec.describe "Admin sidebar", type: :request do
     expect(current_link).to eq("Key custody")
   end
 
+  it "points a verifier who is not an admin home to the identity area, not the admin dashboard" do
+    sign_in_via_magic_link(create(:user, :verified, identity_team: true))
+
+    get identity_verifications_path
+
+    page = Nokogiri::HTML(response.body)
+    expect(page.css("a").map { |link| link["href"] }).not_to include(admin_root_path)
+    expect(page.at_css(".admin-topbar-crumb a")["href"]).to eq(identity_verifications_path)
+  end
+
+  it "shows no identity links while an admin impersonates a verifier" do
+    sign_in_via_magic_link(create(:user, :owner, :verified))
+    post impersonate_admin_user_path(create(:user, :verified, identity_team: true))
+
+    get profile_path
+
+    expect(response.body).not_to include(identity_verifications_path, identity_governance_path)
+  end
+
   it "highlights the group link for a page under it" do
     sign_in_via_magic_link(create(:user, :identity_team, :verified))
 

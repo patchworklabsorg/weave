@@ -3,7 +3,7 @@
     drawer controller in the layout. %>
 <aside class="sidebar" data-drawer-target="panel" aria-label="Admin navigation">
   <div class="sidebar-brand">
-    <%= render "shared/wordmark", href: admin_root_path %>
+    <%= render "shared/wordmark", href: admin_home_path %>
     <%= badge (controller_path.start_with?("identity/") ? "Identity" : "Admin"), tone: :grape %>
   </div>
 

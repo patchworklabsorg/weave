@@ -239,7 +239,8 @@ The `CLAUDE.md` rule "No stacked PRs" applies: each PR targets `main`. `gh stack
 6. Krater PR #10 holds branch 12 (the demographics gate) and branch 13. Without `demographics_answered` from Weave, Krater lets every submit through and logs a warning.
 7. Merge Krater PR #10 only after Weave branches 8 and 10 are in production: until Weave sends `us_resident`, Krater counts nobody as a US resident.
 8. After Weave branch 10 and Krater #10 are in production, tell the OSPool contact that the US residency check is live (send the OSPool brief). Krater reads `us_resident` from the directory, so it needs no new scope. Give the `residency` scope only to an app that needs the claim at sign-in.
-9. Push the infra branch `jaspermayone/weave-permanent-log-owner`, open its PR, merge it and deploy infra (`deploy .#alastor --remote-build --skip-checks`). Either order with the Weave stack works. Database roles are on for staging only. Production still signs in as the superuser until its own database roles step.
+9. Infra PR #62 (`weave_audit` owns the permanent log, an event trigger pins the triggers on `users` and `user_roles`) is merged in patchworklabsorg/infra. Do not deploy it until every Weave branch above is merged and staging has run all their migrations: the two log migrations are in branches 6 and 9, and a locked run between them makes the second fail. alastor is deployed from `~/dev/infra`, which pins `patchwork-infra` in `flake.lock`. After staging has the whole stack, run `nix flake update patchwork-infra` there and deploy. If a staging start fails on the log first, `touch /var/lib/weave-staging/allow-audit-migration` and restart.
+10. CI on PRs 1 to 10 shows red lint and annotation jobs: the RuboCop fixes and the annotations are in branch 11. Merge with the admin bypass. Branch 11 makes both jobs green.
 
 Each push to `main` deploys staging (`.github/workflows/deploy-staging.yml`). A push to `main` does not deploy production.
 
