@@ -96,3 +96,10 @@ deletion_review_reminder:
 expire_identity_governance_proposals:
   class: ExpireIdentityGovernanceProposalsJob
   schedule: every hour
+
+# Delete each key custody share that waited longer than
+# pending_share_minutes, and old WebAuthn challenges (see
+# KeyCustody::PendingShares).
+sweep_pending_shares:
+  class: SweepPendingSharesJob
+  schedule: every minute

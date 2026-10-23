@@ -7,14 +7,13 @@ RSpec.describe DeliverBreakGlassNoticesJob do
 
   let(:member) { create(:user, :verified) }
   let(:requester) { create(:user, :identity_team) }
-  let(:holders) { create_list(:user, 2, :key_holder) }
   let!(:lead) { create(:user, :identity_lead) }
-  let(:decryption) do
-    record = BreakGlass.request(create(:verification, :verified, user: member), by: requester, reason: "Fraud report: compare it").record
-    holders.each { |holder| BreakGlass.approve(record, by: holder) }
-    BreakGlass.decrypt!(record.reload, viewer: requester)
-    record.decryptions.sole
-  end
+  let(:record) { opened_break_glass_record(create(:verification, :verified, user: member), requester:, reason: "Fraud report: compare it") }
+  # The requester opened the image, which wrote the decryption.
+  let(:decryption) { record.decryptions.sole }
+
+  # Each approver gets the key holder notice. The requester saw the image.
+  def other_approver = record.approvers.first
 
   def mail_to(user) = ActionMailer::Base.deliveries.select { |mail| mail.to.include?(user.email) }
 
@@ -24,7 +23,7 @@ RSpec.describe DeliverBreakGlassNoticesJob do
     decryption
     described_class.perform_now
 
-    expect(mail_to(holders.first).sole.subject).to include("decrypted")
+    expect(mail_to(other_approver).sole.subject).to include("decrypted")
     expect(mail_to(lead).sole.subject).to include("decrypted")
     expect(mail_to(member)).to be_empty
 

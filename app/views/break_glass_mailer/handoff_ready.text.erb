@@ -1,0 +1,9 @@
+Your break-glass request <%= @record.public_id %> is granted.
+
+Open the image once, in the same browser you asked from, before <%= @record.handoff_expires_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>. Click "Open" on the break-glass page:
+
+<%= @admin_url %>
+
+Only your browser holds the key that opens it. Weave deletes the sealed key when you open the image, or when the time passes. If the time passes, or your browser lost the key, ask again.
+
+Opening it sends the notices to the key holders, the identity team lead, the member and the board.

@@ -55,7 +55,8 @@ class Identity::VerificationsController < Identity::BaseController
     if VerificationFlow.reject_document(@verification, by: current_user, note: params[:note].to_s.strip)
       redirect_to identity_verification_path(@verification), notice: "The member was asked for a new document."
     else
-      redirect_to identity_verification_path(@verification), alert: "Write what the member must fix. The attempt must be in pre-review."
+      redirect_to identity_verification_path(@verification), alert: KeyCustody.warning_for_pre_review ||
+                                                                    "Write what the member must fix. The attempt must be in pre-review."
     end
   end
 
@@ -73,7 +74,8 @@ class Identity::VerificationsController < Identity::BaseController
       redirect_to identity_verification_path(@verification),
                   notice: "Document OK. Agree a call time with the member by email or Slack, then record it here."
     else
-      redirect_to identity_verification_path(@verification), alert: "Only the pre-reviewer can mark the document OK, during pre-review."
+      redirect_to identity_verification_path(@verification), alert: KeyCustody.warning_for_pre_review ||
+                                                                    "Only the pre-reviewer can mark the document OK, during pre-review."
     end
   end
 

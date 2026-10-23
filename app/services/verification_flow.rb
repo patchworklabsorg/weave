@@ -123,10 +123,14 @@ module VerificationFlow
       return nil unless verification.document_stored?
 
       VerificationEvent.record!(verification, :document_viewed, actor: by, context: "pre_review")
-      verification.id_document.download
+      IdDocumentVault.pre_review_read(verification)
     end
 
     # A document problem: the member submits again, with this note.
+    #
+    # Pre-review ends here, so the image is sealed to the master public key
+    # and the Lockbox copy is destroyed (IdDocumentVault.seal!). Returns false
+    # when key custody is not set up.
     def reject_document(verification, by:, note:)
       return false unless identity_member?(by, verification) && note.present?
 
@@ -136,14 +140,22 @@ module VerificationFlow
         verification.assign_attributes(resubmission_note: note, pre_reviewed_at: Time.current)
         verification.reject_document!
         VerificationEvent.record!(verification, :document_rejected, actor: by, note:)
+        IdDocumentVault.seal!(verification)
       end
       notify_member(verification)
       true
+    rescue KeyCustody::NotSetUp
+      verification.reload
+      false
     end
 
     # "Document OK": the pre-reviewer ends pre-review. The attempt waits for a
     # call time (awaiting_call). The verifier agrees the time with the member
     # by email or Slack, and then records it (schedule_call).
+    #
+    # Pre-review ends here, so the image is sealed to the master public key
+    # at once and the Lockbox copy is destroyed (IdDocumentVault.seal!).
+    # Returns false when key custody is not set up.
     def approve_document(verification, by:)
       return false unless identity_member?(by, verification) && verification.pre_reviewer_id == by.id
 
@@ -153,13 +165,17 @@ module VerificationFlow
         verification.assign_attributes(pre_reviewed_at: Time.current)
         verification.approve_document!
         VerificationEvent.record!(verification, :document_approved, actor: by)
+        IdDocumentVault.seal!(verification)
       end
       notify_member(verification)
       true
+    rescue KeyCustody::NotSetUp
+      verification.reload
+      false
     end
 
     # Records the call time that the verifier agreed with the member. Also
-    # moves a call. It does not touch the image.
+    # moves a call. It does not touch the image: "Document OK" sealed it.
     def schedule_call(verification, by:, at:)
       return false unless identity_member?(by, verification) && at.present? && at.future?
 

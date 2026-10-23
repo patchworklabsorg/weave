@@ -1,0 +1,53 @@
+<% content_for :title, "Key ceremony" %>
+
+<div class="mb-6">
+  <%= link_to "Key custody", identity_key_custody_path, class: "text-sm text-grape" %>
+  <h2 class="font-display text-2xl font-bold text-ink mt-2 mb-2"><%= @rotation_of ? "Rotation ceremony" : "Key ceremony" %></h2>
+  <p class="text-ink-soft">
+    One key holder runs the ceremony on a clean computer with no browser extensions. The other holders watch on a call.
+    Nobody sends a hardware key or brings it to this computer. This page makes a new master key pair, splits the private
+    key into <%= KeyCustody.share_count %> shares, and seals each share to the seal keys that its holder set up on their
+    own computer. You touch only your own key, one time.
+  </p>
+</div>
+
+<div class="patch p-6 mb-6 space-y-2 text-sm text-ink">
+  <h3 class="font-display text-lg font-bold text-ink">Where the private key exists</h3>
+  <p>
+    The private key and the shares exist in plain form only in the memory of this page, from the start of the ceremony to
+    its end. Weave gets the public key and the sealed shares only. At the end, the page overwrites the private key and the
+    shares. JavaScript can keep other copies until the page closes, so close this tab and the browser after the ceremony.
+    Use a computer you trust, with no browser extensions.
+  </p>
+  <% if @rotation_of %>
+    <p>
+      This is a rotation of <span class="font-mono"><%= @rotation_of.public_id %></span>. The new key set waits until
+      every holder of the new set, and <%= KeyCustody.threshold %> holders of the old set, activate it on their own computers.
+      Then Weave re-wraps every stored image to the new key and retires the old set.
+    </p>
+  <% end %>
+</div>
+
+<div class="patch p-6 mb-6">
+  <h3 class="font-display text-lg font-bold text-ink mb-2">Key holders</h3>
+  <ul class="text-sm text-ink space-y-1">
+    <% @holders.each do |holder| %>
+      <li><%= holder.full_name %>: <%= holder.identity_hardware_keys.select(&:sealable?).map(&:label).to_sentence.presence || "no hardware key with a seal key" %></li>
+    <% end %>
+  </ul>
+</div>
+
+<% if @blocker %>
+  <p class="text-sm text-orange-600" role="alert"><%= @blocker %></p>
+<% elsif !@can_run %>
+  <p class="text-sm text-orange-600" role="alert">Only a key holder with a hardware key can run the ceremony.</p>
+<% else %>
+  <div class="patch p-6" data-controller="key-custody"
+       data-key-custody-options-url-value="<%= start_identity_key_ceremony_path %>"
+       data-key-custody-submit-url-value="<%= identity_key_ceremony_path %>"
+       data-key-custody-redirect-url-value="<%= identity_key_custody_path %>">
+    <button type="button" class="btn-stitch" data-action="key-custody#ceremony">Start the ceremony</button>
+    <p class="text-sm text-ink mt-3 font-bold" data-key-custody-target="status" aria-live="polite"></p>
+    <ol class="text-xs text-ink-soft mt-2 space-y-1 list-decimal ml-5" data-key-custody-target="log"></ol>
+  </div>
+<% end %>

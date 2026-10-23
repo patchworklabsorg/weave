@@ -11,6 +11,9 @@ RSpec.describe VerificationFlow do
   def verification_versions = PaperTrail::Version.where(item_type: "Verification")
   let(:verifier) { create(:user, :identity_team) }
 
+  # The end of pre-review seals the image (see IdDocumentVault).
+  before { active_key_set_without_holders }
+
   def image = Rack::Test::UploadedFile.new(Rails.root.join("spec/fixtures/files/id_document.png"), "image/png")
 
   def identifiers

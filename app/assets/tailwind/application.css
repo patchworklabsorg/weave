@@ -1253,3 +1253,6 @@
 @media print {
   .secure-viewer, [data-controller~="secure-image"] { display: none !important; }
 }
+@media print {
+  [data-controller~="break-glass"] [data-break-glass-target="canvas"] { display: none !important; }
+}

@@ -7,51 +7,16 @@
     <%= badge (controller_path.start_with?("identity/") ? "Identity" : "Admin"), tone: :grape %>
   </div>
 
+  <%# The groups and links come from AdminNavHelper. The identity area
+      (/identity) uses this layout too, for people who are not admins. %>
   <nav class="sidebar-nav">
-    <%# The identity area (/identity) uses this layout too, for people who
-        are not admins. %>
-    <% if current_user&.identity_team || IdentityGovernance.can_view?(current_user) %>
+    <% admin_nav_groups.each do |group| %>
       <div class="nav-section">
-        <div class="nav-section-title">Identity</div>
-        <% if current_user&.identity_team %>
-          <%= nav_link "Verification", identity_verifications_path, icon: :id_card,
-                active: controller_name.in?(%w[verifications break_glass_records]) %>
-        <% end %>
-        <% if IdentityGovernance.can_view?(current_user) %>
-          <%= nav_link "Governance", identity_governance_path, icon: :landmark,
-                active: controller_name.in?(%w[governance governance_proposals]) %>
+        <div class="nav-section-title"><%= group.title %></div>
+        <% group.links.each do |link| %>
+          <%= nav_link link.label, link.path, icon: link.icon, active: admin_nav_link_active?(link) %>
         <% end %>
       </div>
-    <% end %>
-    <% if current_user&.admin? %>
-    <div class="nav-section">
-      <div class="nav-section-title">Directory</div>
-      <%= nav_link "Dashboard", admin_root_path, icon: :layout_dashboard, exact: true %>
-      <%= nav_link "Users", admin_users_path, icon: :users %>
-      <%= nav_link "Groups", admin_groups_path, icon: :users %>
-      <%= nav_link "Consents", admin_guardian_consents_path, icon: :shield_check %>
-      <% if current_user && (current_user.identity_team || current_user.is_board || KnotSettings.program_keys.any? { |program| KnotGrants.patch_lead?(current_user, program) }) %>
-        <%= nav_link "Knot", admin_knots_path, icon: :link,
-              active: controller_name.in?(%w[knots knot_change_requests]) %>
-      <% end %>
-      <%= nav_link "Demographics", admin_demographics_path, icon: :chart_pie %>
-      <% if current_user&.identity_team %>
-        <%= nav_link "Deletion", admin_deletion_requests_path, icon: :trash_2 %>
-      <% end %>
-      <%= nav_link "Funder reports", admin_funder_reports_path, icon: :file_chart_column %>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-title">Apps</div>
-      <%= nav_link "OAuth apps", admin_oauth_applications_path, icon: :app_window %>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-title">Operations</div>
-      <%= nav_link "Jobs", "/admin/jobs", icon: :activity, active: false %>
-      <%= nav_link "Feature flags", "/admin/flipper", icon: :flag, active: false %>
-      <%= nav_link "Blazer", "/admin/blazer", icon: :database, active: false %>
-      <%= nav_link "Console audits", "/admin/console", icon: :terminal, active: false %>
-      <%= nav_link "Console sign-in", admin_console_access_path, icon: :key_round %>
-    </div>
     <% end %>
   </nav>
 

@@ -16,5 +16,8 @@ Rails.application.config.filter_parameters += [
   # The internal trust score ledger: the written reason, the evidence
   # link, the "on behalf of" voucher and a project outcome must not reach the
   # logs or the API usage rows.
-  :reason, :evidence_url, :voucher, :outcome
+  :reason, :evidence_url, :voucher, :outcome,
+  # Key custody: a key holder's share of the master key, the wrapped copies
+  # and the WebAuthn answers must never reach the logs (see KeyCustody).
+  :share, :ciphertext, :prf, :credential, :wrapped
 ]

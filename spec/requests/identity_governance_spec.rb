@@ -86,7 +86,7 @@ RSpec.describe "Identity team governance pages", type: :request do
         [:patch, decide_identity_verification_path(verification), { outcome: "verified", reason: "x" }],
         [:post, identity_verification_break_glass_records_path(verification), { reason: "x" }],
         [:get, identity_break_glass_records_path], [:patch, approve_identity_break_glass_record_path(record)],
-        [:post, image_identity_break_glass_record_path(record)]
+        [:post, approval_options_identity_break_glass_record_path(record)]
       ]
     end
 

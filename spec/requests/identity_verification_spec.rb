@@ -24,6 +24,9 @@ RSpec.describe "Identity verification pages", type: :request do
   end
 
   describe "access" do
+    # The end of pre-review seals the image (see IdDocumentVault).
+    before { active_key_set_without_holders }
+
     it "turns away an admin who is not on the identity team" do
       sign_in_via_magic_link(create(:user, :admin, :verified))
 
@@ -102,9 +105,14 @@ RSpec.describe "Identity verification pages", type: :request do
   end
 
   describe "pre-review" do
+    # The end of pre-review seals the image (see IdDocumentVault).
+    before {
+      active_key_set_without_holders
+      sign_in_via_magic_link(verifier)
+    }
+
     let(:verification) { create(:verification, user: member) }
 
-    before { sign_in_via_magic_link(verifier) }
 
     it "takes the attempt and gives the image to the secure viewer of the pre-reviewer, with a log row" do
       patch start_pre_review_identity_verification_path(verification)
@@ -199,6 +207,13 @@ RSpec.describe "Identity verification pages", type: :request do
 
   describe "recording the call outcome" do
     let(:member) { create(:user, :verified, first_name: "Ada", legal_first_name: "Erika", legal_last_name: "Mustermann", birthday: Date.new(1990, 8, 12)) }
+
+    # The end of pre-review seals the image (see IdDocumentVault).
+    before {
+      active_key_set_without_holders
+      sign_in_via_magic_link(verifier)
+    }
+
     let(:verification) { create(:verification, :call_scheduled, user: member) }
     let(:params) do
       {
@@ -210,7 +225,6 @@ RSpec.describe "Identity verification pages", type: :request do
       }
     end
 
-    before { sign_in_via_magic_link(verifier) }
 
     it "shows the attestation form and no recording field" do
       get identity_verification_path(verification)
@@ -280,18 +294,35 @@ RSpec.describe "Identity verification pages", type: :request do
   end
 
   describe "break-glass" do
-    let(:verification) { create(:verification, :verified, user: member) }
-    let(:holder_a) { create(:user, :key_holder) }
-    let(:holder_b) { create(:user, :key_holder) }
+    let!(:custody) { setup_key_custody }
+    let(:keys) { custody.last }
+    let(:verification) { seal!(create(:verification, :verified, user: member)) }
+
+    # Each holder approves like the browser: fetch the options, open the
+    # share with the hardware key, send the share and the answer.
+    def approve_as(holder, record)
+      sign_in_via_magic_link(holder)
+      post approval_options_identity_break_glass_record_path(record), as: :json
+      options = response.parsed_body
+      fake = keys[holder].first
+      share = fake.open(options["wrapped"][fake.external_id])
+      patch approve_identity_break_glass_record_path(record),
+            params: { credential: fake.assert(options.dig("request", "challenge")), share: b64url(share) }, as: :json
+      share
+    end
+
+    # The requester's browser: a one-time key pair, the reason and the
+    # public key as JSON.
+    def ask_for_break_glass(for_verification)
+      post identity_verification_break_glass_records_path(for_verification),
+           params: { reason: "Fraud report: compare the document.", requester_public_key: browser_public_key(verifier) }, as: :json
+    end
 
     def request_and_approve
       sign_in_via_magic_link(verifier)
-      post identity_verification_break_glass_records_path(verification), params: { reason: "Fraud report: compare the document." }
+      ask_for_break_glass(verification)
       record = BreakGlassRecord.last
-      [holder_a, holder_b].each do |holder|
-        sign_in_via_magic_link(holder)
-        patch approve_identity_break_glass_record_path(record)
-      end
+      keys.keys.first(2).each { |holder| approve_as(holder, record) }
       record.reload
     end
 
@@ -316,32 +347,140 @@ RSpec.describe "Identity verification pages", type: :request do
       expect(BreakGlassRecord.count).to eq(0)
     end
 
-    it "opens the image only after two key holders approve, and writes the notices" do
+    it "shows the approve button that runs the hardware key script" do
+      sign_in_via_magic_link(verifier)
+      ask_for_break_glass(verification)
+      sign_in_via_magic_link(keys.keys.first)
+
+      get identity_break_glass_records_path
+
+      expect(response.body).to include("Approve with my hardware key", approval_options_identity_break_glass_record_path(BreakGlassRecord.last))
+    end
+
+    it "answers an approval as JSON and keeps the share out of the log" do # rubocop:disable RSpec/ExampleLength
+      sign_in_via_magic_link(verifier)
+      ask_for_break_glass(verification)
+      record = BreakGlassRecord.last
+      log = StringIO.new
+      logger = ActiveSupport::Logger.new(log)
+      share = nil
+      original = Rails.logger
+      begin
+        Rails.logger = ActionController::Base.logger = logger
+        share = approve_as(keys.keys.first, record)
+      ensure
+        Rails.logger = ActionController::Base.logger = original
+      end
+
+      expect(response.parsed_body).to include("granted" => false)
+      expect(log.string).to include("approve")
+      expect(log.string).not_to include(b64url(share))
+      expect(log.string).not_to include("clientDataJSON")
+    end
+
+    it "refuses an approval with a wrong share as JSON" do
+      sign_in_via_magic_link(verifier)
+      ask_for_break_glass(verification)
+      record = BreakGlassRecord.last
+      holder = keys.keys.first
+      sign_in_via_magic_link(holder)
+      post approval_options_identity_break_glass_record_path(record), as: :json
+
+      patch approve_identity_break_glass_record_path(record),
+            params: { credential: keys[holder].first.assert(response.parsed_body.dig("request", "challenge")),
+                      share: b64url(SecureRandom.random_bytes(33))
+}, as: :json
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["error"]).to include("not your share")
+    end
+
+    def open_as_requester(record)
+      sign_in_via_magic_link(verifier)
+      post open_identity_break_glass_record_path(record), as: :json
+    end
+
+    it "takes the request as JSON with the browser's public key, and needs that key" do
+      sign_in_via_magic_link(verifier)
+      ask_for_break_glass(verification)
+
+      record = BreakGlassRecord.sole
+      expect(response.parsed_body).to include("id" => record.public_id, "redirect" => identity_break_glass_records_path)
+      expect(record.requester_public_key).to eq(browser_public_key(verifier))
+
+      post identity_verification_break_glass_records_path(verification), params: { reason: "Fraud report: compare the document." }, as: :json
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["error"]).to include("one-time key")
+    end
+
+    it "gives the second approver no image, and the requester opens it once in the browser" do
       record = request_and_approve
       expect(record).to be_granted
 
-      sign_in_via_magic_link(verifier)
-      post image_identity_break_glass_record_path(record)
+      body = response.parsed_body
+      expect(body).to include("granted" => true)
+      expect(body.keys).not_to include("image")
+      expect(body["message"]).to include("You do not see it")
+      expect(BreakGlassDecryption.count).to eq(0)
 
-      expect(viewer_image).to eq(image)
+      get identity_break_glass_records_path
+      expect(response.body).not_to include(open_identity_break_glass_record_path(record))
+      sign_in_via_magic_link(verifier)
+      get identity_break_glass_records_path
+      expect(response.body).to include("Ready for you to open", open_identity_break_glass_record_path(record), 'data-controller="break-glass"')
+
+      open_as_requester(record)
+      expect(response).to have_http_status(:ok)
+      expect(open_in_browser(response.parsed_body, verifier)).to eq(image)
       expect(response.parsed_body["watermark"]).to include("pId" => verifier.p_id, "subjectId" => record.public_id)
       expect_secure_image_headers
+      expect(record.decryptions.sole).to have_attributes(viewer: verifier)
       expect(record.decryptions.sole.notices.pluck(:recipient_kind)).to include("key_holder", "member")
+
+      open_as_requester(record)
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["error"]).to include("already opened")
     end
 
-    it "refuses the image to a key holder who did not ask" do
+    it "refuses the open to an approver" do
       record = request_and_approve
 
-      post image_identity_break_glass_record_path(record)
+      post open_identity_break_glass_record_path(record), as: :json
 
-      expect(response).to have_http_status(:forbidden)
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body).not_to have_key("sealed_key")
       expect(BreakGlassDecryption.count).to eq(0)
     end
 
-    it "lets a team member delay the member notice with a reason" do
+    it "refuses the open after the handoff window" do
       record = request_and_approve
+
+      travel(VerificationSettings.break_glass_handoff_ttl + 1.minute) { open_as_requester(record) }
+
+      expect(response.parsed_body["error"]).to include("Ask again")
+    end
+
+    it "has no route that opens a granted image again" do
+      record = request_and_approve
+      open_as_requester(record)
+
+      expect { Rails.application.routes.recognize_path("/identity/break_glass_records/#{record.to_param}/document") }
+        .to raise_error(ActionController::RoutingError)
+      expect(BreakGlassDecryption.count).to eq(1)
+    end
+
+    it "issues approval options only on POST" do
       sign_in_via_magic_link(verifier)
-      post image_identity_break_glass_record_path(record)
+      ask_for_break_glass(verification)
+
+      path = approval_options_identity_break_glass_record_path(BreakGlassRecord.last)
+      expect { Rails.application.routes.recognize_path(path, method: :get) }.to raise_error(ActionController::RoutingError)
+      expect(Rails.application.routes.recognize_path(path, method: :post)).to include(action: "approval_options")
+    end
+
+    it "lets a team member delay the member notice with a reason" do
+      open_as_requester(request_and_approve)
+      sign_in_via_magic_link(verifier)
       notice = BreakGlassNotice.find_by!(recipient_kind: "member")
 
       patch delay_identity_break_glass_notice_path(notice), params: { reason: "Active fraud case 12" }
@@ -366,8 +505,7 @@ RSpec.describe "Identity verification pages", type: :request do
 
     it "shows the board report to a board member" do
       record = request_and_approve
-      sign_in_via_magic_link(verifier)
-      post image_identity_break_glass_record_path(record)
+      open_as_requester(record)
       sign_in_via_magic_link(create(:user, :admin, :verified, is_board: true))
 
       get admin_break_glass_report_path

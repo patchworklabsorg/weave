@@ -23,11 +23,39 @@ module VerificationSettings
 
     def max_key_holders = config.dig(:break_glass, :max_key_holders)
 
-    def break_glass_access = config.dig(:break_glass, :access_minutes).minutes
-
     def member_notice_delay = config.dig(:break_glass, :member_notice_hours).hours
 
     def max_fraud_delay = config.dig(:break_glass, :max_fraud_delay_days).days
+
+    # How long the requester has to open a granted image (BreakGlass.open!).
+    def break_glass_handoff_ttl = config.dig(:break_glass, :handoff_minutes).minutes
+
+    # Key custody (see KeyCustody). The threshold is the number of approvals
+    # a break-glass request needs, and the share count is the number of key
+    # holders.
+    def key_custody_threshold = break_glass_approvals_required
+
+    def key_custody_share_count = max_key_holders
+
+    # Hardware keys per key holder: LOCKED at 2 in config. Development only
+    # can lower it with KYC_HARDWARE_KEYS_PER_HOLDER, for a local test with
+    # fewer YubiKeys (for example 3 keys for 3 holders). Production, staging
+    # (RAILS_ENV=production) and test ignore the variable.
+    def hardware_keys_per_holder
+      locked = config.dig(:key_custody, :hardware_keys_per_holder)
+      return locked unless Rails.env.development? && ENV["KYC_HARDWARE_KEYS_PER_HOLDER"].present?
+
+      count = Integer(ENV.fetch("KYC_HARDWARE_KEYS_PER_HOLDER"), exception: false)
+      raise ArgumentError, "KYC_HARDWARE_KEYS_PER_HOLDER must be 1 to #{locked}." unless count&.between?(1, locked)
+
+      count
+    end
+
+    def pending_share_ttl = config.dig(:key_custody, :pending_share_minutes).minutes
+
+    def key_custody_challenge_ttl = config.dig(:key_custody, :challenge_minutes).minutes
+
+    def require_user_verification? = config.dig(:key_custody, :require_user_verification) == true
 
     # For specs that change a value.
     def reset! = @config = nil

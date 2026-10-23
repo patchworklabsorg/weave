@@ -199,17 +199,23 @@
   </div>
 <% end %>
 
-<% if !own && @verification.document_stored? && BreakGlass.request_blocker(@verification).nil? %>
+<% if !own && @verification.document_sealed? && BreakGlass.request_blocker(@verification).nil? %>
   <div class="patch p-6 mb-6">
     <h3 class="font-display text-lg font-bold text-ink mb-2">Break-glass</h3>
     <p class="text-sm text-ink-soft mb-2">
-      To open the stored image outside pre-review, ask with a reason. Two key holders must approve. Each decryption tells
-      the key holders who approved, the lead, the member (after <%= VerificationSettings.member_notice_delay.inspect %>) and the board.
+      To open the stored image, ask with a reason. Two key holders must approve, each with a hardware key. Then only you can open the image,
+      once, in this browser, within <%= VerificationSettings.break_glass_handoff_ttl.inspect %>: your browser makes a one-time key for the request,
+      and the approvers do not see the image. The open tells the key holders who approved, the lead, the member
+      (after <%= VerificationSettings.member_notice_delay.inspect %>) and the board.
     </p>
-    <%= form_with url: identity_verification_break_glass_records_path(@verification), method: :post, class: "space-y-2" do |form| %>
+    <%= form_with url: identity_verification_break_glass_records_path(@verification), method: :post, class: "space-y-2",
+                  data: { controller: "break-glass", action: "submit->break-glass#ask",
+                          break_glass_url_value: identity_verification_break_glass_records_path(@verification),
+                          break_glass_redirect_url_value: identity_break_glass_records_path } do |form| %>
       <%= form.text_area :reason, required: true, rows: 2, minlength: 10, placeholder: "Why do you need the image itself?",
-            aria: { label: "Why do you need the image?" }, class: input_class %>
-      <%= form.submit "Ask for break-glass access", class: "btn-stitch-ghost" %>
+            aria: { label: "Why do you need the image?" }, class: input_class, data: { break_glass_target: "reason" } %>
+      <%= form.submit "Ask for break-glass access", class: "btn-stitch-ghost", data: { break_glass_target: "button" } %>
+      <p class="text-xs text-ink-faint" data-break-glass-target="status" aria-live="polite"></p>
     <% end %>
     <% if @break_glass_records.any? %>
       <ul class="mt-3 text-xs text-ink-faint space-y-1">
