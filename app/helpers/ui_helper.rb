@@ -100,6 +100,25 @@ module UiHelper
     end
   end
 
+  # A link to a URL that a member typed in somewhere (a Slack profile field,
+  # for example). Only http and https URLs become links; anything else is
+  # shown as text, so a stored "javascript:" value can never run.
+  #   external_link("Website", user.slack_website)
+  def external_link(label, url, **options)
+    if http_url?(url)
+      link_to label, url, target: "_blank", rel: "noopener noreferrer", class: "link", **options
+    else
+      tag.span(label, class: "text-ink-faint", title: url.to_s)
+    end
+  end
+
+  def http_url?(value)
+    uri = URI.parse(value.to_s.strip)
+    uri.is_a?(URI::HTTP) && uri.host.present?
+  rescue URI::InvalidURIError
+    false
+  end
+
   # dl_row("Email", user.email)
   # dl_row("Role") { badge(user.role.humanize, tone: :grape) }
   def dl_row(label, value = nil, &block)

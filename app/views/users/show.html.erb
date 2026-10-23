@@ -102,7 +102,7 @@
               <%= dl_row("Links") do %>
                 <span class="flex flex-wrap gap-3">
                   <% links.each do |label, url| %>
-                    <%= link_to label, url, target: "_blank", rel: "noopener noreferrer", class: "link" %>
+                    <%= external_link label, url %>
                   <% end %>
                 </span>
               <% end %>
