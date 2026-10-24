@@ -129,6 +129,16 @@ RSpec.describe IdentityGovernance do
         expect(described_class.preconditions(candidate).find { |check| check.key == :verified }.met).to be(false)
       end
 
+      it "lets a person on the age exception list in under the minimum age" do
+        candidate = ready_candidate(birthday: 16.years.ago.to_date)
+        expect(described_class.preconditions_met?(candidate)).to be(false)
+
+        allow(IdentityGovernanceSettings).to receive(:verifier_age_exceptions).and_return([candidate.p_id])
+
+        expect(described_class.preconditions_met?(candidate)).to be(true)
+        expect(described_class.preconditions(candidate).find { |check| check.key == :adult }.detail).to include("age exception")
+      end
+
       it "uses the minimum age from the config" do
         candidate = ready_candidate(birthday: 19.years.ago.to_date)
         allow(IdentityGovernanceSettings).to receive(:verifier_minimum_age).and_return(21)

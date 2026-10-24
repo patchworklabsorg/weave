@@ -149,6 +149,8 @@ Do these steps in production after the deploy (step 6) and before the first memb
 
 Nobody is verified on day one, so nobody can meet the verifier preconditions (verified by another person, 18 or older). The bootstrap adds the first three verifiers at once.
 
+Adam (`PWL8724F96B89`) is under 18. The production `verifier_age_exceptions` list lets him join the identity team (Jasper, 2026-10-24). He is also a minor member: before his own call, his guardian consent must be granted, and a parent or guardian must attend his call. His parent, James Sidwa, co-signs his NDA.
+
 Each verifier signs the identity team NDA before they start. NDAs are signed with Adobe Acrobat Sign, outside Weave. Weave keeps no NDA record (decided 2026-10-23). Kieran signs Jasper's NDA for Patchwork Labs, and Jasper signs Kieran's and Adam's. They then verify each other in a circle. The bootstrap runs one time only. It refuses to run a second time, and it refuses to run after any member of the identity team is verified.
 
 ```mermaid

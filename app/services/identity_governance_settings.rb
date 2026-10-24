@@ -12,6 +12,9 @@ module IdentityGovernanceSettings
 
     def verifier_minimum_age = config.fetch(:verifier_minimum_age)
 
+    # p_ids that may join the identity team under verifier_minimum_age.
+    def verifier_age_exceptions = Array(config[:verifier_age_exceptions]).map(&:to_s)
+
     # For specs that change a value.
     def reset! = @config = nil
 

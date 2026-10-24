@@ -488,7 +488,7 @@ stateDiagram-v2
 `IdentityGovernance.preconditions` checks these at the approval, and the proposal page shows each one:
 
 1. The candidate is verified: `verification_status` is `verified`, and another person recorded the decision.
-2. The candidate is at least `verifier_minimum_age` (18).
+2. The candidate is at least `verifier_minimum_age` (18), or their p_id is in `verifier_age_exceptions` (`config/kyc/identity_governance.yml`). Production has one exception: Adam (`PWL8724F96B89`), decided by Jasper on 2026-10-24. His parent signs his NDA.
 
 A proposal can wait for a missing precondition. When the precondition is met, a board member can approve the same proposal.
 
@@ -586,6 +586,7 @@ The values are in `config/kyc/identity_governance.yml`.
 | --- | --- | --- |
 | `proposal_expiry_days` | 14 | Locked |
 | `verifier_minimum_age` | 18 | Locked |
+| `verifier_age_exceptions` | production: `PWL8724F96B89` (Adam) | Jasper, 2026-10-24 |
 
 ## Key custody
 

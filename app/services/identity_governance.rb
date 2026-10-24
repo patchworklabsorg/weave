@@ -118,6 +118,7 @@ module IdentityGovernance
       verified = user.identity_verified? && latest.verifier_id != user.id
       age = user.age_in_years
       minimum = IdentityGovernanceSettings.verifier_minimum_age
+      age_exception = IdentityGovernanceSettings.verifier_age_exceptions.include?(user.p_id.to_s)
 
       [
         Precondition.new(
@@ -129,8 +130,11 @@ module IdentityGovernance
                   end
         ),
         Precondition.new(
-          key: :adult, met: age.present? && age >= minimum,
-          detail: age.nil? ? "No birthday on record." : "#{age} years old (at least #{minimum} needed)."
+          key: :adult, met: age.present? && (age >= minimum || age_exception),
+          detail: if age.nil? then "No birthday on record."
+                  elsif age < minimum && age_exception then "#{age} years old: under #{minimum}, allowed by an age exception in the config."
+                  else "#{age} years old (at least #{minimum} needed)."
+                  end
         )
       ]
     end
