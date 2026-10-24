@@ -1,0 +1,88 @@
+<% content_for :title, "Deletion request" %>
+<% input_class = "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink" %>
+
+<div class="mb-6">
+  <%= link_to "All deletion requests", admin_deletion_requests_path, class: "text-sm text-grape underline" %>
+  <h2 class="font-display text-2xl font-bold text-ink mt-2"><%= @deletion_request.public_id %></h2>
+</div>
+
+<div class="patch p-6 mb-6">
+  <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+    <div><dt class="text-ink-faint">Member</dt>
+      <dd><%= @user ? link_to("#{@user.full_name} (#{@user.p_id})", admin_user_path(@user), class: "text-grape underline") : "A deleted account" %></dd></div>
+    <div><dt class="text-ink-faint">Source</dt><dd><%= @deletion_request.source %></dd></div>
+    <div><dt class="text-ink-faint">Status</dt><dd><%= @deletion_request.status.humanize %></dd></div>
+    <div><dt class="text-ink-faint">Requested</dt><dd><%= @deletion_request.requested_at.to_fs(:long) %></dd></div>
+    <div><dt class="text-ink-faint">Review due</dt>
+      <dd class="<%= 'text-red-600' if @deletion_request.review_overdue? %>"><%= @deletion_request.review_due_at.to_date.to_fs(:long) %></dd></div>
+    <div><dt class="text-ink-faint">Deletion complete by</dt><dd><%= @deletion_request.complete_by.to_date.to_fs(:long) %></dd></div>
+    <% if @deletion_request.reviewed_at %>
+      <div><dt class="text-ink-faint">Reviewed</dt>
+        <dd><%= @deletion_request.reviewed_by&.full_name || "a deleted user" %>, <%= @deletion_request.reviewed_at.to_fs(:long) %></dd></div>
+      <div><dt class="text-ink-faint">Review note</dt><dd><%= @deletion_request.review_note %></dd></div>
+    <% end %>
+    <% if @user && @deletion_request.dormancy? %>
+      <div><dt class="text-ink-faint">Last active</dt><dd><%= @user.last_active_at.to_fs(:long) %></dd></div>
+    <% end %>
+  </dl>
+</div>
+
+<% if @deletion_request.pending_review? %>
+  <div class="patch p-6 mb-6">
+    <h3 class="font-display text-lg font-bold text-ink mb-2">Authenticity check</h3>
+    <% if @can_review %>
+      <p class="text-sm text-ink-soft mb-3">
+        Confirm that the request came from the member (for example, a reply from the address on file), or that the
+        account is dormant. Do not write member details in the note.
+      </p>
+      <%= form_with url: approve_admin_deletion_request_path(@deletion_request), method: :patch, class: "space-y-3 mb-4" do |form| %>
+        <%= form.label :review_note, "How you checked it", class: "block text-sm font-medium text-ink" %>
+        <%= form.text_area :review_note, required: true, rows: 2, class: input_class %>
+        <%= form.submit "Approve and run the deletion", class: "btn-stitch", data: { turbo_confirm: "This deletes the account. Continue?" } %>
+      <% end %>
+      <%= form_with url: reject_admin_deletion_request_path(@deletion_request), method: :patch, class: "space-y-3" do |form| %>
+        <%= form.label :review_note, "Why the check failed", class: "block text-sm font-medium text-ink" %>
+        <%= form.text_area :review_note, required: true, rows: 2, class: input_class %>
+        <%= form.submit "Reject: could not confirm", class: "btn-stitch-ghost" %>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-ink-soft">You can't review this request: it is your own, or the user is at or above your access level.</p>
+    <% end %>
+  </div>
+<% end %>
+
+<% if @deletion_request.failed? && @can_review %>
+  <%= button_to "Run the pipeline again", rerun_admin_deletion_request_path(@deletion_request), method: :patch, class: "btn-stitch mb-6" %>
+<% end %>
+
+<h3 class="font-display text-lg font-bold text-ink mb-3">Pipeline runs</h3>
+<div class="patch overflow-hidden mb-8">
+  <% if @runs.any? %>
+    <ul class="divide-y divide-ink-soft/10">
+      <% @runs.each do |run| %>
+        <li class="px-6 py-3 text-sm">
+          <p class="text-ink"><strong><%= run.outcome.humanize %></strong>, started <%= run.started_at.to_fs(:long) %></p>
+          <ol class="list-decimal list-inside text-ink-soft">
+            <% run.steps.each do |step| %>
+              <li><%= step["step"] %>: <%= step["status"] %></li>
+            <% end %>
+          </ol>
+          <% if run.error_class %>
+            <p class="text-red-600"><%= run.error_class %>: <%= run.error_message %></p>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="px-6 py-4 text-sm text-ink-faint">No runs yet.</p>
+  <% end %>
+</div>
+
+<h3 class="font-display text-lg font-bold text-ink mb-3">What the pipeline does</h3>
+<div class="patch overflow-hidden mb-8">
+  <ul class="divide-y divide-ink-soft/10">
+    <% @categories.each do |category| %>
+      <li class="px-6 py-3 text-sm"><strong><%= category.name %></strong> (<%= category.outcome %>): <%= category.legal_basis %></li>
+    <% end %>
+  </ul>
+</div>

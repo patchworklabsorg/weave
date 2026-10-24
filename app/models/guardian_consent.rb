@@ -76,8 +76,11 @@ class GuardianConsent < ApplicationRecord
   RESEND_COOLDOWN = 10.minutes
   TOKEN_BYTES = 32
 
-  # How long Weave keeps consents (see PurgeGuardianConsentsJob). The privacy
-  # policy and the guardian page give these periods, so change them together.
+  # How long Weave keeps consents (see PurgeGuardianConsentsJob). The deletion
+  # pipeline deletes a member's consents at once, and DataRetention::Sweeps
+  # deletes them when the member turns 18: the guardian page and the privacy
+  # policy promise that. KEEP_AFTER_ACCOUNT_DELETION applies only to an account
+  # removed outside the pipeline.
   KEEP_AFTER_ACCOUNT_DELETION = 1.year
   KEEP_UNANSWERED = 30.days
 

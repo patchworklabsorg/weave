@@ -1,0 +1,45 @@
+<%# The member's data export page (see TakeoutsController). %>
+<% content_for :title, t("data_handling.takeout.title") %>
+<% link_class = "text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2" %>
+
+<div class="min-h-full flex items-center justify-center px-4 py-12">
+  <div class="patch patch-bound w-full max-w-lg">
+    <div class="quilt-binding"></div>
+
+    <div class="p-9 pb-5">
+      <h1 class="font-display text-3xl font-bold text-ink text-center"><%= t("data_handling.takeout.title") %></h1>
+      <p class="text-ink-soft mt-2"><%= t("data_handling.takeout.intro") %></p>
+    </div>
+
+    <div class="px-9 pb-9 space-y-5 text-sm text-ink">
+      <p><%= t("data_handling.takeout.download_window", days: DataRetention.takeout_download_window.in_days.to_i) %></p>
+      <p class="text-ink-soft"><%= t("data_handling.takeout.not_included") %></p>
+      <p>
+        <%= link_to t("data_handling.data_page_link"), Weave.data_page_url, class: link_class, target: "_blank", rel: "noopener noreferrer" %>
+      </p>
+
+      <%= button_to t("data_handling.takeout.button"), takeout_path, method: :post, class: "btn-stitch w-full justify-center" %>
+
+      <% if @takeouts.any? %>
+        <div>
+          <h2 class="font-display text-lg font-bold text-ink mb-2"><%= t("data_handling.takeout.history") %></h2>
+          <ul class="space-y-2">
+            <% @takeouts.each do |takeout| %>
+              <li class="flex items-center justify-between gap-4">
+                <span>
+                  <%= takeout.created_at.to_date.to_fs(:long) %>:
+                  <%= t("data_handling.takeout.statuses.#{takeout.status}", date: takeout.expires_at&.to_date&.to_fs(:long)) %>
+                </span>
+                <% if takeout.downloadable? %>
+                  <%= link_to t("data_handling.takeout.download"), download_takeout_path(takeout), class: link_class %>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <p class="text-center"><%= link_to t("data_handling.profile.delete"), deletion_request_path, class: link_class %></p>
+    </div>
+  </div>
+</div>

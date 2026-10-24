@@ -16,7 +16,10 @@ RSpec.describe "Thread Count stays internal" do # rubocop:disable RSpec/Describe
     /\Aapp\/helpers\/thread_count_helper\.rb\z/,
     # Write only: a service reports a project outcome and gets a receipt.
     /\Aapp\/controllers\/api\/v1\/project_events_controller\.rb\z/,
-    /\Aapp\/serializers\/thread_count_project_event_serializer\.rb\z/
+    /\Aapp\/serializers\/thread_count_project_event_serializer\.rb\z/,
+    # The data-category registry names the ledger only so that deletion
+    # destroys it. Takeout never exports it.
+    /\Aapp\/services\/data_categories\.rb\z/
   ].freeze
   pattern = /ThreadCount|thread_count|Thread Count/
 

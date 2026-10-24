@@ -35,6 +35,9 @@
             <p class="mt-1">
               <%= link_to t("guardian_consent.page.privacy_link"), Weave::PRIVACY_POLICY_URL,
                     target: "_blank", rel: "noopener noreferrer", class: "link" %>
+              &middot;
+              <%= link_to t("data_handling.data_page_link"), Weave.data_page_url,
+                    target: "_blank", rel: "noopener noreferrer", class: "link" %>
             </p>
           </div>
 

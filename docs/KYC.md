@@ -696,3 +696,212 @@ The external signal weights (`github_student` 5, `other_program` 3) are still pl
 
 - Blazer (`/admin/blazer`) lets every admin run SQL on the whole database. An admin can read the kinds and the levels in `thread_count_entries` there. The reason and the evidence link are encrypted.
 - The retention matrix in the proposal has no row for TC entries. Now they are deleted with the account.
+
+## Data handling, takeout and deletion
+
+Proposal section 06 ("Data handling") and issue #94. Each kind of data has a written answer to three questions: can the member export it, can the member delete it, and if not, which obligation keeps it and for how long.
+
+### The data-category registry
+
+`DataCategories` (`app/services/data_categories.rb`) lists the nine categories of the v0.8 matrix. Takeout and deletion both read it. The member-facing name and the legal basis of each category are in `config/locales/data_handling.en.yml` (`data_categories.<key>`).
+
+| Category | On delete | Exported | Source models | Why / window |
+| --- | --- | --- | --- | --- |
+| `raw_id_images` | deleted | no | `Verification#id_document` | Purged 7 days after a pass. A stored image goes at once at deletion. |
+| `account_profile` | deleted | yes | `User`, `EmailAddress`, `UserAddress`, sessions, magic links, Ahoy rows, group memberships, app grants and roles, OAuth tokens, takeouts, dormancy warnings, TC entries, PaperTrail rows | No obligation. |
+| `guardian_contact` | deleted | yes | `GuardianConsent` | Only while a minor takes part. Also deleted when the member turns 18. |
+| `demographics` | folded | no | `DemographicRecord` | `DemographicsVault.fold!`, then the sealed record goes. |
+| `verification_audit` | retained | yes | `Verification`, `VerificationEvent`, `BreakGlassRecord` | Fraud and compliance. 3 years after deletion, then destroyed. Fraud-evidence hold. |
+| `financial` | retained | yes | `GrantDisbursement` | IRS, audit, funder terms. 7 years in full (longer per funder), then anonymized: the person's details go, the dates move to January 1 of their year, and the amount, the program and the year stay. |
+| `participation` | folded | yes | `ProgramParticipation` | Bands fold into the delete-time aggregates, then the row goes. |
+| `funder_records` | retained | yes | `ProgramParticipation` (funder requires it) | The funder's window, then folded. |
+| `knot` | retained | no | `Knot`, `KnotHash`, `ProgramGrant` | One-way hashes, the flag and the grants. Identifies nobody. |
+
+`spec/services/deletion_pipeline_matrix_spec.rb` has one example for each category. It is the acceptance test of the pipeline.
+
+The proposal has no row for Thread Count entries. They are in `account_profile`: deleted with the account and never exported (members never see TC).
+
+### Deletion requests and the human review
+
+```mermaid
+stateDiagram-v2
+  [*] --> pending_review: member asks, or the dormancy job asks
+  pending_review --> approved: identity team, authenticity check passed, note
+  pending_review --> rejected: identity team, check failed, reason
+  pending_review --> cancelled: member cancels, or a sign-in (dormancy)
+  approved --> running: RunDeletionPipelineJob
+  running --> completed: all four steps done
+  running --> failed: a step raised
+  failed --> running: identity team runs it again
+  completed --> [*]
+```
+
+- The member asks on `/profile/delete`. The member ticks a box and types `DELETE`.
+- A human on the identity team reviews every request (`/admin/deletion_requests`). It is an authenticity check, not a judgment call. The reviewer must be on the identity team, have the admin role, not be the member, and outrank the member (`UserAdminPermissions#manage?`).
+- The review is due `deletion.review_sla_days` (14) after the request. The deletion is complete by `deletion.complete_within_days` (30). The member page, the admin queue and the admin page show the dates. `DeletionReviewReminderJob` emails the identity team leads each day while a review is overdue.
+- After completion the `deletion_requests` row stays as the log of the deletion. It has no `user_id`, the receipt address is emptied after the receipt is sent, and the receipt lists categories, not values. No other row about the member stays: there is no return capsule, no recovery code and no archive row.
+
+### The pipeline
+
+`DeletionPipeline.run!` runs exactly four steps, in this order. Steps 1 to 3 run in one database transaction, so a failure before step 3 ends leaves the identity intact. Step 4 runs after the commit.
+
+```mermaid
+sequenceDiagram
+  participant J as RunDeletionPipelineJob
+  participant P as DeletionPipeline
+  participant A as delete_time_aggregates
+  participant V as DemographicsVault
+  participant K as KnotLinker
+  participant DB as Database
+  participant M as Member (email)
+  J->>P: run!(request)
+  Note over P,DB: one transaction
+  P->>A: 1. add bands of each participation (not funder-kept rows)
+  P->>V: 1. fold!(user, cohorts: year + program-year)
+  P->>K: 2. write_record_and_detach!(user)
+  P->>DB: 3. purge the ID image, start the audit window
+  P->>DB: 3. delete guardian contact, detach funder-kept rows and disbursements
+  P->>DB: 3. destroy the user (PaperTrail off), scrub PaperTrail rows
+  Note over P,DB: commit
+  P->>M: 4. deletion receipt (no Ahoy history)
+  P->>DB: forget the receipt address, log the run
+```
+
+- Every run is a `DeletionRun` row with each step and its status (`done`, `failed`, `rolled_back`, `done_earlier`) and the first line of the error. The row stays after the account is gone, so it does not keep the next lines: a database error puts row values there.
+- Step 3 is real deletion: `user.destroy!`, not a soft delete. It deletes the PaperTrail rows of the user and of the records that belong to them (email addresses, group memberships, sessions, app grants, app roles, guardian consents), and empties `whodunnit` where the user was the author. It also finds the PaperTrail rows of those records that the member deleted earlier (an old email address, a signed-out session) by the account id in the stored object, and deletes them. It deletes the Ahoy events of the user, the receipt address on earlier rejected or cancelled requests, and the takeout files.
+- A retry after a failed step 4 sends only the receipt again. The aggregates are not counted twice.
+- The receipt email turns off Ahoy history, so the address of a deleted member is not stored in `ahoy_messages`.
+- The admin panel has no delete action. An account is deleted only through a deletion request, so every deletion runs the pipeline and sends the receipt.
+
+### Delete-time aggregates
+
+`DeleteTimeAggregates` keeps running totals in `delete_time_aggregates`: one count for each combination of program, year, outcome, age band, region (country of the address) and amount band. The table has no `user_id`, no timestamps and a random UUID id. Demographic bands do not come here: the app can't open the vault, so `DemographicsVault.fold!` parks the envelope for the next reporting run (see "Delete-time folding" above).
+
+Reports (`/admin/delete_time_aggregates`) read the totals through `DemographicsReport.suppress` with the vault's threshold, so both use the same small-count suppression.
+
+Known limit: Blazer can read the raw counts. A new cell with a count of 1 right after a deletion can show that a member left. The counts hold only bands.
+
+### Takeout
+
+```mermaid
+flowchart LR
+  A[Member: /profile/export] --> B[Takeout.request!]
+  B --> C[BuildTakeoutJob]
+  C --> D[Takeout.build: every exportable category]
+  D --> E[(Encrypted JSON attachment)]
+  E --> F[Email: your copy is ready]
+  F --> G[Member signs in and downloads]
+  E --> H[DataRetention::Sweeps deletes it after takeout.download_days]
+```
+
+- One export at a time, and not more often than `takeout.cooldown_hours`.
+- Not in the export: demographics (no read path for one member), raw ID images, the Knot, Thread Count. The file lists what is not included and why.
+- An admin who impersonates a member can't ask for an export or a deletion.
+
+### Funder profiles
+
+No funder has signed yet. The design covers the usual contract terms now, so the first funder needs only config. Each funder is a profile under `funders` in `config/kyc/data_retention.yml`, and `program_funders` maps each program to a list of funder keys (a program can have more than one funder). `FunderProfiles` reads them.
+
+```yaml
+funders:
+  example_funder:
+    name: Example Foundation               # required
+    contract_reference: "Grant 2027-014"   # where the contract is
+    financial_keep_years: 10               # disbursements kept in full
+    individual_record_years: 3             # individual participation records kept after deletion
+    award_ends_on: 2028-06-30              # with post_award_keep_years
+    post_award_keep_years: 5
+    report_fields: [age_band, gender_identity]
+    small_count_threshold: 20
+    amount_reporting: bands                # or totals
+    report_cadence: quarterly              # monthly, quarterly, annual or end_of_award
+    requires_member_consent: true
+    eligibility:
+      min_age: 13
+      max_age: 18
+      countries: [US, CA]
+program_funders:
+  ganymede: [example_funder]
+```
+
+| Key | Meaning | Default |
+| --- | --- | --- |
+| `name` | The funder's name. Required. | none |
+| `contract_reference` | Where the contract is (for example the Adobe Sign or Drive reference). | empty |
+| `financial_keep_years` | Years a grant disbursement is kept in full. | `financial.keep_years` (7) |
+| `individual_record_years` | Years an individual participation record is kept after the account is deleted. Empty: the record folds into the aggregates at deletion. | empty |
+| `award_ends_on`, `post_award_keep_years` | A record is kept until the later of its window and `award_ends_on` + `post_award_keep_years`. | empty |
+| `report_fields` | The demographic fields the funder may receive, in aggregate only: `age_band` and the questions in `config/demographics.yml`. | none (member counts only) |
+| `small_count_threshold` | The funder's threshold. It can only be stricter (higher) than the global `small_count_threshold`, never lower. | the global value (10) |
+| `amount_reporting` | `bands` (members per amount band) or `totals` (sums per program and year, never a per-person amount). | `bands` |
+| `report_cadence` | `monthly`, `quarterly`, `annual` or `end_of_award`. Recorded for the report schedule. | `annual` |
+| `requires_member_consent` | When true, a member counts in the funder's report only with a live `FunderConsent`. | false |
+| `eligibility` | `min_age`, `max_age`, `countries`. Recorded and shown on the report only. Weave does not enforce it, because grants stay manual. | empty |
+
+Rules:
+
+- Weave checks the profiles at boot (`config/initializers/funder_profiles.rb`). An unknown key, a bad value, a report field that is not in `config/demographics.yml`, a threshold below the global one, or a program funder with no profile stops the app with an error that names the funder and the key.
+- Each `ProgramParticipation` and `GrantDisbursement` keeps its own `funder`. For a program with one funder, the record keeps that funder. For a program with more than one, the record names its funder (`ProgramParticipation.record!(..., funder:)`), or it names none.
+- Retention always uses the longest window that applies: the record's own funder, or every funder of its program when it names none (`DataRetention.financial_retention_ends_on`, `DataRetention.individual_record_until`).
+- `FunderConsent` (member, funder, `given_at`, `withdrawn_at`) holds the consent. The member gives or withdraws it on the demographics page. The copy is in `config/locales/demographics.en.yml` (`funder_consents`). The rows are account data: deletion removes them, and takeout exports them.
+
+```mermaid
+flowchart TD
+  P[Funder profile] --> M{requires_member_consent?}
+  M -- yes --> C[Live members with a FunderConsent]
+  M -- no --> A[Live members of the funder's programs]
+  C --> R[FunderReport]
+  A --> R
+  A --> D[Departed totals and delete-time aggregates]
+  D --> R
+  R --> F[Only report_fields]
+  F --> T[The funder's threshold]
+  T --> X[Amounts: bands or totals]
+  X --> V[Admin preview: /admin/funder_reports]
+```
+
+- `FunderReport.build(funder)` builds the aggregate report. The demographic counts come from the reporting run (`DemographicsReport.generate!` saves each funder's counts under `results["funders"]`), because only that run can open the vault. The delete-time aggregates and the amounts come from the database.
+- The members of a funder's report are the live members with a participation that names the funder, or that names no funder in a program whose only funder is this one.
+- For a consent funder, departed members and the delete-time aggregates are left out, because their consent can't be shown.
+- With `totals`, a sum shows only when at least the threshold number of members got money, so a total can't be one person's amount.
+- The admin page `/admin/funder_reports` previews each report. There is no export and no send yet.
+
+### Retention jobs
+
+| Job | When | What |
+| --- | --- | --- |
+| `DataRetentionJob` | Daily | `DataRetention::Sweeps`: audit records past their window (not under the fraud-evidence hold), financial anonymization, funder records that fold, guardian contact of adults, expired takeouts. |
+| `DormancyJob` | Daily | Warnings 60 and 7 days before the 5-year cutoff. Then a dormancy deletion request, through the same human review. |
+| `DeletionReviewReminderJob` | Daily | Emails the identity team leads about overdue reviews. |
+
+The fraud-evidence hold: an attempt linked to a blacklisted Knot stays while the flag stands. When a two-key sign-off clears the flag, the normal 3-year window applies at the next run.
+
+Dormancy: the clock starts at `User#last_active_at` (the newest session activity, or the sign-up). Any sign-in resets it: old warnings stop counting and an open dormancy request is cancelled. The request is made only after the last warning went out at least 7 days before.
+
+### "What we do with your data"
+
+Every place that collects or handles this data links to `Weave.data_page_url`: the site-wide footer (`shared/_data_footer`, in every layout and on the home page), sign-up, the profile page, verification, the demographics form, the guardian consent step and page, the takeout and deletion pages, and every email (the mailer layout). `spec/requests/data_page_links_spec.rb` and `spec/mailers/data_handling_mailer_spec.rb` check each one.
+
+### Open values
+
+The values are in `config/kyc/data_retention.yml`.
+
+| Key | Value | State |
+| --- | --- | --- |
+| `deletion.review_sla_days` | 14 | Locked |
+| `deletion.complete_within_days` | 30 | Locked |
+| `dormancy.inactive_years` | 5 | Locked |
+| `dormancy.warning_days_before` | 60, 7 | Locked |
+| `verification_audit.keep_years_after_deletion` | 3 | Locked |
+| `financial.keep_years` | 7 | Locked (longer per funder) |
+| `guardian_contact_until_age` | 18 | Locked |
+| `takeout.download_days` | 7 | Locked |
+| `takeout.cooldown_hours` | 24 | Locked |
+| `amount_band_starts` | 0, 1, 100, 250, 500, 1000, 2500, 5000: $0 (stored as `none`), $1-99, $100-249, $250-499, $500-999, $1,000-2,499, $2,500-4,999, $5,000+ | Locked |
+| `funders`, `program_funders` | empty | No funder has signed. See "Funder profiles" and the checklist in `docs/KYC_ROLLOUT.md`. |
+
+### Known gaps
+
+- `GrantDisbursement` and `ProgramParticipation` have no admin screens yet. `KnotGrants.record` writes a participation row. Finance records disbursements in code until a screen exists.
+- `GuardianConsent::KEEP_AFTER_ACCOUNT_DELETION` (1 year) still applies to accounts deleted outside the pipeline. The pipeline deletes the guardian contact at once, as the matrix says.
+- Deletion does not remove the member from the Slack workspace.

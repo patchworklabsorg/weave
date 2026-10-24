@@ -6,6 +6,7 @@
 # Database name: primary
 #
 #  id                        :bigint           not null, primary key
+#  account_deleted_at        :datetime
 #  age_consistent            :boolean
 #  call_scheduled_for        :datetime
 #  decided_at                :datetime
@@ -40,6 +41,7 @@
 #
 # Indexes
 #
+#  index_verifications_on_account_deleted_at         (account_deleted_at)
 #  index_verifications_on_call_scheduled_by_id       (call_scheduled_by_id)
 #  index_verifications_on_escalation_resolved_by_id  (escalation_resolved_by_id)
 #  index_verifications_on_guardian_consent_id        (guardian_consent_id)

@@ -75,6 +75,30 @@
     </div>
   <% end %>
 
+  <% consent_funders = FunderProfiles.all.select(&:consent_required?) %>
+  <% if consent_funders.any? %>
+    <div class="patch p-6 space-y-3">
+      <h2 class="font-display text-lg font-bold text-ink"><%= t("funder_consents.title") %></h2>
+      <p class="text-sm text-ink-soft"><%= t("funder_consents.intro") %></p>
+      <% live = current_user.funder_consents.live.pluck(:funder) %>
+      <ul class="space-y-3">
+        <% consent_funders.each do |profile| %>
+          <li class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <span class="text-sm text-ink">
+              <%= profile.name %>:
+              <%= live.include?(profile.key) ? t("funder_consents.counted") : t("funder_consents.not_counted") %>
+            </span>
+            <% if live.include?(profile.key) %>
+              <%= button_to t("funder_consents.withdraw"), funder_consent_path(profile.key), method: :delete, class: "btn-stitch-ghost" %>
+            <% else %>
+              <%= button_to t("funder_consents.give"), funder_consents_path(funder: profile.key), method: :post, class: "btn-stitch-ghost" %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
   <% if @answered_at %>
     <div class="patch p-6 space-y-3">
       <h2 class="font-display text-lg font-bold text-ink"><%= t("demographics.form.withdraw_title") %></h2>

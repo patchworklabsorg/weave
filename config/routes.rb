@@ -115,7 +115,6 @@
 #                                admin_user GET    /admin/users/:id(.:format)                                                                        admin/users#show
 #                                           PATCH  /admin/users/:id(.:format)                                                                        admin/users#update
 #                                           PUT    /admin/users/:id(.:format)                                                                        admin/users#update
-#                                           DELETE /admin/users/:id(.:format)                                                                        admin/users#destroy
 #             review_admin_guardian_consent PATCH  /admin/guardian_consents/:id/review(.:format)                                                     admin/guardian_consents#review
 #                   admin_guardian_consents GET    /admin/guardian_consents(.:format)                                                                admin/guardian_consents#index
 #                   admin_group_memberships POST   /admin/groups/:group_id/memberships(.:format)                                                     admin/group_memberships#create
@@ -468,6 +467,13 @@ Rails.application.routes.draw do
   # The member's self-reported demographics: answer, answer again, or take
   # the answers back. Write-only (see DemographicsVault).
   resource :demographics, path: "profile/demographics", only: [:show, :update, :destroy]
+  # Consent to be counted in a funder's report (see FunderConsent).
+  resources :funder_consents, path: "profile/funder_consents", param: :funder, only: [:create, :destroy]
+
+  # Data takeout and account deletion (see Takeout and DeletionReview).
+  resource :takeout, path: "profile/export", only: [:show, :create]
+  get "profile/export/:id/download", to: "takeouts#download", as: :download_takeout
+  resource :deletion_request, path: "profile/delete", only: [:show, :create, :destroy]
 
   # Email confirmation routes
   get "/email_confirmation", to: "email_confirmations#show", as: :email_confirmation
@@ -525,7 +531,9 @@ Rails.application.routes.draw do
       get :search, to: "search#index", defaults: { format: :json }
 
       # Resources and sub-resources
-      resources :users do
+      # No destroy: accounts are deleted only through a deletion request, which
+      # runs the deletion pipeline (DeletionPipeline) and sends the receipt.
+      resources :users, except: [:destroy] do
         member do
           post :impersonate
           patch :regen_pid
@@ -623,6 +631,20 @@ Rails.application.routes.draw do
       # Demographics aggregates for funder reports. Counts only, never a
       # member's answers (see DemographicsReport).
       resource :demographics, only: [:show]
+      # A preview of each funder's aggregate report (see FunderReport). No
+      # export and no send yet.
+      resources :funder_reports, param: :funder, only: [:index, :show]
+
+      # Deletion requests for the identity team to review (see
+      # DeletionReview), and the delete-time aggregates (counts only).
+      resources :deletion_requests, only: [:index, :show] do
+        member do
+          patch :approve
+          patch :reject
+          patch :rerun
+        end
+      end
+      resource :delete_time_aggregates, only: [:show]
 
       resources :services do
         member do

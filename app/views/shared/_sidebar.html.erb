@@ -23,6 +23,10 @@
               active: controller_name.in?(%w[knots knot_change_requests]) %>
       <% end %>
       <%= nav_link "Demographics", admin_demographics_path, icon: :chart_pie %>
+      <% if current_user&.identity_team %>
+        <%= nav_link "Deletion", admin_deletion_requests_path, icon: :trash_2 %>
+      <% end %>
+      <%= nav_link "Funder reports", admin_funder_reports_path, icon: :file_chart_column %>
     </div>
     <div class="nav-section">
       <div class="nav-section-title">Apps</div>

@@ -1,0 +1,115 @@
+# Values for data handling, takeout and deletion (see DataRetention,
+# DataCategories and docs/KYC.md). Values marked LOCKED were decided on
+# 2026-10-12. Counsel can still change them here: no code change is
+# necessary.
+shared: &shared
+  deletion:
+    # Days for the identity team to do the human check of a deletion request.
+    review_sla_days: 14 # LOCKED
+    # Days from the request until the deletion is complete.
+    complete_within_days: 30 # LOCKED
+
+  takeout:
+    # Days the member can download an export before Weave deletes the file.
+    download_days: 7 # LOCKED
+    # Hours a member waits between two exports.
+    cooldown_hours: 24 # LOCKED
+
+  dormancy:
+    # Years with no sign-in after which the deletion pipeline removes the
+    # account. Any sign-in resets the clock.
+    inactive_years: 5 # LOCKED
+    # Warning emails, in days before the cutoff.
+    warning_days_before: [60, 7] # LOCKED
+
+  verification_audit:
+    # Years Weave keeps the verification audit records after the account is
+    # deleted. A blacklisted member's records are held while the flag
+    # stands (the fraud-evidence hold).
+    keep_years_after_deletion: 3 # LOCKED
+
+  financial:
+    # Years Weave keeps a grant disbursement in full, from the date it was
+    # paid. Then the person's details are removed and the amount, the
+    # program and the year stay. A funder's terms can make it longer (see
+    # funders below).
+    keep_years: 7 # LOCKED
+
+  # Amount bands for the delete-time aggregates, as the lower bound of each
+  # band in whole currency units. An amount is never stored in an aggregate.
+  # LOCKED (2026-10-13): $0 (stored as "none"), $1-99, $100-249, $250-499,
+  # $500-999, $1,000-2,499, $2,500-4,999, $5,000+.
+  amount_band_starts: [0, 1, 100, 250, 500, 1000, 2500, 5000] # LOCKED
+
+  # Guardian contact: kept until the member turns this age or leaves the
+  # program (deletes the account).
+  guardian_contact_until_age: 18 # LOCKED
+
+  # Funder profiles (see FunderProfiles and docs/KYC.md, "Funder profiles").
+  # The key is what a ProgramParticipation or a GrantDisbursement stores in
+  # `funder`. Weave checks every profile at boot: an unknown key or a bad
+  # value stops the app with a clear error. Every key except name is
+  # optional.
+  #
+  #   example_funder:
+  #     name: Example Foundation               # required
+  #     contract_reference: "Grant 2027-014"   # where the contract is
+  #     financial_keep_years: 10               # disbursements kept in full (the longer of this and financial.keep_years)
+  #     individual_record_years: 3             # individual participation records kept after deletion (empty: fold at deletion)
+  #     award_ends_on: 2028-06-30              # with post_award_keep_years: kept until the later of the windows
+  #     post_award_keep_years: 5
+  #     report_fields: [age_band, gender_identity]  # aggregate fields only; each must be in config/demographics.yml
+  #     small_count_threshold: 20              # only stricter (higher) than the global threshold
+  #     amount_reporting: bands                # bands (default) or totals (sums only, never a per-person amount)
+  #     report_cadence: quarterly              # monthly, quarterly, annual (default) or end_of_award
+  #     requires_member_consent: true          # count a member only with their consent (FunderConsent)
+  #     eligibility:                           # recorded and reported only, never enforced
+  #       min_age: 13
+  #       max_age: 18
+  #       countries: [US, CA]
+  #
+  # No funder has signed yet. Add the first one with the checklist in
+  # docs/KYC_ROLLOUT.md.
+  funders: {}
+
+  # The funders of each program, by program key (see config/kyc/knot.yml): a
+  # list, because a program can have more than one funder. A record of a
+  # program with one funder keeps that funder. With more than one, the record
+  # names its funder, or retention uses the longest window of all of them.
+  program_funders: {}
+
+development:
+  <<: *shared
+
+test:
+  <<: *shared
+  # Test funders only. The specs use them; no real funder is here.
+  funders:
+    test_funder:
+      name: Test Funder
+      financial_keep_years: 10
+      individual_record_years: 2
+    plain_funder:
+      name: Plain Funder
+      financial_keep_years:
+      individual_record_years:
+    consent_funder:
+      name: Consent Funder
+      contract_reference: "TEST-2027-001"
+      financial_keep_years: 8
+      award_ends_on: 2030-06-30
+      post_award_keep_years: 6
+      report_fields: [age_band, gender_identity]
+      small_count_threshold: 5
+      amount_reporting: totals
+      report_cadence: quarterly
+      requires_member_consent: true
+      eligibility:
+        min_age: 13
+        max_age: 18
+        countries: [US, CA]
+  program_funders:
+    ganymede: [test_funder, plain_funder]
+
+production:
+  <<: *shared

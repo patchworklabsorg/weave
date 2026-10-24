@@ -1,0 +1,13 @@
+<p style="margin: 0 0 16px 0; color: #2a2050;"><%= t("data_handling.mailer.deletion_receipt.intro") %></p>
+<% { "removed" => true, "retained" => true, "none_held" => false }.each do |section, with_basis| %>
+  <% keys = Array(@receipt[section]) %>
+  <% next if keys.empty? %>
+  <h3 style="margin: 16px 0 8px 0; color: #2a2050; font-size: 16px;"><%= t("data_handling.mailer.deletion_receipt.#{section}") %></h3>
+  <ul style="margin: 0 0 16px 0; padding-left: 20px; color: #2a2050;">
+    <% keys.each do |key| %>
+      <li><strong><%= @categories[key].name %></strong><% if with_basis %>: <%= @categories[key].legal_basis %><% end %></li>
+    <% end %>
+  </ul>
+<% end %>
+<p style="margin: 0 0 16px 0; color: #2a2050;"><%= t("data_handling.mailer.deletion_receipt.closing") %></p>
+<p style="margin: 0 0 16px 0;"><a href="<%= @data_page_url %>" style="color: #6c3ec1;"><%= t("data_handling.data_page_link") %></a></p>

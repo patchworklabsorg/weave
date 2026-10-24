@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 class Admin::UsersController < Admin::BaseController
-  before_action :set_user, only: [:show, :edit, :update, :destroy, :impersonate, :regen_pid, :invite_to_slack, :code_of_conduct_exemption]
+  before_action :set_user, only: [:show, :edit, :update, :impersonate, :regen_pid, :invite_to_slack, :code_of_conduct_exemption]
   before_action :ensure_can_view_user, only: [:show]
-  before_action :ensure_can_manage_user, only: [:edit, :update, :destroy, :regen_pid]
+  before_action :ensure_can_manage_user, only: [:edit, :update, :regen_pid]
   before_action :ensure_can_impersonate, only: [:impersonate]
   before_action :ensure_not_already_impersonating, only: [:impersonate]
   before_action :require_superadmin, only: [:regen_pid, :code_of_conduct_exemption]
@@ -67,15 +67,6 @@ class Admin::UsersController < Admin::BaseController
       redirect_to admin_user_path(@user), notice: "User was successfully updated."
     else
       render :edit, status: :unprocessable_content
-    end
-  end
-
-  def destroy
-    if @user == current_user
-      redirect_to admin_users_path, alert: "You cannot delete yourself."
-    else
-      @user.destroy
-      redirect_to admin_users_path, notice: "User was successfully deleted."
     end
   end
 

@@ -82,7 +82,7 @@ RSpec.describe "Guardian consent", type: :request do
 
       expect(response.body).to include("some members are adults", "an identifier for your device",
                                        "Before Ada can get a budget",
-                                       "1 year after the account is deleted", "https://patchworklabs.org/privacy")
+                                       "When Ada turns 18 or deletes their account, we delete them", "https://patchworklabs.org/privacy")
     end
 
     it "answers 404 for an unknown token" do

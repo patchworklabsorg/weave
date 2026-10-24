@@ -365,6 +365,49 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.index ["user_id"], name: "index_console_access_requests_on_user_id"
   end
 
+  create_table "delete_time_aggregates", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "program", null: false
+    t.integer "year", null: false
+    t.string "outcome", null: false
+    t.string "age_band", null: false
+    t.string "region", null: false
+    t.string "amount_band", null: false
+    t.integer "count", default: 0, null: false
+    t.index ["program", "year", "outcome", "age_band", "region", "amount_band"], name: "index_delete_time_aggregates_on_bands", unique: true
+  end
+
+  create_table "deletion_requests", force: :cascade do |t|
+    t.bigint "user_id"
+    t.string "source", default: "member", null: false
+    t.string "status", default: "pending_review", null: false
+    t.datetime "requested_at", null: false
+    t.datetime "review_due_at", null: false
+    t.datetime "complete_by", null: false
+    t.bigint "reviewed_by_id"
+    t.datetime "reviewed_at"
+    t.text "review_note"
+    t.text "receipt_email_ciphertext"
+    t.jsonb "receipt", default: {}, null: false
+    t.datetime "receipt_sent_at"
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["reviewed_by_id"], name: "index_deletion_requests_on_reviewed_by_id"
+    t.index ["status"], name: "index_deletion_requests_on_status"
+    t.index ["user_id"], name: "index_deletion_requests_on_user_id"
+  end
+
+  create_table "deletion_runs", force: :cascade do |t|
+    t.bigint "deletion_request_id", null: false
+    t.string "outcome", default: "running", null: false
+    t.jsonb "steps", default: [], null: false
+    t.string "error_class"
+    t.text "error_message"
+    t.datetime "started_at", null: false
+    t.datetime "finished_at"
+    t.index ["deletion_request_id"], name: "index_deletion_runs_on_deletion_request_id"
+  end
+
   create_table "demographic_departed_totals", force: :cascade do |t|
     t.text "envelope", null: false
     t.string "key_id", null: false
@@ -397,6 +440,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["generated_at"], name: "index_demographic_reports_on_generated_at"
+  end
+
+  create_table "dormancy_warnings", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.integer "days_before", null: false
+    t.datetime "last_active_at", null: false
+    t.datetime "sent_at", null: false
+    t.index ["user_id", "days_before", "last_active_at"], name: "index_dormancy_warnings_unique", unique: true
+    t.index ["user_id"], name: "index_dormancy_warnings_on_user_id"
   end
 
   create_table "email_addresses", force: :cascade do |t|
@@ -439,6 +491,36 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.index ["slug", "sluggable_type", "scope"], name: "index_friendly_id_slugs_on_slug_and_sluggable_type_and_scope", unique: true
     t.index ["slug", "sluggable_type"], name: "index_friendly_id_slugs_on_slug_and_sluggable_type"
     t.index ["sluggable_type", "sluggable_id"], name: "index_friendly_id_slugs_on_sluggable_type_and_sluggable_id"
+  end
+
+  create_table "funder_consents", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "funder", null: false
+    t.datetime "given_at", null: false
+    t.datetime "withdrawn_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["funder"], name: "index_funder_consents_on_funder"
+    t.index ["user_id", "funder"], name: "index_funder_consents_on_user_and_funder_live", unique: true, where: "(withdrawn_at IS NULL)"
+    t.index ["user_id"], name: "index_funder_consents_on_user_id"
+  end
+
+  create_table "grant_disbursements", force: :cascade do |t|
+    t.bigint "user_id"
+    t.string "program", null: false
+    t.string "funder"
+    t.date "disbursed_on", null: false
+    t.integer "amount_cents", null: false
+    t.string "currency", default: "USD", null: false
+    t.text "payee_name_ciphertext"
+    t.text "payee_email_ciphertext"
+    t.text "reference_ciphertext"
+    t.datetime "detached_at"
+    t.datetime "anonymized_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["disbursed_on"], name: "index_grant_disbursements_on_disbursed_on"
+    t.index ["user_id"], name: "index_grant_disbursements_on_user_id"
   end
 
   create_table "group_memberships", force: :cascade do |t|
@@ -647,6 +729,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.index ["knot_id"], name: "index_program_grants_on_knot_id"
   end
 
+  create_table "program_participations", force: :cascade do |t|
+    t.bigint "user_id"
+    t.string "program", null: false
+    t.integer "year", null: false
+    t.string "outcome", null: false
+    t.string "funder"
+    t.string "age_band"
+    t.string "region"
+    t.string "amount_band"
+    t.datetime "detached_at"
+    t.datetime "retained_until"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["retained_until"], name: "index_program_participations_on_retained_until"
+    t.index ["user_id", "program", "year"], name: "index_program_participations_on_user_id_and_program_and_year", unique: true, where: "(user_id IS NOT NULL)"
+    t.index ["user_id"], name: "index_program_participations_on_user_id"
+  end
+
   create_table "rollups", force: :cascade do |t|
     t.string "name", null: false
     t.string "interval", null: false
@@ -732,6 +832,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.datetime "updated_at", null: false
     t.index ["session_id"], name: "index_sessions_on_session_id", unique: true
     t.index ["updated_at"], name: "index_sessions_on_updated_at"
+  end
+
+  create_table "takeout_requests", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "ready_at"
+    t.datetime "expires_at"
+    t.datetime "downloaded_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_takeout_requests_on_user_id"
   end
 
   create_table "thread_count_entries", force: :cascade do |t|
@@ -928,6 +1039,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.datetime "updated_at", null: false
     t.bigint "knot_id"
     t.string "knot_review_reason"
+    t.datetime "account_deleted_at"
+    t.index ["account_deleted_at"], name: "index_verifications_on_account_deleted_at"
     t.index ["call_scheduled_by_id"], name: "index_verifications_on_call_scheduled_by_id"
     t.index ["escalation_resolved_by_id"], name: "index_verifications_on_escalation_resolved_by_id"
     t.index ["guardian_consent_id"], name: "index_verifications_on_guardian_consent_id"
@@ -974,8 +1087,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   add_foreign_key "break_glass_records", "users", on_delete: :nullify
   add_foreign_key "break_glass_records", "verifications"
   add_foreign_key "console_access_requests", "users", on_delete: :nullify
+  add_foreign_key "deletion_requests", "users", column: "reviewed_by_id", on_delete: :nullify
+  add_foreign_key "deletion_requests", "users", on_delete: :nullify
+  add_foreign_key "deletion_runs", "deletion_requests", on_delete: :cascade
   add_foreign_key "demographic_records", "users", on_delete: :cascade
+  add_foreign_key "dormancy_warnings", "users", on_delete: :cascade
   add_foreign_key "email_addresses", "users"
+  add_foreign_key "funder_consents", "users", on_delete: :cascade
+  add_foreign_key "grant_disbursements", "users", on_delete: :nullify
   add_foreign_key "group_memberships", "groups"
   add_foreign_key "group_memberships", "users"
   add_foreign_key "group_memberships", "users", column: "added_by_id", on_delete: :nullify
@@ -999,12 +1118,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   add_foreign_key "oauth_access_tokens", "users", column: "resource_owner_id"
   add_foreign_key "oauth_openid_requests", "oauth_access_grants", column: "access_grant_id", on_delete: :cascade
   add_foreign_key "program_grants", "knots"
+  add_foreign_key "program_participations", "users", on_delete: :nullify
   add_foreign_key "service_key_usages", "service_keys"
   add_foreign_key "service_keys", "services"
   add_foreign_key "service_keys", "users", column: "created_by_id"
   add_foreign_key "service_webhooks", "services"
   add_foreign_key "service_webhooks", "users", column: "created_by_id"
   add_foreign_key "services", "users", column: "created_by_id"
+  add_foreign_key "takeout_requests", "users", on_delete: :cascade
   add_foreign_key "thread_count_entries", "services", on_delete: :nullify
   add_foreign_key "thread_count_entries", "thread_count_entries", column: "reverses_id", on_delete: :cascade
   add_foreign_key "thread_count_entries", "users", column: "author_id", on_delete: :nullify

@@ -54,10 +54,10 @@ RSpec.describe "Admin user management permissions", type: :request do
         expect(response).to redirect_to(admin_users_path)
       end
 
-      it "can't delete an owner" do
-        delete admin_user_path(owner)
+      it "can't delete anyone: deletion goes through a deletion request" do
+        delete "/admin/users/#{owner.p_id}"
 
-        expect(response).to redirect_to(admin_users_path)
+        expect(response).to have_http_status(:not_found)
         expect(User.exists?(owner.id)).to be(true)
       end
 

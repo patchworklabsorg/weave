@@ -71,3 +71,22 @@ deliver_break_glass_notices:
 break_glass_board_report:
   class: BreakGlassBoardReportJob
   schedule: "0 9 1 * *"
+
+# Apply the data retention windows: verification audit records, financial
+# anonymization, funder-required records, guardian contact of adults and
+# expired takeout files (see DataRetention::Sweeps and
+# config/kyc/data_retention.yml).
+data_retention:
+  class: DataRetentionJob
+  schedule: every day at 5am
+
+# Warn dormant accounts and send them to the deletion review after the
+# dormancy cutoff (see DormancyJob).
+dormancy:
+  class: DormancyJob
+  schedule: every day at 5:30am
+
+# Remind the identity team leads of deletion requests past their review date.
+deletion_review_reminder:
+  class: DeletionReviewReminderJob
+  schedule: every day at 9am

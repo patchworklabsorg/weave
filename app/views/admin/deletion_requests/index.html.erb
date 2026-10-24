@@ -1,0 +1,43 @@
+<% content_for :title, "Deletion requests" %>
+
+<div class="mb-6 flex flex-wrap justify-between items-start gap-4">
+  <div>
+    <h2 class="font-display text-2xl font-bold text-ink mb-2">Deletion requests</h2>
+    <p class="text-ink-soft">
+      Check that each request is authentic: it came from the member, or the account is really dormant. This is not a
+      judgment call. Review each request by its due date (<%= DataRetention.review_sla.in_days.to_i %> days).
+      <%= link_to "What we do with your data", Weave.data_page_url, target: "_blank", rel: "noopener noreferrer", class: "text-grape underline" %>
+    </p>
+  </div>
+  <%= link_to "Departed totals", admin_delete_time_aggregates_path, class: "btn-stitch-ghost" %>
+</div>
+
+<%
+  sections = [
+    ["Waiting for review", @pending, ->(r) { "Review due #{r.review_due_at.to_date.to_fs(:long)}#{' (overdue)' if r.review_overdue?}" }],
+    ["Approved, running or failed", @active, ->(r) { "#{r.status.humanize}, complete by #{r.complete_by.to_date.to_fs(:long)}" }],
+    ["Recently closed", @recent, ->(r) { "#{r.status.humanize}, #{time_ago_in_words(r.updated_at)} ago" }]
+  ]
+%>
+
+<% sections.each do |title, requests, detail| %>
+  <h3 class="font-display text-lg font-bold text-ink mb-3"><%= title %></h3>
+  <div class="patch overflow-hidden mb-8">
+    <% if requests.any? %>
+      <ul class="divide-y divide-ink-soft/10">
+        <% requests.each do |request| %>
+          <li class="px-6 py-3 flex flex-wrap justify-between gap-2">
+            <span class="text-sm text-ink">
+              <%= link_to request.public_id, admin_deletion_request_path(request), class: "font-mono hover:text-grape" %>
+              <%= request.user&.full_name || "A deleted account" %>
+              <span class="text-ink-faint">(<%= request.source %>)</span>
+            </span>
+            <span class="text-sm <%= request.review_overdue? ? 'text-red-600' : 'text-ink-soft' %>"><%= detail.call(request) %></span>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="px-6 py-4 text-sm text-ink-faint">Nothing here.</p>
+    <% end %>
+  </div>
+<% end %>

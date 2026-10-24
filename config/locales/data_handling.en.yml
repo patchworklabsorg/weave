@@ -1,0 +1,109 @@
+# Text for data handling, takeout and deletion (see DataCategories,
+# DeletionPipeline, Takeout and docs/KYC.md). Members see this text. Keep it
+# in ASD-STE100 Simplified Technical English.
+en:
+  data_handling:
+    data_page_link: "What we do with your data"
+    footer: "Patchwork Labs keeps only the data it needs."
+    impersonating: "You can't do this while you impersonate a member."
+    profile:
+      title: "Your data"
+      intro: "You can get a copy of your data, or ask us to delete your account."
+      export: "Get a copy of your data"
+      delete: "Delete your account"
+    takeout:
+      title: "Get a copy of your data"
+      intro: "We put your data in one JSON file. When it is ready, we send you an email. You sign in to download it."
+      not_included: "Some data is not in the file. Your demographic answers are sealed, and nobody can read them for one person, not even for you. Your ID image is deleted soon after you pass. The Knot holds only one-way codes that identify nobody."
+      download_window: "You can download the file for %{days} days. Then we delete it."
+      button: "Make a copy of my data"
+      requested: "We are making your file. We will send you an email when it is ready."
+      history: "Your recent copies"
+      download: "Download"
+      statuses:
+        pending: "Being made"
+        ready: "Ready until %{date}"
+        failed: "Failed. Ask again."
+        expired: "Deleted"
+      errors:
+        pending: "We are still making your last file."
+        cooldown: "You asked for a copy recently. Try again tomorrow."
+        unavailable: "This file is not available. Ask for a new copy."
+    deletion:
+      title: "Delete your account"
+      intro: "We delete the data we do not have to keep. A person on our identity team checks each request first, to make sure that it came from you. This is not a decision about you."
+      sla: "We check your request in %{review_days} days or less. The deletion is complete in %{complete_days} days or less."
+      what_happens: "What happens to each kind of data"
+      outcomes:
+        deleted: "Deleted"
+        folded: "Added to anonymous totals, then deleted"
+        retained: "Kept for a fixed time"
+      knot_note: "A one-way code (the Knot) stays. It identifies nobody. It stops a person from getting the same grant two times under a new account."
+      confirm_word: "DELETE"
+      understand: "I understand that this deletes my account. I can't undo it."
+      confirmation_label: "Type DELETE to continue"
+      button: "Ask to delete my account"
+      requested: "We got your request. We will check it and send you an email."
+      pending: "Your request is waiting for review. We will check it by %{date}."
+      in_progress: "We are deleting your account. We will send you a receipt."
+      cancel: "Cancel my request"
+      cancelled: "We cancelled your request. Your account stays."
+      export_first: "Do you want a copy of your data first?"
+      errors:
+        confirmation: "Tick the box and type DELETE."
+        already_open: "You already have a deletion request."
+        cannot_cancel: "You can't cancel this request now."
+    mailer:
+      takeout_ready:
+        subject: "Your copy of your Weave data is ready"
+        body: "Hi %{first_name}, your copy of your data is ready. Sign in to download it. We delete the file on %{date}."
+        action: "Download your data"
+      deletion_requested:
+        subject: "We got your request to delete your Weave account"
+        body: "Hi %{first_name}, we got your request to delete your account. A person on our identity team will check it by %{date}, to make sure that it came from you. If you did not ask for this, sign in and cancel the request."
+        action: "See your request"
+      deletion_rejected:
+        subject: "We could not confirm your deletion request"
+        body: "We could not confirm that the request to delete your Weave account came from you. Your account stays. If you want to delete it, sign in and ask again, or reply to our support team."
+      deletion_receipt:
+        subject: "Your Weave account is deleted"
+        intro: "We deleted your Weave account. This is your receipt."
+        removed: "What we removed"
+        retained: "What we kept, and why"
+        none_held: "We did not hold this data about you"
+        closing: "We do not keep a copy of your account. If you come back, you start again."
+      dormancy_warning:
+        subject: "Your Weave account will be deleted in %{days} days"
+        body: "Hi %{first_name}, you have not signed in to Weave for a long time. We delete accounts that nobody uses. If you do not sign in by %{date}, we will delete your account. A person on our identity team checks this first."
+        action: "Sign in to keep your account"
+  data_categories:
+    raw_id_images:
+      name: "Images of your ID"
+      legal_basis: "We delete them %{image_days} days after you pass verification, before any request to delete."
+      not_exported: "Deleted soon after verification. Until then, two of the three key holders must approve before anyone opens them, and each opening is logged."
+    account_profile:
+      name: "Account and profile"
+      legal_basis: "We have no obligation to keep it."
+    guardian_contact:
+      name: "Parent or guardian contact"
+      legal_basis: "We need it only while a member under %{guardian_age} takes part."
+    demographics:
+      name: "Demographic answers"
+      legal_basis: "The answers are added to anonymous totals for funder reports, then the sealed record is deleted."
+      not_exported: "Sealed. Nobody can read the answers of one person, not even the person."
+    verification_audit:
+      name: "Verification records"
+      legal_basis: "Fraud prevention and compliance. We keep them %{audit_years} years after the account is deleted, then destroy them. While an active fraud flag stands, we keep them until the flag is removed."
+    financial:
+      name: "Grant payments"
+      legal_basis: "Tax law (IRS), audits and funder award terms. We keep them in full for %{financial_years} years, or longer when a funder's terms say so. Then we remove your details and keep only the amount, the program and the year."
+    participation:
+      name: "Program participation"
+      legal_basis: "Added to anonymous totals for funder reports, then deleted."
+    funder_records:
+      name: "Records a funder requires"
+      legal_basis: "Only where a funder contract requires individual records, for that funder's time. Then we add them to anonymous totals and delete them."
+    knot:
+      name: "The Knot"
+      legal_basis: "One-way codes, a yes or no fraud flag and the program grants received. They identify nobody. They stop a person from getting the same grant two times."
+      not_exported: "One-way codes that identify nobody."

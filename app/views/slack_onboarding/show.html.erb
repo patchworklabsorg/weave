@@ -91,6 +91,7 @@
           <% else %>
             <p class="text-sm text-ink"><%= t("guardian_consent.form.intro") %></p>
             <p class="text-sm text-ink-soft"><%= t("guardian_consent.form.honesty") %></p>
+            <p class="text-sm"><%= link_to t("data_handling.data_page_link"), Weave.data_page_url, target: "_blank", rel: "noopener noreferrer", class: "text-grape underline decoration-dashed underline-offset-2" %></p>
             <%= form_with url: guardian_consent_request_path, method: :post, class: "space-y-4 text-left" do |form| %>
               <% [[:guardian_name, :text_field], [:guardian_email, :email_field]].each do |field, input| %>
                 <div class="field-group">

@@ -1,0 +1,5 @@
+<%= t("data_handling.mailer.takeout_ready.body", first_name: @user.first_name, date: @takeout.expires_at.to_date.to_fs(:long)) %>
+
+<%= t("data_handling.mailer.takeout_ready.action") %>: <%= @url %>
+
+<%= t("data_handling.data_page_link") %>: <%= @data_page_url %>

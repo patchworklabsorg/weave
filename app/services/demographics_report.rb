@@ -7,7 +7,8 @@
 #   2. Count the parked envelopes of deleted members (DemographicFold) into
 #      those totals for their cohorts, delete them, and seal the totals again.
 #   3. Count the live envelopes of current members.
-#   4. Apply small-count suppression and save a DemographicReport.
+#   4. Apply small-count suppression and save a DemographicReport, with
+#      each funder's own counts (FunderReport.run_results).
 #
 # Run it with `bin/rails demographics:report` in a process that has the
 # private key. The web app never has the key, so it can't run this.
@@ -37,14 +38,25 @@ module DemographicsReport
         save_departed!(reader, totals_row, departed) if folds_counted.positive?
 
         active = Tally.new
+        profiles = FunderProfiles.all
+        funder_members = profiles.to_h { |profile| [profile.key, FunderReport.member_ids(profile).to_set] }
+        funder_tallies = profiles.to_h { |profile| [profile.key, Tally.new] }
         DemographicRecord.find_each do |record|
           payload = open_envelope(reader, record.envelope)
-          payload ? active.add(payload) : unreadable += 1
+          next unreadable += 1 if payload.nil?
+
+          active.add(payload)
+          funder_members.each { |key, ids| funder_tallies[key].add(payload) if ids.include?(record.user_id) }
         end
 
         DemographicReport.create!(
           generated_at: Time.current, threshold:, run_by:, unreadable_count: unreadable, folds_counted:,
-          results: { "active" => suppress(active.to_h, threshold), "departed" => departed_results(departed, threshold) }
+          results: {
+            "active" => suppress(active.to_h, threshold), "departed" => departed_results(departed, threshold),
+            # Each funder's own counts, with its fields, threshold and
+            # consent rule (see FunderReport).
+            "funders" => profiles.to_h { |profile| [profile.key, FunderReport.run_results(profile, funder_tallies[profile.key].to_h, departed)] }
+          }
         )
       end
     end

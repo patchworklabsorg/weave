@@ -1,0 +1,99 @@
+<%# A preview of one funder's report (see FunderReport). Counts and sums only,
+    after the funder's own threshold. %>
+<% profile = @report.profile %>
+<% content_for :title, "Funder report: #{profile.name}" %>
+
+<%
+  # One block of suppressed counts: respondents and a table per field.
+  render_counts = lambda do |data|
+    capture do
+      concat tag.p("Members: #{demographic_count(data['respondents'], profile.threshold)}", class: "text-sm text-ink-soft mb-2")
+      data.fetch("fields", {}).each do |field, counts|
+        concat(tag.table(class: "min-w-full divide-y divide-ink-soft/20 mb-4") do
+          concat tag.caption(demographic_field_label(field), class: "text-left text-sm font-semibold text-ink mb-1")
+          concat(tag.tbody(class: "divide-y divide-ink-soft/10") do
+            counts.each do |value, count|
+              concat(tag.tr do
+                concat tag.td(demographic_option_label(field, value), class: "px-4 py-1 text-sm text-ink")
+                concat tag.td(demographic_count(count, profile.threshold), class: "px-4 py-1 text-sm text-ink text-right")
+              end)
+            end
+          end)
+        end)
+      end
+    end
+  end
+%>
+
+<div class="mb-6 space-y-2">
+  <%= link_to "All funders", admin_funder_reports_path, class: "text-sm text-grape" %>
+  <h2 class="font-display text-2xl font-bold text-ink"><%= profile.name %></h2>
+  <p class="text-ink-soft">Preview only. There is no export and no send yet. Counts below <%= profile.threshold %> are hidden.</p>
+</div>
+
+<div class="patch p-6 mb-6 text-sm text-ink space-y-1">
+  <h3 class="font-display text-lg font-bold text-ink mb-2">Profile</h3>
+  <p>Key: <code><%= profile.key %></code>. Contract: <%= profile.contract_reference || "not recorded" %>.</p>
+  <p>Programs: <%= profile.programs.to_sentence.presence || "none" %>. Report cadence: <%= profile.report_cadence.humanize.downcase %>.</p>
+  <p>Report fields: <%= profile.report_fields.map { |field| demographic_field_label(field) }.to_sentence.presence || "none (member counts only)" %>.</p>
+  <p>Amounts: <%= profile.totals? ? "totals (sums only)" : "bands" %>. Threshold: <%= profile.threshold %>. Member consent: <%= profile.consent_required? ? "required" : "not required" %>.</p>
+  <p>
+    Award ends: <%= profile.award_ends_on&.iso8601 || "not set" %>.
+    Records kept: <%= profile.financial_keep_years ? "#{profile.financial_keep_years} years in full" : "the default financial window" %><%= ", and until #{profile.post_award_until.iso8601} after the award" if profile.post_award_until %>.
+  </p>
+  <% if profile.eligibility.any? %>
+    <p>
+      Eligibility in the contract (recorded only, not enforced):
+      <%= ["ages #{profile.eligibility.min_age || 'any'} to #{profile.eligibility.max_age || 'any'}",
+           ("countries #{profile.eligibility.countries.join(', ')}" if profile.eligibility.countries.any?)].compact.join(", ") %>.
+    </p>
+  <% end %>
+  <% @report.notes.each do |note| %>
+    <p class="text-orange-600"><%= note %></p>
+  <% end %>
+</div>
+
+<div class="patch p-6 mb-6">
+  <h3 class="font-display text-lg font-bold text-ink mb-1">Current members</h3>
+  <p class="text-xs text-ink-faint mb-3"><%= @report.generated_at ? "From the reporting run of #{@report.generated_at.strftime('%b %-d, %Y %H:%M')}." : "No reporting run yet." %></p>
+  <%= @report.demographics ? render_counts.call(@report.demographics) : tag.p("No counts yet.", class: "text-sm text-ink-faint") %>
+</div>
+
+<% if @report.departed.present? %>
+  <% @report.departed.each do |cohort, data| %>
+    <div class="patch p-6 mb-6">
+      <h3 class="font-display text-lg font-bold text-ink mb-3">Members who left (<%= cohort %>)</h3>
+      <%= render_counts.call(data) %>
+    </div>
+  <% end %>
+<% end %>
+
+<% if @report.delete_time %>
+  <% @report.delete_time.each do |cohort, data| %>
+    <div class="patch p-6 mb-6">
+      <h3 class="font-display text-lg font-bold text-ink mb-3">Delete-time aggregates (<%= cohort %>)</h3>
+      <%= render_counts.call(data) %>
+    </div>
+  <% end %>
+<% end %>
+
+<div class="patch p-6 mb-6">
+  <h3 class="font-display text-lg font-bold text-ink mb-3">Grant amounts</h3>
+  <% if @report.amounts.empty? %>
+    <p class="text-sm text-ink-faint">No grant money for this funder yet.</p>
+  <% end %>
+  <% @report.amounts.each do |cohort, data| %>
+    <h4 class="text-sm font-semibold text-ink mt-3 mb-1"><%= cohort %></h4>
+    <% if profile.totals? %>
+      <p class="text-sm text-ink">
+        <% if data["total_cents"] %>
+          <%= number_to_currency(data["total_cents"] / 100.0, unit: "") %> <%= data["currency"] %> to <%= data["recipients"] %> members.
+        <% else %>
+          Hidden: fewer than <%= profile.threshold %> members got money.
+        <% end %>
+      </p>
+    <% else %>
+      <%= render_counts.call(data) %>
+    <% end %>
+  <% end %>
+</div>
