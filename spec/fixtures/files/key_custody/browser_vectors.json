@@ -1,0 +1,31 @@
+{
+  "digest": {
+    "share": "3SQg0zDeVxl4TixDbre-36xdUSmWQ3pSWS7O8m5p_Ldw",
+    "public_key": "S8VFseXPF8by/iOEPxDJCJDY7MgNvA178TmTZKuVTn0=",
+    "hex": "1e750bb5ef41204289ae75bb35ae860d53ae08dd18f370b6e77d222c12782e45"
+  },
+  "browser_key_pair": {
+    "note": "Made with generateMasterKey() in Node 22 WebCrypto (JWK d and x).",
+    "private_key_hex": "a8ce15142375c6ef052f65f1eb101c971c59169aae9a518da37ec456c481885a",
+    "public_key": "ttqLVUHbJVnlTS2ZWdcUF5MjAUqIScJLRla0H7bU7jA="
+  },
+  "seal_key": {
+    "prf": "Xp53zzOvVWBEocYgC6KxD-llmRbkb7_OsZv31NSCY0A",
+    "seal_public_key": "79qtyp6fSOHZGs5kEjHNATFWOrLz4wMdZJoCu6iGXzw=",
+    "note": "HKDF-SHA256 of the PRF output (info: weave key custody seal key v1) as an X25519 private key. Ruby and Node 22 WebCrypto give this public key."
+  },
+  "ruby_sealed": {
+    "prf": "Xp53zzOvVWBEocYgC6KxD-llmRbkb7_OsZv31NSCY0A",
+    "share": "9--603Mr7tZFSb0Fz-izQVSFiAyYM6cyy57_zWHjsxcb",
+    "aad": "weave key custody sealed share v1|S8VFseXPF8by/iOEPxDJCJDY7MgNvA178TmTZKuVTn0=|usr_test|cred_test|27",
+    "sealed": "AfkJWD_45-_mK2H2hduwKjUt1nVXk-Rv1cP2D4iH7f5XUTwA-sdfjE1MVTJWpURKpPyYCKgcmbeKbrgiDtXvsLzu-dA8bPIIJnZHirQgtfwa15BYlElvwTJF1ghZ_g",
+    "note": "Made with KeyCustody::Crypto.seal_share in Ruby. The browser opens it."
+  },
+  "browser_sealed": {
+    "prf": "Xp53zzOvVWBEocYgC6KxD-llmRbkb7_OsZv31NSCY0A",
+    "share": "Wikp10n4tMXSOlGS1o1IZJes126FGWx_lUmKAOmMbrgR",
+    "aad": "weave key custody sealed share v1|S8VFseXPF8by/iOEPxDJCJDY7MgNvA178TmTZKuVTn0=|usr_test|cred_test|17",
+    "sealed": "Ac-p2oxOIfqqnrhICj-Qxt4Aqsda8Q3uGf7iSrZM9kEqwOWkZKYcBDpamkB5wrmpjgD3Cu9y7oqfmIRcwcoOSE8M3DO5HbcB4f4hoymNRtnBRPTdqW489cIVdE4HEw",
+    "note": "Made with sealShare() in Node 22 WebCrypto."
+  }
+}

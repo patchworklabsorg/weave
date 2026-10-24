@@ -117,5 +117,6 @@ FactoryBot.define do
     user { verification.user }
     requested_by factory: %i[user identity_team]
     reason { "Fraud report: check the stored document." }
+    requester_public_key { Base64.strict_encode64(KeyCustody::Crypto.generate_key_pair.last) }
   end
 end

@@ -11,18 +11,8 @@
     ["Password", password_path, :lock, "change password"],
     ["Join the Slack", slack_onboarding_path, :message_circle, "onboarding invite"]
   ]
-  admin_pages = current_user.admin? ? [
-    ["Admin dashboard", admin_root_path, :layout_dashboard, "admin home"],
-    ["Users", admin_users_path, :users, "admin people members"],
-    ["Groups", admin_groups_path, :users, "admin teams"],
-    ["Consents", admin_guardian_consents_path, :shield_check, "admin guardian minors review queue"],
-    ["OAuth apps", admin_oauth_applications_path, :app_window, "admin applications clients"],
-    ["Jobs", "/admin/jobs", :activity, "admin mission control queue"],
-    ["Feature flags", "/admin/flipper", :flag, "admin flipper"],
-    ["Blazer", "/admin/blazer", :database, "admin sql queries reports"],
-    ["Console audits", "/admin/console", :terminal, "admin audits1984"],
-    ["Console sign-in", admin_console_access_path, :key_round, "admin production console dbconsole code"]
-  ] : []
+  # The admin and identity pages this person can open (AdminNavHelper).
+  admin_pages = admin_nav_groups.flat_map(&:links).map { |link| [link.label, link.path, link.icon, link.keywords] }
   admin_actions = current_user.admin? ? [
     ["New user", new_admin_user_path, :plus, "create add"],
     ["New group", new_admin_group_path, :plus, "create add"],

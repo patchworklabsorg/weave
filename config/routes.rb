@@ -543,9 +543,10 @@ Rails.application.routes.draw do
     # Break-glass access to stored ID images (see BreakGlass).
     resources :break_glass_records, only: [:index] do
       member do
+        post :approval_options
         patch :approve
         patch :deny
-        post :image
+        post :open
       end
     end
     resources :break_glass_notices, only: [] do
@@ -568,6 +569,30 @@ Rails.application.routes.draw do
     end
     resources :team_removals, only: [:create]
     resources :ndas, only: [:create]
+
+    # Key custody of stored ID images (see KeyCustody): hardware keys, the
+    # ceremony, recovery and rotation.
+    resource :key_custody, controller: "key_custody", only: [:show]
+    resources :hardware_keys, only: [:create] do
+      collection { post :options }
+      member do
+        patch :revoke
+        post :seal_key_options
+        post :seal_key
+        post :rewrap_options
+        post :rewrap
+      end
+    end
+    resource :key_ceremony, only: [:new, :create] do
+      post :start
+    end
+    resources :key_sets, only: [] do
+      member do
+        post :activation_options
+        post :activate
+        patch :discard
+      end
+    end
   end
 
   # Admin namespace with constraint

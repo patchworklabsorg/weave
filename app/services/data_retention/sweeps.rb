@@ -103,7 +103,7 @@ module DataRetention
           BreakGlassApproval.where(break_glass_record_id: records.select(:id)).delete_all
           records.delete_all
           VerificationEvent.where(verification_id: verification.id).delete_all
-          verification.id_document.purge if verification.id_document.attached?
+          IdDocumentVault.purge!(verification)
           PaperTrail::Version.where(item_type: "Verification", item_id: verification.id).delete_all
           Verification.where(id: verification.id).delete_all
         end

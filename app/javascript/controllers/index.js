@@ -6,6 +6,8 @@ import { application } from "./application"
 
 import AddressSyncController from "./address_sync_controller"
 application.register("address-sync", AddressSyncController)
+import BreakGlassController from "./break_glass_controller"
+application.register("break-glass", BreakGlassController)
 
 import ClipboardController from "./clipboard_controller"
 application.register("clipboard", ClipboardController)
@@ -27,6 +29,8 @@ application.register("fingerprint", FingerprintController)
 
 import FlashController from "./flash_controller"
 application.register("flash", FlashController)
+import KeyCustodyController from "./key_custody_controller"
+application.register("key-custody", KeyCustodyController)
 
 import LoginFormController from "./login_form_controller"
 application.register("login-form", LoginFormController)

@@ -25,8 +25,6 @@ shared: &shared
     # The most identity team members that can hold a key at one time. Any
     # approvals_required of them approve a request (2 of 3).
     max_key_holders: 3 # LOCKED
-    # Minutes a granted request lets the requester decrypt the image.
-    access_minutes: 30 # PLACEHOLDER
     # Hours after a decryption before Weave tells the member, unless an
     # identity team member records a fraud investigation delay.
     member_notice_hours: 72 # LOCKED
@@ -35,6 +33,32 @@ shared: &shared
     # reason and the sign-off of an owner or the identity team lead (never the
     # person who asked for the delay or for the access).
     max_fraud_delay_days: 30 # LOCKED
+    # Minutes the requester has to open a granted image (the sealed handoff,
+    # see BreakGlass). The second approval seals the image's data key to a
+    # one-time key of the requester's browser. The requester opens it once
+    # in this window. After it, the sweeper deletes the sealed key and the
+    # requester must ask again.
+    handoff_minutes: 30 # LOCKED
+
+  # Key custody of stored ID images (see KeyCustody and docs/KYC.md, "Key
+  # custody"). The master key is split into max_key_holders Shamir shares
+  # (3), and any approvals_required of them (2) rebuild it.
+  key_custody:
+    # Hardware keys (YubiKeys) that each key holder enrolls: a primary and a
+    # backup. Either one opens the holder's share. For a local test with
+    # fewer keys, development (only) reads KYC_HARDWARE_KEYS_PER_HOLDER (see
+    # VerificationSettings.hardware_keys_per_holder).
+    hardware_keys_per_holder: 2 # LOCKED
+    # Minutes a submitted share waits for the next share. It waits in the
+    # database, encrypted with Lockbox and bound to its request (one share
+    # alone reveals nothing). After that the sweeper deletes it, and the
+    # holder must submit again.
+    pending_share_minutes: 60 # LOCKED
+    # Minutes a WebAuthn challenge stays valid. Each challenge works once.
+    challenge_minutes: 5
+    # Ask the hardware key for its PIN (WebAuthn user verification) at each
+    # use, so a stolen key alone opens nothing.
+    require_user_verification: true
 
 development:
   <<: *shared

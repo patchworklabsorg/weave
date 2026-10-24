@@ -42,6 +42,20 @@ module Weave
       "https://#{host(env)}"
     end
 
+    # The WebAuthn origin (config/initializers/webauthn.rb). Production and
+    # staging use url. Development uses WEBAUTHN_ORIGIN, or else localhost on
+    # PORT (foreman's bin/dev sets PORT=5000), or else port 3000. Test always
+    # uses http://localhost:3000.
+    def webauthn_origin(rails_env: Rails.env, env: ENV)
+      if rails_env.to_s == "production"
+        url(env)
+      elsif rails_env.to_s == "development"
+        env.fetch("WEBAUTHN_ORIGIN") { "http://localhost:#{env.fetch('PORT', 3000)}" }
+      else
+        "http://localhost:3000"
+      end
+    end
+
     # Prefix of the Patchwork Labs ID (User#p_id, the OIDC `sub`). Staging IDs
     # start with SPWL so a sandbox identity can never pass for a real one.
     def p_id_prefix(env = ENV)

@@ -10,6 +10,10 @@ Rails.application.configure do
     Bullet.enable        = true
     Bullet.bullet_logger = true
     Bullet.raise         = true # raise an error if n+1 query occurs
+    # Active Storage preloads the record of an attachment when it purges the
+    # Lockbox copy of an ID image at the seal (IdDocumentVault.seal!). That
+    # preload is inside Active Storage, not in Weave.
+    Bullet.add_safelist(type: :unused_eager_loading, class_name: "ActiveStorage::Attachment", association: :record)
   end
 
   # Settings specified here will take precedence over those in config/application.rb.

@@ -40,8 +40,9 @@ class VerificationEvent < ApplicationRecord
 
   KINDS = %w[
     submitted pre_review_started pre_review_taken_over document_viewed document_rejected document_approved call_scheduled decided
-    escalated escalation_resolved document_purged
-    break_glass_requested break_glass_approved break_glass_granted break_glass_denied document_decrypted
+    escalated escalation_resolved document_purged document_sealed
+    break_glass_requested break_glass_approved break_glass_approval_lapsed break_glass_granted break_glass_denied
+    document_decrypted break_glass_grant_wiped break_glass_handoff_expired
     member_notice_delayed member_notice_delay_signed_off member_notice_delay_lifted
     member_notice_delay_expired reverification_required
     knot_review_required knot_duplicate_account knot_linked

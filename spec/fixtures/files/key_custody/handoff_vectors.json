@@ -1,0 +1,11 @@
+{
+  "comment": "Made by KeyCustody::Crypto in Ruby: a data key sealed to a browser key pair (HANDOFF_SEAL_INFO) and an image encrypted with it. spec/javascript/break_glass_handoff.test.js opens it like the browser; spec/services/key_custody/crypto_spec.rb checks it in Ruby.",
+  "private_key": "mG87REKCGIJXe1rRji5cMy4VqRYUD+7AKnTGDktncUs=",
+  "public_key": "h2RCPnQ+fp1naj/Dj26UimktIMr0u/eF7TqJH/c8nFw=",
+  "data_key": "IkU0fDsjhCJqhX3DceJ1IaW6bswq9Sl0xIinStfJWls=",
+  "sealed_key": "AS+6qjjDj5HlJJqXpQyb0ky2cEyG2X6Z9lL1fz0dmz1lJzmtR5ZDCOKGF2qwoy5LuwvPkMfhdrLqLaDh8lIRor2p2FpCjKICRZ3uLN1CgegB+r8rN+yg/1Yf5CdD",
+  "handoff_aad": "break_glass_handoff|brgl_vector|PWL0000000000",
+  "ciphertext": "AR+M4fCoFe5O2B8xHxnC2FbAgXWDhfJCOxY+64EIBwoqGxE4xtwxuFDAHzWsEtYkJ0ykSldrX3mOlM9gzA==",
+  "image_aad": "verification:42",
+  "image": "d2VhdmUgaGFuZG9mZiB2ZWN0b3IgaW1hZ2UgYnl0ZXM="
+}

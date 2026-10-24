@@ -10,6 +10,15 @@ class BreakGlassMailer < ApplicationMailer
     mail(to: holder.email, subject: env_subject("[IDP Alert] Break-glass approval needed (#{record.public_id})"))
   end
 
+  # To the requester, when the second approval sealed the image's data key to
+  # their browser key. They open it once, in the handoff window.
+  def handoff_ready(record)
+    @record = record
+    @admin_url = identity_break_glass_records_url
+
+    mail(to: record.requested_by.email, subject: env_subject("[IDP Alert] Your break-glass request is granted (#{record.public_id})"))
+  end
+
   # To the other key holder and the identity team lead, at once.
   def decrypted(notice)
     @notice = notice

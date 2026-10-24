@@ -133,8 +133,12 @@ class Verification < ApplicationRecord
                                                      dependent: :restrict_with_exception, inverse_of: :verification
   has_many :break_glass_records, dependent: :restrict_with_exception
 
+  # The ID image waits for pre-review under Lockbox (the server key), so the
+  # pre-reviewer can open it. When pre-review ends, IdDocumentVault seals it
+  # to the master public key (SealedIdDocument) and destroys this copy.
   has_one_attached :id_document
   encrypts_attached :id_document
+  has_one :sealed_document, class_name: "SealedIdDocument", dependent: :restrict_with_exception, inverse_of: :verification
 
   validates :verification_method, inclusion: { in: METHODS }
   validates :document_type, inclusion: { in: DOCUMENT_TYPES }, if: :document_call?
@@ -223,7 +227,10 @@ class Verification < ApplicationRecord
     decided_at + VerificationSettings.failed_call_cooldown
   end
 
-  def document_stored? = id_document.attached? && document_purged_at.nil?
+  def document_stored? = (id_document.attached? || document_sealed?) && document_purged_at.nil?
+
+  # Sealed to the master public key: only break-glass opens it.
+  def document_sealed? = sealed_document.present? && document_purged_at.nil?
 
   # The people who made this decision, when it was a fail.
   def failing_verifier_ids = failed? ? [verifier_id, second_verifier_id].compact : []

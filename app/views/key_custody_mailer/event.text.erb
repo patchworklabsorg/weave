@@ -1,0 +1,13 @@
+<%= @event.summary %>
+
+When: <%= @event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>
+<% if @event.data["reason"].present? -%>
+Reason: <%= @event.data["reason"] %>
+<% end -%>
+<% if @event.kind == "key_set_compromised" -%>
+The key set still opens images, but it must be rotated: a new ceremony, then all three holders activate the new one (two of them also give their share of the old set).
+<% end -%>
+
+You get this email because you are on the board. Key custody changes are reported to the whole board.
+
+<%= @url %>

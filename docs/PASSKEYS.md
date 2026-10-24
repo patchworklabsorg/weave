@@ -36,7 +36,7 @@ A passkey sign-in ends in the same `complete_login` as a magic link: the session
 
 - Both ceremonies require user verification (a PIN, fingerprint or face). A passkey alone is a full sign-in.
 - A challenge is good for one check and for 5 minutes (`PasskeyChallenges`).
-- The relying party id is `Weave.host`. A passkey made on staging does not work on production, and the reverse. Development and test use `localhost`.
+- The relying party id is `Weave.host`. A passkey made on staging does not work on production, and the reverse. Development and test use `localhost`. Test uses port 3000. Development uses `PORT` (foreman's `bin/dev` sets 5000), or port 3000 when `PORT` is unset. Set `WEBAUTHN_ORIGIN` to override it (`Weave.webauthn_origin`). Key custody (`KeyCustody.relying_party`) uses the same relying party.
 - If the sign count of a passkey goes back, Weave marks the passkey compromised, and it cannot sign in. The member must remove it and add a new one.
 - A locked, suspended or deactivated account cannot sign in with a passkey.
 - An admin cannot add or remove passkeys while impersonating a member.

@@ -22,6 +22,7 @@ The identity team is a flag on the user, not a role rank:
 
 - `SystemGroups` mirrors `identity_team` into the `identity-team` system group, so access rules and apps can ask "is the user in group X?" like the other built-in groups.
 - The verification pages live in the identity area (`/identity/verifications`, `/identity/break_glass_records`), not in the admin panel. A team member does not need the admin role. An admin who is not on the team can't open them.
+- The admin and identity layout has a left sidebar with four headed groups (`AdminNavHelper`, `layouts/_admin_nav`): Identity (Verification, Key custody, Governance, Knot), People (Users, Groups, Consents), Data (Deletion, Demographics, Funder reports) and System (Dashboard, OAuth Apps, Jobs, Flipper, Blazer, Console Audits). Each person sees only the groups and links they can use: a verifier without the admin role sees only Identity. The current page is highlighted (`aria-current="page"`). On a phone, the sidebar is behind a "Menu" button. `spec/requests/admin_nav_spec.rb` checks the links of each role.
 - The flags change only through governance (see "Identity team governance" below). PaperTrail records each change.
 
 ### The flow
@@ -44,7 +45,7 @@ stateDiagram-v2
 
 - `Verification` is one row per attempt. `previous_attempt_id` links each attempt to the one before it, so the history reads as one chain.
 - `VerificationFlow` holds the steps. Each step adds a `VerificationEvent`.
-- Scheduling is manual. The pre-reviewer ends pre-review with "Document OK" (`VerificationFlow.approve_document`, event `document_approved`). After that, nobody can see the image in pre-review. The attempt waits in `awaiting_call`, and the member gets an email that says the team will contact them. A verifier agrees a time with the member by email or Slack. Then the verifier records the time as a separate step (`VerificationFlow.schedule_call`). This step does not touch the image. "Send back" (`reject_document`) still works during pre-review.
+- Scheduling is manual. The pre-reviewer ends pre-review with "Document OK" (`VerificationFlow.approve_document`, event `document_approved`). At once, `IdDocumentVault.seal!` seals the image (see "The ID image and break-glass"), and nobody can see it in pre-review. The attempt waits in `awaiting_call`, and the member gets an email that says the team will contact them. A verifier agrees a time with the member by email or Slack. Then the verifier records the time as a separate step (`VerificationFlow.schedule_call`). This step does not touch the image. "Send back" (`reject_document`) still works during pre-review.
 - Hand-over: any other identity team member can click "Take over pre-review" on an attempt in pre-review (`VerificationFlow.take_over_pre_review`). They become the pre-reviewer. The `pre_review_taken_over` event logs the old and the new pre-reviewer. Only the current pre-reviewer can see the image and mark "Document OK".
 - `verification_method` is `document_call` (an ID image, then a live call) or `digital_id_call` (a digital ID, then a live call). See "Digital ID" below.
 - The member page is `/verification`. The profile page links to it.
@@ -180,9 +181,13 @@ sequenceDiagram
 
 ### The ID image and break-glass
 
-The image is an Active Storage attachment encrypted with Lockbox (`encrypts_attached :id_document`).
+`IdDocumentVault` (`app/services/id_document_vault.rb`) is the one interface to stored images. An image has two forms in its life:
 
-- **Pre-review.** Only the pre-reviewer can open the image, only while the attempt is in pre-review. Each view adds a `document_viewed` event before Weave decrypts the image. The board report counts these views.
+1. **Waiting for pre-review.** The image is an Active Storage attachment encrypted with Lockbox (`encrypts_attached :id_document`), so the pre-reviewer can see it before any key holder is involved. Only the pre-reviewer can open it, and only while the attempt is in pre-review. Each view adds a `document_viewed` event before Weave decrypts the image. The board report counts these views.
+2. **Sealed.** When pre-review ends ("Document OK", or the member must submit again), `IdDocumentVault.seal!` encrypts the image with a fresh data key, seals the data key to the master public key and destroys the Lockbox copy (`SealedIdDocument`). After that, only break-glass opens it. See "Key custody" below.
+
+Pre-review can't end before the key ceremony: with no key set, Weave can't seal the image, so `approve_document` and `reject_document` refuse and the page says why.
+
 - **Any other decryption** needs break-glass (`BreakGlass`, issue #92):
 
 ```mermaid
@@ -194,29 +199,35 @@ sequenceDiagram
   participant L as Identity team lead
   participant M as Member
   participant B as Board
-  R->>W: Request with a written reason
+  R->>R: Browser makes a one-time X25519 key pair, keeps the private key (non-extractable, IndexedDB)
+  R->>W: Request with a written reason + the public key only
   W->>K1: Approval needed
   W->>K2: Approval needed
-  K1->>W: Approve
-  K2->>W: Approve
-  W->>W: Granted for break_glass.access_minutes
-  R->>W: Decrypt
-  W->>W: One transaction: decryption row + notice rows + audit row
-  W->>R: Image (only after the commit)
-  W->>K2: Notice at once (the other key holder)
+  K1->>W: Share + hardware key assertion
+  W->>W: Share 1 waits, encrypted (pending_share_minutes at most)
+  K2->>W: Share + hardware key assertion
+  W->>W: Rebuild the master key in memory, open only this image's data key
+  W->>W: Seal the data key to the requester's public key, store the sealed blob, write the grant
+  W->>W: Wipe the shares, the master key, the data key
+  W->>R: Email: granted, open it within handoff_minutes
+  R->>W: Open (once, within handoff_minutes)
+  W->>W: One transaction: decryption row + notice rows + audit rows, delete the sealed blob
+  W->>R: Sealed data key + encrypted image (only after the commit)
+  R->>R: Open the data key with the private key, decrypt the image, show it in the secure viewer, delete the private key
+  W->>K1: Notice at once (each key holder who approved)
+  W->>K2: Notice at once
   W->>L: Notice at once
   W->>M: Notice after member_notice_hours, unless a signed-off delay holds it
   W->>B: Monthly report lists every event
 ```
 
 - Break-glass is only for an attempt that passed, failed or was escalated: a fraud review, an appeal or a blacklist check (`BreakGlass.request_blocker`). Before the decision (submitted, pre-review, waiting for the call time, call set), the page does not show the button, and Weave refuses a request with the reason.
-- Two different key holders must approve. The requester can be a key holder.
+- Two different key holders must approve. An approval is the submission of the holder's share with a hardware key (see "Key custody"). The requester can be a key holder, and may approve their own request (locked, 2026-10-13).
 - The lead verifier on a member's calls (the one who recorded a decision) can't approve or deny a break-glass request for that member, and gets no approval email for it (`BreakGlass.may_approve?`). A second verifier is not excluded.
-- Only the requester can decrypt, and only until the grant expires. Each decryption is a `BreakGlassDecryption` row.
-- Quiet use is not possible. `BreakGlass.decrypt!` writes the decryption and its `BreakGlassNotice` rows in one transaction. It reads the image only after the commit. `DeliverBreakGlassNoticesJob` sends each notice when it is due. It runs after each decryption and every 15 minutes, so a lost enqueue does not lose a notice.
+- The sealed handoff (2026-10-20, replaces "the second approver sees the image"). See "The sealed handoff" below. The requester sees the image. The second approver does not.
+- Quiet use is not possible. `BreakGlass.open!` writes the decryption (the requester as the viewer) and its `BreakGlassNotice` rows in one transaction. It returns the sealed data key and the encrypted image only after the commit. If a notice can't be written, nothing is written, nothing is returned and the sealed blob stays. `DeliverBreakGlassNoticesJob` sends each notice when it is due. It runs after each decryption and every 15 minutes, so a lost enqueue does not lose a notice.
 - An identity team member can ask to delay the member notice for an active fraud investigation. A reason is required. The delay holds the notice only after an owner or an identity team lead signs it off. The person who asked for the delay, the person who asked for the access and the member can never sign it off (`BreakGlass.may_sign_off_delay?`). It holds the notice for at most `break_glass.max_fraud_delay_days` after the notice was first due. Then the notice goes out, also when nobody lifts the delay. The lead gets an email, and the board report lists every delayed notice.
 - The board report is the admin page `/admin/break_glass_report` (identity team and board members) and a monthly email to each board member (`BreakGlassBoardReportJob`).
-- The key holders approve with a signed-in click. Hardware keys are not built yet.
 
 ### Upload conversion
 
@@ -235,6 +246,22 @@ sequenceDiagram
 - HEIC decodes in libvips with libheif and its HEVC decoder plugin. A PDF page is rendered by poppler's `pdftoppm` in a child process, from stdin to stdout, with a 20-second timeout. Active Storage blocks the untrusted libvips loaders (`Vips.block_untrusted`), and the PDF loader is one of them, so Weave does not turn it back on in the web process.
 - The Docker image needs `poppler-utils` and `libheif-plugin-libde265` (see the Dockerfile).
 - The specs use small fixtures in `spec/fixtures/files`. The HEIC spec skips where libvips can't decode HEIC, and the PDF specs skip where `pdftoppm` is not installed.
+
+### The sealed handoff
+
+Who can ask: any identity team member who is not the member (`BreakGlass.request`). The requester does not need a hardware key, so every requester gets the browser key pair, also a requester who is not a key holder.
+
+1. Ask. The requester's browser makes a one-time X25519 key pair with WebCrypto (`app/javascript/key_custody/handoff.js`). The private key is a NON-EXTRACTABLE `CryptoKey`. The browser keeps it in IndexedDB (database `weave-break-glass`), under the request id. Only the public key goes to Weave, with the reason (`requester_public_key`). A request without a valid public key is refused.
+2. Grant. On the second approval, Weave rebuilds the master key in memory and opens ONLY that image's data key. It seals the data key to the requester's public key (`KeyCustody::Crypto.seal`, HKDF info `weave key custody handoff v1`, aad `BreakGlass.handoff_aad`: the request id and the requester's p_id). It stores the sealed blob on the record (`handoff_sealed_key`) and wipes the master key, the shares and the data key. The second approver does not see the image. The requester gets an email (`BreakGlassMailer#handoff_ready`).
+3. Open. On the break-glass page, the requester clicks "Open" under "Ready for you to open". Their browser posts to `/identity/break_glass_records/:id/open` and gets the sealed data key and the encrypted image (JSON, `Cache-Control: no-store`). It opens the data key with the private key from IndexedDB, decrypts the image, and shows it in the secure viewer (see "The ID image viewer"). Then the browser deletes the private key.
+4. Open is allowed only once, only for the requester, and only within `break_glass.handoff_minutes` (30, locked). At the open, Weave deletes the sealed blob (`opened_at`). `SweepPendingSharesJob` deletes an expired blob every minute (`BreakGlass.sweep_expired_handoffs!`, event `break_glass_handoff_expired`).
+5. If the time passes, or the browser lost the private key (another browser, cleared site data, a private window), the requester must ask again.
+
+The decryption row, the notices and the board report record the requester as the viewer. Each key holder who approved gets the key holder notice.
+
+A leak of the database and the Lockbox master key can't open the image: the blob is sealed to a key that only the requester's browser holds, and the waiting shares are deleted at the grant. A spec scans every table for the data key in raw, Base64 and hex form, after the grant and after the open (`spec/services/break_glass_spec.rb`, "a database and Lockbox leak"). The browser test (`spec/javascript/break_glass_handoff.test.js`) opens a Ruby-made vector (`spec/fixtures/files/key_custody/handoff_vectors.json`). Bun 1.2 has no X25519, so it skips those tests. `node spec/javascript/break_glass_handoff_node_check.mjs` runs the same check in Node 22.
+
+What it does not stop: the requester's own computer sees the image. Malware on it, or a person at it, could copy it. The watermark makes a copy traceable to the requester.
 
 ### The ID image viewer
 
@@ -259,6 +286,8 @@ Every view of an ID image uses the same secure viewer: the pre-reviewer's view a
 | Document problem or failed call | `purge_image_days_after_close` after it closed, not while an escalation is open |
 | Account deleted | At the next run |
 
+The job purges both forms: the Lockbox copy and the sealed copy (`IdDocumentVault.purge!`). The deletion pipeline and the retention sweep use the same call.
+
 ### Digital ID
 
 `DigitalIdProvider` is the interface for a digital ID path, for example the EU digital identity wallet. No provider exists yet, so members can't choose the path. A provider implements `start` and `result`. `result` gives a `VerificationIdentifiers`, which goes to the same hook as a document call.
@@ -273,9 +302,12 @@ The values are in `config/kyc/verification.yml`. Values marked `LOCKED` were dec
 | `failed_calls_before_escalation` | 2 | Locked |
 | `purge_image_days_after_pass` | 7 | Locked |
 | `purge_image_days_after_close` | 30 | Locked |
-| `break_glass.access_minutes` | 30 | Placeholder |
 | `break_glass.member_notice_hours` | 72 | Locked |
 | `break_glass.max_fraud_delay_days` | 30 | Locked |
+| `key_custody.hardware_keys_per_holder` | 2 | Locked |
+| `key_custody.pending_share_minutes` | 60 | Locked |
+| `key_custody.challenge_minutes` | 5 | Default |
+| `key_custody.require_user_verification` | true | Default |
 
 The retention window for verification audit records is part of the retention question in the proposal. The deletion part sets it.
 
@@ -358,7 +390,7 @@ flowchart LR
 
 ### The key holder hook
 
-After the commit of every change to the key holder set, Weave sends the `ActiveSupport::Notifications` event `key_holders_changed.identity` (`IdentityGovernance::KEY_HOLDERS_CHANGED`). The payload has `user`, `change` (`:added` or `:removed`), `holder_ids` (the key holders after the change), `proposal` (empty for a removal from the team) and `actor`. The key custody work subscribes to it to force a master-key rotation.
+After the commit of every change to the key holder set, Weave sends the `ActiveSupport::Notifications` event `key_holders_changed.identity` (`IdentityGovernance::KEY_HOLDERS_CHANGED`). The payload has `user`, `change` (`:added` or `:removed`), `holder_ids` (the key holders after the change), `proposal` (empty for a removal from the team) and `actor`. Key custody subscribes to it (`config/initializers/key_custody.rb`): the current key set becomes compromised and must be rotated. See "Key custody" below.
 
 ### Bootstrap
 
@@ -423,6 +455,224 @@ The values are in `config/kyc/identity_governance.yml`.
 | --- | --- | --- |
 | `proposal_expiry_days` | 14 | Locked |
 | `verifier_minimum_age` | 18 | Locked |
+
+## Key custody
+
+Jasper locked this design on 2026-10-12. `KeyCustody` (`app/services/key_custody.rb` and `app/services/key_custody/`) holds it. The page is `/identity/key_custody`. Identity team members, owners and board members can open it.
+
+### The design
+
+- There are 3 key holders (Jasper, Kieran and Adam). Any 2 of the 3 open a stored image. The count is `break_glass.max_key_holders` and the threshold is `break_glass.approvals_required`.
+- Each holder enrolls 2 hardware keys (YubiKeys): a primary and a backup. Either key opens the holder's share.
+- Each ID image is encrypted with a fresh random data key (AES-256-GCM). The data key is sealed to the master public key (X25519, HKDF-SHA256, AES-256-GCM). Sealing needs only the public key, so no key holder takes part in a seal.
+- Weave never stores the master private key. It exists only as Shamir shares, one for each holder (`KeyCustodyShare` keeps the x value and a SHA-256 digest of the share, not the share).
+- Each share is sealed to a seal public key of each of its holder's hardware keys (`KeyCustodyWrappedShare`, see "Seal keys"). The seal private key comes from the key's WebAuthn PRF output (hmac-secret) through HKDF-SHA256, in the holder's own browser. The PRF output and the seal private key never leave that browser, so Weave can't open a sealed share.
+- Every hardware key use needs the key's PIN (WebAuthn user verification, `key_custody.require_user_verification`). A stolen key alone opens nothing.
+- All the cryptography on the server uses Ruby's OpenSSL. The browser uses WebCrypto (`app/javascript/key_custody/crypto.js`).
+- Hardware keys and passkeys share one WebAuthn relying party (`config/initializers/webauthn.rb`, `Weave.webauthn_origin`). In development the origin is `http://localhost:` plus `PORT` (5000 under foreman's `bin/dev`), or port 3000 when `PORT` is unset. `WEBAUTHN_ORIGIN` overrides it. A key enrolled on one origin does not work on another.
+
+### Shamir's Secret Sharing
+
+The browser splits the master key with the JavaScript library `shamir-secret-sharing` (Privy). Cure53 and Zellic audited it. No Ruby library of the same standard exists. Thus the server side, which only combines shares, is a small port of the same algorithm (`KeyCustody::Shamir`): GF(2^8) with the AES polynomial 0x11b, the same field as the library and HashiCorp Vault, and the same share format (the y bytes, then one x byte).
+
+The risk of the port and how the specs control it:
+
+- The specs check the port against vectors from the library (`spec/fixtures/files/key_custody/shamir_vectors.json`), every 2-of-3 subset, every 3-of-5 subset, the field inverse of each value, and Ruby shares combined by the library.
+- A wrong share gives a wrong key, not an error. Weave checks every share against its stored digest before it combines anything. Then it checks the rebuilt key against the stored master public key (`KeyCustody::Unlock`). A wrong key is refused, logged (`unlock_failed`) and reported to the board.
+- Ruby gives no constant-time guarantee. The arithmetic has no branch or table lookup on a secret value. The combine runs only at a break-glass unlock or an activation, so an attacker gets few timing samples.
+
+### Seal keys
+
+Each hardware key has a seal key pair. The holder sets it up on their own computer, at enrollment. Enrollment takes one touch where the key and the browser can, and two touches otherwise:
+
+```mermaid
+sequenceDiagram
+  participant H as Holder (own computer)
+  participant K as Their YubiKey
+  participant W as Weave
+  W-->>H: Registration options: a single-use challenge, PRF eval salt = seal_salt
+  H->>K: Touch, PIN (navigator.credentials.create with PRF)
+  alt The key gives the PRF output at creation (one touch)
+    K-->>H: New credential + PRF output
+    H->>H: HKDF-SHA256(PRF output, info "weave key custody seal key v1") = X25519 private key
+    H->>W: Registration + seal public key, in one request
+    W->>W: Check the registration challenge, store the key, seal_salt and seal_public_key
+  else No PRF output at creation (two touches)
+    K-->>H: New credential, prf.enabled true, no output
+    H->>W: Registration
+    W-->>H: Seal options: a challenge, PRF salt = the same seal_salt
+    H->>K: Touch, PIN
+    K-->>H: Assertion + PRF output
+    H->>H: HKDF-SHA256(PRF output, info "weave key custody seal key v1") = X25519 private key
+    H->>W: Seal public key + the assertion
+    W->>W: Check the assertion of that key, store seal_public_key
+  end
+```
+
+- Weave makes the seal salt before the create step (`KeyCustody::Enrollment.seal_salt_for`, a SHA-256 of the single-use registration challenge) and puts it in the registration options as `extensions.prf.eval.first`. Both paths use this one value, so the seal key is the same in both.
+- One touch: a key that evaluates PRF at creation (`hmac-secret-mc`, for example YubiKey firmware 5.8) gives the output at once. The browser derives the seal key pair and sends the seal public key with the registration. The registration challenge is bound to the user, works once and is signed into the attestation, so it is the proof that the key was present.
+- Two touches: a key that only has `hmac-secret` (for example YubiKey firmware 5.4), or a browser without PRF at creation, gives no output. Weave stores the key without a seal key and asks for one more touch (`register_seal_key!`).
+- A key whose `prf.enabled` is false is refused at once, in the browser and in Weave.
+- `IdentityHardwareKey.seal_salt` is different for each key. `seal_public_key` is the only part of the seal key that Weave stores. The private key exists only in the holder's browser, and only while a page needs it.
+- `KeyCustody::Enrollment.register_seal_key!` takes the public key only with a fresh assertion of that same key. In both paths, Weave can't check that the public key comes from the PRF output, because only the holder's browser has the PRF output.
+- A key with no seal key shows a "Set up the seal key" button. The ceremony refuses to start until each holder has 2 active keys with a seal key.
+
+### The ceremony
+
+The ceremony makes a key set. It runs at the first setup and at each rotation. Each holder has enrolled their 2 keys and set up their seal keys before, on their own computer.
+
+Process rule (locked, 2026-10-13): one holder (the operator) runs each ceremony on a clean computer with no browser extensions. The other two holders watch on a call. Nobody sends a hardware key or brings it to another person's computer. Only the operator's own key touches the ceremony computer, one time.
+
+```mermaid
+sequenceDiagram
+  participant O as Operator (one holder, clean computer)
+  participant P as Ceremony page (operator's browser)
+  participant W as Weave
+  participant H as Each holder (own computer)
+  participant B as Board
+  P->>W: Start (a key holder)
+  W-->>P: One challenge for the operator, the holders, their keys and seal public keys
+  P->>P: Make the X25519 key pair (WebCrypto)
+  P->>P: Split the private key into 3 shares, overwrite the key
+  loop Each holder, each of their 2 keys
+    P->>P: Seal the share to the key's seal public key (X25519 + HKDF-SHA256 + AES-256-GCM)
+  end
+  P->>P: Overwrite the shares
+  O->>P: Touch the operator's own key, PIN (the assertion also gives PRF on its seal salt)
+  P->>P: Open the operator's own just-sealed share with that PRF output
+  P->>W: Public key, x values, digests, 6 sealed shares, 1 assertion, the operator's share
+  W->>W: Check the assertion and the shape of each sealed share, store a pending key set
+  W->>W: The operator's share matches its digest: it is the operator's activation share (share_given)
+  W->>B: Email: ceremony completed
+  H->>W: Each of the two other holders, on their own computer: one touch opens the share, send it to activate
+  W->>W: Each pair of shares rebuilds the key: check each, wipe
+  W->>W: The key set is active
+```
+
+- A sealed share is `version | ephemeral X25519 public key | nonce | ciphertext | tag` (`KeyCustody::Crypto.seal_share`, HKDF info "weave key custody sealed share v1"). Its aad is `KeyCustodyWrappedShare.aad`: the key set's public key, the holder, the credential id and the share x. A sealed share that is moved to another key, holder, key set or x does not open.
+- One-touch ceremony: the operator's one assertion asks PRF on the seal salt of the operator's keys. The ceremony page opens the operator's own share from the copy it just sealed to the key that signed, and sends it as `operator_share`. `KeyCustody::Ceremony.complete!` checks it against the operator's digest and gives it as the operator's activation share (`Activation.give_share!`, `via: "ceremony"`). So the operator does not activate a second time. The other holders still activate on their own computers. A key that gives no PRF output sends no share, and the operator activates later like the others. In a rotation, the operator still gives their old share at activation.
+- Each holder opens their share at activation, approval and rewrap the same way: one touch with PRF on the key's seal salt gives the seal private key in their browser, which opens every share sealed to that key (also the old share in a rotation).
+
+Where the plaintext master key exists during the ceremony:
+
+- It exists only in the memory of the ceremony page, from the start of the ceremony to its end. The page splits it at once and overwrites it. The shares stay in plain form in the page until the last share is sealed, then the page overwrites them.
+- Weave gets only the public key and the sealed shares. The server never sees the private key or a share at the ceremony.
+- JavaScript can keep other copies until the page closes (the garbage collector and WebCrypto have their own buffers). Thus the operator uses a clean computer, with no browser extensions, and closes the browser after the ceremony. The other holders watch on a call. The ceremony trust is accepted: the operator's computer sees the master key once.
+- The page can't prove to Weave that its shares belong to its public key. So a new key set starts as pending. ALL three holders must activate it (`KeyCustody::Activation`, locked 2026-10-13): each submits their own new share with a hardware key, from their own session. When all three shares wait, Weave checks each share: every pair must rebuild the key that matches the public key. So each share is proven before Weave seals any image to the set. Decryption still needs any 2 of the 3 shares.
+- The key custody page shows each holder's activation status ("share given" or "not yet", from `KeyCustody::Activation.waiting_holder_ids`). A holder who gave their share sees "You gave your share" in place of the activate button. Each share that a holder gives for an activation adds a `share_given` row to the key custody log (`KeyCustody::Activation.give_share!`), with the holder, the key set and which share (new or old). The log shows who gave a share and who is still missing. The row holds no share. While a ceremony blocker exists (for example a pending set), the page shows the blocker text in place of the ceremony button.
+
+The log has `ceremony_started`, `ceremony_completed` and `key_set_activated` events, and the board gets an email. An owner or a key holder can discard a pending set with a reason. A discard is a one-person action, so it logs `key_set_discarded` and the board gets an email each time. A hardware key revoke is also a one-person action, and the board gets an email each time.
+
+### A break-glass decryption
+
+```mermaid
+sequenceDiagram
+  participant R as Requester
+  participant K1 as Key holder 1 (browser)
+  participant K2 as Key holder 2 (browser)
+  participant W as Weave
+  participant M as key_custody_pending_shares
+  R->>W: Request with a reason
+  K1->>W: Approval options (POST)
+  W-->>K1: Challenge "weave:break_glass:<request id>:<random>", sealed share, PRF salt (the key's seal salt)
+  K1->>K1: Touch the key: PRF gives the seal key, which opens the share; check the digest
+  K1->>W: Share + assertion (one request)
+  W->>W: Check the assertion, the key, the challenge (once) and the digest
+  W->>M: Keep share 1, Lockbox, bound to the request (pending_share_minutes at most)
+  K2->>W: Share + assertion
+  W->>W: Same checks, row lock on the request
+  W->>M: Take share 1 (SELECT FOR UPDATE, delete)
+  W->>W: Combine, check the public key, open the data key, decrypt the image
+  W->>W: Grant + decryption + notice ladder in one transaction
+  W-->>K2: The image, once, in this response
+  W->>W: Wipe the shares, the master key and the data key
+```
+
+- Approval is the act of submitting the share. A key holder can't approve without their hardware key, and a hardware key can't approve without its holder's share.
+- The challenge holds the id of the one request, and it works once (`KeyCustodyChallenge`). A replayed assertion finds its challenge used. When the hardware key keeps a sign count, the count must also go up.
+- The key must be an active key of the approver that holds a sealed copy of their share of the image's key set. A key of another holder, a revoked key or a key with no share is refused.
+- The share must match the stored digest of the approver's share. A share of another holder, a share of an old key set or random bytes is refused.
+- `BreakGlass.may_approve?` still refuses the lead verifier on the member's calls. Weave does not even send them approval options.
+- One share never opens anything. A request with one approval stays pending.
+
+What happens to the secrets:
+
+- A share in plain form is never written to the database, a log, the cache, a job or PaperTrail. The request log filters `share`, `credential`, `ciphertext`, `prf` and `wrapped` (`config/initializers/filter_parameter_logging.rb`). At the `debug` log level, Rails writes the raw body of a request whose JSON it can't parse. Keep production at `info` (the default of `RAILS_LOG_LEVEL`).
+- The first share waits in the table `key_custody_pending_shares` (`KeyCustodyPendingShare`, `KeyCustody::PendingShares`), so every web process sees it. Weave does not depend on one Puma process. This is safe because one Shamir share alone reveals nothing about the master key. Each row is encrypted with Lockbox (`share_ciphertext`) and bound to its request: the plaintext starts with a digest of the memory key, so a row moved to another request does not open. The row has no PaperTrail, `filter_attributes` hides it in logs, and it is not member data, so it is not in the data-category matrix.
+- A waiting share is deleted when the shares are combined, on a deny, and after `pending_share_minutes` (60, locked). `take` and `holder_ids` ignore an expired row, and `SweepPendingSharesJob` deletes expired rows every minute. When a share expires, the approval lapses (`break_glass_approval_lapsed`) and the holder submits again. The page shows who must approve again.
+- Two web processes can't both combine the same shares: the approval holds a row lock on the request, and `take` locks the waiting rows (`SELECT ... FOR UPDATE`) and deletes them in the same transaction.
+- A spec scans every table, the job queue and PaperTrail for each share. While a share waits, the only column that may hold it is the Lockbox ciphertext of `key_custody_pending_shares`. After the combine, that row is gone too.
+- At the grant, Weave counts only the shares of approvers who may still approve. When an approver left the key holders, or became the lead verifier on the member's calls, after they gave their share, their approval lapses (`break_glass_approval_lapsed` with the reason `no_longer_eligible`) and their share is deleted.
+- Weave keeps no data key it can open. The second share seals the data key to the requester's browser key (the sealed handoff). The requester's browser decrypts the image and shows it in the secure viewer (a canvas, no object URL, no download).
+- The options actions (`approval_options`, `activation_options`, `rewrap_options`) are POST, because each one issues a challenge.
+- Weave overwrites the shares, the master key and the data key with zero bytes when it is done (`KeyCustody::Crypto.wipe`). This is best effort. Ruby can keep other copies: the garbage collector can move a string before it is overwritten, OpenSSL has its own buffers, and the request body and the parsed parameters hold the share until the request ends. Weave does not write any of them to disk.
+
+### A lost hardware key
+
+The holder still has the other key:
+
+1. The holder (or an owner) revokes the lost key on `/identity/key_custody`, with a reason. Its sealed share is deleted, so the key can't open a share if somebody finds it. The board gets an email.
+2. The holder enrolls a new key. The board gets an email for each new key, so a stolen session that enrolls a key is seen.
+3. The holder sets up the seal key of the new key (part of enrollment, on their own computer: in the same touch where the key can, otherwise with a second touch).
+4. The holder clicks "Seal my share for this key", on their own computer. One touch of the remaining key opens the share. The browser checks its digest and seals it to the new key's seal public key. It sends the new sealed share and the assertion of the remaining key. The share itself is not sent, and the new key needs no touch for this step.
+
+The log has `hardware_key_enrolled`, `hardware_key_revoked` and `share_rewrapped`, and the board gets an email for each.
+
+### Rotation
+
+A key set must be rotated when a holder lost both keys, or when the key holder set changed. Weave then marks it compromised (`holder_lost_all_keys`, `key_holder_removed` or `key_holder_added`), emails the board and shows a warning on the key custody page and the break-glass page. A compromised set still opens images (the master key is not known to be out), and new images are still sealed to it until the rotation is done.
+
+When a holder has no key left that opens their share of a pending set, that set is also marked compromised, and it can't be activated. A new ceremony replaces it.
+
+The key holder hook: `IdentityGovernance` sends `key_holders_changed.identity` after each change of the key holder set. `KeyCustody.key_holders_changed` marks the current set compromised, and also a pending set, which then can't be activated.
+
+```mermaid
+flowchart TD
+  A[Holder lost both keys, or the key holders changed] --> B[Current set marked compromised. Board emailed]
+  B --> C[A holder who lost both keys enrolls 2 new keys. A new holder enrolls 2 keys]
+  C --> D[Rotation ceremony with the current holders: a new pending set]
+  D --> E[Each holder activates on their own computer: new share, and old share with the same touch]
+  E --> F{All 3 new shares and 2 old shares waiting?}
+  F -- no --> E
+  F -- yes --> G[Rebuild the new key: check. Rebuild the old key: check]
+  G --> H[Open each data key of the old set, seal it to the new public key]
+  H --> I[Old set retired, its sealed shares deleted. New set active]
+  I --> J[Wipe both keys. Board emailed: rotation completed]
+```
+
+- One touch gives both shares: the key's seal private key opens every share sealed to that key, new and old.
+- Every current holder gives their new share. A holder who lost both keys gives only their new share. A removed holder is no longer a key holder, so they can't take part. The other two holders give the old shares.
+- The re-wrap, the retirement of the old set and the activation of the new set are one transaction. The rotation locks the old set, and a seal takes a shared lock on the set, so no image is sealed to the old set after the re-wrap has read the list.
+- Images live at most 7 days after a pass, so there are few data keys to re-wrap.
+- After the rotation, the old shares are useless: their sealed copies are deleted, and their digests belong to a retired set.
+- If fewer than 2 holders of the old set remain, the old set can't be opened again. Its images can't be re-wrapped, and they expire with the purge job. This needs a decision (see "Open questions").
+
+### Files
+
+| File | What it does |
+| --- | --- |
+| `app/services/key_custody.rb` | Current and pending key set, compromise, the governance hook, board emails |
+| `app/services/key_custody/shamir.rb` | Combine (and split, for specs) over GF(2^8) |
+| `app/services/key_custody/crypto.rb` | X25519 seal, AES-256-GCM, share digests, wipe |
+| `app/services/key_custody/assertions.rb` | Challenges and WebAuthn assertion checks (webauthn gem) |
+| `app/services/key_custody/pending_shares.rb` | Waiting shares in the database (Lockbox), and the sweep |
+| `app/services/key_custody/unlock.rb` | Rebuild a master key for one block, check it, wipe it |
+| `app/services/key_custody/enrollment.rb` | Enroll and revoke hardware keys |
+| `app/services/key_custody/ceremony.rb` | Start, complete and discard a key set |
+| `app/services/key_custody/enrollment.rb` (seal keys) | Register a key's seal public key |
+| `app/services/key_custody/activation.rb` | Activate a set, and the rotation re-wrap |
+| `app/services/key_custody/recovery.rb` | Seal the share for a new key |
+| `app/services/id_document_vault.rb` | Seal, decrypt with an opened data key, re-wrap, purge |
+| `app/javascript/key_custody/` and `controllers/key_custody_controller.js` | The browser side: WebAuthn with PRF, seal keys, key pair, split, seal and open shares |
+| `app/javascript/key_custody/handoff.js` and `controllers/break_glass_controller.js` | The requester's side of the sealed handoff: the one-time key pair, IndexedDB, open and decrypt |
+
+The specs play the browser with the webauthn gem's fake client. The fake client has no PRF, so `spec/support/key_custody_helpers.rb` stubs it with an HMAC over the salt. `spec/javascript/key_custody_enrollment.test.js` checks the one-touch and two-touch enrollment paths. `spec/javascript/key_custody_crypto.test.js` (`bun test spec/javascript`) checks that the browser code derives the same seal key as Ruby, opens a share that Ruby sealed, and gives the same digests. `spec/services/key_custody/crypto_spec.rb` opens a share that the browser code sealed (a Node 22 vector). Bun 1.2 has no X25519 in WebCrypto, so it skips the X25519 tests: run them in a browser or a newer runtime.
+
+### Open questions
+
+- The pre-review copy is under Lockbox (the server key) until pre-review ends. Somebody with the database and the Lockbox master key can open an image that waits for pre-review. Jasper chose this so the pre-reviewer sees the image before any key holder is involved.
+- A waiting share is in the database under Lockbox for at most 60 minutes (locked). One share alone reveals nothing, but a person with the database, the Lockbox master key and a second share (for example a stolen hardware key and its PIN) could rebuild the key in that time.
+- When fewer than 2 holders of a compromised set remain, its images can't be re-wrapped. Weave has no "abandon the old set" step yet.
 
 ## The Knot
 

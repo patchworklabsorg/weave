@@ -8,19 +8,22 @@
 #   but not while the lead reviews an escalation
 # - at once when the member's account is deleted
 #
-# The verification and its audit record stay. Running it twice deletes
-# nothing new.
+# It purges the Lockbox copy and the sealed copy (see IdDocumentVault). The
+# verification and its audit record stay. Running it twice deletes nothing
+# new.
 class PurgeVerificationDocumentsJob < ApplicationJob
   queue_as :low
 
   def perform
     purged = 0
-    Verification.where(document_purged_at: nil).joins(:id_document_attachment).find_each do |verification|
+    Verification.where(document_purged_at: nil).left_joins(:id_document_attachment, :sealed_document)
+                .where("active_storage_attachments.id IS NOT NULL OR sealed_id_documents.id IS NOT NULL")
+                .distinct.find_each do |verification|
       reason = purge_reason(verification)
       next unless reason
 
       Verification.transaction do
-        verification.id_document.purge
+        IdDocumentVault.purge!(verification)
         verification.update!(document_purged_at: Time.current)
         VerificationEvent.record!(verification, :document_purged, reason:)
       end

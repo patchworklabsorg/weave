@@ -195,6 +195,9 @@ class User < ApplicationRecord
   # Signed NDAs, recorded by hand by an owner (see IdentityNda). The rows
   # stay after the account is deleted: the database empties user_id.
   has_many :identity_ndas, dependent: nil
+  # The hardware keys (YubiKeys) of a key holder (see KeyCustody). Staff
+  # records: the database deletes them with the account.
+  has_many :identity_hardware_keys, dependent: nil
   # Self-reported demographics are sealed in DemographicsVault, with no
   # association here: the app has no read path to them. On delete, the sealed
   # answers fold into the departed totals before the user row goes. The

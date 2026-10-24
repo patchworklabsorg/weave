@@ -18,10 +18,7 @@ RSpec.describe BreakGlassBoardReportJob do
   it "lists each decryption and each delayed notice in the mail" do
     member = create(:user, :verified)
     requester = create(:user, :identity_team)
-    record = BreakGlass.request(create(:verification, :verified, user: member), by: requester, reason: "Fraud report: compare it").record
-    BreakGlass.approve(record, by: create(:user, :key_holder))
-    BreakGlass.approve(record, by: create(:user, :key_holder))
-    BreakGlass.decrypt!(record.reload, viewer: requester)
+    record = opened_break_glass_record(create(:verification, :verified, user: member), requester:, reason: "Fraud report: compare it")
     BreakGlass.delay_member_notice(BreakGlassNotice.find_by!(recipient_kind: "member"), by: requester, reason: "Active fraud case 12")
 
     mail = BreakGlassMailer.board_report(create(:user, :verified, is_board: true), Date.current.beginning_of_month.iso8601)

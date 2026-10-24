@@ -162,9 +162,8 @@ module DeletionPipeline
     def keep_verification_audit!(user, now)
       verifications = Verification.where(user_id: user.id)
       verifications.where(document_purged_at: nil).find_each do |verification|
-        next unless verification.id_document.attached?
+        next unless IdDocumentVault.purge!(verification, later: true)
 
-        verification.id_document.purge_later
         verification.update_columns(document_purged_at: now) # rubocop:disable Rails/SkipsModelValidations
         VerificationEvent.record!(verification, :document_purged, reason: "account_deleted")
       end

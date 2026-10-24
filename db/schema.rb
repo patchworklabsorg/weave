@@ -259,9 +259,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.bigint "break_glass_record_id", null: false
     t.bigint "approver_id"
     t.datetime "created_at", null: false
+    t.bigint "hardware_key_id"
+    t.datetime "lapsed_at"
     t.index ["approver_id"], name: "index_break_glass_approvals_on_approver_id"
-    t.index ["break_glass_record_id", "approver_id"], name: "index_break_glass_approvals_on_record_and_approver", unique: true
+    t.index ["break_glass_record_id", "approver_id"], name: "index_break_glass_approvals_on_record_and_approver", unique: true, where: "(lapsed_at IS NULL)"
     t.index ["break_glass_record_id"], name: "index_break_glass_approvals_on_break_glass_record_id"
+    t.index ["hardware_key_id"], name: "index_break_glass_approvals_on_hardware_key_id"
   end
 
   create_table "break_glass_decryptions", force: :cascade do |t|
@@ -309,7 +312,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.text "denial_reason"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "key_set_id"
+    t.text "requester_public_key"
+    t.text "handoff_sealed_key"
+    t.datetime "handoff_expires_at"
+    t.datetime "opened_at"
     t.index ["denied_by_id"], name: "index_break_glass_records_on_denied_by_id"
+    t.index ["key_set_id"], name: "index_break_glass_records_on_key_set_id"
     t.index ["requested_by_id"], name: "index_break_glass_records_on_requested_by_id"
     t.index ["user_id"], name: "index_break_glass_records_on_user_id"
     t.index ["verification_id"], name: "index_break_glass_records_on_verification_id"
@@ -631,6 +640,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.index ["subject_id"], name: "index_identity_governance_proposals_on_subject_id"
   end
 
+  create_table "identity_hardware_keys", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "external_id", null: false
+    t.text "public_key", null: false
+    t.bigint "sign_count", default: 0, null: false
+    t.string "role", null: false
+    t.string "nickname"
+    t.datetime "last_used_at"
+    t.datetime "revoked_at"
+    t.bigint "revoked_by_id"
+    t.text "revoked_reason"
+    t.string "seal_salt", null: false
+    t.string "seal_public_key"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["external_id"], name: "index_identity_hardware_keys_on_external_id", unique: true
+    t.index ["revoked_by_id"], name: "index_identity_hardware_keys_on_revoked_by_id"
+    t.index ["user_id"], name: "index_identity_hardware_keys_on_user_id"
+  end
+
   create_table "identity_ndas", force: :cascade do |t|
     t.bigint "user_id"
     t.date "signed_on", null: false
@@ -666,6 +695,85 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.datetime "updated_at", null: false
     t.index ["admin_id"], name: "index_impersonations_on_admin_id"
     t.index ["user_id"], name: "index_impersonations_on_user_id"
+  end
+
+  create_table "key_custody_challenges", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "purpose", null: false
+    t.string "subject", null: false
+    t.string "challenge", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "consumed_at"
+    t.datetime "created_at", null: false
+    t.index ["challenge"], name: "index_key_custody_challenges_on_challenge", unique: true
+    t.index ["user_id"], name: "index_key_custody_challenges_on_user_id"
+  end
+
+  create_table "key_custody_events", force: :cascade do |t|
+    t.string "kind", null: false
+    t.bigint "actor_id"
+    t.bigint "subject_id"
+    t.bigint "key_set_id"
+    t.jsonb "data", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["actor_id"], name: "index_key_custody_events_on_actor_id"
+    t.index ["created_at"], name: "index_key_custody_events_on_created_at"
+    t.index ["key_set_id"], name: "index_key_custody_events_on_key_set_id"
+    t.index ["subject_id"], name: "index_key_custody_events_on_subject_id"
+  end
+
+  create_table "key_custody_key_sets", force: :cascade do |t|
+    t.text "public_key", null: false
+    t.integer "threshold", null: false
+    t.integer "share_count", null: false
+    t.string "status", default: "pending", null: false
+    t.bigint "created_by_id"
+    t.bigint "rotated_from_id"
+    t.datetime "activated_at"
+    t.datetime "compromised_at"
+    t.string "compromised_reason"
+    t.datetime "retired_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_key_custody_key_sets_on_created_by_id"
+    t.index ["public_key"], name: "index_key_custody_key_sets_on_public_key", unique: true
+    t.index ["rotated_from_id"], name: "index_key_custody_key_sets_on_rotated_from_id"
+    t.index ["status"], name: "index_key_custody_key_sets_on_status"
+  end
+
+  create_table "key_custody_pending_shares", force: :cascade do |t|
+    t.string "memory_key", null: false
+    t.bigint "holder_id", null: false
+    t.text "share_ciphertext", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.index ["expires_at"], name: "index_key_custody_pending_shares_on_expires_at"
+    t.index ["holder_id"], name: "index_key_custody_pending_shares_on_holder_id"
+    t.index ["memory_key", "holder_id"], name: "index_key_custody_pending_shares_on_memory_key_and_holder_id", unique: true
+  end
+
+  create_table "key_custody_shares", force: :cascade do |t|
+    t.bigint "key_set_id", null: false
+    t.bigint "holder_id"
+    t.integer "x", null: false
+    t.string "digest", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["holder_id"], name: "index_key_custody_shares_on_holder_id"
+    t.index ["key_set_id", "holder_id"], name: "index_key_custody_shares_on_key_set_id_and_holder_id", unique: true
+    t.index ["key_set_id", "x"], name: "index_key_custody_shares_on_key_set_id_and_x", unique: true
+    t.index ["key_set_id"], name: "index_key_custody_shares_on_key_set_id"
+  end
+
+  create_table "key_custody_wrapped_shares", force: :cascade do |t|
+    t.bigint "share_id", null: false
+    t.bigint "hardware_key_id", null: false
+    t.text "sealed", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hardware_key_id"], name: "index_key_custody_wrapped_shares_on_hardware_key_id"
+    t.index ["share_id", "hardware_key_id"], name: "idx_on_share_id_hardware_key_id_f328b38774", unique: true
+    t.index ["share_id"], name: "index_key_custody_wrapped_shares_on_share_id"
   end
 
   create_table "knot_change_requests", force: :cascade do |t|
@@ -821,6 +929,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.jsonb "dimensions", default: {}, null: false
     t.float "value"
     t.index ["name", "interval", "time", "dimensions"], name: "index_rollups_on_name_and_interval_and_time_and_dimensions", unique: true
+  end
+
+  create_table "sealed_id_documents", force: :cascade do |t|
+    t.bigint "verification_id", null: false
+    t.bigint "key_set_id", null: false
+    t.text "sealed_data_key", null: false
+    t.string "content_type", null: false
+    t.string "extension"
+    t.datetime "sealed_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key_set_id"], name: "index_sealed_id_documents_on_key_set_id"
+    t.index ["verification_id"], name: "index_sealed_id_documents_on_verification_id", unique: true
   end
 
   create_table "service_key_usages", force: :cascade do |t|
@@ -1141,6 +1262,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   add_foreign_key "application_roles", "oauth_applications", column: "application_id", on_delete: :cascade
   add_foreign_key "application_roles", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "break_glass_approvals", "break_glass_records"
+  add_foreign_key "break_glass_approvals", "identity_hardware_keys", column: "hardware_key_id", on_delete: :nullify
   add_foreign_key "break_glass_approvals", "users", column: "approver_id", on_delete: :nullify
   add_foreign_key "break_glass_decryptions", "break_glass_records"
   add_foreign_key "break_glass_decryptions", "users", column: "viewer_id", on_delete: :nullify
@@ -1149,6 +1271,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   add_foreign_key "break_glass_notices", "users", column: "delay_signed_off_by_id", on_delete: :nullify
   add_foreign_key "break_glass_notices", "users", column: "delayed_by_id", on_delete: :nullify
   add_foreign_key "break_glass_notices", "users", column: "recipient_id", on_delete: :nullify
+  add_foreign_key "break_glass_records", "key_custody_key_sets", column: "key_set_id"
   add_foreign_key "break_glass_records", "users", column: "denied_by_id", on_delete: :nullify
   add_foreign_key "break_glass_records", "users", column: "requested_by_id", on_delete: :nullify
   add_foreign_key "break_glass_records", "users", on_delete: :nullify
@@ -1179,11 +1302,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   add_foreign_key "identity_governance_proposals", "users", column: "closed_by_id", on_delete: :nullify
   add_foreign_key "identity_governance_proposals", "users", column: "proposed_by_id", on_delete: :nullify
   add_foreign_key "identity_governance_proposals", "users", column: "subject_id", on_delete: :nullify
+  add_foreign_key "identity_hardware_keys", "users", column: "revoked_by_id", on_delete: :nullify
+  add_foreign_key "identity_hardware_keys", "users", on_delete: :cascade
   add_foreign_key "identity_ndas", "users", column: "recorded_by_id", on_delete: :nullify
   add_foreign_key "identity_ndas", "users", on_delete: :nullify
   add_foreign_key "impersonation_actions", "impersonations", on_delete: :cascade
   add_foreign_key "impersonations", "users", column: "admin_id", on_delete: :nullify
   add_foreign_key "impersonations", "users", on_delete: :nullify
+  add_foreign_key "key_custody_challenges", "users", on_delete: :cascade
+  add_foreign_key "key_custody_events", "key_custody_key_sets", column: "key_set_id"
+  add_foreign_key "key_custody_events", "users", column: "actor_id", on_delete: :nullify
+  add_foreign_key "key_custody_events", "users", column: "subject_id", on_delete: :nullify
+  add_foreign_key "key_custody_key_sets", "key_custody_key_sets", column: "rotated_from_id"
+  add_foreign_key "key_custody_key_sets", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "key_custody_pending_shares", "users", column: "holder_id", on_delete: :cascade
+  add_foreign_key "key_custody_shares", "key_custody_key_sets", column: "key_set_id"
+  add_foreign_key "key_custody_shares", "users", column: "holder_id", on_delete: :nullify
+  add_foreign_key "key_custody_wrapped_shares", "identity_hardware_keys", column: "hardware_key_id", on_delete: :cascade
+  add_foreign_key "key_custody_wrapped_shares", "key_custody_shares", column: "share_id", on_delete: :cascade
   add_foreign_key "knot_change_requests", "knots"
   add_foreign_key "knot_change_requests", "users", column: "requested_by_id", on_delete: :nullify
   add_foreign_key "knot_change_requests", "verifications", on_delete: :cascade
@@ -1196,6 +1332,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   add_foreign_key "oauth_openid_requests", "oauth_access_grants", column: "access_grant_id", on_delete: :cascade
   add_foreign_key "program_grants", "knots"
   add_foreign_key "program_participations", "users", on_delete: :nullify
+  add_foreign_key "sealed_id_documents", "key_custody_key_sets", column: "key_set_id"
+  add_foreign_key "sealed_id_documents", "verifications"
   add_foreign_key "service_key_usages", "service_keys"
   add_foreign_key "service_keys", "services"
   add_foreign_key "service_keys", "users", column: "created_by_id"
@@ -1272,15 +1410,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
       $function$
   SQL
 
-  create_trigger :log_privileged_attribute_changes, sql_definition: <<-SQL
-      CREATE TRIGGER log_privileged_attribute_changes AFTER INSERT OR UPDATE OF is_board, identity_team, identity_key_holder, identity_lead, role ON public.users FOR EACH ROW EXECUTE FUNCTION log_privileged_attribute_changes()
-  SQL
-
   create_trigger :privileged_attribute_changes_no_truncate, sql_definition: <<-SQL
       CREATE TRIGGER privileged_attribute_changes_no_truncate BEFORE TRUNCATE ON public.privileged_attribute_changes FOR EACH STATEMENT EXECUTE FUNCTION refuse_privileged_attribute_change_edits()
   SQL
 
   create_trigger :privileged_attribute_changes_append_only, sql_definition: <<-SQL
       CREATE TRIGGER privileged_attribute_changes_append_only BEFORE DELETE OR UPDATE ON public.privileged_attribute_changes FOR EACH ROW EXECUTE FUNCTION refuse_privileged_attribute_change_edits()
+  SQL
+
+  create_trigger :log_privileged_attribute_changes, sql_definition: <<-SQL
+      CREATE TRIGGER log_privileged_attribute_changes AFTER INSERT OR UPDATE OF is_board, identity_team, identity_key_holder, identity_lead, role ON public.users FOR EACH ROW EXECUTE FUNCTION log_privileged_attribute_changes()
   SQL
 end
