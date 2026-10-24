@@ -218,6 +218,7 @@ RSpec.describe "Identity verification pages", type: :request do
     let(:params) do
       {
         outcome: "verified", reason: "Face matched the ID held up on the call.", age_consistent: "yes", region_consistent: "yes",
+        us_resident: "yes", us_state: "MA", residency_evidence: "id_document",
         identifiers: {
           document_type: "passport", issuing_country: "DE", document_number: "C01X00T47",
           legal_name: "Erika Mustermann", date_of_birth: "1990-08-12"

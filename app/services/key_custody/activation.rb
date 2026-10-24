@@ -137,7 +137,8 @@ module KeyCustody
         prove_each_share!(key_set, new_shares)
         if old_set
           unlock!(old_set, old_shares) do |old_private_key|
-            rewrapped = IdDocumentVault.rewrap_all!(old_set, old_private_key, key_set)
+            rewrapped = IdDocumentVault.rewrap_all!(old_set, old_private_key, key_set) +
+                        ResidencyDocumentVault.rewrap_all!(old_set, old_private_key, key_set)
           end
           old_set.update!(status: "retired", retired_at: Time.current)
           KeyCustodyWrappedShare.where(share_id: old_set.shares.select(:id)).delete_all

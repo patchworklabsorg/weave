@@ -14,6 +14,11 @@
     <% end %>
   </p>
 
+  <% residency = ResidencyFlow.current_check(user) %>
+  <p class="text-xs text-ink-faint mt-1">
+    US residency: <%= t("residency.statuses.#{user.us_residency_status}") %><%= ", #{residency.us_state_name}, until #{residency.expires_at.to_date.to_fs(:long)}" if residency&.us_resident %>.
+  </p>
+
   <% roles = [("identity team" if user.identity_team), ("key holder" if user.identity_key_holder), ("lead" if user.identity_lead)].compact %>
   <p class="text-xs text-ink-faint mt-1">Identity team: <%= roles.any? ? roles.join(", ") : "no" %></p>
 

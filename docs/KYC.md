@@ -311,6 +311,71 @@ The values are in `config/kyc/verification.yml`. Values marked `LOCKED` were dec
 
 The retention window for verification audit records is part of the retention question in the proposal. The deletion part sets it.
 
+## US residency
+
+OSPool (the Open Science Pool) lets only US residents use its capacity. It approves each user and project after Patchwork's own review. So every verified member gets a US residency result: yes (with the US state) or no. The check is about where the member lives. Weave never asks about citizenship.
+
+### Evidence
+
+| Evidence type | What the verifier sees |
+| --- | --- |
+| `id_document` | The member's US driver's license, learner's permit or state ID, with a current US address. On the identity call this is the ID itself, so there is no extra upload. |
+| `school_enrollment` | A current US school enrollment record |
+| `guardian_state_id` | The guardian's US driver's license or state ID, with a current US address |
+| `guardian_id_and_proof_of_address` | The guardian's ID and a proof of a current US address |
+| `member_statement` | The member says they do not live in the US. This gives a no, with no document. |
+
+A US passport alone is not on the list: it does not show where the member lives. A member without accepted evidence gets a no. A no is not "not eligible": it only keeps the member out of programs that need a US resident.
+
+### Two ways to a result
+
+```mermaid
+flowchart TD
+  A[Member submits an ID] -->|ID shows a US address| C[Identity call]
+  A -->|no US state ID| B[Member adds a proof document with the ID]
+  B --> C
+  C --> D[Verifier records: lives in the US yes/no, state, evidence]
+  E[Member already verified, or result ended] --> F[Uploads a proof document on /verification]
+  F --> G[Verifier pre-review, no call]
+  G --> D
+  E --> H[Says: I do not live in the US]
+  H --> I[No result]
+```
+
+- **On the identity call** (`source: identity_call`). A pass needs a residency result. The pre-reviewer sees the proof document next to the ID image, and "Document OK" seals both. The verifier records the result in the call outcome form. A failed call records no result.
+- **Without a call** (`source: document_review`). A member who already passed identity verification uploads a proof document on `/verification`. A verifier takes it on `/identity/residency_checks`, opens it in the secure viewer, and records yes (with the state) or no, or sends it back with a note. Identity is already proven, so there is no call.
+
+### What is stored
+
+`residency_checks` keeps the result (`us_resident`), the US state (`us_state`, only for yes), the evidence type, the source, who decided and the dates. Weave stores no copy of the evidence. The proof document follows the ID image rules (`ResidencyDocumentVault`): Lockbox during pre-review, then sealed to the master public key, re-wrapped at a key rotation, and purged by `PurgeVerificationDocumentsJob` on the ID image windows (a yes counts as a pass, a no or a sent-back document as a close). Break-glass does not open a residency document: after pre-review nobody can read it.
+
+Account deletion purges the document at once and keeps the check without a link, like the verification audit records. The retention sweep deletes it on the same window.
+
+### How long a result stands
+
+- A yes stands for `residency.valid_months` (12) after the decision. `RenewResidencyChecksJob` emails the member `residency.renewal_reminder_days` (30) before it ends, and the member can renew in that window.
+- A change of the state or country of the member's shipping address ends a yes at once (`UserAddress`, `ResidencyFlow.address_changed!`). The shipping address is the only address a member keeps in Weave. A move inside the same state keeps the result.
+- A no has no time limit. The member can upload a document at any time, for example after a move to the US.
+- A new result replaces the old one (`end_reason: replaced`).
+
+### Where apps see it
+
+| Where | Field |
+| --- | --- |
+| Directory API | `us_resident` (true, false or null) and `us_residency_checked_on` |
+| OIDC, scope `residency` | `us_resident` and `us_residency_checked_on`. An admin adds the scope to an app that needs it. |
+| `/verification` | The member's status, the state and the end date |
+| Admin user page | The status, the state and the end date |
+
+The state never leaves Weave. Krater filters OSPool submissions to members with `us_resident: true`.
+
+### Open values
+
+| Key | Value | State |
+| --- | --- | --- |
+| `residency.valid_months` | 12 | Decided 2026-10-21 |
+| `residency.renewal_reminder_days` | 30 | Default |
+
 ## Roles
 
 Jasper locked this design on 2026-10-20. Staff and identity roles are rows in a table, not boolean columns on `users`. The number of roles will grow, and each role has its own grant rule.

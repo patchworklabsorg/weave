@@ -23,7 +23,8 @@ RSpec.describe VerificationFlow do
 
   def decide(verification, by: verifier, outcome: "verified", **overrides)
     described_class.decide(verification, by:, outcome:, reason: "Face matched the ID held up on the call.",
-                                         age_consistent: true, region_consistent: true, identifiers:, **overrides)
+                                         age_consistent: true, region_consistent: true, identifiers:,
+                                         residency: { us_resident: true, us_state: "MA", evidence_type: "id_document" }, **overrides)
   end
 
   describe ".submit" do

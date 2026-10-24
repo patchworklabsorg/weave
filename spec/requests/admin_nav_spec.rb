@@ -19,7 +19,7 @@ RSpec.describe "Admin sidebar", type: :request do
 
     get identity_verifications_path
 
-    expect(sidebar).to eq("Identity" => ["Verification", "Key custody"])
+    expect(sidebar).to eq("Identity" => ["Verification", "US residency", "Key custody"])
     expect(current_link).to eq("Verification")
     expect(response.body).to include("Sign out", "Back to Weave")
   end
@@ -43,7 +43,7 @@ RSpec.describe "Admin sidebar", type: :request do
     get admin_users_path
 
     expect(sidebar).to eq(
-      "Identity" => ["Verification", "Key custody", "Knot"],
+      "Identity" => ["Verification", "US residency", "Key custody", "Knot"],
       "People" => ["Users", "Staff and contractors", "Groups", "Consents"],
       "Data" => ["Deletion", "Demographics", "Funder reports"],
       "System" => ["Dashboard", "OAuth apps", "Jobs", "Feature flags", "Blazer", "Console audits", "Console sign-in"]

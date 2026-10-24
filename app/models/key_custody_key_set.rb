@@ -59,6 +59,8 @@ class KeyCustodyKeySet < ApplicationRecord
   has_many :wrapped_shares, through: :shares
   has_many :sealed_documents, class_name: "SealedIdDocument", foreign_key: :key_set_id,
                               dependent: :restrict_with_exception, inverse_of: :key_set
+  has_many :sealed_residency_documents, foreign_key: :key_set_id, dependent: :restrict_with_exception,
+                                        inverse_of: :key_set
 
   validates :status, inclusion: { in: STATUSES }
   validates :public_key, presence: true, uniqueness: true

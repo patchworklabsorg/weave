@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -926,6 +926,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.index ["user_id"], name: "index_program_participations_on_user_id"
   end
 
+  create_table "residency_checks", force: :cascade do |t|
+    t.bigint "user_id"
+    t.bigint "verification_id"
+    t.string "source", null: false
+    t.string "status", default: "submitted", null: false
+    t.string "evidence_type", null: false
+    t.boolean "us_resident"
+    t.string "us_state", limit: 2
+    t.bigint "pre_reviewer_id"
+    t.datetime "pre_review_started_at"
+    t.datetime "pre_reviewed_at"
+    t.text "resubmission_note"
+    t.bigint "decided_by_id"
+    t.datetime "decided_at"
+    t.datetime "ended_at"
+    t.string "end_reason"
+    t.datetime "renewal_reminded_at"
+    t.datetime "document_purged_at"
+    t.datetime "account_deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["decided_at"], name: "index_residency_checks_on_decided_at"
+    t.index ["decided_by_id"], name: "index_residency_checks_on_decided_by_id"
+    t.index ["pre_reviewer_id"], name: "index_residency_checks_on_pre_reviewer_id"
+    t.index ["status"], name: "index_residency_checks_on_status"
+    t.index ["user_id"], name: "index_residency_checks_on_user_id"
+    t.index ["verification_id"], name: "index_residency_checks_on_verification_id"
+  end
+
   create_table "roles", force: :cascade do |t|
     t.string "key", null: false
     t.string "name", null: false
@@ -957,6 +986,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.datetime "updated_at", null: false
     t.index ["key_set_id"], name: "index_sealed_id_documents_on_key_set_id"
     t.index ["verification_id"], name: "index_sealed_id_documents_on_verification_id", unique: true
+  end
+
+  create_table "sealed_residency_documents", force: :cascade do |t|
+    t.bigint "residency_check_id", null: false
+    t.bigint "key_set_id", null: false
+    t.text "sealed_data_key", null: false
+    t.string "content_type", null: false
+    t.string "extension"
+    t.datetime "sealed_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key_set_id"], name: "index_sealed_residency_documents_on_key_set_id"
+    t.index ["residency_check_id"], name: "index_sealed_residency_documents_on_residency_check_id", unique: true
   end
 
   create_table "service_key_usages", force: :cascade do |t|
@@ -1369,8 +1411,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   add_foreign_key "oauth_openid_requests", "oauth_access_grants", column: "access_grant_id", on_delete: :cascade
   add_foreign_key "program_grants", "knots"
   add_foreign_key "program_participations", "users", on_delete: :nullify
+  add_foreign_key "residency_checks", "users", column: "decided_by_id", on_delete: :nullify
+  add_foreign_key "residency_checks", "users", column: "pre_reviewer_id", on_delete: :nullify
+  add_foreign_key "residency_checks", "users", on_delete: :nullify
+  add_foreign_key "residency_checks", "verifications", on_delete: :nullify
   add_foreign_key "sealed_id_documents", "key_custody_key_sets", column: "key_set_id"
   add_foreign_key "sealed_id_documents", "verifications"
+  add_foreign_key "sealed_residency_documents", "key_custody_key_sets", column: "key_set_id"
+  add_foreign_key "sealed_residency_documents", "residency_checks"
   add_foreign_key "service_key_usages", "service_keys"
   add_foreign_key "service_keys", "services"
   add_foreign_key "service_keys", "users", column: "created_by_id"
@@ -1542,10 +1590,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
       CREATE TRIGGER privileged_attribute_changes_append_only BEFORE DELETE OR UPDATE ON public.privileged_attribute_changes FOR EACH ROW EXECUTE FUNCTION refuse_privileged_attribute_change_edits()
   SQL
 
-  create_trigger :log_privileged_attribute_changes, sql_definition: <<-SQL
-      CREATE TRIGGER log_privileged_attribute_changes AFTER INSERT OR UPDATE OF role ON public.users FOR EACH ROW EXECUTE FUNCTION log_privileged_attribute_changes()
-  SQL
-
   create_trigger :log_user_role_changes, sql_definition: <<-SQL
       CREATE TRIGGER log_user_role_changes AFTER INSERT OR UPDATE OF revoked_at ON public.user_roles FOR EACH ROW EXECUTE FUNCTION log_user_role_changes()
   SQL
@@ -1556,5 +1600,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
 
   create_trigger :user_roles_no_truncate, sql_definition: <<-SQL
       CREATE TRIGGER user_roles_no_truncate BEFORE TRUNCATE ON public.user_roles FOR EACH STATEMENT EXECUTE FUNCTION refuse_user_role_edits()
+  SQL
+
+  create_trigger :log_privileged_attribute_changes, sql_definition: <<-SQL
+      CREATE TRIGGER log_privileged_attribute_changes AFTER INSERT OR UPDATE OF role ON public.users FOR EACH ROW EXECUTE FUNCTION log_privileged_attribute_changes()
   SQL
 end

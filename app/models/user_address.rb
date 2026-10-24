@@ -46,12 +46,31 @@ class UserAddress < Address
   # Additional validations specific to user addresses
   validates :addressable_type, inclusion: { in: ["User"] }
 
+  # A move to another state or country ends a standing US residency result
+  # (see ResidencyFlow.address_changed!). The shipping address is the only
+  # address a member keeps in Weave.
+  # (One after_commit: Rails keeps only the last of after_create_commit and
+  # after_update_commit when they name the same method.)
+  after_commit :end_residency_after_move, on: %i[create update], if: :moved_for_residency?
+
   # We could add more restrictive address type validation here if needed
   # For now, relying on the base Address model's enum validation
 
   # User-specific methods
   def user
     addressable
+  end
+
+  def end_residency_after_move
+    ResidencyFlow.address_changed!(user) if user.is_a?(User)
+  end
+
+  # An edit of the state or country, or a new address outside the US.
+  def moved_for_residency?
+    return false unless shipping?
+    return self[:country].present? && self[:country] != "US" if previously_new_record?
+
+    saved_change_to_country? || saved_change_to_state?
   end
 
   # Override to provide user-specific validation messages

@@ -23,7 +23,8 @@ RSpec.describe KnotLinker do
   def decide(verification, outcome: "verified", ids: identifiers, **overrides)
     match_account!(verification.user, ids) if outcome == "verified" && ids
     VerificationFlow.decide(verification, by: verifier, outcome:, reason: "Face matched the ID on the call.",
-                                          age_consistent: true, region_consistent: true, identifiers: ids, **overrides)
+                                          age_consistent: true, region_consistent: true, identifiers: ids,
+                                          residency: { us_resident: true, us_state: "MA", evidence_type: "id_document" }, **overrides)
   end
 
   def pass(user, ids: identifiers, **)

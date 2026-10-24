@@ -29,6 +29,21 @@ module DataRetention
           destroy_verification!(verification)
           purged += 1
         end
+        purged + purge_residency_audit!(cutoff)
+      end
+
+      # US residency checks of deleted accounts go on the same window as the
+      # verification audit records.
+      def purge_residency_audit!(cutoff)
+        purged = 0
+        ResidencyCheck.where(user_id: nil).where(account_deleted_at: ..cutoff).find_each do |check|
+          ResidencyCheck.transaction do
+            ResidencyDocumentVault.purge!(check)
+            PaperTrail::Version.where(item_type: "ResidencyCheck", item_id: check.id).delete_all
+            ResidencyCheck.where(id: check.id).delete_all
+          end
+          purged += 1
+        end
         purged
       end
 

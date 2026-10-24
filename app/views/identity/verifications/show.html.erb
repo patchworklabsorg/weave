@@ -54,6 +54,13 @@
     <% if @verification.pre_reviewer == current_user %>
       <p class="text-sm text-ink-soft">Each view of the image is logged. Open it only to check the document.</p>
       <%= render "shared/secure_image_viewer", url: image_identity_verification_path(@verification), label: "Show the ID image" %>
+      <% if @residency_check&.document&.attached? %>
+        <p class="text-sm text-ink-soft">
+          The member also uploaded a US residency document: <%= @residency_check.evidence_label.downcase %>.
+          Check that it is readable and current. You record the residency result on the call.
+        </p>
+        <%= render "shared/secure_image_viewer", url: residency_image_identity_verification_path(@verification), label: "Show the residency document" %>
+      <% end %>
     <% else %>
       <p class="text-sm text-ink-soft">
         <%= @verification.pre_reviewer&.full_name || "A deleted user" %> is the pre-reviewer. Only they can open the image and mark the document OK.
@@ -149,6 +156,26 @@
             <% end %>
           </div>
         </fieldset>
+        <fieldset class="space-y-2">
+          <legend class="text-sm font-medium text-ink">US residency (a pass needs a result). Check where the member lives. Never ask about citizenship.</legend>
+          <p class="text-xs text-ink-faint">
+            Yes needs a US driver's license, learner's permit or state ID with a current US address, or the proof document the member uploaded
+            <%= @residency_check&.document_stored? ? "(#{@residency_check.evidence_label.downcase})" : "(none uploaded)" %>.
+            A US passport alone does not show where the member lives. Weave keeps only the result, the state, the evidence type and the date.
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label class="text-sm text-ink">Lives in the US
+              <%= form.select :us_resident, [["Choose", ""], ["Yes", "yes"], ["No", "no"]], { selected: values[:us_resident] }, class: input_class %>
+            </label>
+            <label class="text-sm text-ink">US state (for yes)
+              <%= form.select :us_state, ResidencyCheck::US_STATES.map { |code, name| [name, code] }, { include_blank: true, selected: values[:us_state] }, class: input_class %>
+            </label>
+            <label class="text-sm text-ink">Evidence (for yes)
+              <%= form.select :residency_evidence, (["id_document"] + ResidencyCheck::UPLOAD_EVIDENCE).map { |type| [ResidencyCheck::EVIDENCE_TYPES[type], type] },
+                    { include_blank: true, selected: values[:residency_evidence] }, class: input_class %>
+            </label>
+          </div>
+        </fieldset>
         <%= form.text_area :reason, value: values[:reason], required: true, rows: 3, placeholder: "Written reason: what you checked on the call and why you decided",
               aria: { label: "Written reason" }, class: input_class %>
         <div class="flex flex-wrap gap-2">
@@ -193,6 +220,9 @@
     <p>Guardian attended: <%= @verification.guardian_attended ? "yes" : "no" %></p>
     <p>Age consistent: <%= @verification.age_consistent ? "yes" : "no" %>. Region consistent: <%= @verification.region_consistent ? "yes" : "no" %>.</p>
     <p>Reason: <%= @verification.decision_reason %></p>
+    <% if @residency_check&.decided? && !@residency_check.us_resident.nil? %>
+      <p>US residency: <%= @residency_check.us_resident ? "yes, #{@residency_check.us_state_name} (#{@residency_check.evidence_label.downcase})" : "no" %>.</p>
+    <% end %>
     <% if @verification.reverification_required? %>
       <p>This pass no longer stands: <%= @verification.reverification_reason.humanize %>, <%= @verification.reverification_required_at.to_fs(:long) %>. The member needs a new call.</p>
     <% end %>

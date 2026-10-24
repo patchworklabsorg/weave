@@ -11,6 +11,10 @@
 # It purges the Lockbox copy and the sealed copy (see IdDocumentVault). The
 # verification and its audit record stay. Running it twice deletes nothing
 # new.
+#
+# US residency proof documents (see ResidencyDocumentVault) follow the same
+# windows: a yes result counts as a pass, and a no result or a sent-back
+# document as a close.
 class PurgeVerificationDocumentsJob < ApplicationJob
   queue_as :low
 
@@ -30,9 +34,34 @@ class PurgeVerificationDocumentsJob < ApplicationJob
       purged += 1
     end
     Rails.logger.info("Purged #{purged} ID images") if purged.positive?
+    purge_residency_documents
   end
 
   private
+
+  def purge_residency_documents
+    purged = 0
+    ResidencyCheck.where(document_purged_at: nil).left_joins(:document_attachment, :sealed_document)
+                  .where("active_storage_attachments.id IS NOT NULL OR sealed_residency_documents.id IS NOT NULL")
+                  .distinct.find_each do |check|
+      next unless residency_purge_due?(check)
+
+      ResidencyCheck.transaction do
+        ResidencyDocumentVault.purge!(check)
+        check.update!(document_purged_at: Time.current)
+      end
+      purged += 1
+    end
+    Rails.logger.info("Purged #{purged} residency documents") if purged.positive?
+  end
+
+  def residency_purge_due?(check)
+    return true if check.user_id.nil?
+    return check.decided_at <= VerificationSettings.purge_image_after_pass.ago if check.decided? && check.us_resident
+
+    closed_at = check.closed_at
+    closed_at.present? && closed_at <= VerificationSettings.purge_image_after_close.ago
+  end
 
   def purge_reason(verification)
     return "account_deleted" if verification.user_id.nil?

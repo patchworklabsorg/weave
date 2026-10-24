@@ -43,6 +43,12 @@ shared: &shared
   # Key custody of stored ID images (see KeyCustody and docs/KYC.md, "Key
   # custody"). The master key is split into max_key_holders Shamir shares
   # (3), and any approvals_required of them (2) rebuild it.
+  # The US residency check (see ResidencyCheck). A yes result stands for
+  # valid_months, or until the member's shipping address changes state or
+  # country. The member gets a reminder renewal_reminder_days before it ends.
+  residency:
+    valid_months: 12
+    renewal_reminder_days: 30
   key_custody:
     # Hardware keys (YubiKeys) that each key holder enrolls: a primary and a
     # backup. Either one opens the holder's share. For a local test with
