@@ -22,7 +22,9 @@ The local branches, from bottom to top:
 | 5 | weave | `jaspermayone/94-kyc-deletion` | Retention, takeout, deletion pipeline, dormancy |
 | 6 | weave | `jaspermayone/kyc-identity-governance` | Identity team governance, the identity area, the bootstrap |
 | 7 | weave | `jaspermayone/kyc-key-custody` | Key custody: hardware keys, the split master key, sealed images, rotation |
-| 8 | patchworklabs.org | `jaspermayone/your-data` | The page https://patchworklabs.org/your-data |
+| 8 | weave | `jaspermayone/kyc-demographics-required` | Demographics required before the first grant: `demographics_answered` in the directory API, `return_to` on the form |
+| 9 | krater | `jaspermayone/demographics-gate` | Krater refuses a project submit until the submitter answered. Built on `claude/application-form` (krater PR #9) |
+| 10 | patchworklabs.org | `jaspermayone/your-data` | The page https://patchworklabs.org/your-data |
 
 ## The order
 
@@ -202,13 +204,14 @@ The `CLAUDE.md` rule "No stacked PRs" applies: each PR targets `main`. `gh stack
 2. Wait for CI. Squash-merge it (`gh pr merge --squash`).
 3. Fetch `main`. Rebase the next branch onto `main`: `git rebase --onto origin/main <old tip of the branch below> <next branch>`.
 4. Push the next branch, open its PR against `main`, wait for CI, and squash-merge it.
-5. Do steps 3 and 4 again for each branch, up to branch 7.
+5. Do steps 3 and 4 again for each branch, up to branch 8.
+6. In the `krater` repo, merge branch 9 after krater PR #9 is on `main`. Rebase it onto krater `main`, push it, open its PR against `main`, and squash-merge it. Merge it only after branch 8 is in production: without `demographics_answered` from Weave, Krater lets every submit through and logs a warning.
 
 Each push to `main` deploys staging (`.github/workflows/deploy-staging.yml`). A push to `main` does not deploy production.
 
 ### 5. Test staging
 
-Staging is `weave-staging.patchworklabs.org` (see `docs/STAGING.md`). After branch 7 is on `main` and staging has deployed:
+Staging is `weave-staging.patchworklabs.org` (see `docs/STAGING.md`). After branch 8 is on `main` and staging has deployed:
 
 - Run the migrations, then check `/up`.
 - The Docker image needs two system packages for ID uploads (`IdDocumentConverter`, see `docs/KYC.md`, "Upload conversion"): `poppler-utils` (already in the image, for `pdftoppm`) and `libheif-plugin-libde265` (added to the runtime stage of the Dockerfile, so libvips can decode HEIC). Build the image once before the rollout and check that `apt-get` finds the package for the image's Debian release.

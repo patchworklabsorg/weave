@@ -821,11 +821,13 @@ The rule: nobody can read one member's answers in the app. The only output is ag
 
 ### What the member sees
 
-- `/profile/demographics` has the form. Every question is optional, and every question has "Prefer not to say". The member must tick a consent box each time they save.
+- `/profile/demographics` has the form. Every question needs an answer. There is no "Prefer not to say" option. Records saved before this change can still hold `prefer_not_to_say` or no answer, and reports count them as before.
+- A member must answer before their first grant application. Krater reads `demographics_answered` in the directory API and sends the member to `/profile/demographics?return_to=<url>`. After a save, Weave sends the member back to `return_to` only when its origin matches a redirect URI of a registered OAuth app.
+- The form has no consent box. The legal basis is the funder reporting obligation of the grant, not consent: consent that a grant depends on is not freely given (GDPR Art. 7(4)). Counsel must confirm this basis and the required gender question before rollout.
 - The form always starts empty. Weave cannot show the answers back, not even to the member. The page shows only the date of the last answer.
 - To change the answers, the member answers again. The new answers replace the old ones. No version history is kept.
 - The member can delete the answers ("withdraw"). Withdrawn answers are not counted anywhere.
-- The profile page and the `/slack` onboarding page show an optional invitation to the form. It never blocks a step: the community is not gated on it.
+- The profile page and the `/slack` onboarding page do not mention the form. The community is not gated on it: only grants are.
 - Every page that collects or shows this data links to the public page "What we do with your data" (`Weave.data_page_url`, `https://patchworklabs.org/your-data`).
 - An admin who impersonates a member cannot save or delete the member's answers.
 

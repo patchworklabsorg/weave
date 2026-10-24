@@ -29,7 +29,10 @@ class DirectoryUserSerializer
       guardian_verified: @user.guardian_verified?,
       # Identity verification: needs_submission, pending, verified or
       # ineligible (see User#verification_status).
-      verification_status: @user.verification_status
+      verification_status: @user.verification_status,
+      # The member saved demographics answers. Never the answers themselves.
+      # Krater asks for it before a member's first grant application.
+      demographics_answered: DemographicsVault.answered?(@user)
     }
   end
 

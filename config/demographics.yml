@@ -1,8 +1,9 @@
 # The demographics vault (see DemographicsVault and docs/KYC.md).
 #
 # Members answer these questions themselves. Their answer is the only source
-# of record. Every question is optional, and every question gets a
-# "prefer_not_to_say" option automatically. Labels live in
+# of record. Every question needs an answer before a member's first grant
+# application (Krater reads demographics_answered in the directory API). There
+# is no "prefer_not_to_say" option. Labels live in
 # config/locales/demographics.en.yml under demographics.fields.<key>.
 #
 # Counsel can still change any value here. No code change is needed.

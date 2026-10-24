@@ -12,7 +12,7 @@ RSpec.describe DemographicsVault do
 
   describe ".record" do
     it "seals the answers so that only the private key opens them" do
-      result = described_class.record(user, { "gender_identity" => "woman" }, consent: true)
+      result = described_class.record(user, { "gender_identity" => "woman" })
 
       expect(result).to be_success
       record = DemographicRecord.find_by!(user:)
@@ -24,55 +24,54 @@ RSpec.describe DemographicsVault do
     end
 
     it "derives the age band from the birthday when the member saves" do
-      described_class.record(user, {}, consent: true)
+      described_class.record(user, { "gender_identity" => "woman" })
       travel_to(Date.new(2027, 3, 1))
-      described_class.record(user, {}, consent: true)
+      described_class.record(user, { "gender_identity" => "woman" })
 
       expect(opened(DemographicRecord.find_by!(user:))["age_band"]).to eq("18-24")
     end
 
     it "makes envelopes of the same size, whatever the answers" do
-      described_class.record(user, { "gender_identity" => "prefer_not_to_say" }, consent: true)
+      described_class.record(user, { "gender_identity" => "man" })
       short = DemographicRecord.find_by!(user:).envelope.bytesize
-      described_class.record(user, { "gender_identity" => "self_describe", "gender_identity_self_description" => "x" * 100 }, consent: true)
+      described_class.record(user, { "gender_identity" => "self_describe", "gender_identity_self_description" => "x" * 100 })
 
       expect(DemographicRecord.find_by!(user:).envelope.bytesize).to eq(short)
     end
 
     it "replaces the answers before, with no copy left" do
-      described_class.record(user, { "gender_identity" => "woman" }, consent: true)
-      described_class.record(user, { "gender_identity" => "non_binary" }, consent: true)
+      described_class.record(user, { "gender_identity" => "woman" })
+      described_class.record(user, { "gender_identity" => "non_binary" })
 
       expect(DemographicRecord.where(user:).count).to eq(1)
       expect(opened(DemographicRecord.find_by!(user:))["answers"]["gender_identity"]).to eq("non_binary")
     end
 
-    it "needs the member to agree" do
-      result = described_class.record(user, { "gender_identity" => "woman" }, consent: false)
+    it "needs an answer to every question" do
+      result = described_class.record(user, {})
 
-      expect(result.errors).to include(:consent)
+      expect(result.errors).to include(:gender_identity)
       expect(DemographicRecord.where(user:)).to be_empty
     end
 
+    it "no longer offers prefer_not_to_say" do
+      expect(described_class.options_for(described_class.fields.first)).not_to include("prefer_not_to_say")
+      expect(described_class.record(user, { "gender_identity" => "prefer_not_to_say" }).errors).to include(:gender_identity)
+    end
+
     it "refuses an option that is not in the config" do
-      result = described_class.record(user, { "gender_identity" => "robot" }, consent: true)
+      result = described_class.record(user, { "gender_identity" => "robot" })
 
       expect(result.errors).to include(:gender_identity)
       expect(DemographicRecord.where(user:)).to be_empty
     end
 
     it "keeps the self-description only when the member picks self_describe" do
-      described_class.record(user, { "gender_identity" => "man", "gender_identity_self_description" => "stray" }, consent: true)
+      described_class.record(user, { "gender_identity" => "man", "gender_identity_self_description" => "stray" })
       expect(opened(DemographicRecord.find_by!(user:))["answers"]["gender_identity_self_description"]).to be_nil
 
-      described_class.record(user, { "gender_identity" => "self_describe", "gender_identity_self_description" => " genderfluid " }, consent: true)
+      described_class.record(user, { "gender_identity" => "self_describe", "gender_identity_self_description" => " genderfluid " })
       expect(opened(DemographicRecord.find_by!(user:))["answers"]["gender_identity_self_description"]).to eq("genderfluid")
-    end
-
-    it "stores a skipped question as no answer" do
-      described_class.record(user, {}, consent: true)
-
-      expect(opened(DemographicRecord.find_by!(user:))["answers"]["gender_identity"]).to be_nil
     end
 
     context "with a multi-answer field from the config" do
@@ -83,19 +82,17 @@ RSpec.describe DemographicsVault do
       end
 
       it "keeps every answer the member picks" do
-        described_class.record(user, { "heritage" => %w[a c] }, consent: true)
+        described_class.record(user, { "heritage" => %w[a c] })
 
         expect(opened(DemographicRecord.find_by!(user:))["answers"]).to eq("heritage" => %w[a c])
       end
 
-      it "keeps only prefer_not_to_say when the member also picks it" do
-        described_class.record(user, { "heritage" => %w[a prefer_not_to_say] }, consent: true)
-
-        expect(opened(DemographicRecord.find_by!(user:))["answers"]).to eq("heritage" => ["prefer_not_to_say"])
+      it "needs at least one answer" do
+        expect(described_class.record(user, { "heritage" => [] }).errors).to include(:heritage)
       end
 
       it "refuses an unknown answer" do
-        expect(described_class.record(user, { "heritage" => %w[a z] }, consent: true).errors).to include(:heritage)
+        expect(described_class.record(user, { "heritage" => %w[a z] }).errors).to include(:heritage)
       end
     end
 
@@ -103,13 +100,13 @@ RSpec.describe DemographicsVault do
       described_class.public_key = nil
 
       expect(described_class).not_to be_available
-      expect { described_class.record(user, {}, consent: true) }.to raise_error(DemographicsVault::NotConfigured)
+      expect { described_class.record(user, {}) }.to raise_error(DemographicsVault::NotConfigured)
     end
   end
 
   describe ".withdraw!" do
     it "deletes the member's answers" do
-      described_class.record(user, { "gender_identity" => "woman" }, consent: true)
+      described_class.record(user, { "gender_identity" => "woman" })
 
       expect(described_class.withdraw!(user)).to be(true)
       expect(DemographicRecord.where(user:)).to be_empty
@@ -124,16 +121,18 @@ RSpec.describe DemographicsVault do
   describe ".answered_at" do
     it "tells when the member last answered, and nothing more" do
       expect(described_class.answered_at(user)).to be_nil
+      expect(described_class).not_to be_answered(user)
 
-      described_class.record(user, {}, consent: true)
+      described_class.record(user, { "gender_identity" => "woman" })
 
       expect(described_class.answered_at(user)).to be_within(1.second).of(Time.current)
+      expect(described_class).to be_answered(user)
     end
   end
 
   describe ".fold!" do
     it "parks the sealed envelope with no link to the member, then destroys the record" do
-      described_class.record(user, { "gender_identity" => "woman" }, consent: true)
+      described_class.record(user, { "gender_identity" => "woman" })
       envelope = DemographicRecord.find_by!(user:).envelope
 
       fold = described_class.fold!(user, cohorts: ["ganymede-2026", "2026"])
@@ -148,7 +147,7 @@ RSpec.describe DemographicsVault do
     end
 
     it "defaults the cohort to the year" do
-      described_class.record(user, {}, consent: true)
+      described_class.record(user, { "gender_identity" => "woman" })
 
       described_class.fold!(user)
 
@@ -158,7 +157,7 @@ RSpec.describe DemographicsVault do
     it "does nothing for a member with no answers, and is safe to call twice" do
       expect(described_class.fold!(user).folded).to be(false)
 
-      described_class.record(user, {}, consent: true)
+      described_class.record(user, { "gender_identity" => "woman" })
       described_class.fold!(user)
 
       expect(described_class.fold!(user).folded).to be(false)
@@ -166,7 +165,7 @@ RSpec.describe DemographicsVault do
     end
 
     it "runs when a user is destroyed" do
-      described_class.record(user, { "gender_identity" => "man" }, consent: true)
+      described_class.record(user, { "gender_identity" => "man" })
 
       user.destroy!
 

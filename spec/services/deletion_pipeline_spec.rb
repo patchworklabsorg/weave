@@ -11,7 +11,7 @@ RSpec.describe DeletionPipeline do
   before do
     create(:program_participation, user:)
     create(:knot, user:)
-    DemographicsVault.record(user, { "gender_identity" => "woman" }, consent: true)
+    DemographicsVault.record(user, { "gender_identity" => "woman" })
   end
 
   it "runs exactly the four steps, in order" do # rubocop:disable RSpec/ExampleLength, RSpec/MultipleExpectations

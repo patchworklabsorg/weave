@@ -128,12 +128,6 @@
     </section>
   </div>
 
-  <% unless impersonating? %>
-    <div class="mt-6">
-      <%= render "demographics/prompt", user: @user %>
-    </div>
-  <% end %>
-
   <%# Takeout and deletion (see Takeout and DeletionReview). %>
   <div class="patch p-5 mt-6 flex flex-col sm:flex-row sm:items-center gap-4">
     <div class="flex-1">

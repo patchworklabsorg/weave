@@ -43,7 +43,7 @@ RSpec.describe Takeout do
   end
 
   it "never holds demographics or Thread Count" do
-    DemographicsVault.record(user, { "gender_identity" => "woman" }, consent: true)
+    DemographicsVault.record(user, { "gender_identity" => "woman" })
     create(:thread_count_entry, user:, kind: "board_vouch", level: nil, reason: "SECRET-REASON")
 
     json = described_class.build(user).to_json

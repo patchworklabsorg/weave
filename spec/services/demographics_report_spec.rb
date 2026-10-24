@@ -10,7 +10,7 @@ RSpec.describe DemographicsReport do
 
   def answer(gender, birthday: 20.years.ago.to_date)
     user = create(:user, :verified, birthday:)
-    DemographicsVault.record(user, { "gender_identity" => gender }, consent: true)
+    DemographicsVault.record(user, { "gender_identity" => gender })
     user
   end
 
@@ -31,8 +31,7 @@ RSpec.describe DemographicsReport do
 
     it "never stores the self-described text" do
       user = create(:user, :verified)
-      DemographicsVault.record(user, { "gender_identity" => "self_describe", "gender_identity_self_description" => "stargazer" },
-                               consent: true)
+      DemographicsVault.record(user, { "gender_identity" => "self_describe", "gender_identity_self_description" => "stargazer" })
       3.times { answer("self_describe") }
 
       report = described_class.generate!(reader: demographics_reader)
@@ -50,8 +49,13 @@ RSpec.describe DemographicsReport do
       expect(report.active["fields"]["gender_identity"]).to eq("woman" => nil)
     end
 
-    it "counts members who skipped a question as not answered" do
-      3.times { answer(nil) }
+    it "counts a record from before every question was required as not answered" do
+      3.times do
+        payload = { "v" => 1, "age_band" => "18-24", "recorded_year" => 2026, "answers" => { "gender_identity" => nil } }
+        key = DemographicsVault.public_key
+        DemographicRecord.create!(user: create(:user, :verified), envelope: DemographicsVault::Envelope.seal(payload, key),
+                                  key_id: DemographicsVault::Envelope.key_id(key))
+      end
 
       report = described_class.generate!(reader: demographics_reader)
 

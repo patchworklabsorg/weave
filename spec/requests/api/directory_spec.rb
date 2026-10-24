@@ -36,8 +36,17 @@ RSpec.describe "Directory API", type: :request do
         "sub" => reviewer.p_id, "name" => reviewer.full_name, "email" => reviewer.email,
         "email_verified" => true, "slack_id" => "U0REVIEW", "slack_member" => reviewer.slack_member?,
         "groups" => ["krater-reviewers"], "roles" => ["reviewer"], "active" => true, "minor" => false, "guardian_verified" => false,
-        "verification_status" => "needs_submission"
+        "verification_status" => "needs_submission", "demographics_answered" => false
       )
+    end
+
+    it "says when the user answered the demographics form, and never the answers" do
+      DemographicsVault.record(reviewer, { "gender_identity" => "woman" })
+
+      body = directory_get(api_v1_directory_user_path(reviewer.p_id))
+
+      expect(body).to include("demographics_answered" => true)
+      expect(body.to_json).not_to include("woman", "gender")
     end
 
     it "gives the identity verification status, and no value from the ID" do

@@ -8,7 +8,7 @@ RSpec.describe "Admin demographics", type: :request do
 
   def answer(gender, first_name:)
     user = create(:user, :verified, first_name:)
-    DemographicsVault.record(user, { "gender_identity" => gender }, consent: true)
+    DemographicsVault.record(user, { "gender_identity" => gender })
   end
 
   it "shows the latest report with small counts hidden, and no member" do
@@ -52,7 +52,7 @@ RSpec.describe "Admin demographics", type: :request do
 
   it "shows nothing about one member on the admin user page" do
     member = create(:user, :verified)
-    DemographicsVault.record(member, { "gender_identity" => "non_binary" }, consent: true)
+    DemographicsVault.record(member, { "gender_identity" => "non_binary" })
     sign_in_via_magic_link(admin)
 
     get admin_user_path(member)
