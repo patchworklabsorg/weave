@@ -53,6 +53,9 @@ module KeyCustody
 
     def set_up? = current_key_set.present?
 
+    # Members can start an ID check: a key set is active (not compromised).
+    def open? = current_key_set&.active? || false
+
     def threshold = VerificationSettings.key_custody_threshold
 
     def share_count = VerificationSettings.key_custody_share_count

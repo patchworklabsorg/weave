@@ -62,6 +62,7 @@ module ResidencyFlow
 
     # Why the member can't ask for a check without a call now, or nil.
     def submission_blocker(user)
+      return :not_open unless KeyCustody.open?
       return :identity_needed unless user.identity_verified?
       return :in_progress if open_check(user)
 

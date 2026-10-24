@@ -73,8 +73,8 @@ roles:
     requires: [verifier]
     grant:
       rule: owner_proposes_all_board_approve
-      preconditions_at_proposal: [verified_by_another]
-      preconditions_at_approval: [verified_by_another]
+      preconditions_at_proposal: [verified_or_bootstrap]
+      preconditions_at_approval: [verified_or_bootstrap]
     revoke:
       rule: owner_proposes_all_board_approve
 

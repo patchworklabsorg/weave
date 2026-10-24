@@ -33,21 +33,21 @@ module VerificationFlow
     def submission_blocker(user)
       return :under_minimum_age if user.under_minimum_age?
       return :no_birthday if user.birthday.nil?
-      # ID checks open after the key ceremony: until a key set is active, no
-      # image can be sealed when pre-review ends. The identity team may submit
-      # before, for the bootstrap circle.
-      return :not_open unless KeyCustody.set_up? || user.identity_team
 
       latest = user.latest_verification
-      return nil if latest.nil?
+      return not_open_blocker if latest.nil?
       return :verified if latest.standing_pass?
       return :ineligible if latest.ineligible?
       return :in_progress if latest.in_progress?
       return :escalated if latest.escalation_open?
       return :cooldown if latest.failed? && latest.retry_available_at.future?
 
-      nil
+      not_open_blocker
     end
+
+    # ID checks open after the key ceremony, and pause while the key set is
+    # compromised: pre-review seals each image to the active key set.
+    def not_open_blocker = KeyCustody.open? ? nil : :not_open
 
     # The member submits an ID image ahead of the call. A member whose ID
     # is not a US driver's license, learner's permit or state ID with a

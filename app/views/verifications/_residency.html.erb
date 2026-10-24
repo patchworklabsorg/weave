@@ -9,6 +9,7 @@
     elsif check&.us_resident then t("residency.page.us_resident", state: check.us_state_name, date: check.expires_at.to_date.to_fs(:long))
     elsif check then t("residency.page.not_us_resident")
     elsif latest&.end_reason == "address_changed" then t("residency.page.ended_address")
+    elsif blocker == :not_open then t("residency.blockers.not_open")
     elsif blocker == :identity_needed then t("residency.page.identity_first")
     else t("residency.page.needs_check")
     end
