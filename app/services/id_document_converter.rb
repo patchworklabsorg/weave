@@ -62,27 +62,30 @@ module IdDocumentConverter
 
   # upload: an uploaded file (or any IO). Returns a Converted.
   def convert(upload)
+    # Outside the rescue below: without libvips, its LoadError must show.
     load_vips!
-    data = read(upload)
-    raise Refused, "The file is empty." if data.empty?
+    begin
+      data = read(upload)
+      raise Refused, "The file is empty." if data.empty?
 
-    type = Marcel::MimeType.for(StringIO.new(data))
-    raise Refused, "The file type #{type} is not accepted." unless ACCEPTED_TYPES.include?(type)
+      type = Marcel::MimeType.for(StringIO.new(data))
+      raise Refused, "The file type #{type} is not accepted." unless ACCEPTED_TYPES.include?(type)
 
-    image = load(data, type)
-    raise Refused, "The image is too large." if image.width * image.height > MAX_PIXELS
+      image = load(data, type)
+      raise Refused, "The image is too large." if image.width * image.height > MAX_PIXELS
 
-    # pdftoppm renders the page on white, with no orientation tag.
-    image = image.autorot unless type == "application/pdf"
-    image = image.colourspace(:srgb) unless image.interpretation == :srgb || image.bands < 3
-    if %w[image/png application/pdf].include?(type)
-      Converted.new(data: image.write_to_buffer(".png", strip: true), content_type: "image/png", extension: ".png")
-    else
-      image = image.flatten(background: [255, 255, 255]) if image.has_alpha?
-      Converted.new(data: image.write_to_buffer(".jpg", strip: true, Q: JPEG_QUALITY), content_type: "image/jpeg", extension: ".jpg")
+      # pdftoppm renders the page on white, with no orientation tag.
+      image = image.autorot unless type == "application/pdf"
+      image = image.colourspace(:srgb) unless image.interpretation == :srgb || image.bands < 3
+      if %w[image/png application/pdf].include?(type)
+        Converted.new(data: image.write_to_buffer(".png", strip: true), content_type: "image/png", extension: ".png")
+      else
+        image = image.flatten(background: [255, 255, 255]) if image.has_alpha?
+        Converted.new(data: image.write_to_buffer(".jpg", strip: true, Q: JPEG_QUALITY), content_type: "image/jpeg", extension: ".jpg")
+      end
+    rescue Vips::Error => e
+      raise Refused, "The file does not convert: #{e.message.lines.first.to_s.strip}"
     end
-  rescue Vips::Error => e
-    raise Refused, "The file does not convert: #{e.message.lines.first.to_s.strip}"
   end
 
   def read(upload)

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "vips"
 
 # The upload conversion of ID images (see IdDocumentConverter). The fixtures
 # are small files made with libvips (JPEG with EXIF and GPS, HEIC, WebP), a
