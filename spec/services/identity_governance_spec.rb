@@ -151,15 +151,15 @@ RSpec.describe IdentityGovernance do
         .to have_enqueued_mail(IdentityGovernanceMailer, :approval_needed).twice
     end
 
-    it "logs each step and keeps a PaperTrail version of the flag change" do
+    it "logs each step and keeps a role row that names the approver and the proposal" do
       proposal = propose("add_member", candidate)
       described_class.approve(proposal, by: board_member)
 
       expect(proposal.events.order(:id).pluck(:kind)).to eq(%w[proposed approved applied])
       expect(proposal.events.find_by(kind: "proposed").data).to include("reason" => "Needed for the calls.")
-      version = candidate.versions.order(:id).last
-      expect(version.whodunnit).to eq(board_member.id.to_s)
-      expect(version.object).to include("identity_team: false")
+      row = UserRole.active.for_role("verifier").find_by!(user: candidate)
+      expect(row).to have_attributes(granted_by: board_member, identity_governance_proposal: proposal, reason: "Needed for the calls.")
+      expect(PrivilegedAttributeChange.find_by!(user_role_id: row.id)).to have_attributes(actor_id: board_member.id, operation: "grant")
     end
   end
 
@@ -613,6 +613,91 @@ RSpec.describe IdentityGovernance do
 
       expect(event).to have_attributes(kind: "board_member_removed", actor: owner, subject: leaving)
       expect(ActionMailer::Base.deliveries.flat_map(&:to)).to contain_exactly(owner.email, board_member.email, leaving.email)
+    end
+  end
+
+  describe "patch lead changes" do
+    let(:lead) { ready_candidate(first_name: "Adam") }
+
+    def propose_lead(by: owner, scope: "ganymede", subject: lead)
+      described_class.propose(kind: "add_patch_lead", subject:, by:, reason: "Leads Ganymede.", scope:)
+    end
+
+    it "needs an owner to propose with a program and a different board member to approve" do
+      result = propose_lead
+      expect(result).to be_success
+      proposal = result.record
+      expect(proposal).to have_attributes(scope: "ganymede", required_approver_ids: [])
+      expect(proposal.description).to eq("make #{lead.full_name} the patch lead of Project Ganymede")
+
+      expect(described_class.approve(proposal, by: owner)).not_to be_success
+      expect(lead.reload.has_role?("patch_lead", scope: "ganymede")).to be(false)
+      expect(described_class.approve(proposal, by: board_member)).to be_success
+
+      expect(lead.reload.has_role?("patch_lead", scope: "ganymede")).to be(true)
+      expect(KnotGrants.patch_lead?(lead, "ganymede")).to be(true)
+      expect(UserRole.for_role("patch_lead").sole).to have_attributes(identity_governance_proposal: proposal, granted_by: board_member)
+      expect(proposal.events.find_by(kind: "applied").summary).to include("patch lead of Project Ganymede")
+    end
+
+    it "needs a program from config/kyc/knot.yml" do
+      expect(propose_lead(scope: nil).errors).to include(scope: "must be one of: ganymede")
+      expect(propose_lead(scope: "europa").errors).to include(scope: "must be one of: ganymede")
+      expect(IdentityGovernanceProposal.count).to eq(0)
+    end
+
+    it "does not let a non-owner propose, and refuses a patch lead who already leads the program" do
+      expect(propose_lead(by: board_member)).not_to be_success
+
+      RoleGrants.grant!(lead, "patch_lead", scope: "ganymede")
+      expect(propose_lead.message).to include("already the patch lead of ganymede")
+    end
+
+    it "needs the patch lead to be ID-verified by another verifier, at the proposal and at the approval" do
+      unverified = create(:user, :verified)
+      expect(propose_lead(subject: unverified).message).to include("must be verified (by another verifier)")
+
+      proposal = propose_lead.record
+      lead.latest_verification.update_columns(verifier_id: lead.id) # rubocop:disable Rails/SkipsModelValidations
+      expect(described_class.approve(proposal, by: board_member).message).to include("must be verified (by another verifier)")
+      expect(lead.reload.has_role?("patch_lead", scope: "ganymede")).to be(false)
+    end
+
+    it "does not let the subject approve a proposal about themselves" do
+      lead.update!(is_board: true)
+      proposal = propose_lead.record
+
+      expect(described_class.approve(proposal, by: lead)).not_to be_success
+    end
+  end
+
+  describe "the rules come from config/roles.yml" do
+    it "offers only the kinds whose role has a proposal rule" do
+      expect(described_class.proposable_kinds).to eq(IdentityGovernanceProposal::KINDS)
+
+      raw = YAML.safe_load_file(RoleRegistry::PATH)
+      raw["roles"]["identity_lead"]["revoke"] = { "rule" => "owner" }
+      allow(RoleRegistry).to receive(:definitions).and_return(RoleRegistry.parse(raw))
+
+      expect(described_class.proposable_kinds).not_to include("clear_lead")
+      lead = create(:user, :identity_lead)
+      result = described_class.propose(kind: "clear_lead", subject: lead, by: owner, reason: "x")
+      expect(result.message).to include("does not need a proposal")
+    end
+
+    it "asks every board member when the config gives a role the all-board rule" do
+      board_member
+      other_board_member
+      raw = YAML.safe_load_file(RoleRegistry::PATH)
+      raw["roles"]["patch_lead"]["grant"]["rule"] = "owner_proposes_all_board_approve"
+      allow(RoleRegistry).to receive(:definitions).and_return(RoleRegistry.parse(raw))
+
+      proposal = described_class.propose(kind: "add_patch_lead", subject: ready_candidate, by: owner,
+                                         reason: "x", scope: "ganymede").record
+
+      expect(proposal.required_approver_ids).to contain_exactly(owner.id, board_member.id, other_board_member.id)
+      described_class.approve(proposal, by: board_member)
+      expect(proposal.reload).to be_pending
     end
   end
 

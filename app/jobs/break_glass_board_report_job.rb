@@ -10,7 +10,7 @@ class BreakGlassBoardReportJob < ApplicationJob
     month = month ? Date.iso8601(month) : Date.current.prev_month
     report = BreakGlassReport.new(month)
 
-    User.where(is_board: true).where.not(email: nil).find_each do |member|
+    User.board_members.where.not(email: nil).find_each do |member|
       next unless member.can_authenticate?
 
       BreakGlassMailer.board_report(member, report.month.iso8601).deliver_later

@@ -5,7 +5,8 @@ require "rails_helper"
 RSpec.describe SyncSystemGroupsJob do
   it "syncs every user and records the job as the actor" do
     user = create(:user)
-    user.update_column(:is_board, true) # rubocop:disable Rails/SkipsModelValidations
+    # A role row written without RoleGrants (as raw SQL would), so no sync ran.
+    UserRole.create!(user:, role: Role.fetch!("board"), granted_at: Time.current)
 
     described_class.perform_now
 

@@ -640,6 +640,12 @@ Rails.application.routes.draw do
         end
       end
 
+      # Roles with an immediate grant rule: staff, contractor, board member
+      # (see RoleGrants and config/roles.yml).
+      resources :role_assignments, only: [:index, :create] do
+        collection { post :revoke }
+      end
+
       # The Knot (see KnotLinker and KnotChanges). The index lists the
       # two-key requests that wait for a sign-off.
       resources :knots, only: [:index, :show] do

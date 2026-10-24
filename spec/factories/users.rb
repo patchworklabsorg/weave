@@ -125,6 +125,10 @@ FactoryBot.define do
       birthday { 15.years.ago.to_date }
     end
 
+    # The role traits create user_roles rows (see RoleGrants): the
+    # compatibility setters (identity_team, is_board, ...) stage the role,
+    # and the save grants it.
+    #
     # Runs identity verification (see Verification). The verification pages
     # (/identity) do not need the admin role. The trait gives it anyway,
     # because the deletion review and the Knot pages are in /admin.
@@ -142,6 +146,29 @@ FactoryBot.define do
     trait :identity_lead do
       identity_team
       identity_lead { true }
+    end
+
+    trait :board do
+      is_board { true }
+    end
+
+    trait :staff do
+      is_staff { true }
+    end
+
+    trait :contractor do
+      is_contractor { true }
+    end
+
+    # The patch lead of a program (default ganymede): a scoped role.
+    trait :patch_lead do
+      transient do
+        patch_lead_program { "ganymede" }
+      end
+
+      after(:create) do |user, evaluator|
+        RoleGrants.grant!(user, "patch_lead", scope: evaluator.patch_lead_program, reason: "factory")
+      end
     end
 
     trait :with_magic_link do

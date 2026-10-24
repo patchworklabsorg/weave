@@ -37,6 +37,8 @@ module AdminNavHelper
       ]),
       NavGroup.new("People", [
         (admin_nav_entry("Users", admin_users_path, :users, "admin people members", %w[users user_*], :admin) if admin),
+        (admin_nav_entry("Staff and contractors", admin_role_assignments_path, :briefcase, "admin roles staff contractors",
+                         %w[role_assignments], :admin) if admin),
         (admin_nav_entry("Groups", admin_groups_path, :users_round, "admin teams", %w[groups group_memberships], :admin) if admin),
         (admin_nav_entry("Consents", admin_guardian_consents_path, :shield_check, "admin guardian minors review queue",
                          %w[guardian_consents], :admin) if admin)
@@ -79,6 +81,6 @@ module AdminNavHelper
 
   # The Knot pages: the identity team, the board and the program patch leads.
   def knot_nav?(user)
-    user.identity_team || user.is_board || KnotSettings.program_keys.any? { |program| KnotGrants.patch_lead?(user, program) }
+    user.identity_team || user.is_board || KnotGrants.any_patch_lead?(user)
   end
 end

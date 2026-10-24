@@ -23,8 +23,9 @@ The local branches, from bottom to top:
 | 6 | weave | `jaspermayone/kyc-identity-governance` | Identity team governance, the identity area, the bootstrap |
 | 7 | weave | `jaspermayone/kyc-key-custody` | Key custody: hardware keys, the split master key, sealed images, rotation |
 | 8 | weave | `jaspermayone/kyc-demographics-required` | Demographics required before the first grant: `demographics_answered` in the directory API, `return_to` on the form |
-| 9 | krater | `jaspermayone/demographics-gate` | Krater refuses a project submit until the submitter answered. Built on `claude/application-form` (krater PR #9) |
-| 10 | patchworklabs.org | `jaspermayone/your-data` | The page https://patchworklabs.org/your-data |
+| 9 | weave | `jaspermayone/kyc-roles` | Roles table: `roles` and `user_roles` replace the role booleans, grant rules in `config/roles.yml`, patch leads as scoped roles |
+| 10 | krater | `jaspermayone/demographics-gate` | Krater refuses a project submit until the submitter answered. Built on `claude/application-form` (krater PR #9) |
+| 11 | patchworklabs.org | `jaspermayone/your-data` | The page https://patchworklabs.org/your-data |
 
 ## The order
 
@@ -69,7 +70,7 @@ Each value below is marked `PLACEHOLDER` in its file, or shows as a bracketed ma
 | `config/thread_count.yml` | `external_signal_weights` | `github_student` 5, `other_program` 3 | thread-count |
 | `config/thread_count.yml` | `project_event_services` | `[]` (add the real service, for example Krater) | thread-count |
 
-These are locked now and need no decision: `purge_image_days_after_close` (30), `programs.ganymede.patch_lead_p_ids` (Adam, `PWL8724F96B89`, in production), the Knot is kept for ever, `age_band_starts` (`[0, 13, 16, 18, 25, 35]`), `takeout.download_days` (7), `takeout.cooldown_hours` (24), `key_custody.pending_share_minutes` (60) and `amount_band_starts` (`[0, 1, 100, 250, 500, 1000, 2500, 5000]`). `funders` and `program_funders` stay empty until a funder signs: see "When the first funder signs" below.
+These are locked now and need no decision: `purge_image_days_after_close` (30), the Ganymede patch lead (Adam, `PWL8724F96B89`, in production: the migration `MigrateRoleBooleansToUserRoles` makes it a `patch_lead` role scoped to `ganymede`), the role grant rules in `config/roles.yml`, the Knot is kept for ever, `age_band_starts` (`[0, 13, 16, 18, 25, 35]`), `takeout.download_days` (7), `takeout.cooldown_hours` (24), `key_custody.pending_share_minutes` (60) and `amount_band_starts` (`[0, 1, 100, 250, 500, 1000, 2500, 5000]`). `funders` and `program_funders` stay empty until a funder signs: see "When the first funder signs" below.
 
 **Page markers** (`patchworklabs.org`, branch `jaspermayone/your-data`)
 
@@ -140,7 +141,7 @@ The production p_ids of the people below (production values only; staging and de
 | Dominic | `PWL908148D41E` | yes | no |
 | Adam | `PWL8724F96B89` | no | yes (also the Ganymede patch lead) |
 
-1. An owner marks the board members (`is_board`) on `/admin/users/:id/edit`: Jasper (`PWL7A1CE1F3CB`), Kieran (`PWL0667B785FD`) and Dominic (`PWL908148D41E`). Adam (`PWL8724F96B89`) is not on the board. Only an owner can change this box. Each change is logged and emailed to the board. The board group drives the governance approvals, so do this first. A key holder change needs at least 2 board members.
+1. Check the board roles. The migration `MigrateRoleBooleansToUserRoles` copies each old `is_board` value into a `board` role. On `/identity/governance` (section "Roles"), the board must be Jasper (`PWL7A1CE1F3CB`), Kieran (`PWL0667B785FD`) and Dominic (`PWL908148D41E`). Adam (`PWL8724F96B89`) is not on the board. If the board is not right, an owner grants or revokes the board role in the roles section of `/admin/users/:id`. Only an owner sees this form, and any owner can change it for any person. Each change is logged and emailed to the board. The board group drives the governance approvals, so do this first. A key holder change needs at least 2 board members.
 2. Jasper (`PWL7A1CE1F3CB`), Kieran (`PWL0667B785FD`) and Adam (`PWL8724F96B89`) sign the NDA in Mercury.
 3. An owner opens `/identity/governance` and records each signed NDA: the date, the NDA version and the Mercury reference. Do not upload the document.
 4. Run the bootstrap in a one-off container, with the members in circle order:
@@ -204,22 +205,24 @@ The `CLAUDE.md` rule "No stacked PRs" applies: each PR targets `main`. `gh stack
 2. Wait for CI. Squash-merge it (`gh pr merge --squash`).
 3. Fetch `main`. Rebase the next branch onto `main`: `git rebase --onto origin/main <old tip of the branch below> <next branch>`.
 4. Push the next branch, open its PR against `main`, wait for CI, and squash-merge it.
-5. Do steps 3 and 4 again for each branch, up to branch 8.
-6. In the `krater` repo, merge branch 9 after krater PR #9 is on `main`. Rebase it onto krater `main`, push it, open its PR against `main`, and squash-merge it. Merge it only after branch 8 is in production: without `demographics_answered` from Weave, Krater lets every submit through and logs a warning.
+5. Do steps 3 and 4 again for each branch, up to branch 9.
+6. In the `krater` repo, merge branch 10 after krater PR #9 is on `main`. Rebase it onto krater `main`, push it, open its PR against `main`, and squash-merge it. Merge it only after branch 8 is in production: without `demographics_answered` from Weave, Krater lets every submit through and logs a warning.
 
 Each push to `main` deploys staging (`.github/workflows/deploy-staging.yml`). A push to `main` does not deploy production.
 
 ### 5. Test staging
 
-Staging is `weave-staging.patchworklabs.org` (see `docs/STAGING.md`). After branch 8 is on `main` and staging has deployed:
+Staging is `weave-staging.patchworklabs.org` (see `docs/STAGING.md`). After branch 9 is on `main` and staging has deployed:
 
 - Run the migrations, then check `/up`.
 - The Docker image needs two system packages for ID uploads (`IdDocumentConverter`, see `docs/KYC.md`, "Upload conversion"): `poppler-utils` (already in the image, for `pdftoppm`) and `libheif-plugin-libde265` (added to the runtime stage of the Dockerfile, so libvips can decode HEIC). Build the image once before the rollout and check that `apt-get` finds the package for the image's Debian release.
 - Upload one HEIC photo and one PDF with a test account. Check that each is stored as an image (JPEG or PNG) with no EXIF or GPS data.
-- Check the permanent log: change the board box of a test account on `/admin/users/:id/edit`, and check that the row shows on `/identity/governance` with your name as the actor. In a console, run `User.find_by(email: "<test email>").update_column(:is_board, false)`, and check that a row with the label `console <name>` shows too.
+- Check the roles: run `bin/rails roles:sync`. It must list the 7 roles of `config/roles.yml`. Check that each staging account that had a role boolean before the deploy now has the same role on `/identity/governance` (section "Roles").
+- Check the permanent log: grant the board role to a test account in the roles section of `/admin/users/:id`, and check that the row `grant role board` shows on `/identity/governance` with your name as the actor. In a console, run `RoleGrants.revoke!(User.find_by(email: "<test email>"), "board")`, and check that a row with the label `console <name>` shows too.
+- Check that an admin who is not an owner sees no board form, and that the staff and contractors page (`/admin/role_assignments`) grants and revokes staff.
+- Check that one owner can change the board role of a second test owner, and that a patch lead proposal for a person who is not ID-verified is refused.
 - Do the bootstrap with three test accounts (step 3), and check that it refuses a second run.
 - Check that a bootstrap member who is not verified can't record a decision for a person who is not next in the circle.
-- Check that an admin who is not an owner can't change the board box on `/admin/users/:id/edit`.
 - Propose a verifier with one owner and approve with another board member. Check that the owner can't approve their own proposal.
 - Sign in as a verifier without the admin role. Check that `/identity/verifications` opens and `/admin` does not.
 - Do one full verification with a test account: submit, pre-review, call, decision.
@@ -233,9 +236,20 @@ Staging is `weave-staging.patchworklabs.org` (see `docs/STAGING.md`). After bran
 
 - Deploy with `bin/deploy-local`. The fallback is `gh workflow run deploy.yml`.
 - The migration `CreatePrivilegedAttributeChanges` creates the permanent log and its triggers. The database role of the app must be able to create functions and triggers (the owner of the tables can). After the deploy, check that `/identity/governance` shows the section "Permanent log of privileged attributes". The seeding in step 3 writes the first rows.
+- The migrations `CreateRoles` and `MigrateRoleBooleansToUserRoles` create the roles tables and copy each true role boolean (`identity_team`, `identity_lead`, `identity_key_holder`, `is_board`, `is_staff`, `is_contractor`) into a role row. They also make Adam (`PWL8724F96B89`) the Ganymede patch lead. The copy does not check the ID verification that a new patch lead needs: Adam is verified in the bootstrap circle (step 3). A later patch lead goes through a proposal, which checks it. Each copy writes a `grant` row to the permanent log with the label `migration MigrateRoleBooleansToUserRoles`. After the deploy, check the section "Roles" on `/identity/governance` against the old values, and run `bin/rails groups:sync_system`.
 - Check `/up`, the identity pages `/identity/verifications` and `/identity/governance`, and the admin pages `/admin/deletion_requests` and `/admin/break_glass_report`.
 - Seed the roles and bootstrap the identity team (step 3, "Seed the roles and bootstrap the identity team").
 - Run the key ceremony (step 3, "The key ceremony").
+
+#### Later: drop the old role columns
+
+The old boolean columns stay after the roles deploy, so a rollback of the code still has the old values. Weave ignores them (`User.ignored_columns`) and no longer writes them, so they go stale. Drop them in a later, separate deploy:
+
+1. Wait until the roles deploy runs in production with no problem (for example 2 weeks).
+2. Check that no code queries the columns: `grep -rnE "(is_board|is_staff|is_contractor|identity_team|identity_key_holder|identity_lead)(: | =)" app lib config db/seeds.rb`. Only the accessors in `app/models/user.rb` may show. The accessors (`user.is_board` and the rest) read the roles, so they stay.
+3. Write one migration that removes the six columns (`safety_assured { remove_column ... }`). Strong Migrations asks for the ignored columns first, and they are ignored already.
+4. In the same change, remove the six names from `self.ignored_columns`, and keep `User::LEGACY_ROLE_COLUMNS` for the accessors.
+5. Do not change the old permanent log rows. They keep the old column names as history.
 
 ### 7. Publish the page
 

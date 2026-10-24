@@ -41,10 +41,15 @@ module KnotGrants
       [settings.grant_cap - (user&.knot&.grants_received(settings.key) || 0), 0].max
     end
 
+    # The patch lead of a program holds the patch_lead role scoped to the
+    # program key (see RoleGrants and config/roles.yml).
     def patch_lead?(user, program)
       settings = KnotSettings.program(program)
-      user.present? && settings.present? && settings.patch_lead_p_ids.include?(user.p_id)
+      user.present? && settings.present? && user.has_role?("patch_lead", scope: settings.key)
     end
+
+    # True when the user leads any program.
+    def any_patch_lead?(user) = user.present? && user.role_scopes("patch_lead").intersect?(KnotSettings.program_keys)
 
     def record(user, program:, by:)
       program = program.to_s

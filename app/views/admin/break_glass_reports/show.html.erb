@@ -96,7 +96,7 @@
 </div>
 
 <h3 class="font-display text-lg font-bold text-ink mb-3">Changes to privileged attributes</h3>
-<p class="text-sm text-ink-soft mb-3">From the permanent log: every change to board membership, the identity team flags and the admin role. A database trigger writes it, so console and SQL changes are in it too.</p>
+<p class="text-sm text-ink-soft mb-3">From the permanent log: every grant and revoke of a role (board member, verifier, key holder, identity lead, staff, contractor, patch lead) and every change to the admin role. Database triggers write it, so console and SQL changes are in it too.</p>
 <div class="patch overflow-hidden mb-8">
   <% if @report.privileged_changes.any? %>
     <ul class="divide-y divide-ink-soft/10">

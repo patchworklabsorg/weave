@@ -182,16 +182,54 @@ class User < ApplicationRecord
   # KnotLinker.write_record_and_detach!, and the database empties user_id.
   has_one :knot, dependent: nil, inverse_of: :user
 
+  # Staff and identity roles are rows in user_roles (see Role, UserRole,
+  # RoleGrants and config/roles.yml). The admin tier stays in `role` above.
+  #
   # The identity team runs verification. Key holders approve break-glass
   # access to stored ID images, and the lead gets every break-glass notice
   # (see BreakGlass). Changes go through IdentityGovernance: two people add a
   # verifier or change the lead, the whole board changes a key holder, and one
   # owner or lead removes a member at once.
-  scope :identity_team, -> { where(identity_team: true) }
-  scope :identity_key_holders, -> { identity_team.where(identity_key_holder: true) }
-  scope :identity_leads, -> { identity_team.where(identity_lead: true) }
-  validate :identity_roles_need_identity_team
-  validate :identity_key_holder_limit, if: -> { identity_key_holder && will_save_change_to_identity_key_holder? }
+  has_many :user_roles, dependent: nil, inverse_of: :user
+  has_many :active_user_roles, -> { active.includes(:role) }, class_name: "UserRole", inverse_of: false, dependent: nil
+
+  # The old boolean column of each role. The columns stay in the table until
+  # a later migration drops them (docs/KYC_ROLLOUT.md), but Weave neither
+  # reads nor writes them: the accessors below read the roles. They are
+  # ignored, so a stray user.is_board reads the role and never the stale
+  # column. Do not query them with where(is_board: true): use the scopes.
+  LEGACY_ROLE_COLUMNS = {
+    "identity_team" => "verifier",
+    "identity_lead" => "identity_lead",
+    "identity_key_holder" => "key_holder",
+    "is_board" => "board",
+    "is_staff" => "staff",
+    "is_contractor" => "contractor"
+  }.freeze
+  self.ignored_columns += LEGACY_ROLE_COLUMNS.keys
+
+  # Preload the roles of a list of users (no N+1 for user.is_board and the
+  # other accessors).
+  scope :with_roles, -> { includes(:active_user_roles) }
+  # Users with an active assignment of the role. scope: nil is a global
+  # assignment, :any is any scope.
+  scope :with_role, lambda { |key, scope: nil|
+    assignments = UserRole.active.for_role(key)
+    assignments = assignments.where(scope:) unless scope == :any
+    where(id: assignments.select(:user_id))
+  }
+  scope :identity_team, -> { with_role("verifier") }
+  scope :identity_key_holders, -> { identity_team.with_role("key_holder") }
+  scope :identity_leads, -> { identity_team.with_role("identity_lead") }
+  scope :board_members, -> { with_role("board") }
+  scope :staff_members, -> { with_role("staff") }
+  scope :contractors, -> { with_role("contractor") }
+  validate :identity_roles_need_identity_team, if: :pending_role_changes?
+  validate :identity_key_holder_limit, if: -> { pending_role_changes? && pending_role_grant?("key_holder") }
+  after_save :apply_pending_role_changes, if: :pending_role_changes?
+  # Account deletion revokes every role first, so the rows stay as history
+  # (the database refuses to delete them).
+  before_destroy :revoke_roles_for_deletion
   # Signed NDAs, recorded by hand by an owner (see IdentityNda). The rows
   # stay after the account is deleted: the database empties user_id.
   has_many :identity_ndas, dependent: nil
@@ -598,11 +636,60 @@ class User < ApplicationRecord
     is_staff || is_contractor
   end
 
+  # -- Roles (see RoleGrants) --------------------------------------------
+
+  # True when the user holds the role. scope: nil asks for a global
+  # assignment. A change set through a compatibility setter (is_board = true)
+  # counts before the save.
+  def has_role?(key, scope: nil)
+    key = key.to_s
+    return @pending_role_changes[key] if scope.nil? && @pending_role_changes&.key?(key)
+
+    scope = scope&.to_s
+    active_user_roles.any? { |assignment| assignment.role.key == key && assignment.scope == scope }
+  end
+
+  # The scopes of a scopable role the user holds (for example the program
+  # keys of a patch lead).
+  def role_scopes(key)
+    key = key.to_s
+    active_user_roles.select { |assignment| assignment.role.key == key }.filter_map(&:scope)
+  end
+
+  # The keys of every role the user holds.
+  def role_keys = active_user_roles.map { |assignment| assignment.role.key }.uniq
+
+  # Drops the cached roles, after a grant or revoke.
+  def reload_roles!
+    association(:active_user_roles).reset
+    association(:user_roles).reset
+    self
+  end
+
+  def reload(*)
+    @pending_role_changes = nil
+    super
+  end
+
+  # Compatibility accessors: user.is_board, user.identity_team and the rest
+  # read the roles. The setters stage a change that applies at the save,
+  # through RoleGrants.grant! and .revoke! with no rule check: they are for
+  # the console and specs, like a column write was. The app grants roles
+  # through RoleGrants.grant, .revoke and IdentityGovernance.
+  LEGACY_ROLE_COLUMNS.each do |column, key|
+    define_method(column) { has_role?(key) }
+    define_method(:"#{column}?") { has_role?(key) }
+    define_method(:"#{column}=") do |value|
+      (@pending_role_changes ||= {})[key] = ActiveModel::Type::Boolean.new.cast(value) || false
+    end
+  end
+
   # Membership attributes. `role` governs access (user/admin/superadmin/owner);
-  # staff and board are orthogonal attributes that configure capabilities, not
+  # staff and board are orthogonal roles that configure capabilities, not
   # access tiers. A plain member with no elevated role is a "community member".
   def board? = is_board
   def staff? = is_staff
+  def contractor? = is_contractor
   def community_member? = user?
 
   # In the Slack workspace already — a slack_id is only ever set by syncing
@@ -923,6 +1010,36 @@ class User < ApplicationRecord
     return if others < VerificationSettings.max_key_holders
 
     errors.add(:identity_key_holder, "can't be added: there are already #{others} key holders")
+  end
+
+  def pending_role_changes? = @pending_role_changes.present?
+
+  # A staged grant of a role the user does not hold yet.
+  def pending_role_grant?(key)
+    return false unless @pending_role_changes&.[](key)
+
+    new_record? || active_user_roles.none? { |assignment| assignment.role.key == key && assignment.scope.nil? }
+  end
+
+  # Applies the changes staged by the compatibility setters. Grants run
+  # required roles first (verifier before key holder). A revoke also revokes
+  # the roles that require it.
+  def apply_pending_role_changes
+    changes = @pending_role_changes
+    @pending_role_changes = nil
+    reload_roles!
+    grants, revokes = changes.partition { |_key, value| value }
+    revokes.each { |key, _value| RoleGrants.revoke!(self, key, reason: "set through User##{LEGACY_ROLE_COLUMNS.key(key)}=") }
+    grants.map(&:first).sort_by { |key| RoleRegistry.fetch(key).requires.size }.each do |key|
+      RoleGrants.grant!(self, key, reason: "set through User##{LEGACY_ROLE_COLUMNS.key(key)}=")
+    end
+  rescue RoleGrants::Error => error
+    errors.add(:base, error.message)
+    raise ActiveRecord::RecordInvalid, self
+  end
+
+  def revoke_roles_for_deletion
+    RoleGrants.revoke_all!(self, reason: "The account was deleted.") if persisted?
   end
 
   def birthday_plausible

@@ -251,7 +251,7 @@ RSpec.describe "Identity team governance pages", type: :request do
         .to have_enqueued_mail(IdentityGovernanceMailer, :member_removed)
 
       expect(member.reload.identity_team).to be(false)
-      expect(PrivilegedAttributeChange.where(user_id: member.id, attribute_name: "identity_team", new_value: "false").sole)
+      expect(PrivilegedAttributeChange.where(user_id: member.id, role_key: "verifier", operation: "revoke").sole)
         .to have_attributes(new_value: "false", actor_id: lead.id)
     end
 
@@ -295,22 +295,24 @@ RSpec.describe "Identity team governance pages", type: :request do
 
       get admin_break_glass_report_path
 
-      expect(response.body).to include("Changes to privileged attributes", "#{member.p_id}: identity_team true -&gt; false",
+      expect(response.body).to include("Changes to privileged attributes", "#{member.p_id}: revoke role verifier",
                                        "By Olive")
       mail = BreakGlassMailer.board_report(board, Date.current.beginning_of_month.iso8601)
-      expect(mail.body.encoded).to include("Changes to privileged attributes (permanent log)", "#{member.p_id}: identity_team true -> false")
+      expect(mail.body.encoded).to include("Changes to privileged attributes (permanent log)", "#{member.p_id}: revoke role verifier")
     end
   end
 
   describe "the permanent log on the governance page" do
-    it "shows every change to a privileged attribute" do
+    it "shows every role grant and revoke, and every admin tier change" do
       member = create(:user, :verified)
-      member.update_column(:is_board, true) # rubocop:disable Rails/SkipsModelValidations
+      RoleGrants.grant!(member, "patch_lead", scope: "ganymede")
+      member.update!(role: :admin)
       sign_in_via_magic_link(owner)
 
       get identity_governance_path
 
-      expect(response.body).to include("Permanent log of privileged attributes", "#{member.p_id}: is_board false -&gt; true")
+      expect(response.body).to include("Permanent log of privileged attributes", "#{member.p_id}: grant role patch_lead (ganymede)",
+                                       "#{member.p_id}: role user (0) -&gt; admin (1)")
     end
   end
 end

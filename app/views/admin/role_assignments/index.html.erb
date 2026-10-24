@@ -1,0 +1,60 @@
+<% content_for :title, "Staff and contractors" %>
+<% input_class = "px-3 py-2 rounded-lg border-2 border-neutral-300 bg-paper text-sm" %>
+
+<div class="mb-6">
+  <h2 class="font-display text-2xl font-bold text-ink mb-2">Staff and contractors</h2>
+  <p class="text-ink-soft">
+    Any admin grants or revokes the staff and contractor roles at once, for a person they can manage.
+    Weave logs each change in the permanent log. Other roles have their own rules: see the identity governance page.
+  </p>
+</div>
+
+<div class="patch p-6 mb-8">
+  <h3 class="font-display text-lg font-bold text-ink mb-3">Grant a role</h3>
+  <%= form_with url: admin_role_assignments_path, method: :post, class: "flex flex-col md:flex-row gap-2" do |form| %>
+    <%= form.text_field :person, required: true, placeholder: "Weave ID or email", aria: { label: "Person" }, class: "flex-1 #{input_class}" %>
+    <%= form.select :role, Admin::RoleAssignmentsController::PAGE_ROLES.map { |key| [RoleRegistry.fetch(key).name, key] }, {},
+          aria: { label: "Role" }, class: input_class %>
+    <%= form.text_field :reason, placeholder: "Reason (optional)", aria: { label: "Reason" }, class: "flex-1 #{input_class}" %>
+    <%= form.submit "Grant", class: "btn-stitch" %>
+  <% end %>
+</div>
+
+<% @assignments.each do |key, assignments| %>
+  <% definition = RoleRegistry.fetch(key) %>
+  <h3 class="font-display text-lg font-bold text-ink mb-3"><%= definition.name %></h3>
+  <div class="patch overflow-hidden mb-8">
+    <% if assignments.any? %>
+      <ul class="divide-y divide-ink-soft/10">
+        <% assignments.each do |assignment| %>
+          <% user = assignment.user %>
+          <li class="px-6 py-3 text-sm text-ink space-y-2">
+            <div class="flex flex-wrap justify-between gap-2">
+              <span>
+                <%= link_to user.full_name, admin_user_path(user), class: "hover:text-grape" %>
+                <span class="font-mono text-ink-faint">(<%= user.p_id %>)</span>
+              </span>
+              <span class="text-ink-soft">
+                Since <%= assignment.granted_at.utc.strftime("%Y-%m-%d") %>.
+                <%= "Granted by #{assignment.granted_by&.full_name || 'Weave'}." %>
+                <%= "Reason: #{assignment.reason}" if assignment.reason.present? %>
+              </span>
+            </div>
+            <% if RoleGrants.allowed_now?(current_user, user, key, :revoke) %>
+              <%= form_with url: revoke_admin_role_assignments_path, method: :post, class: "flex flex-col sm:flex-row gap-2" do |form| %>
+                <%= form.hidden_field :user_id, value: user.p_id %>
+                <%= form.hidden_field :role, value: key %>
+                <%= form.text_field :reason, required: true, placeholder: "Reason for the revoke",
+                      aria: { label: "Reason to revoke #{definition.name} of #{user.full_name}" }, class: "flex-1 #{input_class}" %>
+                <%= form.submit "Revoke", class: "btn-stitch-ghost",
+                      data: { turbo_confirm: "Revoke the #{definition.name.downcase} role of #{user.full_name} now?" } %>
+              <% end %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="px-6 py-4 text-sm text-ink-faint">Nobody has this role.</p>
+    <% end %>
+  </div>
+<% end %>

@@ -5,16 +5,20 @@
 module KnotSettings
   PATH = Rails.root.join("config/kyc/knot.yml")
 
-  # grant_cap nil means no cap.
-  Program = Data.define(:key, :name, :grant_cap, :patch_lead_p_ids)
+  # grant_cap nil means no cap. The patch lead of a program is a role (see
+  # KnotGrants.patch_lead?), not a value here.
+  Program = Data.define(:key, :name, :grant_cap)
 
   class << self
     def config = @config ||= Rails.application.config_for(PATH)
 
     def programs
       config.fetch(:programs).to_h.map do |key, values|
-        Program.new(key: key.to_s, name: values.fetch(:name), grant_cap: values[:grant_cap],
-                    patch_lead_p_ids: Array(values[:patch_lead_p_ids]).map(&:to_s))
+        if values.key?(:patch_lead_p_ids)
+          raise ArgumentError, "#{PATH}: programs.#{key}.patch_lead_p_ids is gone. A patch lead is a patch_lead role scoped to the program (see config/roles.yml)."
+        end
+
+        Program.new(key: key.to_s, name: values.fetch(:name), grant_cap: values[:grant_cap])
       end
     end
 

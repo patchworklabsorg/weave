@@ -321,6 +321,8 @@
     </section>
   <% end %>
 
+  <%= render "admin/users/roles", user: @user %>
+
   <%= render "admin/users/impersonations", impersonations: @impersonations, action_counts: @impersonation_action_counts %>
 
   <section class="card card-flush">

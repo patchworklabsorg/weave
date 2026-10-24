@@ -9,21 +9,26 @@
 #
 # Memberships made here have `source: system`. A sync adds and removes system
 # rows only, so it never touches a membership that was added by hand.
+#
+# `attributes` are the user columns that can change a membership: a save that
+# changes one syncs the user. The staff, board, contractors and identity team
+# groups follow roles instead (see RoleGrants), which sync the user after
+# each grant or revoke.
 module SystemGroups
   Definition = Data.define(:slug, :name, :description, :attributes, :rule)
 
   DEFINITIONS = [
     Definition.new(
-      slug: "staff", name: "Staff", description: "Users marked as staff.",
-      attributes: %w[is_staff], rule: ->(user) { user.is_staff }
+      slug: "staff", name: "Staff", description: "Users with the staff role.",
+      attributes: [], rule: ->(user) { user.is_staff }
     ),
     Definition.new(
-      slug: "board", name: "Board", description: "Users marked as board members.",
-      attributes: %w[is_board], rule: ->(user) { user.is_board }
+      slug: "board", name: "Board", description: "Users with the board member role.",
+      attributes: [], rule: ->(user) { user.is_board }
     ),
     Definition.new(
-      slug: "contractors", name: "Contractors", description: "Users marked as contractors.",
-      attributes: %w[is_contractor], rule: ->(user) { user.is_contractor }
+      slug: "contractors", name: "Contractors", description: "Users with the contractor role.",
+      attributes: [], rule: ->(user) { user.is_contractor }
     ),
     Definition.new(
       slug: "admins", name: "Admins", description: "Users with the admin, superadmin or owner role.",
@@ -35,7 +40,7 @@ module SystemGroups
     ),
     Definition.new(
       slug: "identity-team", name: "Identity Team", description: "Users who run identity verification.",
-      attributes: %w[identity_team], rule: ->(user) { user.identity_team }
+      attributes: [], rule: ->(user) { user.identity_team }
     )
   ].freeze
 
@@ -78,7 +83,7 @@ module SystemGroups
     # Syncs every user. For the first fill after deploy and for drift repair.
     def sync_all
       groups = ensure_groups!
-      User.find_each { |user| sync(user, groups: groups) }
+      User.with_roles.find_each { |user| sync(user, groups: groups) }
     end
 
   end

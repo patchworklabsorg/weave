@@ -14,7 +14,8 @@
 # Owners may grant any role (someone has to be able to appoint owners);
 # everyone else only roles strictly below their own.
 #
-# Board membership (is_board) is privileged too: see change_board?.
+# Board membership is a role with its own grant rule (config/roles.yml): see
+# RoleGrants and change_board?.
 class UserAdminPermissions
   def initialize(actor, target)
     @actor = actor
@@ -41,9 +42,11 @@ class UserAdminPermissions
   # a new verifier, and the whole board approves a key holder change (see
   # IdentityGovernance). Only an owner changes it, so an admin can't put
   # themselves or a friend on the board, or empty it to approve alone. Each
-  # change is logged and the board is told. An owner may mark their own
-  # account: that adds an approver, and nobody approves their own proposal.
-  def change_board? = @actor.owner?
+  # change is logged and the board is told. Any owner changes it for any
+  # person, other owners too (the any_owner rule in config/roles.yml): it
+  # skips the peer rule of manage?. An owner may mark their own account:
+  # that adds an approver, and nobody approves their own proposal.
+  def change_board? = RoleGrants.allowed_now?(@actor, @target, "board", :grant)
 
   private
 

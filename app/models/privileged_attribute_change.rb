@@ -1,10 +1,16 @@
 # frozen_string_literal: true
 
 # The permanent log of privileged user attributes (see docs/KYC.md "The
-# permanent log"). A Postgres trigger on users writes one row for each change
-# to is_board, identity_team, identity_key_holder, identity_lead or role, so a
-# console write, update_column or raw SQL is in the log too. Weave never
-# writes a row itself.
+# permanent log"). Postgres triggers write it, so a console write,
+# update_column or raw SQL is in the log too. Weave never writes a row itself.
+#
+# - The trigger on user_roles writes one row for each grant (operation
+#   "grant") and each revoke ("revoke") of a role, with role_key, role_scope
+#   and user_role_id. attribute_name is "role:<key>" or "role:<key>[<scope>]".
+# - The trigger on users writes one row for each change to role (the admin
+#   tier).
+# - Rows from before the roles table (2026-10-20) also name the old boolean
+#   columns is_board, identity_team, identity_key_holder and identity_lead.
 #
 # Rows are permanent. The database refuses UPDATE, DELETE and TRUNCATE on the
 # table, and there is no foreign key to users, so the deletion pipeline and the
@@ -14,13 +20,20 @@
 # settings of the database session (see PrivilegedChangeActor). db_user is the
 # database role that made the change.
 class PrivilegedAttributeChange < ApplicationRecord
-  ATTRIBUTES = %w[is_board identity_team identity_key_holder identity_lead role].freeze
+  # The user columns the users trigger logs. Older rows also name the old
+  # role booleans (LEGACY_ATTRIBUTES).
+  ATTRIBUTES = %w[role].freeze
+  LEGACY_ATTRIBUTES = %w[is_board identity_team identity_key_holder identity_lead].freeze
+  ROLE_OPERATIONS = %w[grant revoke].freeze
 
   belongs_to :user, optional: true
   belongs_to :actor, class_name: "User", optional: true
 
   scope :newest_first, -> { order(changed_at: :desc, id: :desc) }
   scope :between, ->(range) { where(changed_at: range) }
+  scope :role_changes, -> { where(operation: ROLE_OPERATIONS) }
+
+  def role_change? = ROLE_OPERATIONS.include?(operation)
 
   def readonly? = true
 
@@ -36,7 +49,10 @@ class PrivilegedAttributeChange < ApplicationRecord
   end
 
   def summary
-    "#{user_p_id || "user #{user_id}"}: #{attribute_name} #{before_value || 'unset'} -> #{after_value}"
+    who = user_p_id || "user #{user_id}"
+    return "#{who}: #{operation} role #{role_key}#{" (#{role_scope})" if role_scope}" if role_change?
+
+    "#{who}: #{attribute_name} #{before_value || 'unset'} -> #{after_value}"
   end
 
   private

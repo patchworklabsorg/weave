@@ -311,6 +311,65 @@ The values are in `config/kyc/verification.yml`. Values marked `LOCKED` were dec
 
 The retention window for verification audit records is part of the retention question in the proposal. The deletion part sets it.
 
+## Roles
+
+Jasper locked this design on 2026-10-20. Staff and identity roles are rows in a table, not boolean columns on `users`. The number of roles will grow, and each role has its own grant rule.
+
+- The roles and their rules are in `config/roles.yml`. `RoleRegistry` (`app/services/role_registry.rb`) reads the file. Weave checks the file at boot (`config/initializers/roles.rb`). An unknown key, rule, precondition, required role or scope source stops the boot with `RoleRegistry::ConfigError`.
+- The table `roles` has one row for each role in the file (`key`, `name`, `description`, `scopable`, `system`). The migration `MigrateRoleBooleansToUserRoles`, `bin/rails roles:sync` and `Role.fetch!` fill it. Each of them is idempotent. A role that leaves the file keeps its row.
+- The table `user_roles` has one row for each assignment: `user_id`, `role_id`, `scope` (empty for a global role), `granted_by_id`, `granted_at`, `reason`, `revoked_at`, `revoked_by_id`, `revoke_reason` and `identity_governance_proposal_id` (the proposal that applied it, if any).
+- One person has at most one active assignment of a role and scope. A partial unique index on `(user_id, role_id, COALESCE(scope, ''))` where `revoked_at IS NULL` enforces this.
+- Rows are never deleted. A revoke sets `revoked_at`, `revoked_by_id` and `revoke_reason` one time. A trigger refuses every other `UPDATE`, and `DELETE` and `TRUNCATE`. The database empties `user_id`, `granted_by_id` and `revoked_by_id` when the account goes, and the row stays as history.
+- The admin tier (`users.role`: user, admin, superadmin, owner) is not a role in this table. It stays a column.
+
+### The roles and their rules
+
+| Role | Key | Scope | Grant | Revoke |
+| --- | --- | --- | --- | --- |
+| Verifier (the identity team) | `verifier` | none | an owner proposes, a different board member approves. At the approval: verified by another verifier, 18 or older, NDA on record | one owner or identity lead, at once |
+| Identity lead | `identity_lead` | none | an owner proposes, a different board member approves. Verified by another verifier | an owner proposes, a different board member approves |
+| Key holder | `key_holder` | none | an owner proposes, every board member approves. Verified by another verifier. At most `max_key_holders` (3) | an owner proposes, every board member approves |
+| Board member | `board` | none | one owner, at once, for any person (other owners too). Logged and emailed to the board | one owner, at once, for any person. Logged and emailed |
+| Staff | `staff` | none | any admin, at once | any admin, at once |
+| Contractor | `contractor` | none | any admin, at once | any admin, at once |
+| Patch lead | `patch_lead` | a program key from `config/kyc/knot.yml` | an owner proposes, a different board member approves. Verified by another verifier | one owner, at once |
+
+- The identity lead and the key holder need the verifier role first (`requires`). A revoke of the verifier role also revokes them.
+- The rules `owner` and `admin` also need the actor to manage the person in the admin panel (`UserAdminPermissions#manage?`): an admin changes only people below them, or themselves. The board role uses `any_owner` instead (locked 2026-10-20): any owner changes the board role of any person, other owners too.
+- A new identity lead, key holder or patch lead must be ID-verified by another verifier. Weave checks this at the proposal and again at the approval (`preconditions_at_proposal` and `preconditions_at_approval`).
+- A key holder change sends `key_holders_changed.identity` (see "The key holder hook"). A board change logs a governance event and emails the board (see "The board").
+
+```mermaid
+flowchart TD
+  C[config/roles.yml] -->|boot check| R[RoleRegistry]
+  R -->|sync| RT[(roles)]
+  R -->|rule of each role| G[RoleGrants]
+  P[Proposal rule: verifier, lead, key holder, new patch lead] --> IG[IdentityGovernance: propose, approve]
+  IG -->|grant! or revoke!| G
+  I[Immediate rule: board, staff, contractor, patch lead removal, verifier removal] -->|RoleGrants.grant or .revoke| G
+  G -->|insert or set revoked_at| UR[(user_roles)]
+  UR -->|trigger log_user_role_changes| L[(privileged_attribute_changes)]
+  UR -->|after commit| SG[SystemGroups: staff, board, contractors, identity-team]
+  SG --> D[Directory API and userinfo claims]
+```
+
+### Where roles change
+
+- A proposal role (verifier, identity lead, key holder, a new patch lead) changes on `/identity/governance`. A patch lead proposal (`add_patch_lead`) names the program.
+- Staff and contractor change on `/admin/role_assignments` (the staff and contractors page), or in the roles section of the admin user page (`/admin/users/:id`).
+- Board member and the removal of a patch lead change in the roles section of `/admin/users/:id`. Only an owner sees the forms. The roles section is on the user page, not the edit page, because an owner can open the page of another owner but not edit it.
+- A verifier is removed with the removal form on `/identity/governance`. `RoleGrants.revoke` sends a verifier removal to `IdentityGovernance.remove_member`.
+- The governance page lists each role, its holders (with the scope) and its rules.
+
+### How the code reads roles
+
+The old accessors still work, and read the roles: `user.identity_team`, `user.identity_lead`, `user.identity_key_holder`, `user.is_board`, `user.is_staff`, `user.is_contractor` (each also with `?`), `user.board?`, `user.staff?` and `user.contractor?`. The scopes `User.identity_team`, `User.identity_key_holders` and `User.identity_leads` still work. New scopes: `User.board_members`, `User.staff_members`, `User.contractors` and `User.with_role(key, scope:)`.
+
+- `user.has_role?(key, scope:)` and `user.role_scopes(key)` read the roles of one user. `KnotGrants.patch_lead?(user, program)` reads the patch lead role.
+- The roles of a user load in one query and stay cached (`active_user_roles`). For a list of users, use `User.with_roles` (preload), or Bullet reports an N+1.
+- The old boolean columns are still in the table, but `User.ignored_columns` hides them. Weave does not read or write them. Never query them with `where(is_board: true)`: the values are old. Use the scopes.
+- The compatibility setters (`user.is_board = true`, `user.update!(identity_team: true)`) stage the role and grant or revoke it at the save, with no rule check. They are for the console and the specs, like the old column writes. The app grants roles only through `RoleGrants.grant`, `RoleGrants.revoke` and `IdentityGovernance`.
+
 ## Identity team governance
 
 Jasper locked these rules on 2026-10-12. `IdentityGovernance` (`app/services/identity_governance.rb`) holds them. The identity team can open ID images and approve break-glass access, so no one person can change who is on it.
@@ -323,23 +382,26 @@ Jasper locked these rules on 2026-10-12. `IdentityGovernance` (`app/services/ide
 | Make or unmake a lead | an owner, with a reason | one board member who is not the proposer and not the subject | at the approval |
 | Add or remove a key holder | an owner, with a reason | every board member at proposal time | after the last approval |
 | Remove a member | any one owner or identity team lead, with a reason | nobody | at once |
+| Make someone the patch lead of a program | an owner, with a reason and the program | one board member who is not the proposer and not the subject | at the approval |
+| Remove a patch lead | any one owner, with a reason | nobody | at once |
 
-- A new lead (`set_lead`) and a new key holder (`add_key_holder`) must be verified by another verifier. Weave checks this at the proposal and again at the approval (`IdentityGovernance::VERIFIED_SUBJECT_KINDS`).
+- The rule of each change comes from `config/roles.yml` (see "Roles"). A proposal kind is offered only while the rule of its role is a proposal rule (`IdentityGovernance.proposable_kinds`).
+- A new lead (`set_lead`), a new key holder (`add_key_holder`) and a new patch lead (`add_patch_lead`) must be verified by another verifier. Weave checks this at the proposal and again at the approval (`preconditions_at_proposal` and `preconditions_at_approval` in `config/roles.yml`).
 - Nobody approves their own proposal. Nobody approves a proposal about themselves, except for a key holder change: there every board member must approve, the subject too if they are on the board.
 - A key holder change snapshots the board at proposal time (`required_approver_ids`). A person who joins the board later can't approve it. A person who leaves the board can't approve it any more, so the proposal waits until it expires.
 - A key holder change needs at least 2 board members (`MINIMUM_BOARD_FOR_KEY_HOLDERS`). With one board member, that person could approve the change alone, so the proposal is refused.
 - Approvals of key holder changes and removals take one database lock (`KEY_HOLDER_LOCK`), so two changes at the same time can't go over the limit of key holders.
 - A pending proposal expires after `proposal_expiry_days`. `ExpireIdentityGovernanceProposalsJob` marks it every hour. An approval also refuses an expired proposal.
 - A board member can reject a proposal with a reason. The proposer or an owner can withdraw it.
-- Removal also clears the key holder and lead flags, and cancels the open proposals about that person. Each board member gets an email (`IdentityGovernanceMailer#member_removed`).
+- Removal also revokes the key holder and lead roles, and cancels the open proposals about that person. Each board member gets an email (`IdentityGovernanceMailer#member_removed`).
 - The approvers of a new proposal get an email (`IdentityGovernanceMailer#approval_needed`).
 - When the deletion pipeline deletes the account of an identity team member, `IdentityGovernance.account_deleted!` removes them from the team first. It logs a `member_removed` event, cancels the open proposals about them and tells the board. For a key holder, it sends `key_holders_changed.identity`.
 
 ### The board
 
-The board group (`users.is_board`) approves every change to the identity team, so the board itself is protected:
+The board (the `board` role) approves every change to the identity team, so the board itself is protected:
 
-- Only an owner can change `is_board`, on `/admin/users/:id/edit` or when they create a user (`UserAdminPermissions#change_board?`). Other admins see the box but can't change it. An owner can mark their own account: that adds an approver, and nobody approves their own proposal.
+- Only an owner can grant or revoke the board role, in the roles section of `/admin/users/:id` (the `any_owner` rule in `config/roles.yml`). Any owner can change it for any person, other owners too. Other admins see the role but no form. An owner can mark their own account: that adds an approver, and nobody approves their own proposal.
 - Each change adds a `board_member_added` or `board_member_removed` event, in the same transaction as the change.
 - Every board member before and after the change gets an email (`IdentityGovernanceMailer#board_changed`).
 
@@ -408,19 +470,26 @@ flowchart LR
 ### Audit
 
 - Every step adds an `IdentityGovernanceEvent` row: `proposed`, `approved`, `rejected`, `withdrawn`, `expired`, `cancelled`, `applied`, `member_removed`, `nda_recorded`, `bootstrap_member_added`, `board_member_added`, `board_member_removed`. The rows are append-only.
-- PaperTrail records each change to a proposal and to the user flags.
+- PaperTrail records each change to a proposal. Each role row names who granted or revoked it, the reason and the proposal, and the permanent log records each grant and revoke.
 - The governance page shows the team, the proposals, the NDA records and the log.
 - The monthly board report (`BreakGlassReport`, the page and the email) lists every governance step of the month, every change in the permanent log of the month, and the team as it is now.
 
 ### The permanent log
 
-Every change to `users.is_board`, `users.identity_team`, `users.identity_key_holder`, `users.identity_lead` and `users.role` goes into the table `privileged_attribute_changes`. A Postgres trigger writes the rows, not the app. Thus a console write, `update_column`, `update_all` and raw SQL are in the log too.
+Every grant and revoke of a role, and every change to `users.role`, goes into the table `privileged_attribute_changes`. Postgres triggers write the rows, not the app. Thus a console write, `update_column`, `update_all` and raw SQL are in the log too.
+
+- The trigger `log_user_role_changes` on `user_roles` writes one row for each insert (operation `grant`) and for each update that sets `revoked_at` (operation `revoke`). The row has `role_key`, `role_scope` and `user_role_id`. `attribute_name` is `role:<key>`, or `role:<key>[<scope>]` for a scoped role.
+- The trigger `log_privileged_attribute_changes` on `users` writes one row for each change to `role` (the admin tier).
+- Before the roles table (2026-10-20), the users trigger also logged `is_board`, `identity_team`, `identity_key_holder` and `identity_lead`. Those rows stay.
 
 ```mermaid
 flowchart LR
-  W[Any write to users: app, console, update_column, SQL] --> T[Trigger log_privileged_attribute_changes]
+  W[Any write to users.role: app, console, update_column, SQL] --> T[Trigger log_privileged_attribute_changes]
+  UR[Any insert into user_roles, or a revoke] --> TR[Trigger log_user_role_changes]
   S[Session settings weave.actor_id and weave.actor_label] --> T
+  S --> TR
   T --> L[(privileged_attribute_changes)]
+  TR --> L
   X[UPDATE, DELETE or TRUNCATE] --> R[Trigger refuse_privileged_attribute_change_edits]
   R -->|raises an error| L
 ```
@@ -429,23 +498,24 @@ flowchart LR
 | --- | --- |
 | `user_id` | The person. No foreign key, so the row stays after the account is deleted. |
 | `user_p_id` | A copy of the person's p_id at the time of the change. |
-| `attribute_name` | One of the five columns. |
+| `attribute_name` | `role`, `role:<key>` or `role:<key>[<scope>]`. Older rows also name the four old role columns. |
 | `old_value`, `new_value` | The values as text. `role` is the integer of the enum (0 user, 1 admin, 2 superadmin, 3 owner). The pages show the name too. |
-| `operation` | `update`, or `insert` for a new user with a flag that is true or a role above user. |
+| `operation` | `grant` or `revoke` for a role. `update`, or `insert` for a new user with a role above user. |
+| `role_key`, `role_scope`, `user_role_id` | For a grant or revoke: the role, its scope and the `user_roles` row. |
 | `changed_at` | The time of the transaction. |
 | `db_user` | The database role that made the change. |
 | `actor_id`, `actor_label` | Who acted, from the session settings `weave.actor_id` and `weave.actor_label`. Empty when nobody set them. |
 
-- The trigger writes one row for each changed column. A write that does not change a value writes no row.
+- The users trigger writes one row for each changed `role`. A write that does not change the value writes no row.
 - A second trigger refuses `UPDATE` and `DELETE` on each row, and `TRUNCATE` on the table. The rows are never deleted and never expire. The deletion pipeline and the retention jobs do not touch them. A spec runs the deletion pipeline and the retention jobs and checks that the rows stay.
 - `PrivilegedAttributeChange` is a read-only model.
-- `PrivilegedChangeActor` sets the actor. `ApplicationController` sets it for each request (the signed-in user, or the admin during an impersonation) and clears it after the request. `IdentityGovernance` sets it for each action that has an actor. `ApplicationJob` sets the label to the job class. A console session sets the label to the Console1984 user name (`config/initializers/console.rb`).
+- `PrivilegedChangeActor` sets the actor. `ApplicationController` sets it for each request (the signed-in user, or the admin during an impersonation) and clears it after the request. `IdentityGovernance` and `RoleGrants` set it for each action that has an actor. The data migration sets the label to `migration MigrateRoleBooleansToUserRoles`. `ApplicationJob` sets the label to the job class. A console session sets the label to the Console1984 user name (`config/initializers/console.rb`).
 - The governance page shows the newest 50 rows. The monthly board report (the page and the email) lists every row of the month.
 - The log is a staff governance record. It is not one of the nine data categories of the member matrix, because it holds rows only for people who had one of these roles or flags. It keeps the p_id of a deleted account on purpose.
 
 #### How fresh databases get the trigger
 
-`db/schema.rb` is in Ruby format, and plain Rails can't dump triggers. Weave uses the `fx` gem: it dumps the functions (`create_function`) and the triggers (`create_trigger`) into `db/schema.rb`. Thus `db:schema:load` (the test database, CI, a fresh database) creates them too. The migration `CreatePrivilegedAttributeChanges` uses `execute` with a down method that drops the triggers, the functions and the table. If you change the trigger, write a new migration and check that `db/schema.rb` gets the new definition.
+`db/schema.rb` is in Ruby format, and plain Rails can't dump triggers. Weave uses the `fx` gem: it dumps the functions (`create_function`) and the triggers (`create_trigger`) into `db/schema.rb`. Thus `db:schema:load` (the test database, CI, a fresh database) creates them too. The migration `CreatePrivilegedAttributeChanges` uses `execute` with a down method that drops the triggers, the functions and the table. The migration `CreateRoles` adds the `user_roles` triggers and narrows the users trigger to `role`. If you change the trigger, write a new migration and check that `db/schema.rb` gets the new definition.
 
 ### Open values
 
@@ -765,7 +835,7 @@ sequenceDiagram
 | --- | --- | --- |
 | Set or clear the fraud flag | identity team member | another identity team member |
 | Legal name change | identity team member, after a continuity check | another identity team member |
-| Grant over the cap | the program's patch lead | a board member (`is_board`) |
+| Grant over the cap | the program's patch lead | a board member (the `board` role) |
 
 - The reason goes into the verification audit record (`VerificationEvent` on `Knot#audit_verification`, the newest decided attempt linked to the Knot), never onto the Knot. A Knot with no audit record left can't change.
 - The request row is deleted after the sign-off or the decline, so the Knot keeps no history.
@@ -781,7 +851,7 @@ sequenceDiagram
 `KnotGrants` records grants on the Knot and applies the caps in `config/kyc/knot.yml`.
 
 - A grant needs a Knot (a passed verification), no fraud flag, and room under the cap. A cap of `null` means no cap.
-- The program's patch lead records a grant from the admin user page. An owner can too.
+- The program's patch lead (the `patch_lead` role scoped to the program, see "Roles") records a grant from the admin user page. An owner can too.
 - Only the identity team sees the fraud flag on the admin user page. A patch lead or an owner sees only the eligibility text.
 - Over the cap, the patch lead asks for an override with a written reason, and a board member signs it off. An override never lifts the fraud flag.
 - Because grants are keyed to the Knot, a member who deletes the account and comes back with the same document has the same grant count.
@@ -810,7 +880,7 @@ The values are in `config/kyc/knot.yml`.
 | --- | --- | --- |
 | `programs.ganymede.grant_cap` | 1 | Locked: one grant per person per program, for life |
 | `keep_years` | null (kept for ever) | Locked: a Knot has no expiry |
-| `programs.ganymede.patch_lead_p_ids` | `["PWL8724F96B89"]` (Adam) in `production`, empty elsewhere | Locked |
+| The Ganymede patch lead | Adam (`PWL8724F96B89`) in production: a `patch_lead` role scoped to `ganymede`. The old `patch_lead_p_ids` key is gone, and `KnotSettings` refuses it | Locked |
 | `knot.pepper` (credentials) | not set | Must be set in production before the first pass |
 
 ## Demographics vault

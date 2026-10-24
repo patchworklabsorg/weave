@@ -10,12 +10,12 @@ class Identity::GovernanceProposalsController < Identity::BaseController
   def show
     @preconditions = IdentityGovernance.preconditions(@proposal.subject) if @proposal.subject && @proposal.kind == "add_member"
     @events = @proposal.events.includes(:actor).order(:created_at, :id)
-    @board = User.where(is_board: true).order(:first_name)
+    @board = User.board_members.with_roles.order(:first_name)
   end
 
   def create
     result = IdentityGovernance.propose(kind: params[:kind], subject: find_person(params[:person]), by: current_user,
-                                        reason: params[:reason])
+                                        reason: params[:reason], scope: params[:scope])
     if result.success?
       redirect_to identity_governance_proposal_path(result.record), notice: "Proposed. The board members who can approve got an email."
     else

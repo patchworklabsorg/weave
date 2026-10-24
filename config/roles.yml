@@ -1,0 +1,118 @@
+# Staff and identity roles (see RoleRegistry, RoleGrants and docs/KYC.md
+# "Roles"). The roles table is seeded from this file: by a migration, by
+# `bin/rails roles:sync`, and on demand when Weave first needs a role row.
+#
+# The admin tier (users.role: user, admin, superadmin, owner) is not here. It
+# stays a column on users.
+#
+# LOCKED (2026-10-20): the role set and the grant rules below. A change to a
+# rule here changes who may grant the role, with no code change. Weave checks
+# this file at boot and refuses to start on an unknown key, rule, precondition
+# or scope source.
+#
+# Each role:
+#   name, description  Shown on the governance page and in the admin panel.
+#   scopable           true: each assignment names a scope (for example a
+#                      program key). false: the role is global.
+#   scope_source       For a scopable role: where the valid scopes come from.
+#                      knot_programs = the program keys in config/kyc/knot.yml.
+#   requires           Roles the person must hold first. Revoking a required
+#                      role revokes this role too.
+#   grant, revoke      The rule for each direction:
+#     rule             One of:
+#                      owner_proposes_board_approves   An owner proposes with a
+#                        reason, and a different board member approves. Nobody
+#                        approves their own proposal or a proposal about
+#                        themselves.
+#                      owner_proposes_all_board_approve  An owner proposes, and
+#                        every board member at proposal time approves. The
+#                        board needs at least 2 members.
+#                      owner                 One owner, at once.
+#                      any_owner             One owner, at once, for any person,
+#                        other owners too.
+#                      admin                 Any admin, at once.
+#                      owner_or_identity_lead  One owner or identity lead, at once.
+#                      The owner and admin rules also need the actor to be able
+#                      to manage the person in the admin panel
+#                      (UserAdminPermissions#manage?). any_owner does not.
+#                      LOCKED (2026-10-20): any owner changes the board role
+#                      of any person, other owners too.
+#     preconditions_at_proposal, preconditions_at_approval
+#                      Checks on the person: verified_by_another (verified by
+#                      another verifier), adult (at least
+#                      identity_governance.verifier_minimum_age) and nda (a
+#                      signed NDA on record).
+roles:
+  verifier:
+    name: Verifier
+    description: Member of the identity team. Runs verification calls.
+    scopable: false
+    grant:
+      rule: owner_proposes_board_approves
+      preconditions_at_approval: [verified_by_another, adult, nda]
+    revoke:
+      rule: owner_or_identity_lead
+
+  identity_lead:
+    name: Identity lead
+    description: Leads the identity team. Gets every break-glass notice and can remove a verifier.
+    scopable: false
+    requires: [verifier]
+    grant:
+      rule: owner_proposes_board_approves
+      preconditions_at_proposal: [verified_by_another]
+      preconditions_at_approval: [verified_by_another]
+    revoke:
+      rule: owner_proposes_board_approves
+
+  key_holder:
+    name: Key holder
+    description: Holds a share of the ID image master key. Approves break-glass access.
+    scopable: false
+    requires: [verifier]
+    grant:
+      rule: owner_proposes_all_board_approve
+      preconditions_at_proposal: [verified_by_another]
+      preconditions_at_approval: [verified_by_another]
+    revoke:
+      rule: owner_proposes_all_board_approve
+
+  board:
+    name: Board member
+    description: Member of the Patchwork Labs board. Approves identity team changes.
+    scopable: false
+    grant:
+      rule: any_owner
+    revoke:
+      rule: any_owner
+
+  staff:
+    name: Staff
+    description: Patchwork Labs staff.
+    scopable: false
+    grant:
+      rule: admin
+    revoke:
+      rule: admin
+
+  contractor:
+    name: Contractor
+    description: A contractor of Patchwork Labs.
+    scopable: false
+    grant:
+      rule: admin
+    revoke:
+      rule: admin
+
+  patch_lead:
+    name: Patch lead
+    description: Leads a grant program. Records grants and asks for a grant over the cap.
+    scopable: true
+    scope_source: knot_programs
+    # LOCKED (2026-10-20): a patch lead must be ID-verified, like a key holder.
+    grant:
+      rule: owner_proposes_board_approves
+      preconditions_at_proposal: [verified_by_another]
+      preconditions_at_approval: [verified_by_another]
+    revoke:
+      rule: owner
