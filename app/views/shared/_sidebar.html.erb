@@ -18,6 +18,10 @@
         <%= nav_link "Verification", admin_verifications_path, icon: :id_card,
               active: controller_name.in?(%w[verifications break_glass_records break_glass_reports]) %>
       <% end %>
+      <% if current_user && (current_user.identity_team || current_user.is_board || KnotSettings.program_keys.any? { |program| KnotGrants.patch_lead?(current_user, program) }) %>
+        <%= nav_link "Knot", admin_knots_path, icon: :link,
+              active: controller_name.in?(%w[knots knot_change_requests]) %>
+      <% end %>
     </div>
     <div class="nav-section">
       <div class="nav-section-title">Apps</div>

@@ -1,0 +1,93 @@
+<% content_for :title, "Knot #{@knot.public_id}" %>
+<% input_class = "w-full px-3 py-2 rounded-lg border-2 border-neutral-300 bg-paper text-sm" %>
+
+<div class="mb-6">
+  <%= link_to "Knot requests", admin_knots_path, class: "text-sm text-grape" %>
+  <h2 class="font-display text-2xl font-bold text-ink mt-2">Knot <span class="font-mono"><%= @knot.public_id %></span></h2>
+  <p class="text-ink-soft mt-1">
+    <% if @user %>
+      Keyed to <%= link_to @user.full_name, admin_user_path(@user), class: "hover:text-grape" %> (<%= @user.p_id %>).
+    <% else %>
+      Detached: the account was deleted. The Knot identifies nobody.
+    <% end %>
+  </p>
+</div>
+
+<div class="patch p-6 mb-6 text-sm text-ink space-y-1">
+  <h3 class="font-display text-lg font-bold text-ink mb-2">State</h3>
+  <p>Fraud flag: <strong><%= @knot.blacklisted ? "yes" : "no" %></strong>. The reason is in the audit record, not here.</p>
+  <p>
+    Grants received:
+    <% if @grants.any? %>
+      <%= @grants.map { |program, count| "#{KnotSettings.program(program)&.name || program}: #{count}" }.join(", ") %>
+    <% else %>
+      none
+    <% end %>
+  </p>
+  <p class="text-ink-faint">
+    Hashes: <%= KnotHasher::KINDS.map { |kind| "#{kind.humanize} #{@hash_counts.fetch(kind, 0)}" }.join(", ") %>.
+    The hashes are one-way. Weave can't show the values behind them.
+  </p>
+</div>
+
+<div class="patch p-6 mb-6">
+  <h3 class="font-display text-lg font-bold text-ink mb-2"><%= @knot.blacklisted ? "Clear the fraud flag" : "Set the fraud flag" %></h3>
+  <p class="text-sm text-ink-soft mb-2">A second identity team member must sign off. The reason goes into the verification audit record.</p>
+  <%= form_with url: request_blacklist_admin_knot_path(@knot), method: :post, class: "space-y-2" do |form| %>
+    <%= form.hidden_field :blacklisted, value: @knot.blacklisted ? "0" : "1" %>
+    <%= form.text_area :reason, required: true, rows: 2, placeholder: "Written reason", aria: { label: "Written reason" }, class: input_class %>
+    <%= form.submit "Ask for sign-off", class: "btn-stitch-ghost" %>
+  <% end %>
+</div>
+
+<% if @user %>
+  <div class="patch p-6 mb-6">
+    <h3 class="font-display text-lg font-bold text-ink mb-2">Legal name change</h3>
+    <p class="text-sm text-ink-soft mb-2">
+      Check continuity first: the member shows the new document or the change-of-name record. Type the new identifiers.
+      Weave keeps only their hashes. A second identity team member must sign off. Old hashes, the flag and the grants stay.
+    </p>
+    <%= form_with url: request_name_change_admin_knot_path(@knot), method: :post, class: "space-y-2", html: { autocomplete: "off" } do |form| %>
+      <%= form.select :evidence, [["Change-of-name record", "change_of_name_record"], ["New document", "new_document"]], {},
+            aria: { label: "Evidence" }, class: input_class %>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <%= form.fields_for :identifiers do |ids| %>
+          <%= ids.text_field :legal_name, required: true, placeholder: "New legal name", aria: { label: "New legal name" }, class: input_class %>
+          <%= ids.date_field :date_of_birth, required: true, aria: { label: "Date of birth" }, class: input_class %>
+          <%= ids.select :document_type, [["No new document", ""]] + Verification::DOCUMENT_TYPES.map { |type| [type.humanize, type] }, {},
+                aria: { label: "Document type" }, class: input_class %>
+          <%= ids.text_field :issuing_country, maxlength: 2, placeholder: "Issuing country (two letters)", aria: { label: "Issuing country" }, class: input_class %>
+          <%= ids.text_field :document_number, placeholder: "Document number (new document only)", aria: { label: "Document number" }, class: input_class %>
+          <%= ids.text_field :national_id, placeholder: "National identity number (if any)", aria: { label: "National identity number" }, class: input_class %>
+        <% end %>
+      </div>
+      <%= form.text_area :note, required: true, rows: 2, placeholder: "How you checked continuity", aria: { label: "How you checked continuity" }, class: input_class %>
+      <%= form.submit "Ask for sign-off", class: "btn-stitch-ghost" %>
+    <% end %>
+  </div>
+<% end %>
+
+<% if @requests.any? %>
+  <div class="patch p-6 mb-6">
+    <h3 class="font-display text-lg font-bold text-ink mb-2">Waiting for sign-off</h3>
+    <ul class="text-sm text-ink space-y-1">
+      <% @requests.each do |request| %>
+        <li><%= t("knot.changes.#{request.kind}") %>, asked by <%= request.requested_by&.full_name || "a deleted user" %>. <%= link_to "Open the queue", admin_knots_path, class: "text-grape" %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
+
+<div class="patch p-6 mb-6">
+  <h3 class="font-display text-lg font-bold text-ink mb-2">Linked attempts</h3>
+  <p class="text-xs text-ink-faint mb-2">Attempts from deleted accounts stay while their audit records are kept.</p>
+  <ol class="text-sm text-ink space-y-1">
+    <% @verifications.each do |verification| %>
+      <li>
+        <%= link_to verification.public_id, admin_verification_path(verification), class: "font-mono text-grape" %>:
+        <%= verification.status.humanize %>, <%= verification.created_at.to_date.to_fs(:long) %>
+        <%= "(account deleted)" if verification.user_id.nil? %>
+      </li>
+    <% end %>
+  </ol>
+</div>

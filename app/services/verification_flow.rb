@@ -24,6 +24,9 @@ module VerificationFlow
   end
 
   OUTCOMES = %w[verified failed].freeze
+  DETAILS_MISMATCH_REASON = "The details on the ID don't match the account."
+  # The error keys of a name or birthday that does not match the account.
+  MISMATCH_KEYS = %i[identifiers_legal_name identifiers_date_of_birth].freeze
 
   class << self
     # Why the user can't submit an attempt now, or nil when they can.
@@ -179,12 +182,23 @@ module VerificationFlow
     #
     # identifiers (a VerificationIdentifiers) go to the subscribers of
     # VerificationIdentifiers::EVENT and are then dropped. A pass of a
-    # document call needs them.
+    # document call needs them, and the legal name and birth date in them
+    # must match the member's account (see .account_mismatches).
+    #
+    # details_mismatch: true is the fail for "the details don't match the
+    # account". A fail is always allowed: it needs no attestation and no
+    # complete identifiers, and the reason starts with DETAILS_MISMATCH_REASON.
     def decide(verification, by:, outcome:, reason:, age_consistent:, region_consistent:,
-               second_verifier: nil, guardian_attended: false, identifiers: nil)
+               second_verifier: nil, guardian_attended: false, identifiers: nil, details_mismatch: false)
       user = verification.user
+      if details_mismatch
+        return failure(verification, outcome: "must be failed for details that don't match the account") if outcome != "failed"
+
+        reason = [DETAILS_MISMATCH_REASON, reason.presence].compact.join(" ")
+        identifiers = nil unless identifiers&.valid?
+      end
       errors = decision_errors(verification, user, by:, outcome:, reason:, age_consistent:, region_consistent:,
-                                                   second_verifier:, guardian_attended:, identifiers:)
+                                                   second_verifier:, guardian_attended:, identifiers:, details_mismatch:)
       return failure(verification, errors) if errors.any?
 
       escalated = false
@@ -208,7 +222,7 @@ module VerificationFlow
             member_id: user.id, verifier_id: by.id, second_verifier_id: second_verifier&.id,
             guardian_attended:, guardian_consent_id: verification.guardian_consent_id
           },
-          age_consistent:, region_consistent:
+          age_consistent:, region_consistent:, details_mismatch:
         )
         if identifiers
           ActiveSupport::Notifications.instrument(VerificationIdentifiers::EVENT, verification:, outcome:, identifiers:)
@@ -219,6 +233,13 @@ module VerificationFlow
       notify_member(verification)
       notify_leads_of_escalation(verification) if escalated
       Result.new(verification:, errors: {})
+    # The Knot subscriber raises inside the transaction when a pass at the
+    # same time took the same document. The pass rolls back, and the verifier
+    # gets an error, not a crash.
+    rescue KnotLinker::DuplicateAccount
+      failure(verification.reload, identifiers: I18n.t("knot.errors.duplicate_account"))
+    rescue ActiveRecord::RecordNotUnique
+      failure(verification.reload, base: "Another decision changed the same records at the same time. Try again.")
     end
 
     # The identity team lead decides an escalated case: one more round
@@ -281,7 +302,7 @@ module VerificationFlow
     def identity_member?(by, verification) = by&.identity_team && by.id != verification.user_id
 
     def decision_errors(verification, user, by:, outcome:, reason:, age_consistent:, region_consistent:,
-                        second_verifier:, guardian_attended:, identifiers:)
+                        second_verifier:, guardian_attended:, identifiers:, details_mismatch: false)
       errors = {}
       return { base: "The member's account no longer exists." } if user.nil?
       return { base: "Only an identity team member who is not the member can record the outcome." } unless identity_member?(by, verification)
@@ -298,14 +319,21 @@ module VerificationFlow
       end
       errors[:outcome] = "must be verified or failed" unless OUTCOMES.include?(outcome)
       errors[:reason] = "is required: write what you checked and why you decided" if reason.blank?
-      errors[:age_consistent] = "must be yes or no" if age_consistent.nil?
-      errors[:region_consistent] = "must be yes or no" if region_consistent.nil?
+      unless details_mismatch
+        errors[:age_consistent] = "must be yes or no" if age_consistent.nil?
+        errors[:region_consistent] = "must be yes or no" if region_consistent.nil?
+      end
       if guardian_attended && !user.guardian_consent_granted?
         errors[:guardian_attended] = "needs a granted guardian consent on file"
       end
       if outcome == "verified"
         errors.merge!(pass_errors(verification, user, age_consistent:, region_consistent:, guardian_attended:,
                                                       identifiers:))
+      end
+      # The Knot checks a pass only when nothing else stops it. A soft match
+      # can only ask for a second verifier: it never fails or blocks.
+      if outcome == "verified" && errors.empty?
+        errors.merge!(KnotLinker.pass_errors(verification, identifiers:, second_verifier:))
       end
       if identifiers && outcome != "verified"
         identifiers.errors.each { |key, message| errors[:"identifiers_#{key}"] = message }
@@ -328,7 +356,24 @@ module VerificationFlow
           errors[:identifiers] = "are required for a pass"
         else
           identifiers.errors.each { |key, message| errors[:"identifiers_#{key}"] = message }
+          errors.merge!(account_mismatches(user, identifiers)) if identifiers.valid?
         end
+      end
+      errors
+    end
+
+    # The verifier types the legal name and the date of birth from the ID
+    # without seeing the account values. A pass needs both to match the
+    # account: the name after KnotHasher.normalize_name (case, accents,
+    # punctuation and word order do not count), the birth date exactly. The
+    # errors say which field differs, never the account value.
+    def account_mismatches(user, identifiers)
+      errors = {}
+      if KnotHasher.normalize_name(identifiers.legal_name) != KnotHasher.normalize_name(user.legal_full_name)
+        errors[:identifiers_legal_name] = "does not match the legal name on the member's account"
+      end
+      if identifiers.date_of_birth != user.birthday
+        errors[:identifiers_date_of_birth] = "does not match the birthday on the member's account"
       end
       errors
     end

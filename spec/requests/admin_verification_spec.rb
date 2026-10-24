@@ -150,6 +150,7 @@ RSpec.describe "Admin identity verification", type: :request do
   end
 
   describe "recording the call outcome" do
+    let(:member) { create(:user, :verified, first_name: "Ada", legal_first_name: "Erika", legal_last_name: "Mustermann", birthday: Date.new(1990, 8, 12)) }
     let(:verification) { create(:verification, :call_scheduled, user: member) }
     let(:params) do
       {
@@ -166,7 +167,10 @@ RSpec.describe "Admin identity verification", type: :request do
     it "shows the attestation form and no recording field" do
       get admin_verification_path(verification)
 
-      expect(response.body).to include("Consistency attestation", "Never check gender", "Weave does not store these values")
+      expect(response.body).to include("Consistency attestation", "Never check gender",
+                                       "Weave keeps document and national ID numbers only as one-way hashes for the fraud check. " \
+                                       "The name and birthday must match the member's account.")
+      expect(response.body).not_to include("Mustermann", "1990-08-12")
       expect(response.body).not_to match(/name="[^"]*(video|recording)/)
     end
 
@@ -176,8 +180,27 @@ RSpec.describe "Admin identity verification", type: :request do
       expect(verification.reload).to be_verified
       expect(member.verification_status).to eq("verified")
       stored = Verification.where(id: verification.id).to_a.to_json + VerificationEvent.all.to_a.to_json +
-               PaperTrail::Version.all.to_a.to_json
+               PaperTrail::Version.where(item_type: "Verification").to_a.to_json
       expect(stored).not_to include("C01X00T47", "Mustermann")
+    end
+
+    it "shows which field differs after a mismatch, keeps the typed entry and never shows the account value" do
+      patch decide_admin_verification_path(verification),
+            params: params.deep_merge(identifiers: { legal_name: "Erika Musterfrau", date_of_birth: "1990-08-13" })
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(verification.reload).to be_call_scheduled
+      expect(response.body).to include("legal name and birthday you typed do not match",
+                                       "The name does not match the account.", "The birthday does not match the account.",
+                                       'value="Erika Musterfrau"', "Failed: details don&#39;t match the account")
+      expect(response.body).not_to include("Mustermann", "1990-08-12")
+    end
+
+    it "fails the call for details that don't match the account" do
+      patch decide_admin_verification_path(verification), params: { details_mismatch: "1", reason: "" }
+
+      expect(verification.reload).to be_failed
+      expect(verification.decision_reason).to eq(VerificationFlow::DETAILS_MISMATCH_REASON)
     end
 
     it "gives a key holder the outcome form" do

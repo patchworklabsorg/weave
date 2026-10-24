@@ -92,16 +92,24 @@ class Admin::VerificationsController < Admin::BaseController
     result = VerificationFlow.decide(
       @verification,
       by: current_user,
-      outcome: params[:outcome].to_s,
+      outcome: params[:details_mismatch] == "1" ? "failed" : params[:outcome].to_s,
       reason: params[:reason].to_s.strip,
       age_consistent: yes_no(params[:age_consistent]),
       region_consistent: yes_no(params[:region_consistent]),
       second_verifier: (User.identity_team.find_by(p_id: params[:second_verifier]) if params[:second_verifier].present?),
       guardian_attended: params[:guardian_attended] == "1",
-      identifiers: identifiers_from_params
+      identifiers: identifiers_from_params,
+      details_mismatch: params[:details_mismatch] == "1"
     )
     if result.success?
       redirect_to admin_verification_path(@verification), notice: "Recorded the outcome: #{result.verification.status}."
+    elsif (@mismatch = result.errors.slice(*VerificationFlow::MISMATCH_KEYS)).any?
+      # Show the form again with what the verifier typed (never stored), so
+      # they can correct the entry or fail the call.
+      @decision_values = decision_form_values
+      flash.now[:alert] = mismatch_alert(@mismatch)
+      show
+      render :show, status: :unprocessable_content
     else
       redirect_to admin_verification_path(@verification),
                   alert: "Outcome not recorded: #{result.errors.map { |key, message| key == :base ? message : "#{key.to_s.humanize} #{message}" }.join('. ')}."
@@ -134,6 +142,26 @@ class Admin::VerificationsController < Admin::BaseController
     Time.zone.parse(value.to_s) if value.present?
   rescue ArgumentError
     nil
+  end
+
+  # What the verifier typed in the outcome form, to show it again after a
+  # name or birthday mismatch. It is never stored.
+  def decision_form_values
+    {
+      second_verifier: params[:second_verifier].to_s, guardian_attended: params[:guardian_attended] == "1",
+      age_consistent: params[:age_consistent].to_s, region_consistent: params[:region_consistent].to_s,
+      reason: params[:reason].to_s,
+      identifiers: params[:identifiers].respond_to?(:permit) ? params[:identifiers].permit(*VerificationIdentifiers.members).to_h.symbolize_keys : {}
+    }
+  end
+
+  # Says which field differs, never the account value.
+  def mismatch_alert(mismatch)
+    fields = []
+    fields << "legal name" if mismatch.key?(:identifiers_legal_name)
+    fields << "birthday" if mismatch.key?(:identifiers_date_of_birth)
+    "Outcome not recorded: the #{fields.join(' and ')} you typed #{fields.size > 1 ? 'do' : 'does'} not match the member's account. " \
+      "Check the ID and correct the entry, or fail the call with \"Details don't match the account\"."
   end
 
   # The identifiers are never stored (see VerificationIdentifiers). They go

@@ -28,6 +28,20 @@
   <div class="patch p-6 mb-6"><p class="text-sm text-orchid">This is your own verification. Another identity team member must handle it.</p></div>
 <% end %>
 
+<% if @verification.knot_review_reason %>
+  <div class="patch border-2 border-orchid p-6 mb-6">
+    <p class="text-sm font-medium text-ink">Manual review</p>
+    <p class="text-sm text-ink-soft mt-1"><%= t("knot.review_reasons.#{@verification.knot_review_reason}") %></p>
+  </div>
+<% end %>
+
+<% if @verification.knot && current_user.identity_team %>
+  <p class="text-sm text-ink-soft mb-6">
+    Knot: <%= link_to @verification.knot.public_id, admin_knot_path(@verification.knot), class: "font-mono text-grape" %>
+    <%= "(fraud flag set)" if @verification.knot.blacklisted %>
+  </p>
+<% end %>
+
 <% if !own && @verification.submitted? %>
   <div class="patch p-6 mb-6">
     <%= button_to "Take for pre-review", start_pre_review_admin_verification_path(@verification), method: :patch, class: "btn-stitch" %>
@@ -89,15 +103,18 @@
     <% if excluded %>
       <p class="text-sm text-orchid">You failed this member before. A different verifier must run this call.</p>
     <% else %>
+      <% values = @decision_values || {} %>
+      <% typed = values[:identifiers] || {} %>
+      <% mismatch = @mismatch || {} %>
       <%= form_with url: decide_admin_verification_path(@verification), method: :patch, class: "space-y-3", html: { autocomplete: "off" } do |form| %>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label class="text-sm text-ink">Second verifier (optional)
             <%= form.select :second_verifier, @team.reject { |member| @excluded_ids.include?(member.id) }.map { |member| [member.full_name, member.p_id] },
-                  { include_blank: "None" }, class: input_class %>
+                  { include_blank: "None", selected: values[:second_verifier] }, class: input_class %>
           </label>
           <% if @user&.minor? %>
             <label class="text-sm text-ink flex items-center gap-2 mt-5">
-              <%= form.check_box :guardian_attended %> A parent or guardian attended (a pass needs this)
+              <%= form.check_box :guardian_attended, checked: values[:guardian_attended] %> A parent or guardian attended (a pass needs this)
             </label>
           <% end %>
         </div>
@@ -105,31 +122,42 @@
           <legend class="text-sm font-medium text-ink mb-1">Consistency attestation. Do not write down values from the ID. Never check gender.</legend>
           <% { age_consistent: "The self-reported age does not contradict the ID", region_consistent: "The self-reported region does not contradict the ID" }.each do |field, label| %>
             <label class="text-sm text-ink"><%= label %>
-              <%= form.select field, [["Choose", ""], ["Yes", "yes"], ["No", "no"]], {}, required: true, class: input_class %>
+              <%= form.select field, [["Choose", ""], ["Yes", "yes"], ["No", "no"]], { selected: values[field] }, required: true, class: input_class %>
             </label>
           <% end %>
         </fieldset>
         <fieldset class="space-y-2">
-          <legend class="text-sm font-medium text-ink">Identifiers for the fraud check. Weave does not store these values.</legend>
+          <legend class="text-sm font-medium text-ink">Weave keeps document and national ID numbers only as one-way hashes for the fraud check. The name and birthday must match the member's account.</legend>
+          <p class="text-xs text-ink-faint">Type the legal name and the birthday from the ID. Weave compares them with the account when you record a pass.</p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <%= form.fields_for :identifiers do |ids| %>
               <%= ids.select :document_type, Verification::DOCUMENT_TYPES.map { |type| [type.humanize, type] },
-                    { selected: @verification.document_type }, aria: { label: "Document type" }, class: input_class %>
-              <%= ids.text_field :issuing_country, maxlength: 2, placeholder: "Issuing country (two letters)", aria: { label: "Issuing country" }, class: input_class %>
-              <%= ids.text_field :document_number, placeholder: "Document number", aria: { label: "Document number" }, class: input_class %>
-              <%= ids.text_field :national_id, placeholder: "National identity number (if any)", aria: { label: "National identity number" }, class: input_class %>
-              <%= ids.text_field :legal_name, placeholder: "Legal name on the ID", aria: { label: "Legal name" }, class: input_class %>
-              <%= ids.date_field :date_of_birth, aria: { label: "Date of birth" }, class: input_class %>
+                    { selected: typed[:document_type].presence || @verification.document_type }, aria: { label: "Document type" }, class: input_class %>
+              <%= ids.text_field :issuing_country, value: typed[:issuing_country], maxlength: 2, placeholder: "Issuing country (two letters)", aria: { label: "Issuing country" }, class: input_class %>
+              <%= ids.text_field :document_number, value: typed[:document_number], placeholder: "Document number", aria: { label: "Document number" }, class: input_class %>
+              <%= ids.text_field :national_id, value: typed[:national_id], placeholder: "National identity number (if any)", aria: { label: "National identity number" }, class: input_class %>
+              <div>
+                <%= ids.text_field :legal_name, value: typed[:legal_name], placeholder: "Legal name on the ID", aria: { label: "Legal name", invalid: mismatch.key?(:identifiers_legal_name) },
+                      class: "#{input_class} #{'border-orchid' if mismatch.key?(:identifiers_legal_name)}" %>
+                <% if mismatch.key?(:identifiers_legal_name) %><p class="text-xs text-orchid mt-1">The name does not match the account.</p><% end %>
+              </div>
+              <div>
+                <%= ids.date_field :date_of_birth, value: typed[:date_of_birth], aria: { label: "Date of birth", invalid: mismatch.key?(:identifiers_date_of_birth) },
+                      class: "#{input_class} #{'border-orchid' if mismatch.key?(:identifiers_date_of_birth)}" %>
+                <% if mismatch.key?(:identifiers_date_of_birth) %><p class="text-xs text-orchid mt-1">The birthday does not match the account.</p><% end %>
+              </div>
             <% end %>
           </div>
         </fieldset>
-        <%= form.text_area :reason, required: true, rows: 3, placeholder: "Written reason: what you checked on the call and why you decided",
+        <%= form.text_area :reason, value: values[:reason], required: true, rows: 3, placeholder: "Written reason: what you checked on the call and why you decided",
               aria: { label: "Written reason" }, class: input_class %>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
           <%= form.button "Verified", name: "outcome", value: "verified", class: "btn-stitch",
                 data: { turbo_confirm: "Record a pass?" } %>
           <%= form.button "Failed", name: "outcome", value: "failed", class: "btn-stitch-ghost",
                 data: { turbo_confirm: "Record a fail? The member waits for the cooldown, and you can't verify them again." } %>
+          <%= form.button "Failed: details don't match the account", name: "details_mismatch", value: "1", formnovalidate: true,
+                class: "btn-stitch-ghost", data: { turbo_confirm: "Record a fail because the details on the ID don't match the account?" } %>
         </div>
       <% end %>
     <% end %>

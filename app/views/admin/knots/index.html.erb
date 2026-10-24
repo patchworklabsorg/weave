@@ -1,0 +1,60 @@
+<% content_for :title, "Knot requests" %>
+<% input_class = "w-full px-3 py-2 rounded-lg border-2 border-neutral-300 bg-paper text-sm" %>
+
+<div class="mb-6">
+  <h2 class="font-display text-2xl font-bold text-ink mb-2">The Knot: two-key requests</h2>
+  <p class="text-ink-soft">
+    A change to a Knot needs a second person. Sign off only when you checked the reason in the audit record.
+    You see the requests you can sign off, decline or withdraw.
+  </p>
+  <% if @blacklisted_count %>
+    <p class="text-sm text-ink-faint mt-1">Knots with the fraud flag: <%= @blacklisted_count %>.</p>
+  <% end %>
+</div>
+
+<% if @knot_reviews&.any? %>
+  <h3 class="font-display text-lg font-bold text-ink mb-3">Calls that need a second verifier</h3>
+  <div class="patch p-6 mb-8">
+    <ul class="text-sm text-ink space-y-1">
+      <% @knot_reviews.each do |verification| %>
+        <li>
+          <%= link_to verification.public_id, admin_verification_path(verification), class: "font-mono text-grape" %>:
+          <%= t("knot.review_reasons.#{verification.knot_review_reason}") %>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
+
+<h3 class="font-display text-lg font-bold text-ink mb-3">Waiting for sign-off</h3>
+<div class="patch p-6 mb-8 space-y-4">
+  <% if @requests.empty? %>
+    <p class="text-sm text-ink-faint">Nothing waits for you.</p>
+  <% end %>
+  <% @requests.each do |request| %>
+    <div class="border-b border-ink-soft/10 pb-4">
+      <p class="text-sm text-ink">
+        <strong><%= t("knot.changes.#{request.kind}") %></strong><%= " (#{KnotSettings.program(request.program)&.name})" if request.program %>
+        on
+        <% if current_user.identity_team %>
+          <%= link_to request.knot.public_id, admin_knot_path(request.knot), class: "font-mono text-grape" %>
+        <% else %>
+          <span class="font-mono"><%= request.knot.public_id %></span>
+        <% end %>,
+        asked by <%= request.requested_by&.full_name || "a deleted user" %>, <%= time_ago_in_words(request.created_at) %> ago.
+      </p>
+      <% reason = request.verification.events.where(kind: "knot_change_requested").order(:created_at).last&.data&.dig("reason") %>
+      <p class="text-xs text-ink-soft mt-1">Reason in the audit record: <%= reason %></p>
+      <div class="flex flex-wrap gap-2 mt-2">
+        <% if KnotChanges.can_sign_off?(request, current_user) %>
+          <%= button_to "Sign off", sign_off_admin_knot_change_request_path(request), method: :patch, class: "btn-stitch",
+                data: { turbo_confirm: "Sign off this change?" } %>
+        <% end %>
+        <%= form_with url: decline_admin_knot_change_request_path(request), method: :patch, class: "flex gap-2" do |form| %>
+          <%= form.text_field :reason, required: true, placeholder: "Why not?", aria: { label: "Why not?" }, class: input_class %>
+          <%= form.submit request.requested_by_id == current_user.id ? "Withdraw" : "Decline", class: "btn-stitch-ghost" %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>

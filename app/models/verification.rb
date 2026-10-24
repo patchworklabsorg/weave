@@ -46,6 +46,7 @@
 #  escalation_resolution     :string
 #  escalation_resolved_at    :datetime
 #  guardian_attended         :boolean          default(FALSE), not null
+#  knot_review_reason        :string
 #  pre_review_started_at     :datetime
 #  pre_reviewed_at           :datetime
 #  region_consistent         :boolean
@@ -59,6 +60,7 @@
 #  call_scheduled_by_id      :bigint
 #  escalation_resolved_by_id :bigint
 #  guardian_consent_id       :bigint
+#  knot_id                   :bigint
 #  pre_reviewer_id           :bigint
 #  previous_attempt_id       :bigint
 #  second_verifier_id        :bigint
@@ -70,6 +72,7 @@
 #  index_verifications_on_call_scheduled_by_id       (call_scheduled_by_id)
 #  index_verifications_on_escalation_resolved_by_id  (escalation_resolved_by_id)
 #  index_verifications_on_guardian_consent_id        (guardian_consent_id)
+#  index_verifications_on_knot_id                    (knot_id)
 #  index_verifications_on_pre_reviewer_id            (pre_reviewer_id)
 #  index_verifications_on_previous_attempt_id        (previous_attempt_id)
 #  index_verifications_on_second_verifier_id         (second_verifier_id)
@@ -82,6 +85,7 @@
 #  fk_rails_...  (call_scheduled_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (escalation_resolved_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (guardian_consent_id => guardian_consents.id) ON DELETE => nullify
+#  fk_rails_...  (knot_id => knots.id) ON DELETE => nullify
 #  fk_rails_...  (pre_reviewer_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (previous_attempt_id => verifications.id) ON DELETE => nullify
 #  fk_rails_...  (second_verifier_id => users.id) ON DELETE => nullify
@@ -119,6 +123,10 @@ class Verification < ApplicationRecord
   belongs_to :second_verifier, class_name: "User", optional: true
   belongs_to :guardian_consent, optional: true
   belongs_to :escalation_resolved_by, class_name: "User", optional: true
+  # The Knot of the member, set at a pass for the whole chain of attempts (see
+  # KnotLinker). It stays after the account is deleted, so a returning
+  # member's history reads as one chain.
+  belongs_to :knot, optional: true
   has_many :events, -> { order(:created_at, :id) }, class_name: "VerificationEvent",
                                                      dependent: :restrict_with_exception, inverse_of: :verification
   has_many :break_glass_records, dependent: :restrict_with_exception
@@ -136,6 +144,7 @@ class Verification < ApplicationRecord
   validates :escalation_resolution, inclusion: { in: ESCALATION_RESOLUTIONS }, allow_nil: true
   validates :reverification_reason, inclusion: { in: REVERIFICATION_REASONS }, allow_nil: true
   validates :reverification_reason, presence: true, if: :reverification_required_at?
+  validates :knot_review_reason, inclusion: { in: KnotLinker::REVIEW_REASONS }, allow_nil: true
   validate :decision_unchanged, on: :update
 
   aasm column: :status, whiny_persistence: true do
@@ -175,6 +184,12 @@ class Verification < ApplicationRecord
 
   scope :in_progress, -> { where(status: OPEN_STATES) }
   scope :escalation_open, -> { failed.where.not(escalated_at: nil).where(escalation_resolved_at: nil) }
+  scope :knot_review_open, -> { call_scheduled.where.not(knot_review_reason: nil) }
+  # The fraud-evidence hold: attempts linked to a blacklisted Knot are exempt
+  # from the retention window while the flag stands (see docs/KYC.md).
+  scope :under_fraud_hold, -> { joins(:knot).where(knots: { blacklisted: true }) }
+
+  def fraud_hold? = knot&.blacklisted || false
 
   def document_call? = verification_method == "document_call"
 

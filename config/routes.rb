@@ -531,6 +531,28 @@ Rails.application.routes.draw do
 
         # Identity team membership, key holder and lead (owner only).
         resource :identity_team, controller: "user_identity_team", only: [:update]
+
+        # Program grants on the member's Knot (see KnotGrants).
+        resources :program_grants, controller: "user_program_grants", only: [:create] do
+          collection do
+            post :override
+          end
+        end
+      end
+
+      # The Knot (see KnotLinker and KnotChanges). The index lists the
+      # two-key requests that wait for a sign-off.
+      resources :knots, only: [:index, :show] do
+        member do
+          post :request_blacklist
+          post :request_name_change
+        end
+      end
+      resources :knot_change_requests, only: [] do
+        member do
+          patch :sign_off
+          patch :decline
+        end
       end
 
       # Identity verification, for the identity team (see VerificationFlow).
