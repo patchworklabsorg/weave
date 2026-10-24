@@ -222,6 +222,7 @@ RSpec.describe KnotLinker do
     end
 
     it "can never block or flag the member" do
+      active_key_set_without_holders
       verification = create(:verification, :call_scheduled, user: newcomer)
 
       decide(verification, ids: other_document)

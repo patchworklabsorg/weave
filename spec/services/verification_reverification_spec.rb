@@ -10,6 +10,9 @@ RSpec.describe VerificationFlow, "re-verification" do # rubocop:disable RSpec/De
   let(:member) { create(:user, :verified, legal_first_name: "Erika", legal_last_name: "Mustermann") }
   let!(:pass) { create(:verification, :verified, user: member) }
 
+  # ID checks open only after the key ceremony (VerificationFlow.submission_blocker).
+  before { active_key_set_without_holders }
+
   def image = Rack::Test::UploadedFile.new(Rails.root.join("spec/fixtures/files/id_document.png"), "image/png")
 
   it "has no time limit: a pass still stands many years later" do

@@ -47,7 +47,7 @@
               <p><%= @form_errors[:base] %></p>
             </div>
           </div>
-        <% elsif %i[no_birthday under_minimum_age].include?(@blocker) %>
+        <% elsif %i[no_birthday under_minimum_age not_open].include?(@blocker) %>
           <p class="text-sm text-ink"><%= t("verification.blockers.#{@blocker}") %></p>
         <% end %>
       <% end %>
