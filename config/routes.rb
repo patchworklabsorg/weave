@@ -105,6 +105,9 @@
 #        revoke_admin_user_guardian_consent PATCH  /admin/users/:user_id/guardian_consents/:id/revoke(.:format)                                      admin/user_guardian_consents#revoke
 #        verify_admin_user_guardian_consent PATCH  /admin/users/:user_id/guardian_consents/:id/verify(.:format)                                      admin/user_guardian_consents#verify
 #              admin_user_guardian_consents POST   /admin/users/:user_id/guardian_consents(.:format)                                                 admin/user_guardian_consents#create
+#                   admin_user_thread_count GET    /admin/users/:user_id/thread_count(.:format)                                                      admin/user_thread_counts#show
+#     reverse_admin_user_thread_count_entry PATCH  /admin/users/:user_id/thread_count_entries/:id/reverse(.:format)                                  admin/user_thread_count_entries#reverse
+#           admin_user_thread_count_entries POST   /admin/users/:user_id/thread_count_entries(.:format)                                              admin/user_thread_count_entries#create
 #                               admin_users GET    /admin/users(.:format)                                                                            admin/users#index
 #                                           POST   /admin/users(.:format)                                                                            admin/users#create
 #                            new_admin_user GET    /admin/users/new(.:format)                                                                        admin/users#new
@@ -191,6 +194,7 @@
 #                             api_v1_health GET    /api/v1/health(.:format)                                                                          api/v1/health#index
 #                    api_v1_directory_users GET    /api/v1/directory/users(.:format)                                                                 api/v1/directory/users#index
 #                     api_v1_directory_user GET    /api/v1/directory/users/:sub(.:format)                                                            api/v1/directory/users#show
+#        api_v1_thread_count_project_events POST   /api/v1/thread_count/project_events(.:format)                                                     api/v1/project_events#create
 #                     webhooks_slack_events POST   /webhooks/slack/events(.:format)                                                                  webhooks/slack#events
 #               webhooks_slack_interactions POST   /webhooks/slack/interactions(.:format)                                                            webhooks/slack#interactions
 #          turbo_recede_historical_location GET    /recede_historical_location(.:format)                                                             turbo/native/navigation#recede
@@ -547,6 +551,14 @@ Rails.application.routes.draw do
             post :override
           end
         end
+
+        # Thread Count, the internal trust score (see ThreadCount).
+        resource :thread_count, controller: "user_thread_counts", only: [:show]
+        resources :thread_count_entries, controller: "user_thread_count_entries", only: [:create] do
+          member do
+            patch :reverse
+          end
+        end
       end
 
       # The Knot (see KnotLinker and KnotChanges). The index lists the
@@ -683,6 +695,10 @@ Rails.application.routes.draw do
       namespace :directory do
         resources :users, only: [:index, :show], param: :sub
       end
+
+      # Project review outcomes for Thread Count, from services such as
+      # Krater (see Api::V1::ProjectEventsController).
+      post "thread_count/project_events", to: "project_events#create", as: :thread_count_project_events
     end
   end
 

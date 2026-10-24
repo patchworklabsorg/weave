@@ -734,6 +734,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.index ["updated_at"], name: "index_sessions_on_updated_at"
   end
 
+  create_table "thread_count_entries", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "kind", null: false
+    t.string "level"
+    t.bigint "author_id"
+    t.bigint "recorded_by_id"
+    t.bigint "service_id"
+    t.text "reason_ciphertext"
+    t.text "evidence_url_ciphertext"
+    t.string "evidence_type"
+    t.bigint "evidence_id"
+    t.string "project_ref"
+    t.bigint "reverses_id"
+    t.datetime "created_at", null: false
+    t.index ["author_id"], name: "index_thread_count_entries_on_author_id"
+    t.index ["evidence_type", "evidence_id"], name: "index_thread_count_entries_on_evidence"
+    t.index ["recorded_by_id"], name: "index_thread_count_entries_on_recorded_by_id"
+    t.index ["reverses_id"], name: "index_thread_count_entries_on_reverses_id", unique: true
+    t.index ["service_id", "project_ref", "kind"], name: "index_thread_count_entries_on_project_event", unique: true, where: "(project_ref IS NOT NULL)"
+    t.index ["service_id"], name: "index_thread_count_entries_on_service_id"
+    t.index ["user_id", "kind"], name: "index_thread_count_entries_on_user_id_and_kind"
+    t.index ["user_id"], name: "index_thread_count_entries_on_user_id"
+  end
+
   create_table "user_magic_links", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "token_digest", null: false
@@ -981,6 +1005,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   add_foreign_key "service_webhooks", "services"
   add_foreign_key "service_webhooks", "users", column: "created_by_id"
   add_foreign_key "services", "users", column: "created_by_id"
+  add_foreign_key "thread_count_entries", "services", on_delete: :nullify
+  add_foreign_key "thread_count_entries", "thread_count_entries", column: "reverses_id", on_delete: :cascade
+  add_foreign_key "thread_count_entries", "users", column: "author_id", on_delete: :nullify
+  add_foreign_key "thread_count_entries", "users", column: "recorded_by_id", on_delete: :nullify
+  add_foreign_key "thread_count_entries", "users", on_delete: :cascade
   add_foreign_key "user_magic_links", "users"
   add_foreign_key "user_passkeys", "users"
   add_foreign_key "user_sessions", "users"

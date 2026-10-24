@@ -1,0 +1,67 @@
+# Thread Count (TC): the internal trust score. See docs/KYC.md and ThreadCount.
+#
+# Values marked LOCKED were decided by Jasper on 2026-10-12 and 2026-10-23.
+# Counsel can still change any value here:
+# the score is computed from the ledger each time, so a new weight or
+# half-life applies to old entries too. No migration is needed. Staff read the
+# score only. It gates nothing automatically.
+shared:
+  # Each entry fades by half after this many days: 3 years for every
+  # component except the kinds in no_decay_kinds. LOCKED.
+  half_life_days: 1095
+
+  # Kinds that never fade. A blacklist entry keeps its full weight for ever.
+  # LOCKED (2026-10-12): project_blacklisted only.
+  no_decay_kinds:
+    - project_blacklisted
+
+  # Kinds that fade at a different speed. A value of ~ (null) means the entry
+  # never fades. Empty: every other component uses half_life_days. LOCKED.
+  half_life_days_by_kind: {}
+
+  # A member (not staff, not board) may vouch only when their own score is at
+  # least this value. LOCKED.
+  member_vouch_threshold: 75
+
+  # Vouch weight by the voucher's tier: board, staff, then members above the
+  # threshold. LOCKED: board 30, staff 15, member 5. The locked values have no
+  # separate senior staff tier, so senior_staff has the staff weight and no
+  # admin role maps to it (see senior_staff_roles).
+  vouch_weights:
+    board: 30
+    senior_staff: 15
+    staff: 15
+    member: 5
+
+  # Admin roles that make a staff voucher "senior_staff". Empty: there is no
+  # senior staff tier. LOCKED.
+  senior_staff_roles: []
+
+  # Project review outcomes. project_exceptional is added on top of the
+  # approval: an exceptional project gets both entries. LOCKED.
+  project_weights:
+    project_approved: 10
+    project_exceptional: 20
+    project_denied: -5
+    project_blacklisted: -40
+
+  # Moderation case severity. Always zero or below. LOCKED range: -10 to -40,
+  # and the staff member picks the level. The middle level is not locked.
+  moderation_case_weights:
+    minor: -10 # LOCKED
+    major: -25 # LOCKED (2026-10-23)
+    severe: -40 # LOCKED
+
+  # Trust signals that are not verification (proposal section 03). Always zero
+  # or above. LOCKED (2026-10-23).
+  external_signal_weights:
+    github_student: 5
+    other_program: 3
+
+  # Names of services (Admin > Services) whose API keys may send project
+  # events to POST /api/v1/thread_count/project_events. Empty means none.
+  project_event_services: []
+
+test:
+  project_event_services:
+    - Krater

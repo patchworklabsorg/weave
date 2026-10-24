@@ -19,7 +19,8 @@ module Api
           return
         end
 
-        key = Service::Key.find_by(api_key: api_key)
+        # Only a digest of the key is stored (see Service::Key).
+        key = Service::Key.find_by_api_key(api_key) # rubocop:disable Rails/DynamicFindBy -- a real method that digests the key
 
         # Store the key for logging purposes
         @current_key_for_logging = key
@@ -131,7 +132,7 @@ module Api
 
         # Get request body (for POST/PUT/PATCH requests)
         request_body = nil
-        if %w[POST PUT PATCH].include?(request.method) && request.raw_post.present?
+        if log_bodies? && %w[POST PUT PATCH].include?(request.method) && request.raw_post.present?
           begin
             request_body = filter_sensitive_params(JSON.parse(request.raw_post)).to_json
           rescue JSON::ParserError
@@ -141,7 +142,7 @@ module Api
 
         # Get response body if it's JSON
         response_body = nil
-        if response && response.body.present?
+        if log_bodies? && response && response.body.present?
           begin
             parsed_response = JSON.parse(response.body)
             response_body = filter_sensitive_params(parsed_response).to_json
@@ -166,6 +167,10 @@ module Api
       rescue => e
         Rails.logger.error("Failed to update usage record: #{e.message}")
       end
+
+      # Whether the usage row keeps the request and response bodies. An
+      # endpoint whose bodies hold internal staff-only data turns it off.
+      def log_bodies? = true
 
       def send_metrics_to_statsd
         return unless @usage_record

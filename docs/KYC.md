@@ -558,3 +558,141 @@ The age bands are locked (2026-10-13): `age_band_starts: [0, 13, 16, 18, 25, 35]
 The value below is still a placeholder in `config/demographics.yml`:
 
 - Which other fields funders need. Race, ethnicity and sexual orientation are special category data under GDPR Article 9. Ask counsel before you add one.
+
+## Thread Count (TC)
+
+Thread Count is the internal trust score of a member (proposal section 05). It is a different layer from verification. A high score without verification gives no access.
+
+### Rules
+
+- TC is staff only. The member never sees their own score. TC is never in a member-facing view, an OAuth claim, the directory API, a webhook, or a serializer. `spec/services/thread_count_internal_spec.rb` fails when code outside the staff tools uses TC.
+- Admins see the score of a member they can view. Only superadmins and owners see the entries that make the score.
+- Nobody sees their own score, staff included. Nobody adds or reverses an entry about their own account.
+- There is no column on `users` for TC. The score is computed from the ledger each time, so a serializer can not expose it by accident.
+
+### The ledger
+
+Each trust signal is one row in `thread_count_entries` (`ThreadCount::Entry`). The table is append-only. The app does not change or delete a saved row. To take an entry back, Weave adds a `reversal` row that points to it. The rows go only when the member's account is deleted.
+
+| Kind | Sign | Who records it | Level |
+| --- | --- | --- | --- |
+| `board_vouch` | + | Board member (staff can record it for them) | none |
+| `staff_vouch` | + | Staff or admin | `senior_staff` or `staff` |
+| `member_vouch` | + | Member with a score at or above the threshold | none |
+| `project_approved` | + | Service API, or staff by hand | none |
+| `project_exceptional` | + | Service API, or staff by hand. Added on top of the approval. | none |
+| `project_denied` | - | Service API, or staff by hand (only for users below their access level) | none |
+| `project_blacklisted` | - | Service API, or staff by hand (only for users below their access level) | none |
+| `moderation_case` | - | Staff, only for users below their access level | `minor`, `major`, `severe` |
+| `external_signal` | + | Staff (for example GitHub Student) | `github_student`, `other_program` |
+| `reversal` | 0 | Superadmin, or the voucher for their own vouch | none |
+
+Each entry has:
+
+- an author: the person who puts their name on it.
+- `recorded_by`: the staff member who typed it in, or empty when a service sent it.
+- `service`: the service that sent it, for project events.
+- a written reason. It is required for every manual entry. Lockbox encrypts it.
+- an optional evidence link: a URL (encrypted) or a record (`evidence_type` and `evidence_id`).
+
+### The score
+
+```mermaid
+flowchart LR
+  E[Ledger entries] --> R{Reversed?}
+  R -- yes --> Z[Adds 0]
+  R -- no --> W[Weight from config/thread_count.yml]
+  W --> D["Fade: weight x 0.5 ^ (age / half-life)"]
+  D --> S[Sum = Thread Count]
+  Z --> S
+```
+
+- `ThreadCount.score(user)` adds up the entries. Each entry fades by half after each half-life.
+- The weight is not stored on the entry. It comes from `config/thread_count.yml` through the kind and the level. A change to a weight or a half-life applies to all entries, old and new.
+- `no_decay_kinds` lists the kinds that never fade. It holds `project_blacklisted`: a blacklist entry keeps its full -40 for ever. Every other kind keeps the 3-year half-life.
+- `half_life_days_by_kind` sets a different half-life for one kind. A null value means the entry never fades.
+- An entry whose level is removed from the config adds 0, and Weave logs a warning.
+
+### Vouch rules
+
+`ThreadCount::Ledger.vouch` holds the rules.
+
+```mermaid
+flowchart TD
+  A[Vouch request] --> B{Voucher is the member?}
+  B -- yes --> X[Refused]
+  B -- no --> C{Tier}
+  C -- board --> K[board_vouch]
+  C -- senior staff role --> K2[staff_vouch / senior_staff]
+  C -- staff or admin --> K3[staff_vouch / staff]
+  C -- member --> T{Own score >= threshold?}
+  T -- no --> X
+  T -- yes --> K4[member_vouch]
+  K & K2 & K3 & K4 --> V{Active vouch from this voucher?}
+  V -- no --> OK[Entry added]
+  V -- yes, renew --> RN[Old vouch reversed, new entry added]
+  V -- yes, no renew --> X
+```
+
+- The voucher's tier sets the kind and the weight: board, then staff, then member. `senior_staff_roles` in the config can list admin roles for a senior staff tier. It is empty now, so no admin role is senior staff.
+- A member can vouch only when their own score is at or above `member_vouch_threshold`.
+- Each voucher has one active vouch per member. To renew a vouch that faded, vouch again with "renew". Weave reverses the old vouch and adds a new one.
+- A board member or a member with no admin access can not use the admin panel. Staff record the vouch for them ("On behalf of"). The voucher is the author. The staff member is `recorded_by`.
+- A voucher with admin access records their own vouch. Weave refuses an "On behalf of" vouch for them, so nobody can use the name and the weight of another admin.
+- An advisory lock per member stops two requests from both passing the one-vouch check.
+
+### Project events API
+
+Krater and other services send project review outcomes.
+
+```mermaid
+sequenceDiagram
+  participant K as Krater
+  participant W as Weave
+  K->>W: POST /api/v1/thread_count/project_events (X-Api-Key)
+  W->>W: Key valid and service name in project_event_services?
+  W->>W: ThreadCount::Ledger.record_project_event
+  W-->>K: 201 { id, project_ref, kind, created_at }
+```
+
+- Auth: the service API key in `X-Api-Key` (`Api::V1::BaseController`). The service name must also be in `project_event_services` in `config/thread_count.yml`. The list is empty in production until an admin names a service.
+- Body: `sub` (the member's Weave ID), `project_ref` (the service's own project ID), `outcome` (`approved`, `exceptional`, `denied`, or `blacklisted`), and optional `reason` and `evidence_url`.
+- A retry with the same service, `project_ref`, and outcome is recorded once (a unique index).
+- `exceptional` records the approval and the extra entry, so it adds more than an approval.
+- The response is a receipt only. It never holds the score or a weight.
+- The API usage row (`service_key_usages`) for this endpoint does not keep the request body or the response body. The body ties a member to an outcome.
+
+### Logs
+
+`config/initializers/filter_parameter_logging.rb` filters `reason`, `evidence_url`, `voucher` and `outcome`. These values do not go to the Rails log or to an API usage row.
+
+### Staff tools
+
+- The admin user page shows the score and a link to "Open Thread Count" (`/admin/users/:id/thread_count`).
+- The Thread Count page has a vouch form, a form to record other entries, and, for superadmins, the table of entries with the weight, the value now, the author, the reason, and a "Reverse" action.
+- An admin can withdraw their own vouch from the same page.
+
+### Settings
+
+Jasper locked these values on 2026-10-12. They are in `config/thread_count.yml`. Counsel can change them there: no migration is necessary.
+
+| Setting | Value |
+| --- | --- |
+| Board vouch | +30 |
+| Staff vouch | +15 (no separate senior staff tier: `senior_staff_roles` is empty) |
+| Member vouch | +5 |
+| Approved project | +10 |
+| Exceptional project | +20, on top of the approval |
+| Denied project | -5 |
+| Blacklisted project | -40 |
+| Moderation case | -10 (minor) to -40 (severe). Staff pick the level. The middle level (major, -25) is a placeholder. |
+| Half-life | 3 years (1095 days) for every component except blacklist entries |
+| No decay | `project_blacklisted` entries never fade (`no_decay_kinds`) |
+| Member vouch threshold | 75 |
+
+The external signal weights (`github_student` 5, `other_program` 3) are still placeholders. Thread Count is read by staff only. It gates nothing automatically.
+
+### Known limits
+
+- Blazer (`/admin/blazer`) lets every admin run SQL on the whole database. An admin can read the kinds and the levels in `thread_count_entries` there. The reason and the evidence link are encrypted.
+- The retention matrix in the proposal has no row for TC entries. Now they are deleted with the account.

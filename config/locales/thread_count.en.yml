@@ -1,0 +1,24 @@
+# Labels for the admin Thread Count pages. Thread Count is internal: none of
+# this text is shown to members.
+en:
+  admin:
+    thread_count:
+      kinds:
+        staff_vouch: Staff vouch
+        board_vouch: Board vouch
+        member_vouch: Member vouch
+        project_approved: Project approved
+        project_exceptional: Exceptional project bonus
+        project_denied: Project denied
+        project_blacklisted: Project blacklisted
+        moderation_case: Moderation case
+        external_signal: External signal
+        reversal: Reversal
+      levels:
+        senior_staff: senior staff
+        staff: staff
+        minor: minor
+        major: major
+        severe: severe
+        github_student: GitHub Student
+        other_program: other program
