@@ -6,6 +6,9 @@ class ApplicationController < ActionController::Base
 
   before_action :authenticate_user!
   before_action :track_user_session
+  # Tells the permanent log of privileged attributes who acts in this request
+  # (see PrivilegedChangeActor).
+  around_action :attribute_privileged_changes
 
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   # allow_browser versions: :modern
@@ -29,6 +32,20 @@ class ApplicationController < ActionController::Base
   end
 
   private
+
+  # The person behind the request: during impersonation, the admin.
+  def attribute_privileged_changes
+    actor = impersonating? ? admin_user : current_user
+    label = ("user #{actor.p_id}#{" impersonating #{current_user.p_id}" if impersonating? && current_user}" if actor)
+    PrivilegedChangeActor.set!(actor:, label:)
+    yield
+  ensure
+    begin
+      PrivilegedChangeActor.clear!
+    rescue ActiveRecord::StatementInvalid => error
+      Rails.logger.warn("Could not clear the privileged change actor: #{error.class}")
+    end
+  end
 
   def current_user
     return @current_user if defined?(@current_user)

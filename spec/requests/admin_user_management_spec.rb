@@ -349,4 +349,90 @@ RSpec.describe "Admin user management permissions", type: :request do
       expect(User.find_by(email: "new.person@example.com")).to be_admin
     end
   end
+
+  # Board membership drives identity team governance (see IdentityGovernance),
+  # so only an owner changes it, never on their own account, and each change is
+  # logged and told to the board.
+  describe "board membership" do
+    include ActiveJob::TestHelper
+
+    it "lets an owner add a member to the board, with a log row and an email to the board" do
+      sitting = create(:user, :verified, is_board: true)
+      sign_in_via_magic_link(owner)
+
+      perform_enqueued_jobs { update_user(member, is_board: "1") }
+
+      expect(member.reload.is_board).to be(true)
+      expect(IdentityGovernanceEvent.sole).to have_attributes(kind: "board_member_added", actor: owner, subject: member)
+      expect(ActionMailer::Base.deliveries.flat_map(&:to)).to include(sitting.email, member.email)
+    end
+
+    it "writes the change to the permanent log with the owner as the actor, and clears the actor after the request" do
+      sign_in_via_magic_link(owner)
+
+      update_user(member, is_board: "1")
+
+      expect(PrivilegedAttributeChange.where(user_id: member.id).sole)
+        .to have_attributes(attribute_name: "is_board", old_value: "false", new_value: "true", actor_id: owner.id,
+                            actor_label: "user #{owner.p_id}")
+      expect(PrivilegedChangeActor.current).to eq(["", ""])
+    end
+
+    it "does not let an admin or a superadmin add themselves or another person to the board" do
+      [admin, superadmin].each do |actor|
+        sign_in_via_magic_link(actor)
+
+        update_user(actor, is_board: "1")
+        expect(response).to have_http_status(:unprocessable_content)
+        update_user(member, is_board: "1")
+        expect(response).to have_http_status(:unprocessable_content)
+      end
+
+      expect([admin, superadmin, member].map { |user| user.reload.is_board }).to all(be(false))
+      expect(IdentityGovernanceEvent.count).to eq(0)
+    end
+
+    it "does not let a plain admin take a person off the board" do
+      board = create(:user, :verified, is_board: true)
+      sign_in_via_magic_link(admin)
+
+      update_user(board, is_board: "0")
+
+      expect(board.reload.is_board).to be(true)
+    end
+
+    it "lets an owner mark their own account, with a log row" do
+      sign_in_via_magic_link(owner)
+
+      update_user(owner, is_board: "1")
+
+      expect(owner.reload.is_board).to be(true)
+      expect(IdentityGovernanceEvent.sole).to have_attributes(kind: "board_member_added", actor: owner, subject: owner)
+    end
+
+    it "lets an owner create a board member, with a log row" do
+      sign_in_via_magic_link(owner)
+
+      post admin_users_path, params: { user: { first_name: "New", last_name: "Board", email: "new.board@example.com", is_board: "1" } }
+
+      expect(User.find_by(email: "new.board@example.com").is_board).to be(true)
+      expect(IdentityGovernanceEvent.sole.kind).to eq("board_member_added")
+    end
+
+    it "does not let an admin create a board member" do
+      sign_in_via_magic_link(admin)
+
+      expect { post admin_users_path, params: { user: { first_name: "New", last_name: "Board", email: "new.board@example.com", is_board: "1" } } }
+        .not_to change(User, :count)
+    end
+
+    it "lets an admin save other fields when the board box is unchanged" do
+      board = create(:user, :verified, is_board: true)
+      sign_in_via_magic_link(admin)
+
+      update_user(board, first_name: "Renamed", is_board: "1")
+
+      expect(board.reload).to have_attributes(first_name: "Renamed", is_board: true)
+    end
+  end
 end

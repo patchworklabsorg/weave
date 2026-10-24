@@ -26,7 +26,7 @@ class VerificationMailer < ApplicationMailer
     @verification = verification
     @user = verification.user
     @failed_calls = VerificationFlow.failed_calls_since_reset(@user)
-    @admin_url = admin_verification_url(verification)
+    @admin_url = identity_verification_url(verification)
 
     mail(to: lead.email, subject: env_subject("[IDP Alert] Verification escalated for #{@user.p_id}"))
   end

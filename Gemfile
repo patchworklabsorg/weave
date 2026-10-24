@@ -57,6 +57,7 @@ gem "mission_control-jobs"               # Job monitoring
 gem "acts_as_paranoid"                   # Soft deletions
 gem "paper_trail"                        # Track changes to models
 gem "strong_migrations", "~> 2.3"        # Safer database migrations
+gem "fx", "~> 0.11"                      # Dump SQL functions and triggers into schema.rb
 
 ###############################################################################
 # URL & IDENTIFICATION

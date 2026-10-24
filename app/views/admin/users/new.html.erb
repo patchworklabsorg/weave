@@ -62,8 +62,8 @@
       </div>
       <div class="card-body space-y-4">
         <label class="choice">
-          <%= form.check_box :is_board, class: "checkbox" %>
-          <span>Board member<span class="choice-hint">Mark as a board member</span></span>
+          <%= form.check_box :is_board, class: "checkbox", disabled: !admin_permissions_for(@user).change_board? %>
+          <span>Board member<span class="choice-hint">Mark as a board member. Only an owner can change this. The board gets an email about each change.</span></span>
         </label>
         <label class="choice">
           <%= form.check_box :is_staff, class: "checkbox" %>

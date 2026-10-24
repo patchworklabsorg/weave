@@ -2,8 +2,7 @@
 
 # Break-glass access to stored ID images (see BreakGlass): ask, approve or
 # deny, and open the image under a granted request.
-class Admin::BreakGlassRecordsController < Admin::BaseController
-  include IdentityTeamAccess
+class Identity::BreakGlassRecordsController < Identity::BaseController
   include SecureImageResponse
 
   RECENT_LIMIT = 20
@@ -25,25 +24,25 @@ class Admin::BreakGlassRecordsController < Admin::BaseController
     verification = Verification.find_by_public_param!(params[:verification_id])
     result = BreakGlass.request(verification, by: current_user, reason: params[:reason])
     if result.success?
-      redirect_to admin_break_glass_records_path, notice: "Asked the key holders to approve."
+      redirect_to identity_break_glass_records_path, notice: "Asked the key holders to approve."
     else
-      redirect_to admin_verification_path(verification), alert: "Not asked: #{result.errors.values.to_sentence}."
+      redirect_to identity_verification_path(verification), alert: "Not asked: #{result.errors.values.to_sentence}."
     end
   end
 
   def approve
     if BreakGlass.approve(@record, by: current_user)
-      redirect_to admin_break_glass_records_path, notice: @record.reload.granted? ? "Approved. The request is granted." : "Approved. One more key holder must approve."
+      redirect_to identity_break_glass_records_path, notice: @record.reload.granted? ? "Approved. The request is granted." : "Approved. One more key holder must approve."
     else
-      redirect_to admin_break_glass_records_path, alert: "Only a key holder who has not approved yet can approve a pending request."
+      redirect_to identity_break_glass_records_path, alert: "Only a key holder who has not approved yet can approve a pending request."
     end
   end
 
   def deny
     if BreakGlass.deny(@record, by: current_user, reason: params[:reason].to_s.strip)
-      redirect_to admin_break_glass_records_path, notice: "Denied."
+      redirect_to identity_break_glass_records_path, notice: "Denied."
     else
-      redirect_to admin_break_glass_records_path, alert: "Only a key holder can deny a pending request, with a reason."
+      redirect_to identity_break_glass_records_path, alert: "Only a key holder can deny a pending request, with a reason."
     end
   end
 

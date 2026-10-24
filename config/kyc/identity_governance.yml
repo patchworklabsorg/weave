@@ -1,0 +1,22 @@
+# Values for identity team governance (see IdentityGovernance and
+# docs/KYC.md, "Identity team governance"). The rules were locked on
+# 2026-10-12. Values marked LOCKED are decided (proposal_expiry_days on
+# 2026-10-13). Counsel can change any value here: no code change is
+# necessary.
+shared: &shared
+  # Days before a pending proposal (add a verifier, change the lead, change a
+  # key holder) expires. An expired proposal can't be approved. The owner
+  # proposes again.
+  proposal_expiry_days: 14 # LOCKED
+
+  # The youngest age at which a person can join the identity team.
+  verifier_minimum_age: 18 # LOCKED
+
+development:
+  <<: *shared
+
+test:
+  <<: *shared
+
+production:
+  <<: *shared

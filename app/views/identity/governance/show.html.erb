@@ -1,0 +1,187 @@
+<% content_for :title, "Identity team governance" %>
+<% input_class = "px-3 py-2 rounded-lg border-2 border-neutral-300 bg-paper text-sm" %>
+
+<div class="mb-6">
+  <h2 class="font-display text-2xl font-bold text-ink mb-2">Identity team governance</h2>
+  <p class="text-ink-soft">
+    An owner proposes a new verifier or a lead change, and a different board member approves it.
+    A key holder change needs every board member. Any owner or identity team lead removes a member at once.
+  </p>
+  <% if @bootstrap_open %>
+    <p class="text-sm text-orange-600 mt-2">
+      Bootstrap open: no member of the identity team is verified yet. Follow the bootstrap steps in docs/KYC_ROLLOUT.md.
+    </p>
+  <% end %>
+</div>
+
+<h3 class="font-display text-lg font-bold text-ink mb-3">The identity team</h3>
+<div class="patch overflow-hidden mb-8">
+  <% if @team.any? %>
+    <ul class="divide-y divide-ink-soft/10">
+      <% @team.each do |member| %>
+        <li class="px-6 py-3 text-sm text-ink space-y-2">
+          <div class="flex flex-wrap justify-between gap-2">
+            <span>
+              <%= member.full_name %> <span class="font-mono text-ink-faint">(<%= member.p_id %>)</span>
+              <%= "· key holder" if member.identity_key_holder %>
+              <%= "· lead" if member.identity_lead %>
+            </span>
+            <span class="text-ink-soft">
+              <%= member.verification_status.humanize %>.
+              <% nda = member.current_identity_nda %>
+              <%= nda ? "NDA #{nda.nda_version}, signed #{nda.signed_on.iso8601}." : "No NDA on record." %>
+            </span>
+          </div>
+          <% if IdentityGovernance.can_remove?(current_user, member) %>
+            <%= form_with url: identity_team_removals_path, method: :post, class: "flex flex-col sm:flex-row gap-2" do |form| %>
+              <%= form.hidden_field :user_id, value: member.p_id %>
+              <%= form.text_field :reason, required: true, placeholder: "Reason for the removal",
+                    aria: { label: "Reason to remove #{member.full_name}" }, class: "flex-1 #{input_class}" %>
+              <%= form.submit "Remove now", class: "btn-stitch-ghost",
+                    data: { turbo_confirm: "Remove #{member.full_name} from the identity team now? This also clears the key holder and lead flags. The board gets an email." } %>
+            <% end %>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="px-6 py-4 text-sm text-ink-faint">Nobody is on the identity team.</p>
+  <% end %>
+</div>
+
+<h3 class="font-display text-lg font-bold text-ink mb-3">Proposals that wait</h3>
+<div class="patch overflow-hidden mb-8">
+  <% if @pending.any? %>
+    <ul class="divide-y divide-ink-soft/10">
+      <% @pending.each do |proposal| %>
+        <li class="px-6 py-3 flex flex-wrap justify-between gap-2 text-sm">
+          <span class="text-ink">
+            <%= link_to proposal.public_id, identity_governance_proposal_path(proposal), class: "font-mono hover:text-grape" %>
+            <%= proposal.description.upcase_first %>
+          </span>
+          <span class="text-ink-soft">
+            Proposed by <%= proposal.proposed_by&.full_name || "a deleted user" %>.
+            <%= proposal.expired_now? ? "Expired." : "Expires #{proposal.expires_at.utc.strftime('%Y-%m-%d')}." %>
+          </span>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="px-6 py-4 text-sm text-ink-faint">Nothing waits.</p>
+  <% end %>
+</div>
+
+<% if IdentityGovernance.can_propose?(current_user) %>
+  <div class="grid md:grid-cols-2 gap-6 mb-8">
+    <div class="patch p-6">
+      <h3 class="font-display text-lg font-bold text-ink mb-3">Propose a change</h3>
+      <%= form_with url: identity_governance_proposals_path, method: :post, class: "space-y-3" do |form| %>
+        <div>
+          <%= form.label :person, "Person (Weave ID or email)", class: "block text-sm text-ink mb-1" %>
+          <%= form.text_field :person, required: true, class: "w-full #{input_class}" %>
+        </div>
+        <div>
+          <%= form.label :kind, "Change", class: "block text-sm text-ink mb-1" %>
+          <%= form.select :kind, IdentityGovernanceProposal::KINDS.map { |kind| [IdentityGovernanceProposal.describe(kind, "this person").upcase_first, kind] },
+                {}, class: "w-full #{input_class}" %>
+        </div>
+        <div>
+          <%= form.label :reason, "Reason", class: "block text-sm text-ink mb-1" %>
+          <%= form.text_area :reason, required: true, rows: 3, class: "w-full #{input_class}" %>
+        </div>
+        <%= form.submit "Propose", class: "btn-stitch" %>
+      <% end %>
+    </div>
+
+    <div class="patch p-6">
+      <h3 class="font-display text-lg font-bold text-ink mb-3">Record a signed NDA</h3>
+      <p class="text-xs text-ink-faint mb-3">NDAs are signed with Adobe Acrobat Sign. Record the date, the version and the agreement ID. Do not upload the document.</p>
+      <%= form_with url: identity_ndas_path, method: :post, class: "space-y-3" do |form| %>
+        <div>
+          <%= form.label :person, "Person (Weave ID or email)", for: "nda_person", class: "block text-sm text-ink mb-1" %>
+          <%= form.text_field :person, id: "nda_person", required: true, class: "w-full #{input_class}" %>
+        </div>
+        <div>
+          <%= form.label :signed_on, "Signed on", class: "block text-sm text-ink mb-1" %>
+          <%= form.date_field :signed_on, required: true, max: Date.current, class: "w-full #{input_class}" %>
+        </div>
+        <div>
+          <%= form.label :nda_version, "NDA version", class: "block text-sm text-ink mb-1" %>
+          <%= form.text_field :nda_version, required: true, class: "w-full #{input_class}" %>
+        </div>
+        <div>
+          <%= form.label :signature_reference, "Adobe Sign agreement ID", class: "block text-sm text-ink mb-1" %>
+          <%= form.text_field :signature_reference, required: true, class: "w-full #{input_class}" %>
+        </div>
+        <%= form.submit "Record the NDA", class: "btn-stitch" %>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
+<h3 class="font-display text-lg font-bold text-ink mb-3">Closed proposals</h3>
+<div class="patch overflow-hidden mb-8">
+  <% if @recent.any? %>
+    <ul class="divide-y divide-ink-soft/10">
+      <% @recent.each do |proposal| %>
+        <li class="px-6 py-3 text-sm text-ink">
+          <%= link_to proposal.public_id, identity_governance_proposal_path(proposal), class: "font-mono hover:text-grape" %>
+          <%= proposal.description.upcase_first %>: <%= proposal.status %>.
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="px-6 py-4 text-sm text-ink-faint">None yet.</p>
+  <% end %>
+</div>
+
+<h3 class="font-display text-lg font-bold text-ink mb-3">NDA records</h3>
+<div class="patch overflow-hidden mb-8">
+  <% if @ndas.any? %>
+    <ul class="divide-y divide-ink-soft/10">
+      <% @ndas.each do |nda| %>
+        <li class="px-6 py-3 text-sm text-ink">
+          <%= nda.user&.full_name || "A deleted user" %>: version <%= nda.nda_version %>, signed <%= nda.signed_on.iso8601 %>,
+          <%= nda.signature_reference %>. Recorded by <%= nda.recorded_by&.full_name || "a deleted user" %> on <%= nda.created_at.utc.strftime("%Y-%m-%d") %>.
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="px-6 py-4 text-sm text-ink-faint">No NDA recorded yet.</p>
+  <% end %>
+</div>
+
+<h3 class="font-display text-lg font-bold text-ink mb-3">Log</h3>
+<div class="patch overflow-hidden">
+  <% if @events.any? %>
+    <ul class="divide-y divide-ink-soft/10">
+      <% @events.each do |event| %>
+        <li class="px-6 py-3 text-sm text-ink">
+          <span class="text-ink-faint"><%= event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %></span>
+          <%= event.summary %>
+          <% if event.data["reason"].present? %><span class="text-ink-soft">Reason: <%= event.data["reason"] %></span><% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="px-6 py-4 text-sm text-ink-faint">Nothing logged yet.</p>
+  <% end %>
+</div>
+
+<h3 id="permanent-log" class="mt-8 font-display text-lg font-bold text-ink mb-3">Permanent log of privileged attributes</h3>
+<p class="text-sm text-ink-soft mb-3">Every change to is_board, identity_team, identity_key_holder, identity_lead and role. A database trigger writes it. Nobody can change or delete a row.</p>
+<div class="patch overflow-hidden mt-8">
+  <% if @privileged_changes.any? %>
+    <ul class="divide-y divide-ink-soft/10">
+      <% @privileged_changes.each do |change| %>
+        <li class="px-6 py-3 text-sm text-ink">
+          <span class="text-ink-faint"><%= change.changed_at.utc.strftime("%Y-%m-%d %H:%M UTC") %></span>
+          <%= change.summary %>
+          <span class="text-ink-soft">By <%= change.actor_name %>.</span>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="px-6 py-4 text-sm text-ink-faint">No changes logged yet.</p>
+  <% end %>
+</div>

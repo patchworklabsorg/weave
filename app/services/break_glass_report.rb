@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
-# What the board sees about ID image access in one month (see BreakGlass):
-# every break-glass request and decryption, the state of each notice, the
-# member notices that are delayed now, and how many times a pre-reviewer
-# opened an image.
+# What the board sees about ID image access and the identity team in one
+# month (see BreakGlass and IdentityGovernance): every break-glass request
+# and decryption, the state of each notice, the member notices that are
+# delayed now, how many times a pre-reviewer opened an image, every identity
+# team governance step, every change to a privileged user attribute, and the
+# identity team as it is now.
 class BreakGlassReport
   attr_reader :month
 
@@ -30,5 +32,22 @@ class BreakGlassReport
   def pre_review_views
     VerificationEvent.where(kind: "document_viewed", created_at: range).count
   end
+
+  # Every identity team governance step in the month (see
+  # IdentityGovernance): proposals, approvals, removals, NDA records and the
+  # bootstrap.
+  def governance_events
+    IdentityGovernanceEvent.where(created_at: range).includes(:actor, :subject).order(:created_at, :id)
+  end
+
+  # Every change in the month to a privileged user attribute (is_board,
+  # identity_team, identity_key_holder, identity_lead, role), from the
+  # permanent log (see PrivilegedAttributeChange).
+  def privileged_changes
+    PrivilegedAttributeChange.between(range).includes(:actor).order(:changed_at, :id)
+  end
+
+  # The identity team as it is now, for the board to check.
+  def identity_team = User.identity_team.order(:first_name, :last_name)
 
 end

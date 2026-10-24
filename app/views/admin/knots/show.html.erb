@@ -84,7 +84,7 @@
   <ol class="text-sm text-ink space-y-1">
     <% @verifications.each do |verification| %>
       <li>
-        <%= link_to verification.public_id, admin_verification_path(verification), class: "font-mono text-grape" %>:
+        <%= link_to verification.public_id, identity_verification_path(verification), class: "font-mono text-grape" %>:
         <%= verification.status.humanize %>, <%= verification.created_at.to_date.to_fs(:long) %>
         <%= "(account deleted)" if verification.user_id.nil? %>
       </li>

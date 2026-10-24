@@ -25,6 +25,15 @@
             <%= icon(:layout_dashboard) %>Admin
           <% end %>
         <% end %>
+        <% if current_user.identity_team %>
+          <%= link_to identity_verifications_path, class: "btn btn-secondary btn-sm hidden sm:inline-flex" do %>
+            <%= icon(:id_card) %>Verification
+          <% end %>
+        <% elsif IdentityGovernance.can_view?(current_user) %>
+          <%= link_to identity_governance_path, class: "btn btn-secondary btn-sm hidden sm:inline-flex" do %>
+            <%= icon(:landmark) %>Identity governance
+          <% end %>
+        <% end %>
         <% if impersonating? %>
           <%= button_to stop_impersonating_admin_users_path, method: :delete, class: "btn btn-quiet btn-sm hidden sm:inline-flex", form_class: "inline-block" do %>
             <%= icon(:log_out) %>Stop impersonating
@@ -53,6 +62,11 @@
       <%= nav_link "Password", password_path, icon: :lock %>
       <% if current_user.admin? %>
         <%= nav_link "Admin", admin_root_path, icon: :layout_dashboard, active: false %>
+      <% end %>
+      <% if current_user.identity_team %>
+        <%= nav_link "Verification", identity_verifications_path, icon: :id_card, active: false %>
+      <% elsif IdentityGovernance.can_view?(current_user) %>
+        <%= nav_link "Identity governance", identity_governance_path, icon: :landmark, active: false %>
       <% end %>
       <% if impersonating? %>
         <%= button_to stop_impersonating_admin_users_path, method: :delete, class: "nav-link w-full", form_class: "contents" do %>

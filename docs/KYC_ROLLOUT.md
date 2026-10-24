@@ -20,7 +20,8 @@ The local branches, from bottom to top:
 | 3 | weave | `jaspermayone/110-kyc-demographics` | The demographics vault |
 | 4 | weave | `jaspermayone/kyc-thread-count` | Thread Count |
 | 5 | weave | `jaspermayone/94-kyc-deletion` | Retention, takeout, deletion pipeline, dormancy |
-| 6 | patchworklabs.org | `jaspermayone/your-data` | The page https://patchworklabs.org/your-data |
+| 6 | weave | `jaspermayone/kyc-identity-governance` | Identity team governance, the identity area, the bootstrap |
+| 7 | patchworklabs.org | `jaspermayone/your-data` | The page https://patchworklabs.org/your-data |
 
 ## The order
 
@@ -97,9 +98,59 @@ Do these steps before the first verification pass in production. Secrets go in a
 
 - Set `knot.pepper` in the production and staging credentials. Never rotate it. Without it, each pass fails with `KnotHasher::MissingPepper`.
 - Generate the demographics key pairs. Put each public key in the production and staging credentials (`demographics.public_key`). Keep each private key off the server. Add a one-off unit that mounts the private key only for a report run.
-- Mark the board members (`is_board`): Jasper, Kieran (krn) and Dominic.
-- An owner sets the identity team flags (`/admin/users/:id`): the team members, the lead and the key holders.
 - Restart the containers after a secret change. A container reads its env file only at start.
+- Seed the roles and bootstrap the identity team. See "Seed the roles and bootstrap the identity team" below.
+
+#### Seed the roles and bootstrap the identity team
+
+Do these steps in production after the deploy (step 6) and before the first member submits an ID. Do them on staging first, with test accounts.
+
+Nobody is verified on day one, so nobody can meet the verifier preconditions (verified by another person, 18 or older, signed NDA). The bootstrap adds the first three verifiers at once. They then verify each other in a circle. The bootstrap runs one time only. It refuses to run a second time, and it refuses to run after any member of the identity team is verified.
+
+```mermaid
+flowchart TD
+  A[1. Mark the board: Jasper, Kieran, Dominic] --> B[2. Sign the NDAs in Mercury]
+  B --> C[3. Owner records each NDA on /identity/governance]
+  C --> D[4. bin/rails identity:bootstrap]
+  D --> E[5. Each submits an ID on /verification]
+  E --> F[6. Circle: Adam verifies Jasper, Jasper verifies Kieran, Kieran verifies Adam]
+  F --> G[7. bin/rails identity:bootstrap_status: all verified, bootstrap closed]
+  G --> H[8. Owner proposes the lead, a board member approves]
+  H --> I[9. Owner proposes each key holder, the whole board approves]
+```
+
+The production p_ids of the people below (production values only; staging and development have other IDs):
+
+| Person | Production p_id | Board | Identity team and key holder |
+| --- | --- | --- | --- |
+| Jasper | `PWL7A1CE1F3CB` | yes | yes |
+| Kieran (krn) | `PWL0667B785FD` | yes | yes |
+| Dominic | `PWL908148D41E` | yes | no |
+| Adam | `PWL8724F96B89` | no | yes (also the Ganymede patch lead) |
+
+1. An owner marks the board members (`is_board`) on `/admin/users/:id/edit`: Jasper (`PWL7A1CE1F3CB`), Kieran (`PWL0667B785FD`) and Dominic (`PWL908148D41E`). Adam (`PWL8724F96B89`) is not on the board. Only an owner can change this box. Each change is logged and emailed to the board. The board group drives the governance approvals, so do this first. A key holder change needs at least 2 board members.
+2. Jasper (`PWL7A1CE1F3CB`), Kieran (`PWL0667B785FD`) and Adam (`PWL8724F96B89`) sign the NDA in Mercury.
+3. An owner opens `/identity/governance` and records each signed NDA: the date, the NDA version and the Mercury reference. Do not upload the document.
+4. Run the bootstrap in a one-off container, with the members in circle order:
+
+   ```bash
+   bin/rails identity:bootstrap BY=<owner email> MEMBERS=<jasper email>,<kieran email>,<adam email>
+   ```
+
+   The task adds the three to the identity team and prints the circle. Each person's verifier is the person before them in the list, and the first person's verifier is the last person:
+
+   | Member | Verifier |
+   | --- | --- |
+   | Jasper (`PWL7A1CE1F3CB`) | Adam (`PWL8724F96B89`) |
+   | Kieran (`PWL0667B785FD`) | Jasper (`PWL7A1CE1F3CB`) |
+   | Adam (`PWL8724F96B89`) | Kieran (`PWL0667B785FD`) |
+
+5. Each of the three submits an ID on `/verification`.
+6. Do the circle with the normal flow on `/identity/verifications`: pre-review, call and decision. The verifier in the table records the decision. Nobody verifies their own account. Weave enforces the circle: until a bootstrap member is verified, they can record a decision only for the person after them.
+7. Run `bin/rails identity:bootstrap_status`. Each member must show `verified` by their planned verifier, and the task must say "The bootstrap is closed".
+8. Make the lead: an owner proposes `set_lead` on `/identity/governance`, and a different board member approves. The new lead must be verified first. A new key holder must also be verified first.
+9. Make the three key holders (Jasper `PWL7A1CE1F3CB`, Kieran `PWL0667B785FD`, Adam `PWL8724F96B89`): an owner proposes `add_key_holder` for each one (the form takes the p_id), and every board member (Jasper, Kieran, Dominic `PWL908148D41E`) approves each proposal.
+10. Add any later verifier through a proposal: an owner proposes `add_member`, and a different board member approves. The candidate must be verified, 18 or older, and have an NDA on record at the approval.
 
 ### 4. Push and merge the weave stack, bottom-up
 
@@ -111,17 +162,23 @@ The `CLAUDE.md` rule "No stacked PRs" applies: each PR targets `main`. `gh stack
 2. Wait for CI. Squash-merge it (`gh pr merge --squash`).
 3. Fetch `main`. Rebase the next branch onto `main`: `git rebase --onto origin/main <old tip of the branch below> <next branch>`.
 4. Push the next branch, open its PR against `main`, wait for CI, and squash-merge it.
-5. Do steps 3 and 4 again for each branch, up to branch 5.
+5. Do steps 3 and 4 again for each branch, up to branch 6.
 
 Each push to `main` deploys staging (`.github/workflows/deploy-staging.yml`). A push to `main` does not deploy production.
 
 ### 5. Test staging
 
-Staging is `weave-staging.patchworklabs.org` (see `docs/STAGING.md`). After branch 5 is on `main` and staging has deployed:
+Staging is `weave-staging.patchworklabs.org` (see `docs/STAGING.md`). After branch 6 is on `main` and staging has deployed:
 
 - Run the migrations, then check `/up`.
 - The Docker image needs two system packages for ID uploads (`IdDocumentConverter`, see `docs/KYC.md`, "Upload conversion"): `poppler-utils` (already in the image, for `pdftoppm`) and `libheif-plugin-libde265` (added to the runtime stage of the Dockerfile, so libvips can decode HEIC). Build the image once before the rollout and check that `apt-get` finds the package for the image's Debian release.
 - Upload one HEIC photo and one PDF with a test account. Check that each is stored as an image (JPEG or PNG) with no EXIF or GPS data.
+- Check the permanent log: change the board box of a test account on `/admin/users/:id/edit`, and check that the row shows on `/identity/governance` with your name as the actor. In a console, run `User.find_by(email: "<test email>").update_column(:is_board, false)`, and check that a row with the label `console <name>` shows too.
+- Do the bootstrap with three test accounts (step 3), and check that it refuses a second run.
+- Check that a bootstrap member who is not verified can't record a decision for a person who is not next in the circle.
+- Check that an admin who is not an owner can't change the board box on `/admin/users/:id/edit`.
+- Propose a verifier with one owner and approve with another board member. Check that the owner can't approve their own proposal.
+- Sign in as a verifier without the admin role. Check that `/identity/verifications` opens and `/admin` does not.
 - Do one full verification with a test account: submit, pre-review, call, decision.
 - Do one break-glass request with two key holders, and check the notices.
 - Do one takeout and one deletion request with a test account. Check the receipt.
@@ -129,7 +186,9 @@ Staging is `weave-staging.patchworklabs.org` (see `docs/STAGING.md`). After bran
 ### 6. Deploy production
 
 - Deploy with `bin/deploy-local`. The fallback is `gh workflow run deploy.yml`.
-- Check `/up` and the admin pages `/admin/verifications`, `/admin/deletion_requests` and `/admin/break_glass_report`.
+- The migration `CreatePrivilegedAttributeChanges` creates the permanent log and its triggers. The database role of the app must be able to create functions and triggers (the owner of the tables can). After the deploy, check that `/identity/governance` shows the section "Permanent log of privileged attributes". The seeding in step 3 writes the first rows.
+- Check `/up`, the identity pages `/identity/verifications` and `/identity/governance`, and the admin pages `/admin/deletion_requests` and `/admin/break_glass_report`.
+- Seed the roles and bootstrap the identity team (step 3, "Seed the roles and bootstrap the identity team").
 
 ### 7. Publish the page
 

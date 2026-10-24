@@ -125,8 +125,9 @@ FactoryBot.define do
       birthday { 15.years.ago.to_date }
     end
 
-    # Runs identity verification (see Verification). The admin pages need the
-    # admin role too.
+    # Runs identity verification (see Verification). The verification pages
+    # (/identity) do not need the admin role. The trait gives it anyway,
+    # because the deletion review and the Knot pages are in /admin.
     trait :identity_team do
       role { :admin }
       email_confirmed_at { Time.current }

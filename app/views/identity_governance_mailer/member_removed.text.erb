@@ -1,0 +1,14 @@
+<%= @event.summary %>
+
+When: <%= @event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>
+Reason: <%= @event.data["reason"] %>
+<% if @event.data["was_key_holder"] -%>
+The person was a key holder. The key holder flag is cleared.
+<% end -%>
+<% if @event.data["was_lead"] -%>
+The person was an identity team lead. The lead flag is cleared.
+<% end -%>
+
+The removal applied at once. You get this email because you are on the board.
+
+<%= @url %>

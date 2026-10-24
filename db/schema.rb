@@ -590,6 +590,58 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.index ["verified_by_id"], name: "index_guardian_consents_on_verified_by_id"
   end
 
+  create_table "identity_governance_approvals", force: :cascade do |t|
+    t.bigint "identity_governance_proposal_id", null: false
+    t.bigint "approver_id"
+    t.datetime "created_at", null: false
+    t.index ["approver_id"], name: "index_identity_governance_approvals_on_approver_id"
+    t.index ["identity_governance_proposal_id", "approver_id"], name: "index_identity_governance_approvals_on_proposal_and_approver", unique: true
+    t.index ["identity_governance_proposal_id"], name: "index_identity_governance_approvals_on_proposal"
+  end
+
+  create_table "identity_governance_events", force: :cascade do |t|
+    t.string "kind", null: false
+    t.bigint "actor_id"
+    t.bigint "subject_id"
+    t.bigint "identity_governance_proposal_id"
+    t.jsonb "data", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["actor_id"], name: "index_identity_governance_events_on_actor_id"
+    t.index ["created_at"], name: "index_identity_governance_events_on_created_at"
+    t.index ["identity_governance_proposal_id"], name: "index_identity_governance_events_on_proposal"
+    t.index ["subject_id"], name: "index_identity_governance_events_on_subject_id"
+  end
+
+  create_table "identity_governance_proposals", force: :cascade do |t|
+    t.string "kind", null: false
+    t.string "status", default: "pending", null: false
+    t.bigint "subject_id"
+    t.bigint "proposed_by_id"
+    t.text "reason", null: false
+    t.bigint "required_approver_ids", default: [], null: false, array: true
+    t.datetime "expires_at", null: false
+    t.datetime "closed_at"
+    t.bigint "closed_by_id"
+    t.text "close_reason"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["closed_by_id"], name: "index_identity_governance_proposals_on_closed_by_id"
+    t.index ["proposed_by_id"], name: "index_identity_governance_proposals_on_proposed_by_id"
+    t.index ["status", "expires_at"], name: "index_identity_governance_proposals_on_status_and_expires_at"
+    t.index ["subject_id"], name: "index_identity_governance_proposals_on_subject_id"
+  end
+
+  create_table "identity_ndas", force: :cascade do |t|
+    t.bigint "user_id"
+    t.date "signed_on", null: false
+    t.string "nda_version", null: false
+    t.string "signature_reference", null: false
+    t.bigint "recorded_by_id"
+    t.datetime "created_at", null: false
+    t.index ["recorded_by_id"], name: "index_identity_ndas_on_recorded_by_id"
+    t.index ["user_id"], name: "index_identity_ndas_on_user_id"
+  end
+
   create_table "impersonation_actions", force: :cascade do |t|
     t.bigint "impersonation_id", null: false
     t.string "http_method", null: false
@@ -719,6 +771,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["searchable_type", "searchable_id"], name: "index_pg_search_documents_on_searchable"
+  end
+
+  create_table "privileged_attribute_changes", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "user_p_id"
+    t.string "attribute_name", null: false
+    t.text "old_value"
+    t.text "new_value"
+    t.string "operation", null: false
+    t.datetime "changed_at", default: -> { "now()" }, null: false
+    t.string "db_user", null: false
+    t.bigint "actor_id"
+    t.string "actor_label"
+    t.index ["changed_at"], name: "index_privileged_attribute_changes_on_changed_at"
+    t.index ["user_id"], name: "index_privileged_attribute_changes_on_user_id"
   end
 
   create_table "program_grants", force: :cascade do |t|
@@ -1104,6 +1171,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   add_foreign_key "guardian_consents", "users", column: "revoked_by_id", on_delete: :nullify
   add_foreign_key "guardian_consents", "users", column: "verified_by_id", on_delete: :nullify
   add_foreign_key "guardian_consents", "users", on_delete: :nullify
+  add_foreign_key "identity_governance_approvals", "identity_governance_proposals"
+  add_foreign_key "identity_governance_approvals", "users", column: "approver_id", on_delete: :nullify
+  add_foreign_key "identity_governance_events", "identity_governance_proposals", on_delete: :nullify
+  add_foreign_key "identity_governance_events", "users", column: "actor_id", on_delete: :nullify
+  add_foreign_key "identity_governance_events", "users", column: "subject_id", on_delete: :nullify
+  add_foreign_key "identity_governance_proposals", "users", column: "closed_by_id", on_delete: :nullify
+  add_foreign_key "identity_governance_proposals", "users", column: "proposed_by_id", on_delete: :nullify
+  add_foreign_key "identity_governance_proposals", "users", column: "subject_id", on_delete: :nullify
+  add_foreign_key "identity_ndas", "users", column: "recorded_by_id", on_delete: :nullify
+  add_foreign_key "identity_ndas", "users", on_delete: :nullify
   add_foreign_key "impersonation_actions", "impersonations", on_delete: :cascade
   add_foreign_key "impersonations", "users", column: "admin_id", on_delete: :nullify
   add_foreign_key "impersonations", "users", on_delete: :nullify
@@ -1148,4 +1225,62 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   add_foreign_key "verifications", "users", column: "verifier_id", on_delete: :nullify
   add_foreign_key "verifications", "users", on_delete: :nullify
   add_foreign_key "verifications", "verifications", column: "previous_attempt_id", on_delete: :nullify
+
+  create_function :log_privileged_attribute_changes, sql_definition: <<-'SQL'
+      CREATE OR REPLACE FUNCTION public.log_privileged_attribute_changes()
+       RETURNS trigger
+       LANGUAGE plpgsql
+       SET search_path TO 'pg_catalog'
+      AS $function$
+      DECLARE
+        column_name text;
+        old_text text;
+        new_text text;
+        actor_id_text text := nullif(current_setting('weave.actor_id', true), '');
+        actor_label_text text := nullif(current_setting('weave.actor_label', true), '');
+      BEGIN
+        FOREACH column_name IN ARRAY ARRAY['is_board', 'identity_team', 'identity_key_holder', 'identity_lead', 'role'] LOOP
+          new_text := to_jsonb(NEW) ->> column_name;
+          IF TG_OP = 'INSERT' THEN
+            old_text := NULL;
+            CONTINUE WHEN new_text IS NULL OR new_text IN ('false', '0');
+          ELSE
+            old_text := to_jsonb(OLD) ->> column_name;
+            CONTINUE WHEN old_text IS NOT DISTINCT FROM new_text;
+          END IF;
+
+          INSERT INTO public.privileged_attribute_changes
+            (user_id, user_p_id, attribute_name, old_value, new_value, operation, changed_at, db_user, actor_id, actor_label)
+          VALUES
+            (NEW.id, NEW.p_id, column_name, old_text, new_text, lower(TG_OP), now(), CURRENT_USER,
+             CASE WHEN actor_id_text ~ '^[0-9]+$' THEN actor_id_text::bigint END, actor_label_text);
+        END LOOP;
+        RETURN NULL;
+      END;
+      $function$
+  SQL
+
+  create_function :refuse_privileged_attribute_change_edits, sql_definition: <<-'SQL'
+      CREATE OR REPLACE FUNCTION public.refuse_privileged_attribute_change_edits()
+       RETURNS trigger
+       LANGUAGE plpgsql
+       SET search_path TO 'pg_catalog'
+      AS $function$
+      BEGIN
+        RAISE EXCEPTION 'privileged_attribute_changes is append-only: % is not allowed', TG_OP;
+      END;
+      $function$
+  SQL
+
+  create_trigger :log_privileged_attribute_changes, sql_definition: <<-SQL
+      CREATE TRIGGER log_privileged_attribute_changes AFTER INSERT OR UPDATE OF is_board, identity_team, identity_key_holder, identity_lead, role ON public.users FOR EACH ROW EXECUTE FUNCTION log_privileged_attribute_changes()
+  SQL
+
+  create_trigger :privileged_attribute_changes_no_truncate, sql_definition: <<-SQL
+      CREATE TRIGGER privileged_attribute_changes_no_truncate BEFORE TRUNCATE ON public.privileged_attribute_changes FOR EACH STATEMENT EXECUTE FUNCTION refuse_privileged_attribute_change_edits()
+  SQL
+
+  create_trigger :privileged_attribute_changes_append_only, sql_definition: <<-SQL
+      CREATE TRIGGER privileged_attribute_changes_append_only BEFORE DELETE OR UPDATE ON public.privileged_attribute_changes FOR EACH ROW EXECUTE FUNCTION refuse_privileged_attribute_change_edits()
+  SQL
 end

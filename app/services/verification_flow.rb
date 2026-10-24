@@ -308,6 +308,9 @@ module VerificationFlow
       return { base: "Only an identity team member who is not the member can record the outcome." } unless identity_member?(by, verification)
       return { base: "Schedule the call before you record its outcome." } unless verification.call_scheduled?
 
+      bootstrap_error = IdentityGovernance.bootstrap_decision_error(by, user)
+      return { base: bootstrap_error } if bootstrap_error
+
       excluded = excluded_verifier_ids(user)
       errors[:verifier] = "You failed this member before. A different verifier must run this call." if excluded.include?(by.id)
       if second_verifier
