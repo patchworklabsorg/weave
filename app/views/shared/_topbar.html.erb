@@ -21,23 +21,23 @@
         </button>
         <%= render "shared/theme_toggle" %>
         <% if current_user.admin? %>
-          <%= link_to admin_root_path, class: "btn btn-secondary btn-sm hidden sm:inline-flex" do %>
-            <%= icon(:layout_dashboard) %>Admin
+          <%= link_to admin_root_path, class: "btn btn-secondary btn-sm hidden lg:inline-flex", "aria-label": "Admin", title: "Admin" do %>
+            <%= icon(:layout_dashboard) %><span class="topbar-btn-label">Admin</span>
           <% end %>
         <% end %>
         <% if (identity_link = identity_home_link) %>
           <% identity_label, identity_path, identity_icon = identity_link %>
-          <%= link_to identity_path, class: "btn btn-secondary btn-sm hidden sm:inline-flex" do %>
-            <%= icon(identity_icon) %><%= identity_label %>
+          <%= link_to identity_path, class: "btn btn-secondary btn-sm hidden lg:inline-flex", "aria-label": identity_label, title: identity_label do %>
+            <%= icon(identity_icon) %><span class="topbar-btn-label"><%= identity_label %></span>
           <% end %>
         <% end %>
         <% if impersonating? %>
-          <%= button_to stop_impersonating_admin_users_path, method: :delete, class: "btn btn-quiet btn-sm hidden sm:inline-flex", form_class: "inline-block" do %>
-            <%= icon(:log_out) %>Stop impersonating
+          <%= button_to stop_impersonating_admin_users_path, method: :delete, class: "btn btn-quiet btn-sm hidden lg:inline-flex", form_class: "inline-block", "aria-label": "Stop impersonating", title: "Stop impersonating" do %>
+            <%= icon(:log_out) %><span class="topbar-btn-label">Stop impersonating</span>
           <% end %>
         <% else %>
-          <%= button_to logout_path, method: :delete, class: "btn btn-quiet btn-sm hidden sm:inline-flex", form_class: "inline-block", title: "Sign out" do %>
-            <%= icon(:log_out) %>Sign out
+          <%= button_to logout_path, method: :delete, class: "btn btn-quiet btn-sm hidden lg:inline-flex", form_class: "inline-block", "aria-label": "Sign out", title: "Sign out" do %>
+            <%= icon(:log_out) %><span class="topbar-btn-label">Sign out</span>
           <% end %>
         <% end %>
         <button type="button" class="btn btn-quiet btn-sm btn-icon topbar-menu-btn" aria-label="Open menu" aria-expanded="false"

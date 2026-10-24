@@ -743,14 +743,15 @@
   .record-list { display: flex; flex-direction: column; }
   .record {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: 0.5rem 1rem;
     padding: 0.75rem 0;
     border-bottom: 1px solid var(--color-hairline);
   }
   .record:last-child { border-bottom: 0; }
-  .record-main { min-width: 0; flex: 1; }
+  .record-main { min-width: 0; flex: 1 1 14rem; overflow-wrap: anywhere; }
   .record-title { font-size: 0.875rem; font-weight: 500; color: var(--color-ink); }
   .record-meta { font-size: 0.8125rem; color: var(--color-ink-faint); }
   .record-actions { display: flex; flex: none; align-items: center; gap: 0.25rem; }
@@ -822,7 +823,7 @@
   }
   @media (min-width: 40rem) { .topbar-inner { padding: 0 1.5rem; } }
   .topbar-nav { display: none; align-items: center; gap: 0.125rem; margin-left: 0.5rem; }
-  @media (min-width: 48rem) { .topbar-nav { display: flex; } }
+  @media (min-width: 64rem) { .topbar-nav { display: flex; } }
   .topbar-end { margin-left: auto; display: flex; align-items: center; gap: 0.25rem; }
 
   .nav-link {
@@ -848,9 +849,12 @@
     border-top: 1px solid var(--color-hairline);
   }
   .topbar-sheet[data-open="true"] { display: grid; gap: 0.125rem; }
-  @media (min-width: 48rem) { .topbar-sheet[data-open="true"] { display: none; } }
+  @media (min-width: 64rem) { .topbar-sheet[data-open="true"] { display: none; } }
   .topbar-menu-btn { display: inline-flex; }
-  @media (min-width: 48rem) { .topbar-menu-btn { display: none; } }
+  @media (min-width: 64rem) { .topbar-menu-btn { display: none; } }
+  /* Admin, Identity and Sign out show only their icon until the bar has room for the words */
+  .topbar-btn-label { display: none; }
+  @media (min-width: 80rem) { .topbar-btn-label { display: inline; } }
 
   /* ── App shell: sidebar (admin) ─────────────────────────── */
 
@@ -953,6 +957,8 @@
     background-color: var(--color-paper);
     color: var(--color-ink-faint);
     font-size: 0.875rem;
+    white-space: nowrap;
+    flex-shrink: 0;
     cursor: pointer;
     transition: border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
   }
@@ -961,9 +967,10 @@
   .cmdk-trigger-label { display: none; }
   .cmdk-trigger .kbd { display: none; }
   @media (min-width: 40rem) {
-    .cmdk-trigger { min-width: 13rem; }
-    .cmdk-trigger-label { display: inline; flex: 1; text-align: left; }
     .cmdk-trigger .kbd { display: inline-flex; }
+    /* The member top bar is full; only the admin top bar has room for the words */
+    .admin-topbar .cmdk-trigger { min-width: 15rem; }
+    .admin-topbar .cmdk-trigger-label { display: inline; flex: 1; text-align: left; padding-right: 0.5rem; }
   }
 
   /* ── Banners ────────────────────────────────────────────── */
