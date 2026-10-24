@@ -417,3 +417,144 @@ The values are in `config/kyc/knot.yml`.
 | `keep_years` | null (kept for ever) | Locked: a Knot has no expiry |
 | `programs.ganymede.patch_lead_p_ids` | `["PWL8724F96B89"]` (Adam) in `production`, empty elsewhere | Locked |
 | `knot.pepper` (credentials) | not set | Must be set in production before the first pass |
+
+## Demographics vault
+
+Funders ask for statistics: age bands, gender and similar fields. Members answer these questions themselves, and their answer is the only source of record. No document overwrites an answer. Weave never checks gender against a document. This section covers proposal sections 03 ("Demographics") and 06 ("The demographics vault"), and issue #110.
+
+The rule: nobody can read one member's answers in the app. The only output is aggregate counts with small-count suppression.
+
+### What the member sees
+
+- `/profile/demographics` has the form. Every question is optional, and every question has "Prefer not to say". The member must tick a consent box each time they save.
+- The form always starts empty. Weave cannot show the answers back, not even to the member. The page shows only the date of the last answer.
+- To change the answers, the member answers again. The new answers replace the old ones. No version history is kept.
+- The member can delete the answers ("withdraw"). Withdrawn answers are not counted anywhere.
+- The profile page and the `/slack` onboarding page show an optional invitation to the form. It never blocks a step: the community is not gated on it.
+- Every page that collects or shows this data links to the public page "What we do with your data" (`Weave.data_page_url`, `https://patchworklabs.org/your-data`).
+- An admin who impersonates a member cannot save or delete the member's answers.
+
+### What is stored
+
+| Field | Source | Stored as |
+| --- | --- | --- |
+| Age band | Member's birthday, when the member saves | Band only, for example `16-17`, inside the envelope |
+| Gender identity | Member's choice | Option key inside the envelope |
+| Self-description | Member's own words, when the member picks "I describe it differently" | Text inside the envelope. Reports count it only as `self_describe` |
+| Other funder fields | `config/demographics.yml` | Option keys inside the envelope |
+
+The questions, the age bands and the small-count threshold are in `config/demographics.yml`. Labels are in `config/locales/demographics.en.yml`. To add a question, add it to both files. No code change is needed.
+
+### How the vault works
+
+```mermaid
+flowchart LR
+  M[Member form] -->|answers| W[Web app]
+  W -->|seal with public key| R[(demographic_records<br/>one envelope per member)]
+  R -->|member leaves: fold!| F[(demographic_folds<br/>no user link)]
+  K[Key holder runs<br/>demographics:report<br/>with private key] -->|open| R
+  K -->|open, count, delete| F
+  K -->|open, add, seal again| D[(demographic_departed_totals<br/>sealed totals per cohort)]
+  K -->|suppressed counts| P[(demographic_reports)]
+  P --> A[Admin page<br/>/admin/demographics]
+```
+
+1. The web app seals the answers with a public key (`DemographicsVault::Envelope`): a random AES-256-GCM key encrypts the payload, and RSA-OAEP with SHA-256 wraps that key. The payload is padded to a fixed size, so the size of an envelope says nothing about the answers.
+2. The web app has only the public key. It can write an envelope. It cannot open one. There is no read method in `DemographicsVault`.
+3. A key holder runs the report (`bin/rails demographics:report`) with the private key. `DemographicsReport` opens the envelopes in memory, counts them, applies suppression, and saves only the counts in `demographic_reports`. Only one run can work at a time (a Postgres advisory lock).
+4. The admin page `/admin/demographics` shows only the latest report.
+
+Lockbox is not used for the vault. Lockbox keys are symmetric, so the app that writes a Lockbox field can also read it.
+
+### Small-count suppression
+
+`DemographicsReport.suppress` applies these rules, with the threshold `k` from `config/demographics.yml`:
+
+- A count from 1 to `k - 1` is hidden. It is stored as `nil`, so the small number never reaches the database.
+- When a question has exactly one hidden count, the next smallest count is hidden too. Without this rule, the hidden count is the total minus the others.
+- When there are fewer than `k` respondents in total, all counts are hidden.
+- A zero count is shown.
+
+The admin page shows only the latest report, because two reports side by side can show one member's answer by their difference. Earlier reports stay in `demographic_reports`, and admins can read them through Blazer. The rule lowers the risk on the admin page only.
+
+### Delete-time folding
+
+The deletion pipeline calls `DemographicsVault.fold!(user, cohorts: [...])` before it severs the identity. `fold!`:
+
+1. Moves the member's sealed envelope to `demographic_folds`. That table has no `user_id`, no timestamps, and a random UUID as its id, so the row order does not show the order of deletions.
+2. Destroys the member's `demographic_records` row.
+3. Returns `DemographicsVault::Fold` with `folded: true`, or `folded: false` when the member had no answers. A second call is safe.
+
+The next reporting run opens the departed totals, adds the bands of each parked envelope for each cohort (for example `2026` or `ganymede-2026`), deletes the parked envelope, and seals the totals again. The totals have no rows per person. Reports show them per cohort with the same suppression.
+
+The departed totals are raw counts, so they are sealed too: one row in `demographic_departed_totals`, sealed with the same key pair and padded to a multiple of 4 KB. Neither the app nor Blazer can read the small counts. If the run cannot open the totals with its key, it stops and changes nothing (`DemographicsReport::DepartedTotalsUnreadable`).
+
+A parked envelope stays in `demographic_folds` until the next reporting run. Run a report soon after deletions, so parked envelopes do not stay for long.
+
+`User#destroy` also calls `fold!` with the current year as the cohort, so any delete path folds before the user row goes. The foreign key cascades too, so no envelope stays linked to a deleted user.
+
+`fold!` does not return the member's bands. The web app and the job worker cannot open the envelope, because they do not have the private key. The proposal asks that aggregates are updated before the link is severed. Here the envelope is detached from the identity before the link is severed, and the bands are counted at the next reporting run. The pipeline must pass the cohorts it wants the member counted in.
+
+```mermaid
+sequenceDiagram
+  participant P as Deletion pipeline
+  participant V as DemographicsVault
+  participant DB as Database
+  participant K as Reporting run (private key)
+  P->>V: fold!(user, cohorts)
+  V->>DB: insert demographic_folds (envelope, cohorts)
+  V->>DB: delete demographic_records row
+  P->>DB: write the Knot record, sever the identity
+  K->>DB: open the departed totals and each fold, add, delete fold, seal the totals
+```
+
+### Keys and the reporting run
+
+The private key must never be in Rails credentials or in the `weave-env` file. Every Weave process reads those: the web container, and the job worker (production also runs Solid Queue inside Puma). That is why the reporting run is a rake task and not a background job.
+
+1. Make a key pair on a trusted machine: `bin/rails demographics:generate_keypair DIR=~/weave-demographics-key`. The task writes `private.pem` (mode 600) and prints the public key.
+2. Put the public key in each deployment's credentials as `demographics.public_key`. Staging uses its own key pair.
+3. Keep the private key offline with the key holders.
+4. To make a report, run the task in a one-off container with the key mounted only for that run, for example `WEAVE_DEMOGRAPHICS_PRIVATE_KEY_FILE=/run/key/private.pem bin/rails demographics:report RUN_BY=<name>`. The task prints only suppressed totals.
+
+Development makes a throwaway key pair in `tmp/demographics-dev/` on first use. Specs make their own key pair in `spec/support/demographics_keys.rb`.
+
+### Threat model
+
+What the design protects against:
+
+- An admin, a superadmin or an owner in the admin panel. No admin page, serializer, API, mailer, export or console helper reads the vault. `spec/security/demographics_vault_guard_spec.rb` fails if one starts to.
+- A database dump or a Blazer query. The dump has only ciphertext, a key id, a `user_id` and timestamps.
+- A compromise of the web app or the worker that reads the stored data. Those processes do not have the private key.
+- Logs. The form parameters are filtered (`demographic` in `filter_parameter_logging.rb`). The models hide `envelope` from `inspect`.
+
+What the design does not protect against. These are real limits:
+
+- **The private key holders.** Anyone with the private key and the database can open every envelope and see one member's answers. The code only counts, but the key does not enforce that. Keep the key offline, give it to few people, and record every run (`run_by`). Treat a use of this key like a break-glass event.
+- **A compromised web app at write time.** The web app sees the answers in memory when the member submits the form. An attacker who controls the web app can record new answers as members submit them. Stored answers stay safe.
+- **Metadata.** The database shows which members answered and when (`user_id`, `created_at`, `updated_at`). It does not show the answers.
+- **Age band.** The age band comes from the birthday, which Weave already stores in plain form for age checks.
+- **Small cohorts and differencing.** Suppression lowers the risk but does not remove it. Two reports from different dates can differ by one member, and Blazer can read every earlier report. Two cohorts where one contains the other (for example `2026` and `ganymede-2026`) can differ by one member.
+- **Same answer for everyone.** If all respondents in a group give the same answer, the report shows that answer for each of them. Blazer shows who answered (`demographic_records.user_id`). Suppression does not hide this.
+- **Staleness.** The age band is fixed when the member saves. A member who answered at 17 stays in `16-17` until they answer again.
+- **Key loss.** If the private key is lost, no report can open the stored envelopes. The report counts these as "unreadable". The departed totals are lost too, and the run stops until someone removes the sealed totals row.
+- **Key change.** No tool re-seals the stored envelopes or the departed totals with a new key pair yet. Plan a key change before you make one.
+
+### Files
+
+- `app/services/demographics_vault.rb`: the write-only API (`record`, `withdraw!`, `answered_at`, `fold!`).
+- `app/services/demographics_vault/envelope.rb`, `reader.rb`: sealing and opening.
+- `app/services/demographics_report.rb`: the reporting run and suppression.
+- `app/controllers/demographics_controller.rb`, `app/controllers/admin/demographics_controller.rb`.
+- `lib/tasks/demographics.rake`: `demographics:report`, `demographics:generate_keypair`.
+- `config/demographics.yml`: questions, age bands, threshold, public key.
+
+### Open questions
+
+The small-count threshold `k` is locked at 10 (2026-10-12) in `config/demographics.yml`. The test environment uses 3.
+
+The age bands are locked (2026-10-13): `age_band_starts: [0, 13, 16, 18, 25, 35]`. The bands are under 13, 13-15, 16-17, 18-24, 25-34 and 35+. The split at 18 keeps minors apart. The adult bands follow common census brackets. The vault stores the band as `0-12`, `13-15` and so on. `DemographicsHelper#demographic_age_band_label` shows "Under 13", "13 to 15" and "35 and older" (copy in `config/locales/demographics.en.yml`).
+
+The value below is still a placeholder in `config/demographics.yml`:
+
+- Which other fields funders need. Race, ethnicity and sexual orientation are special category data under GDPR Article 9. Ask counsel before you add one.

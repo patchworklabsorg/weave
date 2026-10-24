@@ -1,0 +1,73 @@
+<%# Demographics aggregates (see Admin::DemographicsController). Counts only,
+    after small-count suppression. Nothing here names or links to a member. %>
+<% content_for :title, "Demographics" %>
+
+<div class="mb-6 space-y-2">
+  <h2 class="font-display text-2xl font-bold text-ink">Demographics for funder reports</h2>
+  <p class="text-ink-soft">
+    Members answer these questions themselves. Weave encrypts each answer with a key that the web app does not have,
+    so nobody can see one member's answers here or anywhere else. This page shows only the totals from the latest
+    reporting run. Counts from 1 to <%= @threshold - 1 %> are hidden, and so is one more count when only one count
+    in a question is hidden.
+  </p>
+  <p class="text-sm">
+    <%= link_to t("demographics.data_page_link"), Weave.data_page_url, target: "_blank", rel: "noopener noreferrer",
+          class: "text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2" %>
+  </p>
+</div>
+
+<% if @report.nil? %>
+  <div class="patch p-6 mb-6">
+    <p class="text-sm text-ink-faint">No report yet.</p>
+  </div>
+<% else %>
+  <% sections = [["Current members", @report.active]] + @report.departed.map { |cohort, data| ["Members who left (#{cohort})", data] } %>
+  <p class="text-sm text-ink-soft mb-4">
+    Report from <%= @report.generated_at.strftime("%b %-d, %Y %H:%M") %>.
+    <% if @report.unreadable_count.positive? %>
+      <strong><%= @report.unreadable_count %> envelopes could not be opened with the key of this run.</strong>
+    <% end %>
+  </p>
+
+  <% sections.each do |title, data| %>
+    <div class="patch p-6 mb-6">
+      <h3 class="font-display text-lg font-bold text-ink mb-1"><%= title %></h3>
+      <p class="text-sm text-ink-soft mb-4">Respondents: <%= demographic_count(data["respondents"], @report.threshold) %></p>
+      <% data.fetch("fields", {}).each do |field, counts| %>
+        <table class="min-w-full divide-y divide-ink-soft/20 mb-4">
+          <caption class="text-left text-sm font-semibold text-ink mb-2"><%= demographic_field_label(field) %></caption>
+          <thead>
+            <tr>
+              <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-grape uppercase tracking-wider">Answer</th>
+              <th scope="col" class="px-4 py-2 text-right text-xs font-medium text-grape uppercase tracking-wider">Count</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-ink-soft/10">
+            <% counts.each do |value, count| %>
+              <tr>
+                <td class="px-4 py-2 text-sm text-ink"><%= demographic_option_label(field, value) %></td>
+                <td class="px-4 py-2 text-sm text-ink text-right"><%= demographic_count(count, @report.threshold) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
+
+<div class="patch p-6">
+  <h3 class="font-display text-lg font-bold text-ink mb-2">Make a new report</h3>
+  <p class="text-sm text-ink-soft mb-3">
+    The web app cannot make a report, because it does not have the private key. A key holder runs
+    <code>bin/rails demographics:report</code> with the key in <code>WEAVE_DEMOGRAPHICS_PRIVATE_KEY_FILE</code>.
+    See docs/KYC.md.
+  </p>
+  <% if @runs.any? %>
+    <ul class="text-sm text-ink-soft list-disc list-inside">
+      <% @runs.each do |generated_at, run_by| %>
+        <li><%= generated_at.strftime("%b %-d, %Y %H:%M") %><%= " by #{run_by}" if run_by.present? %></li>
+      <% end %>
+    </ul>
+  <% end %>
+</div>

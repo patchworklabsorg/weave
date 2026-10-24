@@ -10,5 +10,7 @@ Rails.application.config.filter_parameters += [
   # Identifiers from an ID at a verification decision (see VerificationIdentifiers).
   :document_number, :national_id, :date_of_birth, :issuing_country,
   # The uploaded ID image: its file name often holds the member's name.
-  :id_document
+  :id_document,
+  # Self-reported answers for the demographics vault (see DemographicsVault).
+  :demographic
 ]
