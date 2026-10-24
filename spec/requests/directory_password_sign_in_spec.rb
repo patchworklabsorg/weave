@@ -20,6 +20,12 @@ RSpec.describe "Password sign-in with Active Directory", type: :request do
     expect(user.reload.directory_linked_at).to be_present
   end
 
+  it "has no separate password sign-in page" do
+    get "/login/pw"
+
+    expect(response).to have_http_status(:not_found)
+  end
+
   it "refuses the old Weave password once the user is linked" do
     sign_in_with_password(user.email, "SecurePassword123!")
 
@@ -84,7 +90,7 @@ RSpec.describe "Password sign-in with Active Directory", type: :request do
 
       patch expired_password_path, params: { current_password: "Ad-password-1", password: "New-password-2", password_confirmation: "New-password-2" }
 
-      expect(response).to redirect_to(password_login_path)
+      expect(response).to redirect_to(login_path)
       expect(directory.account(user.p_id).password).to eq("New-password-2")
       expect(directory.modifications.last[:operations].map(&:first)).to eq(%i[delete add])
 
@@ -105,7 +111,7 @@ RSpec.describe "Password sign-in with Active Directory", type: :request do
     it "refuses the page without a recent sign-in attempt" do
       get expired_password_path
 
-      expect(response).to redirect_to(password_login_path)
+      expect(response).to redirect_to(login_path)
     end
 
     it "expires the pending change after ten minutes" do
@@ -113,7 +119,7 @@ RSpec.describe "Password sign-in with Active Directory", type: :request do
 
       travel 11.minutes do
         get expired_password_path
-        expect(response).to redirect_to(password_login_path)
+        expect(response).to redirect_to(login_path)
       end
     end
   end

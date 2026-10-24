@@ -33,7 +33,7 @@ class ExpiredPasswordsController < ApplicationController
     status = DirectoryPasswords.change(@user, current: current, new: new_password)
     if status == :ok
       session.delete(SESSION_KEY)
-      redirect_to password_login_path, notice: "Your password was changed. Sign in with the new password."
+      redirect_to login_path, notice: "Your password was changed. Sign in with the new password."
     else
       render_problem(status)
     end
@@ -49,7 +49,7 @@ class ExpiredPasswordsController < ApplicationController
     return if @user&.can_authenticate?
 
     session.delete(SESSION_KEY)
-    redirect_to password_login_path, alert: "Sign in again to change your expired password."
+    redirect_to login_path, alert: "Sign in again to change your expired password."
   end
 
   def render_problem(status)
