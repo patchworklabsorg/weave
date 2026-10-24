@@ -16,7 +16,7 @@ RSpec.describe "OpenID Connect", type: :request do
     Doorkeeper::Application.create!(
       name: "Test Client",
       redirect_uri: redirect_uri,
-      scopes: "openid profile email phone admin slack groups roles",
+      scopes: "openid profile email phone admin slack groups roles verification",
       confidential: false
     )
   end
@@ -277,6 +277,13 @@ RSpec.describe "OpenID Connect", type: :request do
       user.update!(slack_id: "U0MEMBER", slack_membership: "member")
 
       expect(userinfo(scope: "openid slack")).to include("slack_member" => true, "slack_id" => "U0MEMBER")
+    end
+
+    it "gives the identity verification status through the verification scope" do
+      create(:verification, :verified, user:)
+
+      expect(userinfo(scope: "openid verification")).to include("verification_status" => "verified")
+      expect(userinfo(scope: "openid profile")).not_to include("verification_status")
     end
 
     describe "the groups claim" do

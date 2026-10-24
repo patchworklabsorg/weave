@@ -14,6 +14,9 @@
 module Weave
   PRODUCTION_HOST = "weave.patchworklabs.org"
   PRIVACY_POLICY_URL = "https://patchworklabs.org/privacy"
+  # The public page "What we do with your data". Every place that collects or
+  # handles identity data links to it.
+  DATA_PAGE_URL = "https://patchworklabs.org/your-data"
   STAGING = "staging"
 
   class << self
@@ -36,6 +39,8 @@ module Weave
     def url(env = ENV)
       "https://#{host(env)}"
     end
+
+    def data_page_url = DATA_PAGE_URL
 
     # Prefix of the Patchwork Labs ID (User#p_id, the OIDC `sub`). Staging IDs
     # start with SPWL so a sandbox identity can never pass for a real one.

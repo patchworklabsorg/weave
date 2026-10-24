@@ -71,6 +71,7 @@ gem "aasm" # State machines
 ###############################################################################
 # FILE & IMAGE PROCESSING
 ###############################################################################
+gem "ruby-vips", "~> 2.2"               # libvips for ID uploads (IdDocumentConverter)
 gem "active_storage_validations" # File validations
 
 ###############################################################################

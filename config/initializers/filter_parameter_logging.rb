@@ -6,5 +6,9 @@
 # Use this to limit dissemination of sensitive information.
 # See the ActiveSupport::ParameterFilter documentation for supported notations and behaviors.
 Rails.application.config.filter_parameters += [
-  :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc, :legal_
+  :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc, :legal_,
+  # Identifiers from an ID at a verification decision (see VerificationIdentifiers).
+  :document_number, :national_id, :date_of_birth, :issuing_country,
+  # The uploaded ID image: its file name often holds the member's name.
+  :id_document
 ]

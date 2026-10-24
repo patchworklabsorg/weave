@@ -1,0 +1,99 @@
+# Text for identity verification (see VerificationFlow and docs/KYC.md).
+# Members see this text. Keep it in ASD-STE100 Simplified Technical English.
+en:
+  verification:
+    data_page_link: "What we do with your data"
+    statuses:
+      needs_submission: "Not verified"
+      pending: "In progress"
+      verified: "Verified"
+      ineligible: "Closed"
+    page:
+      title: "Identity verification"
+      intro: "Some Patchwork Labs programs give compute, servers or grant money. To use them, you verify your identity one time. The community and the Slack do not need this step."
+      steps_title: "How it works"
+      steps:
+        - "You upload a photo or a scan of an ID."
+        - "A member of our identity team checks the document."
+        - "If the document is OK, we agree a time for the call with you by email or Slack."
+        - "You join a short live video call. You hold up the same ID. We do not record the call. If you are under 18, a parent or guardian must join the call."
+        - "We tell you the result."
+      data: "We encrypt your ID image. We delete it %{days} days after you pass. We do not copy values from your ID into your account. Read what we do with your data before you upload."
+      status_label: "Status"
+      document_type: "Type of document"
+      document: "Photo or scan of your ID"
+      document_hint: "JPEG, PNG, HEIC or PDF, up to %{megabytes} MB. From a PDF we use only the first page. The full document must be clear. We remove the location and camera data from the photo."
+      data_notice_read: "I read what Patchwork Labs does with my data."
+      submit: "Upload and continue"
+      resubmit: "Upload a new document"
+      history: "Your attempts"
+      submitted: "We got your document. Our identity team will check it. Then they contact you by email or Slack to agree a time for the call."
+      pre_review: "Our identity team is checking your document."
+      awaiting_call: "Your document is OK. A member of our identity team will contact you by email or Slack to agree a time for your call."
+      call_scheduled: "Your call is on %{call_time}."
+      needs_resubmission: "Your document has a problem: %{note}"
+      verified: "You are verified. You can use the programs that need verification."
+      reverification_required: "You must verify your identity again: %{reason} Upload an ID and join a new call. Your verification has no time limit. Only a change like this makes a new call necessary."
+      guardian_needed: "You are under 18. A parent or guardian must join your verification call. You cannot pass without them."
+      failed: "You did not pass the call. You can try again from %{retry_date}. A different person from our identity team will run your next call."
+      failed_can_retry: "You did not pass the last call. You can try again now. A different person from our identity team will run your next call."
+      escalated: "Our identity team lead is looking at your attempts. We will email you."
+      ineligible: "Our identity team closed your verification. Contact us if you have questions."
+      document_types:
+        passport: "Passport"
+        national_id_card: "National identity card"
+        driving_licence: "Driving licence"
+        residence_permit: "Residence permit"
+        other: "Other official photo ID"
+    blockers:
+      under_minimum_age: "You must be 13 or older."
+      no_birthday: "Add your birthday to your account first."
+      verified: "You are already verified."
+      ineligible: "Our identity team closed your verification."
+      in_progress: "You already have an attempt in progress."
+      escalated: "Our identity team lead is looking at your attempts."
+      cooldown: "You can try again after the waiting period."
+    errors:
+      data_notice: "Confirm that you read what we do with your data."
+      digital_id_unavailable: "Digital ID is not available yet."
+      document_missing: "Upload a photo or a scan of your ID."
+      document_unsupported: "We could not use this file. Upload a JPEG, PNG, HEIC or PDF of your ID, up to the size limit. If it is a PDF, put the ID on the first page."
+    submitted: "We got your document."
+    mailer:
+      action: "See your verification"
+      needs_resubmission:
+        subject: "Your ID document has a problem"
+        body: "Hi %{first_name}, our identity team found a problem with the document you uploaded: %{note} Please upload a new document."
+      awaiting_call:
+        subject: "Your ID document is OK"
+        body: "Hi %{first_name}, our identity team checked your document, and it is OK. A member of the team will contact you by email or Slack to agree a time for your live call. Have the same ID with you for the call."
+      call_scheduled:
+        subject: "Your verification call"
+        body: "Hi %{first_name}, your verification call is on %{call_time}. Have the same ID with you. We do not record the call. If you are under 18, a parent or guardian must join the call."
+      verified:
+        subject: "You are verified"
+        body: "Hi %{first_name}, you passed identity verification. You can now use the Patchwork Labs programs that need it. We will delete your ID image in %{days} days."
+      failed:
+        subject: "Your verification call"
+        body: "Hi %{first_name}, you did not pass the verification call. You can try again from %{retry_date}. A different person from our identity team will run your next call."
+      escalated:
+        subject: "Your verification call"
+        body: "Hi %{first_name}, you did not pass the verification call. Because this happened more than one time, our identity team lead will look at your attempts. We will email you."
+      reverification_required:
+        subject: "Verify your identity again"
+        body: "Hi %{first_name}, you must verify your identity again: %{reason} Until you pass a new call, you cannot use the programs that need verification. Upload an ID to start."
+      escalation_retry_allowed:
+        subject: "You can try verification again"
+        body: "Hi %{first_name}, our identity team lead looked at your attempts. You can try again from %{retry_date}."
+      escalation_ineligible:
+        subject: "Your identity verification"
+        body: "Hi %{first_name}, our identity team lead looked at your attempts and closed your verification. Contact us if you have questions."
+    reverification_reasons:
+      birthday_changed: "the birthday on your account changed."
+      legal_name_changed: "the legal name on your account changed."
+      blacklist_review: "our identity team reviewed the fraud flag on your record."
+    break_glass_notice:
+      subject: "We opened your stored ID image"
+      body: "Hi %{first_name}, on %{date} a member of the Patchwork Labs identity team opened the stored image of the ID you uploaded. Two key holders approved this access, and we record each access."
+      reason: "The reason they gave: %{reason}"
+      questions: "If you have questions, email %{email}."

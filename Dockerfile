@@ -22,7 +22,11 @@ WORKDIR /rails
 # libargon2 that the argon2-kdf gem vendors (see config/initializers/lockbox.rb).
 # postgresql17-client gives bin/rails dbconsole its psql. Keep its major version
 # equal to the database image in the infra module (pgvector/pgvector:pg17).
-RUN apk add --no-cache argon2-libs jemalloc postgresql17-client tzdata
+# ID uploads (IdDocumentConverter) need vips with its HEIC module and the
+# libheif HEVC decoder, and poppler-utils (pdftoppm renders the first page of
+# a PDF).
+RUN apk add --no-cache argon2-libs jemalloc postgresql17-client tzdata \
+    libheif-libde265 poppler-utils vips vips-heif
 
 ENV RAILS_ENV=production \
     BUNDLE_DEPLOYMENT=1 \

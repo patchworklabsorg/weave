@@ -1,0 +1,7 @@
+<%= @notice.delayed_by&.full_name || "A deleted user" %> asked to delay the member notice for break-glass request <%= @record.public_id %>.
+
+Reason for the delay: <%= @notice.delay_reason %>
+
+The delay holds the notice only after an owner or the identity team lead signs it off. Then the member is told when somebody lifts the delay, or on <%= @notice.delay_ends_at.utc.strftime("%B %-d, %Y") %> at the latest. The board report lists every delayed notice.
+
+<%= @admin_url %>

@@ -410,6 +410,10 @@ Rails.application.routes.draw do
   post "guardian/:token", to: "guardian_consents#create"
   delete "guardian/:token", to: "guardian_consents#destroy"
 
+  # Identity verification for program resources (see VerificationFlow). The
+  # member uploads an ID and follows the status here.
+  resource :verification, only: [:show, :create]
+
   # Well-known routes for standard compliance
   get ".well-known/*path", to: "well_known#show", format: false
   # Legacy location -> canonical RFC 9116 location
@@ -524,7 +528,42 @@ Rails.application.routes.draw do
             patch :verify
           end
         end
+
+        # Identity team membership, key holder and lead (owner only).
+        resource :identity_team, controller: "user_identity_team", only: [:update]
       end
+
+      # Identity verification, for the identity team (see VerificationFlow).
+      resources :verifications, only: [:index, :show] do
+        member do
+          patch :start_pre_review
+          patch :take_over_pre_review
+          post :image
+          patch :reject_document
+          patch :approve_document
+          patch :schedule_call
+          patch :decide
+          patch :resolve_escalation
+        end
+        resources :break_glass_records, only: [:create]
+      end
+
+      # Break-glass access to stored ID images (see BreakGlass).
+      resources :break_glass_records, only: [:index] do
+        member do
+          patch :approve
+          patch :deny
+          post :image
+        end
+      end
+      resources :break_glass_notices, only: [] do
+        member do
+          patch :delay
+          patch :sign_off_delay
+          patch :lift_delay
+        end
+      end
+      resource :break_glass_report, only: [:show]
 
       # Guardian consents with a flag, for an admin to check (see
       # GuardianConsentSignals).
@@ -569,6 +608,7 @@ Rails.application.routes.draw do
           patch :code_of_conduct
           patch :guardian_consent
           patch :email_domains
+          patch :verification
         end
 
         resources :access_grants, controller: "oauth_application_access_grants", only: [:create, :destroy]

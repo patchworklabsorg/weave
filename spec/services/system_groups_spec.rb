@@ -31,7 +31,8 @@ RSpec.describe SystemGroups do
       "board"         => { is_board: true },
       "contractors"   => { is_contractor: true },
       "admins"        => { role: :superadmin },
-      "slack-members" => { slack_membership: "member" }
+      "slack-members" => { slack_membership: "member" },
+      "identity-team" => { role: :admin, identity_team: true }
     }.each do |slug, attributes|
       it "adds and removes #{slug} membership as the attribute changes" do
         user = create(:user)

@@ -1,0 +1,80 @@
+<% content_for :title, "Break-glass report" %>
+
+<div class="mb-6 flex flex-wrap justify-between items-end gap-4">
+  <div>
+    <h2 class="font-display text-2xl font-bold text-ink mb-2">Break-glass report: <%= @report.month.strftime("%B %Y") %></h2>
+    <p class="text-ink-soft">Every request and decryption of a stored ID image in the month, with the state of each notice.</p>
+  </div>
+  <div class="flex gap-2">
+    <%= link_to "Previous month", admin_break_glass_report_path(month: @report.month.prev_month.iso8601), class: "btn-stitch-ghost" %>
+    <%= link_to "Next month", admin_break_glass_report_path(month: @report.month.next_month.iso8601), class: "btn-stitch-ghost" %>
+  </div>
+</div>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+  <% { "Requests" => @report.requests.size, "Decryptions" => @report.decryptions.size,
+       "Pre-review views" => @report.pre_review_views, "Delayed notices now" => @report.delayed_notices.size }.each do |label, count| %>
+    <div class="patch p-4">
+      <p class="text-xs text-ink-faint"><%= label %></p>
+      <p class="font-display text-2xl font-bold text-ink"><%= count %></p>
+    </div>
+  <% end %>
+</div>
+
+<h3 class="font-display text-lg font-bold text-ink mb-3">Decryptions</h3>
+<div class="patch overflow-hidden mb-8">
+  <% if @report.decryptions.any? %>
+    <ul class="divide-y divide-ink-soft/10">
+      <% @report.decryptions.each do |decryption| %>
+        <% record = decryption.break_glass_record %>
+        <li class="px-6 py-3 text-sm text-ink space-y-1">
+          <p><%= decryption.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>: <%= decryption.viewer&.full_name || "A deleted user" %> decrypted the image for <%= record.public_id %>.</p>
+          <p class="text-ink-soft">Reason: <%= record.reason %></p>
+          <p class="text-xs text-ink-faint">
+            Notices: <%= decryption.notices.map { |notice| "#{notice.recipient_kind} (#{notice.recipient&.full_name || 'a deleted user'}): #{notice.sent? ? 'sent' : (notice.delayed? ? 'delayed' : 'waiting')}" }.join("; ") %>
+          </p>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="px-6 py-4 text-sm text-ink-faint">No decryptions in this month.</p>
+  <% end %>
+</div>
+
+<h3 class="font-display text-lg font-bold text-ink mb-3">Requests</h3>
+<div class="patch overflow-hidden mb-8">
+  <% if @report.requests.any? %>
+    <ul class="divide-y divide-ink-soft/10">
+      <% @report.requests.each do |record| %>
+        <li class="px-6 py-3 text-sm text-ink">
+          <%= record.created_at.utc.strftime("%Y-%m-%d") %>: <%= record.public_id %>, <%= record.status %>,
+          asked by <%= record.requested_by&.full_name || "a deleted user" %>, approved by <%= record.approvers.map(&:full_name).to_sentence.presence || "nobody" %>.
+          Reason: <%= record.reason %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="px-6 py-4 text-sm text-ink-faint">No requests in this month.</p>
+  <% end %>
+</div>
+
+<h3 class="font-display text-lg font-bold text-ink mb-3">Member notices delayed now</h3>
+<div class="patch overflow-hidden">
+  <% if @report.delayed_notices.any? %>
+    <ul class="divide-y divide-ink-soft/10">
+      <% @report.delayed_notices.each do |notice| %>
+        <li class="px-6 py-3 text-sm text-ink">
+          <%= notice.break_glass_record.public_id %>: delayed since <%= notice.delayed_at.utc.strftime("%Y-%m-%d") %> by
+          <%= notice.delayed_by&.full_name || "a deleted user" %>. Reason: <%= notice.delay_reason %>.
+          <% if notice.delay_signed_off? %>
+            Signed off by <%= notice.delay_signed_off_by&.full_name || "a deleted user" %>, holds until <%= notice.delay_ends_at.utc.strftime("%Y-%m-%d") %> at the latest.
+          <% else %>
+            Not signed off: it does not hold the notice.
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="px-6 py-4 text-sm text-ink-faint">None.</p>
+  <% end %>
+</div>

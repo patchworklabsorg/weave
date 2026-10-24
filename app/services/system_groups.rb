@@ -32,6 +32,10 @@ module SystemGroups
     Definition.new(
       slug: "slack-members", name: "Slack Members", description: "Full members of the Patchwork Labs Slack.",
       attributes: %w[slack_membership], rule: ->(user) { user.slack_member? }
+    ),
+    Definition.new(
+      slug: "identity-team", name: "Identity Team", description: "Users who run identity verification.",
+      attributes: %w[identity_team], rule: ->(user) { user.identity_team }
     )
   ].freeze
 

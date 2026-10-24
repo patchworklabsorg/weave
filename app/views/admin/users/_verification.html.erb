@@ -1,0 +1,30 @@
+<%# Identity verification and identity team role (see Verification), on the
+    admin user page. Only an owner changes the identity team role. %>
+<% latest = user.latest_verification %>
+<div class="mb-4 pb-4 border-b border-ink-soft/10">
+  <p class="text-sm font-medium text-ink">Identity verification</p>
+  <p class="text-xs text-ink-faint mt-1">
+    <%= user.verification_status.humanize %>.
+    <% if latest&.reverification_required? %>
+      New call needed: <%= latest.reverification_reason.humanize %>.
+    <% end %>
+    <% if latest && current_user.identity_team %>
+      <%= link_to "Last attempt #{latest.public_id}", admin_verification_path(latest), class: "underline" %>
+    <% end %>
+  </p>
+
+  <% roles = [("identity team" if user.identity_team), ("key holder" if user.identity_key_holder), ("lead" if user.identity_lead)].compact %>
+  <p class="text-xs text-ink-faint mt-1">Identity team: <%= roles.any? ? roles.join(", ") : "no" %></p>
+
+  <% if current_user.owner? && user != current_user %>
+    <details class="mt-2">
+      <summary class="text-xs text-grape cursor-pointer">Change the identity team role</summary>
+      <%= form_with url: admin_user_identity_team_path(user), method: :patch, class: "mt-2 space-y-1 text-xs text-ink" do |form| %>
+        <label class="flex items-center gap-2"><%= form.check_box :identity_team, checked: user.identity_team %> On the identity team</label>
+        <label class="flex items-center gap-2"><%= form.check_box :identity_key_holder, checked: user.identity_key_holder %> Key holder (at most <%= VerificationSettings.max_key_holders %>)</label>
+        <label class="flex items-center gap-2"><%= form.check_box :identity_lead, checked: user.identity_lead %> Identity team lead</label>
+        <%= form.submit "Save", class: "btn-stitch-ghost" %>
+      <% end %>
+    </details>
+  <% end %>
+</div>

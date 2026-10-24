@@ -26,6 +26,11 @@
 # (see GuardianConsent). An admin can opt out an app
 # (requires_guardian_consent), or record consent given on paper.
 #
+# An app that gives program resources (compute, servers, grant money) can opt
+# in to identity verification (requires_verification, off by default). Then
+# only members whose User#verification_status is "verified" may use it. The
+# community is never gated this way.
+#
 # Every place that hands out or honors a user's token asks this module:
 # the authorize endpoint, the token endpoint (code exchange and refresh),
 # introspection, and userinfo. Checking at consent alone is not enough,
@@ -45,6 +50,7 @@ module AppAccess
       when :under_minimum_age then "Under #{User::MINIMUM_AGE}, the minimum age"
       when :guardian_consent then "Under 18 without a parent or guardian's consent"
       when :email_domain then "No confirmed address on the app's email domains"
+      when :verification then "Has not passed identity verification"
       else "No grant for this user or their groups"
       end
     end
@@ -80,6 +86,7 @@ module AppAccess
     def grant_decision(user, application)
       return decision(false, :under_minimum_age) if user&.under_minimum_age?
       return decision(false, :guardian_consent) if guardian_consent_missing?(user, application)
+      return decision(false, :verification) if verification_missing?(user, application)
       return decision(false, :code_of_conduct) if code_of_conduct_missing?(user, application)
       return decision(true, :open) unless restricted?(application)
       return decision(false, :no_user) if user.nil?
@@ -107,6 +114,10 @@ module AppAccess
 
     def guardian_consent_missing?(user, application)
       user.present? && application.requires_guardian_consent && user.guardian_consent_missing?
+    end
+
+    def verification_missing?(user, application)
+      user.present? && application.requires_verification && !user.identity_verified?
     end
 
     # Groups linked to an app by an access grant or a role assignment. These

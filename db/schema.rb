@@ -255,6 +255,66 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.index ["creator_id"], name: "index_blazer_uploads_on_creator_id"
   end
 
+  create_table "break_glass_approvals", force: :cascade do |t|
+    t.bigint "break_glass_record_id", null: false
+    t.bigint "approver_id"
+    t.datetime "created_at", null: false
+    t.index ["approver_id"], name: "index_break_glass_approvals_on_approver_id"
+    t.index ["break_glass_record_id", "approver_id"], name: "index_break_glass_approvals_on_record_and_approver", unique: true
+    t.index ["break_glass_record_id"], name: "index_break_glass_approvals_on_break_glass_record_id"
+  end
+
+  create_table "break_glass_decryptions", force: :cascade do |t|
+    t.bigint "break_glass_record_id", null: false
+    t.bigint "viewer_id"
+    t.string "ip"
+    t.string "user_agent"
+    t.datetime "created_at", null: false
+    t.index ["break_glass_record_id"], name: "index_break_glass_decryptions_on_break_glass_record_id"
+    t.index ["viewer_id"], name: "index_break_glass_decryptions_on_viewer_id"
+  end
+
+  create_table "break_glass_notices", force: :cascade do |t|
+    t.bigint "break_glass_decryption_id", null: false
+    t.bigint "recipient_id"
+    t.string "recipient_kind", null: false
+    t.datetime "due_at", null: false
+    t.datetime "sent_at"
+    t.datetime "delayed_at"
+    t.bigint "delayed_by_id"
+    t.text "delay_reason"
+    t.datetime "delay_lifted_at"
+    t.bigint "delay_lifted_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "delay_signed_off_at"
+    t.bigint "delay_signed_off_by_id"
+    t.index ["break_glass_decryption_id"], name: "index_break_glass_notices_on_break_glass_decryption_id"
+    t.index ["delay_lifted_by_id"], name: "index_break_glass_notices_on_delay_lifted_by_id"
+    t.index ["delay_signed_off_by_id"], name: "index_break_glass_notices_on_delay_signed_off_by_id"
+    t.index ["delayed_by_id"], name: "index_break_glass_notices_on_delayed_by_id"
+    t.index ["recipient_id"], name: "index_break_glass_notices_on_recipient_id"
+    t.index ["sent_at", "due_at"], name: "index_break_glass_notices_on_sent_at_and_due_at"
+  end
+
+  create_table "break_glass_records", force: :cascade do |t|
+    t.bigint "verification_id", null: false
+    t.bigint "user_id"
+    t.bigint "requested_by_id"
+    t.text "reason", null: false
+    t.datetime "granted_at"
+    t.datetime "expires_at"
+    t.datetime "denied_at"
+    t.bigint "denied_by_id"
+    t.text "denial_reason"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["denied_by_id"], name: "index_break_glass_records_on_denied_by_id"
+    t.index ["requested_by_id"], name: "index_break_glass_records_on_requested_by_id"
+    t.index ["user_id"], name: "index_break_glass_records_on_user_id"
+    t.index ["verification_id"], name: "index_break_glass_records_on_verification_id"
+  end
+
   create_table "console1984_commands", force: :cascade do |t|
     t.text "statements"
     t.bigint "sensitive_access_id"
@@ -498,6 +558,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.boolean "requires_code_of_conduct", default: true, null: false
     t.boolean "requires_guardian_consent", default: true, null: false
     t.string "email_domains", default: [], null: false, array: true
+    t.boolean "requires_verification", default: false, null: false
     t.index ["uid"], name: "index_oauth_applications_on_uid", unique: true
   end
 
@@ -715,13 +776,71 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
     t.jsonb "slack_coc_messages", default: [], null: false
     t.string "webauthn_id"
     t.datetime "directory_linked_at"
+    t.string "directory_object_guid"
     t.string "referral_source"
     t.string "referral_source_detail"
+    t.boolean "identity_team", default: false, null: false
+    t.boolean "identity_key_holder", default: false, null: false
+    t.boolean "identity_lead", default: false, null: false
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["manager_id"], name: "index_users_on_manager_id"
     t.index ["p_id"], name: "index_users_on_p_id", unique: true
     t.index ["webauthn_id"], name: "index_users_on_webauthn_id", unique: true
+  end
+
+  create_table "verification_events", force: :cascade do |t|
+    t.bigint "verification_id", null: false
+    t.bigint "user_id"
+    t.bigint "actor_id"
+    t.string "kind", null: false
+    t.jsonb "data", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["actor_id"], name: "index_verification_events_on_actor_id"
+    t.index ["kind"], name: "index_verification_events_on_kind"
+    t.index ["user_id"], name: "index_verification_events_on_user_id"
+    t.index ["verification_id"], name: "index_verification_events_on_verification_id"
+  end
+
+  create_table "verifications", force: :cascade do |t|
+    t.bigint "user_id"
+    t.bigint "previous_attempt_id"
+    t.string "verification_method", default: "document_call", null: false
+    t.string "status", default: "submitted", null: false
+    t.string "document_type"
+    t.bigint "pre_reviewer_id"
+    t.datetime "pre_review_started_at"
+    t.datetime "pre_reviewed_at"
+    t.text "resubmission_note"
+    t.datetime "call_scheduled_for"
+    t.bigint "call_scheduled_by_id"
+    t.bigint "verifier_id"
+    t.bigint "second_verifier_id"
+    t.boolean "guardian_attended", default: false, null: false
+    t.bigint "guardian_consent_id"
+    t.boolean "age_consistent"
+    t.boolean "region_consistent"
+    t.text "decision_reason"
+    t.datetime "decided_at"
+    t.datetime "escalated_at"
+    t.datetime "escalation_resolved_at"
+    t.bigint "escalation_resolved_by_id"
+    t.string "escalation_resolution"
+    t.text "escalation_note"
+    t.datetime "document_purged_at"
+    t.datetime "reverification_required_at"
+    t.string "reverification_reason"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["call_scheduled_by_id"], name: "index_verifications_on_call_scheduled_by_id"
+    t.index ["escalation_resolved_by_id"], name: "index_verifications_on_escalation_resolved_by_id"
+    t.index ["guardian_consent_id"], name: "index_verifications_on_guardian_consent_id"
+    t.index ["pre_reviewer_id"], name: "index_verifications_on_pre_reviewer_id"
+    t.index ["previous_attempt_id"], name: "index_verifications_on_previous_attempt_id"
+    t.index ["second_verifier_id"], name: "index_verifications_on_second_verifier_id"
+    t.index ["status"], name: "index_verifications_on_status"
+    t.index ["user_id"], name: "index_verifications_on_user_id"
+    t.index ["verifier_id"], name: "index_verifications_on_verifier_id"
   end
 
   create_table "versions", force: :cascade do |t|
@@ -744,6 +863,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   add_foreign_key "application_role_assignments", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "application_roles", "oauth_applications", column: "application_id", on_delete: :cascade
   add_foreign_key "application_roles", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "break_glass_approvals", "break_glass_records"
+  add_foreign_key "break_glass_approvals", "users", column: "approver_id", on_delete: :nullify
+  add_foreign_key "break_glass_decryptions", "break_glass_records"
+  add_foreign_key "break_glass_decryptions", "users", column: "viewer_id", on_delete: :nullify
+  add_foreign_key "break_glass_notices", "break_glass_decryptions"
+  add_foreign_key "break_glass_notices", "users", column: "delay_lifted_by_id", on_delete: :nullify
+  add_foreign_key "break_glass_notices", "users", column: "delay_signed_off_by_id", on_delete: :nullify
+  add_foreign_key "break_glass_notices", "users", column: "delayed_by_id", on_delete: :nullify
+  add_foreign_key "break_glass_notices", "users", column: "recipient_id", on_delete: :nullify
+  add_foreign_key "break_glass_records", "users", column: "denied_by_id", on_delete: :nullify
+  add_foreign_key "break_glass_records", "users", column: "requested_by_id", on_delete: :nullify
+  add_foreign_key "break_glass_records", "users", on_delete: :nullify
+  add_foreign_key "break_glass_records", "verifications"
   add_foreign_key "console_access_requests", "users", on_delete: :nullify
   add_foreign_key "email_addresses", "users"
   add_foreign_key "group_memberships", "groups"
@@ -774,4 +906,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_200000) do
   add_foreign_key "user_sessions", "users"
   add_foreign_key "user_sessions", "users", column: "impersonated_by_id"
   add_foreign_key "users", "users", column: "manager_id"
+  add_foreign_key "verification_events", "users", column: "actor_id", on_delete: :nullify
+  add_foreign_key "verification_events", "users", on_delete: :nullify
+  add_foreign_key "verification_events", "verifications"
+  add_foreign_key "verifications", "guardian_consents", on_delete: :nullify
+  add_foreign_key "verifications", "users", column: "call_scheduled_by_id", on_delete: :nullify
+  add_foreign_key "verifications", "users", column: "escalation_resolved_by_id", on_delete: :nullify
+  add_foreign_key "verifications", "users", column: "pre_reviewer_id", on_delete: :nullify
+  add_foreign_key "verifications", "users", column: "second_verifier_id", on_delete: :nullify
+  add_foreign_key "verifications", "users", column: "verifier_id", on_delete: :nullify
+  add_foreign_key "verifications", "users", on_delete: :nullify
+  add_foreign_key "verifications", "verifications", column: "previous_attempt_id", on_delete: :nullify
 end

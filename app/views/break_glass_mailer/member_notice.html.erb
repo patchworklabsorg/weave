@@ -1,0 +1,9 @@
+<h2 style="margin: 0 0 16px 0; color: #2a2050; font-size: 20px; font-weight: 700;"><%= t("verification.break_glass_notice.subject") %></h2>
+
+<p style="margin: 0 0 16px 0; color: #2a2050;"><%= t("verification.break_glass_notice.body", first_name: @user.first_name, date: @decryption.created_at.to_date.to_fs(:long)) %></p>
+
+<p style="margin: 0 0 16px 0; color: #2a2050;"><%= t("verification.break_glass_notice.reason", reason: @record.reason) %></p>
+
+<p style="margin: 0 0 16px 0; color: #2a2050;"><%= t("verification.break_glass_notice.questions", email: Weave.mail_address) %></p>
+
+<p style="margin: 0 0 16px 0; color: #2a2050;"><a href="<%= @data_page_url %>" style="color: #6c3ec1;"><%= t("verification.data_page_link") %></a></p>
