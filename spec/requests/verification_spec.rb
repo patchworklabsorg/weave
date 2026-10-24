@@ -8,6 +8,10 @@ RSpec.describe "Identity verification", type: :request do
   let(:image) { Rack::Test::UploadedFile.new(Rails.root.join("spec/fixtures/files/id_document.png"), "image/png") }
   let(:params) { { document_type: "passport", id_document: image, data_notice_read: "1" } }
 
+  # ID checks open only after the key ceremony (VerificationFlow.submission_blocker).
+  before { active_key_set_without_holders }
+
+
   it "needs a signed-in member" do
     get verification_path
 

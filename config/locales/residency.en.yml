@@ -34,6 +34,7 @@ en:
       submission_hint: "If your ID is a US driver's license, learner's permit or state ID with your current US address, you do not need this. If not, and you live in the US, add one of these documents. If you do not live in the US, leave this empty."
     blockers:
       identity_needed: "Verify your identity first. The residency check is part of the identity call."
+      not_open: "ID checks open soon. We will announce them in the Slack."
       in_progress: "You already have a residency check in progress."
       standing: "Your residency result is still good. You can renew it in the last %{days} days."
     errors:

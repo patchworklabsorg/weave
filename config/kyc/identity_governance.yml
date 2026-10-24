@@ -27,5 +27,7 @@ production:
   <<: *shared
   # 2026-10-24, Jasper: Adam (Ganymede patch lead) runs calls before he turns
   # 18. His parent signs his NDA.
+  # Staging runs with RAILS_ENV=production, so its p_id (SPWL...) is here too.
   verifier_age_exceptions:
     - PWL8724F96B89
+    - SPWL8901A1CEFD

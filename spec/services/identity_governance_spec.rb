@@ -99,7 +99,7 @@ RSpec.describe IdentityGovernance do
       end
 
       it "does not check an NDA: NDAs are signed outside Weave" do
-        expect(described_class::PRECONDITION_KEYS.values).to eq(%i[verified adult])
+        expect(described_class::PRECONDITION_KEYS.values).to eq(%i[verified verified_or_bootstrap adult])
         expect(described_class.approve(propose("add_member", candidate), by: board_member)).to be_success
       end
 
@@ -270,6 +270,20 @@ RSpec.describe IdentityGovernance do
     it "refuses a key holder who is not verified" do
       result = described_class.propose(kind: "add_key_holder", subject: create(:user, :identity_team), by: owner, reason: "x")
 
+      expect(result.message).to include("must be verified")
+    end
+
+    it "lets a bootstrap member become a key holder until a key set is activated, also after a discarded one" do
+      circle = %w[Jasper Kieran Adam].map { |name| create(:user, :verified, first_name: name) }
+      described_class.bootstrap!(circle, by: owner)
+
+      expect(described_class.propose(kind: "add_key_holder", subject: circle[1], by: owner, reason: "Ceremony.")).to be_success
+
+      active_key_set_without_holders.first.update!(status: "retired", activated_at: nil)
+      expect(described_class.propose(kind: "add_key_holder", subject: circle[2], by: owner, reason: "Ceremony.")).to be_success
+
+      active_key_set_without_holders
+      result = described_class.propose(kind: "add_key_holder", subject: circle[0], by: owner, reason: "Ceremony.")
       expect(result.message).to include("must be verified")
     end
 

@@ -48,6 +48,7 @@ en:
     blockers:
       under_minimum_age: "You must be 13 or older."
       no_birthday: "Add your birthday to your account first."
+      not_open: "ID checks open soon. We will announce them in the Slack."
       verified: "You are already verified."
       ineligible: "Our identity team closed your verification."
       in_progress: "You already have an attempt in progress."

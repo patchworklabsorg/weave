@@ -64,7 +64,11 @@ module IdentityGovernance
   }.freeze
 
   # The keys of .preconditions for the precondition names of the config.
-  PRECONDITION_KEYS = { "verified_by_another" => :verified, "adult" => :adult }.freeze
+  PRECONDITION_KEYS = {
+    "verified_by_another"   => :verified,
+    "verified_or_bootstrap" => :verified_or_bootstrap,
+    "adult"                 => :adult
+  }.freeze
 
   class << self
     # -- Who may do what -------------------------------------------------
@@ -383,6 +387,25 @@ module IdentityGovernance
 
     private
 
+    # The key ceremony needs the key holders, and no call can end before the
+    # ceremony (pre-review seals the image to the key set). So until the first
+    # key set exists, a member who joined in the bootstrap may become a key
+    # holder before they are verified (config/roles.yml: verified_or_bootstrap).
+    def key_holder_precondition(user)
+      verified = preconditions(user).find { |check| check.key == :verified }.met
+      waiver = !verified && bootstrap_key_holder_waiver?(user)
+      Precondition.new(
+        key: :verified_or_bootstrap, met: verified || waiver,
+        detail: waiver ? "Not verified yet: joined in the bootstrap, before the first key ceremony." : "Not verified by another verifier."
+      )
+    end
+
+    # Before the first key set, a bootstrap member counts as verified for the
+    # key holder role (see preconditions).
+    # A discarded or pending first set does not close it: only an activated
+    # one does, so a failed first ceremony can still be redone.
+    def bootstrap_key_holder_waiver?(user) = KeyCustodyKeySet.where.not(activated_at: nil).none? && bootstrap_member?(user)
+
     def bootstrap_member?(user) = IdentityGovernanceEvent.exists?(kind: "bootstrap_member_added", subject_id: user.id)
 
     # The planned verifier of a bootstrap member, from the newest bootstrap.
@@ -408,12 +431,14 @@ module IdentityGovernance
       return nil if names.empty?
 
       keys = names.map { |name| PRECONDITION_KEYS.fetch(name) }
-      unmet = preconditions(subject).select { |check| keys.include?(check.key) }.reject(&:met)
+      checks = preconditions(subject)
+      checks += [key_holder_precondition(subject)] if keys.include?(:verified_or_bootstrap)
+      unmet = checks.select { |check| keys.include?(check.key) }.reject(&:met)
       return nil if unmet.empty?
 
       if kind == "add_member"
         "#{subject.full_name} can't join the identity team yet: #{unmet.map(&:detail).join(' ')}"
-      elsif unmet.map(&:key) == [:verified]
+      elsif [[:verified], [:verified_or_bootstrap]].include?(unmet.map(&:key))
         "#{subject.full_name} must be verified (by another verifier) before this change."
       else
         "#{subject.full_name} can't get this role yet: #{unmet.map(&:detail).join(' ')}"

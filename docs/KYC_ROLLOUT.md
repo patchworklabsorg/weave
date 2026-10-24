@@ -157,11 +157,12 @@ Each verifier signs the identity team NDA before they start. NDAs are signed wit
 flowchart TD
   A[1. Mark the board: Jasper, Kieran, Dominic] --> B[2. Sign the NDAs with Adobe Acrobat Sign]
   B --> D[4. bin/rails identity:bootstrap]
-  D --> E[5. Each submits an ID on /verification]
-  E --> F[6. Circle: Adam verifies Jasper, Jasper verifies Kieran, Kieran verifies Adam]
-  F --> G[7. bin/rails identity:bootstrap_status: all verified, bootstrap closed]
-  G --> H[8. Owner proposes the lead, a board member approves]
-  H --> I[9. Owner proposes each key holder, the whole board approves]
+  D --> I[5. Owner proposes each key holder, the whole board approves]
+  I --> K[6. The key ceremony: ID checks open when the key set is active]
+  K --> E[7. Each submits an ID on /verification]
+  E --> F[8. Circle: Adam verifies Jasper, Jasper verifies Kieran, Kieran verifies Adam]
+  F --> G[9. bin/rails identity:bootstrap_status: all verified, bootstrap closed]
+  G --> H[10. Owner proposes the lead, a board member approves]
 ```
 
 The production p_ids of the people below (production values only; staging and development have other IDs):
@@ -190,18 +191,17 @@ The production p_ids of the people below (production values only; staging and de
    | Kieran (`PWL0667B785FD`) | Jasper (`PWL7A1CE1F3CB`) |
    | Adam (`PWL8724F96B89`) | Kieran (`PWL0667B785FD`) |
 
-5. Each of the three submits an ID on `/verification`.
-6. Do the circle with the normal flow on `/identity/verifications`: pre-review, call and decision. The verifier in the table records the decision. Nobody verifies their own account. Weave enforces the circle: until a bootstrap member is verified, they can record a decision only for the person after them.
-7. Run `bin/rails identity:bootstrap_status`. Each member must show `verified` by their planned verifier, and the task must say "The bootstrap is closed".
-8. Make the lead: an owner proposes `set_lead` on `/identity/governance`, and a different board member approves. The new lead must be verified first. A new key holder must also be verified first.
-9. Make the three key holders (Jasper `PWL7A1CE1F3CB`, Kieran `PWL0667B785FD`, Adam `PWL8724F96B89`): an owner proposes `add_key_holder` for each one (the form takes the p_id), and every board member (Jasper, Kieran, Dominic `PWL908148D41E`) approves each proposal.
-
-   Each key holder change marks the current key set compromised (see `docs/KYC.md`, "Key custody"). Before the ceremony there is no key set, so this has no effect. Thus make the three key holders before the ceremony.
-10. Add any later verifier through a proposal: an owner proposes `add_member`, and a different board member approves. The candidate must be verified and 18 or older at the approval. Before the approval, the approver confirms that the candidate signed the NDA in Adobe Acrobat Sign.
+5. Make the three key holders (Jasper `PWL7A1CE1F3CB`, Kieran `PWL0667B785FD`, Adam `PWL8724F96B89`): an owner proposes `add_key_holder` for each one (the form takes the p_id), and every board member (Jasper, Kieran, Dominic `PWL908148D41E`) approves each proposal. A key holder must be verified, but no call can end before the key ceremony (pre-review seals each image to the key set). So until the first key set is activated, a bootstrap member may become a key holder before they are verified (`verified_or_bootstrap` in `config/roles.yml`, decided 2026-10-24). After the first key set, a new key holder must be verified.
+6. Run the key ceremony (see "The key ceremony" below). ID checks open for every member when the key set is active: until then `/verification` says "ID checks open soon" and takes no upload. They also pause while the key set is compromised.
+7. Each of the three submits an ID on `/verification`.
+8. Do the circle with the normal flow on `/identity/verifications`: pre-review, call and decision. The verifier in the table records the decision. Nobody verifies their own account. Weave enforces the circle: until a bootstrap member is verified, they can record a decision only for the person after them.
+9. Run `bin/rails identity:bootstrap_status`. Each member must show `verified` by their planned verifier, and the task must say "The bootstrap is closed".
+10. Make the lead: an owner proposes `set_lead` on `/identity/governance`, and a different board member approves. The new lead must be verified first.
+11. Add any later verifier through a proposal: an owner proposes `add_member`, and a different board member approves. The candidate must be verified and 18 or older at the approval. Before the approval, the approver confirms that the candidate signed the NDA in Adobe Acrobat Sign.
 
 #### The key ceremony
 
-Do the ceremony after step 9 above (the three key holders exist) and before the first member submits an ID. Pre-review can't end without a key set: Weave refuses to set a call until the ceremony is done. Do it on staging first, with test keys and test accounts.
+Do the ceremony after step 5 above (the three key holders exist). ID checks open when it is done: before it, pre-review can't end, because it seals each image to the key set. Do it on staging first, with test keys and test accounts.
 
 Process rule (locked, 2026-10-13): one holder runs each ceremony on a clean computer with no browser extensions, while the other two holders watch on a call. This applies to the first ceremony and to every rotation. Nobody sends a hardware key or brings it to another person's computer. Each holder sets up the seal keys of their own 2 keys on their own computer before the ceremony. The page seals each share to those seal public keys, so only the operator's own key touches the ceremony computer, one time.
 
