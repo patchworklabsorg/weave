@@ -64,9 +64,11 @@ module IdentityGovernance
   }.freeze
 
   # The keys of .preconditions for the precondition names of the config.
-  PRECONDITION_KEYS = { "verified_by_another" => :verified, "verified_or_bootstrap" => :verified_or_bootstrap,
-                        "adult" => :adult
-}.freeze
+  PRECONDITION_KEYS = {
+    "verified_by_another"   => :verified,
+    "verified_or_bootstrap" => :verified_or_bootstrap,
+    "adult"                 => :adult
+  }.freeze
 
   class << self
     # -- Who may do what -------------------------------------------------
@@ -400,7 +402,9 @@ module IdentityGovernance
 
     # Before the first key set, a bootstrap member counts as verified for the
     # key holder role (see preconditions).
-    def bootstrap_key_holder_waiver?(user) = KeyCustodyKeySet.none? && bootstrap_member?(user)
+    # A discarded or pending first set does not close it: only an activated
+    # one does, so a failed first ceremony can still be redone.
+    def bootstrap_key_holder_waiver?(user) = KeyCustodyKeySet.where.not(activated_at: nil).none? && bootstrap_member?(user)
 
     def bootstrap_member?(user) = IdentityGovernanceEvent.exists?(kind: "bootstrap_member_added", subject_id: user.id)
 
@@ -427,7 +431,9 @@ module IdentityGovernance
       return nil if names.empty?
 
       keys = names.map { |name| PRECONDITION_KEYS.fetch(name) }
-      unmet = (preconditions(subject) + [key_holder_precondition(subject)]).select { |check| keys.include?(check.key) }.reject(&:met)
+      checks = preconditions(subject)
+      checks += [key_holder_precondition(subject)] if keys.include?(:verified_or_bootstrap)
+      unmet = checks.select { |check| keys.include?(check.key) }.reject(&:met)
       return nil if unmet.empty?
 
       if kind == "add_member"
