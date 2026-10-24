@@ -7,7 +7,7 @@ module VerificationHelpers
   # to the identifiers without callbacks, so no re-verification trigger runs.
   def match_account!(user, identifiers)
     first, rest = identifiers.legal_name.to_s.split(" ", 2)
-    user.update_columns(legal_first_name: first, legal_last_name: rest.presence || first, birthday: identifiers.date_of_birth)
+    user.update_columns(legal_first_name: first, legal_last_name: rest.presence || first, birthday: identifiers.date_of_birth) # rubocop:disable Rails/SkipsModelValidations
     user
   end
 end

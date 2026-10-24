@@ -1,220 +1,221 @@
 <% content_for :title, "Identity team governance" %>
-<% input_class = "px-3 py-2 rounded-lg border-2 border-neutral-300 bg-paper text-sm" %>
 
-<div class="mb-6">
-  <h2 class="font-display text-2xl font-bold text-ink mb-2">Identity team governance</h2>
-  <p class="text-ink-soft">
-    An owner proposes a new verifier or a lead change, and a different board member approves it.
-    A key holder change needs every board member. Any owner or identity team lead removes a member at once.
-    The rule of each role is in the Roles section below (config/roles.yml).
-  </p>
+<%= page_header("Identity team governance",
+      lede: "An owner proposes a new verifier or a lead change, and a different board member approves it. " \
+            "A key holder change needs every board member. Any owner or identity team lead removes a member at once. " \
+            "The rule of each role is in the Roles section below (config/roles.yml).") %>
+
+<div class="space-y-6">
   <% if @bootstrap_open %>
-    <p class="text-sm text-orange-600 mt-2">
-      Bootstrap open: no member of the identity team is verified yet. Follow the bootstrap steps in docs/KYC_ROLLOUT.md.
-    </p>
+    <div class="callout callout-warning">
+      <%= icon(:triangle_alert, size: 18) %>
+      <div class="callout-body">
+        <p>Bootstrap open: no member of the identity team is verified yet. Follow the bootstrap steps in docs/KYC_ROLLOUT.md.</p>
+      </div>
+    </div>
   <% end %>
-</div>
 
-<h3 class="font-display text-lg font-bold text-ink mb-3">The identity team</h3>
-<div class="patch overflow-hidden mb-8">
-  <% if @team.any? %>
-    <ul class="divide-y divide-ink-soft/10">
-      <% @team.each do |member| %>
-        <li class="px-6 py-3 text-sm text-ink space-y-2">
-          <div class="flex flex-wrap justify-between gap-2">
-            <span>
-              <%= member.full_name %> <span class="font-mono text-ink-faint">(<%= member.p_id %>)</span>
-              <%= "· key holder" if member.identity_key_holder %>
-              <%= "· lead" if member.identity_lead %>
-            </span>
-            <span class="text-ink-soft">
-              <%= member.verification_status.humanize %>.
-              <% nda = member.current_identity_nda %>
-              <%= nda ? "NDA #{nda.nda_version}, signed #{nda.signed_on.iso8601}." : "No NDA on record." %>
-            </span>
-          </div>
-          <% if IdentityGovernance.can_remove?(current_user, member) %>
-            <%= form_with url: identity_team_removals_path, method: :post, class: "flex flex-col sm:flex-row gap-2" do |form| %>
-              <%= form.hidden_field :user_id, value: member.p_id %>
-              <%= form.text_field :reason, required: true, placeholder: "Reason for the removal",
-                    aria: { label: "Reason to remove #{member.full_name}" }, class: "flex-1 #{input_class}" %>
-              <%= form.submit "Remove now", class: "btn-stitch-ghost",
-                    data: { turbo_confirm: "Remove #{member.full_name} from the identity team now? This also revokes the key holder and lead roles. The board gets an email." } %>
-            <% end %>
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">The identity team</h2>
+    </div>
+    <% if @team.any? %>
+      <div class="card-body">
+        <ul class="record-list">
+          <% @team.each do |member| %>
+            <li class="record flex-col items-stretch gap-3">
+              <div class="flex flex-wrap items-start justify-between gap-2">
+                <div class="record-main">
+                  <p class="record-title flex flex-wrap items-center gap-2">
+                    <span><%= member.full_name %> <span class="mono text-ink-faint">(<%= member.p_id %>)</span></span>
+                    <% if member.identity_key_holder %><span class="text-ink-soft font-normal">· key holder</span><% end %>
+                    <% if member.identity_lead %><span class="text-ink-soft font-normal">· lead</span><% end %>
+                  </p>
+                </div>
+                <p class="text-sm text-ink-soft"><%= member.verification_status.humanize %>.</p>
+              </div>
+              <% if IdentityGovernance.can_remove?(current_user, member) %>
+                <%= form_with url: identity_team_removals_path, method: :post, class: "flex flex-col sm:flex-row gap-2" do |form| %>
+                  <%= form.hidden_field :user_id, value: member.p_id %>
+                  <%= form.text_field :reason, required: true, placeholder: "Reason for the removal",
+                        aria: { label: "Reason to remove #{member.full_name}" }, class: "field field-sm sm:flex-1" %>
+                  <%= form.submit "Remove now", class: "btn btn-danger btn-sm",
+                        data: { turbo_confirm: "Remove #{member.full_name} from the identity team now? This also revokes the key holder and lead roles. The board gets an email." } %>
+                <% end %>
+              <% end %>
+            </li>
           <% end %>
-        </li>
-      <% end %>
-    </ul>
-  <% else %>
-    <p class="px-6 py-4 text-sm text-ink-faint">Nobody is on the identity team.</p>
-  <% end %>
-</div>
-
-<h3 id="roles" class="font-display text-lg font-bold text-ink mb-3">Roles</h3>
-<p class="text-sm text-ink-soft mb-3">
-  Each role, who has it, and its grant rule. Staff and contractor change on the
-  <%= link_to "staff and contractors page", admin_role_assignments_path, class: "underline hover:text-grape" %>,
-  and board member and the removal of a patch lead on the roles section of a user's admin page.
-</p>
-<div class="patch overflow-hidden mb-8">
-  <ul class="divide-y divide-ink-soft/10">
-    <% RoleRegistry.definitions.each_value do |definition| %>
-      <% assignments = @role_assignments.fetch(definition.key, []) %>
-      <li class="px-6 py-3 text-sm text-ink space-y-1">
-        <div class="flex flex-wrap justify-between gap-2">
-          <span class="font-medium"><%= definition.name %><%= " (scoped by program)" if definition.scopable? %></span>
-          <span class="text-ink-soft">Grant: <%= RoleGrants.rule_text(definition.key, :grant) %> Revoke: <%= RoleGrants.rule_text(definition.key, :revoke) %></span>
-        </div>
-        <p class="text-ink-soft">
-          <% if assignments.any? %>
-            <%= safe_join(assignments.map { |assignment| "#{assignment.user&.full_name || 'A deleted user'}#{" (#{assignment.scope})" if assignment.scope}" }, "; ") %>
-          <% else %>
-            Nobody.
-          <% end %>
-        </p>
-      </li>
+        </ul>
+      </div>
+    <% else %>
+      <%= empty_state("Nobody is on the identity team.", icon: :users) %>
     <% end %>
-  </ul>
-</div>
+  </section>
 
-<h3 class="font-display text-lg font-bold text-ink mb-3">Proposals that wait</h3>
-<div class="patch overflow-hidden mb-8">
-  <% if @pending.any? %>
-    <ul class="divide-y divide-ink-soft/10">
-      <% @pending.each do |proposal| %>
-        <li class="px-6 py-3 flex flex-wrap justify-between gap-2 text-sm">
-          <span class="text-ink">
-            <%= link_to proposal.public_id, identity_governance_proposal_path(proposal), class: "font-mono hover:text-grape" %>
-            <%= proposal.description.upcase_first %>
-          </span>
-          <span class="text-ink-soft">
-            Proposed by <%= proposal.proposed_by&.full_name || "a deleted user" %>.
-            <%= proposal.expired_now? ? "Expired." : "Expires #{proposal.expires_at.utc.strftime('%Y-%m-%d')}." %>
-          </span>
-        </li>
-      <% end %>
-    </ul>
-  <% else %>
-    <p class="px-6 py-4 text-sm text-ink-faint">Nothing waits.</p>
-  <% end %>
-</div>
-
-<% if IdentityGovernance.can_propose?(current_user) %>
-  <div class="grid md:grid-cols-2 gap-6 mb-8">
-    <div class="patch p-6">
-      <h3 class="font-display text-lg font-bold text-ink mb-3">Propose a change</h3>
-      <%= form_with url: identity_governance_proposals_path, method: :post, class: "space-y-3" do |form| %>
-        <div>
-          <%= form.label :person, "Person (Weave ID or email)", class: "block text-sm text-ink mb-1" %>
-          <%= form.text_field :person, required: true, class: "w-full #{input_class}" %>
-        </div>
-        <div>
-          <%= form.label :kind, "Change", class: "block text-sm text-ink mb-1" %>
-          <%= form.select :kind, IdentityGovernance.proposable_kinds.map { |kind| [IdentityGovernanceProposal.describe(kind, "this person").upcase_first, kind] },
-                {}, class: "w-full #{input_class}" %>
-        </div>
-        <div>
-          <%= form.label :scope, "Program (for a patch lead only)", class: "block text-sm text-ink mb-1" %>
-          <%= form.select :scope, KnotSettings.programs.map { |program| [program.name, program.key] }, { include_blank: "None" },
-                class: "w-full #{input_class}" %>
-        </div>
-        <div>
-          <%= form.label :reason, "Reason", class: "block text-sm text-ink mb-1" %>
-          <%= form.text_area :reason, required: true, rows: 3, class: "w-full #{input_class}" %>
-        </div>
-        <%= form.submit "Propose", class: "btn-stitch" %>
-      <% end %>
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2 id="roles" class="card-title">Roles</h2>
+        <p class="card-lede">
+          Each role, who has it, and its grant rule. Staff and contractor change on the
+          <%= link_to "staff and contractors page", admin_role_assignments_path, class: "link" %>,
+          and board member and the removal of a patch lead on the roles section of a user's admin page.
+        </p>
+      </div>
     </div>
-
-    <div class="patch p-6">
-      <h3 class="font-display text-lg font-bold text-ink mb-3">Record a signed NDA</h3>
-      <p class="text-xs text-ink-faint mb-3">NDAs are signed with Adobe Acrobat Sign. Record the date, the version and the agreement ID. Do not upload the document.</p>
-      <%= form_with url: identity_ndas_path, method: :post, class: "space-y-3" do |form| %>
-        <div>
-          <%= form.label :person, "Person (Weave ID or email)", for: "nda_person", class: "block text-sm text-ink mb-1" %>
-          <%= form.text_field :person, id: "nda_person", required: true, class: "w-full #{input_class}" %>
-        </div>
-        <div>
-          <%= form.label :signed_on, "Signed on", class: "block text-sm text-ink mb-1" %>
-          <%= form.date_field :signed_on, required: true, max: Date.current, class: "w-full #{input_class}" %>
-        </div>
-        <div>
-          <%= form.label :nda_version, "NDA version", class: "block text-sm text-ink mb-1" %>
-          <%= form.text_field :nda_version, required: true, class: "w-full #{input_class}" %>
-        </div>
-        <div>
-          <%= form.label :signature_reference, "Adobe Sign agreement ID", class: "block text-sm text-ink mb-1" %>
-          <%= form.text_field :signature_reference, required: true, class: "w-full #{input_class}" %>
-        </div>
-        <%= form.submit "Record the NDA", class: "btn-stitch" %>
-      <% end %>
+    <div class="card-body">
+      <ul class="record-list">
+        <% RoleRegistry.definitions.each_value do |definition| %>
+          <% assignments = @role_assignments.fetch(definition.key, []) %>
+          <li class="record flex-col items-stretch gap-1">
+            <div class="flex flex-wrap justify-between gap-x-4 gap-y-1">
+              <span class="record-title"><%= definition.name %><%= " (scoped by program)" if definition.scopable? %></span>
+              <span class="record-meta">Grant: <%= RoleGrants.rule_text(definition.key, :grant) %> Revoke: <%= RoleGrants.rule_text(definition.key, :revoke) %></span>
+            </div>
+            <p class="text-sm text-ink-soft">
+              <% if assignments.any? %>
+                <%= safe_join(assignments.map { |assignment| "#{assignment.user&.full_name || 'A deleted user'}#{" (#{assignment.scope})" if assignment.scope}" }, "; ") %>
+              <% else %>
+                Nobody.
+              <% end %>
+            </p>
+          </li>
+        <% end %>
+      </ul>
     </div>
-  </div>
-<% end %>
+  </section>
 
-<h3 class="font-display text-lg font-bold text-ink mb-3">Closed proposals</h3>
-<div class="patch overflow-hidden mb-8">
-  <% if @recent.any? %>
-    <ul class="divide-y divide-ink-soft/10">
-      <% @recent.each do |proposal| %>
-        <li class="px-6 py-3 text-sm text-ink">
-          <%= link_to proposal.public_id, identity_governance_proposal_path(proposal), class: "font-mono hover:text-grape" %>
-          <%= proposal.description.upcase_first %>: <%= proposal.status %>.
-        </li>
-      <% end %>
-    </ul>
-  <% else %>
-    <p class="px-6 py-4 text-sm text-ink-faint">None yet.</p>
-  <% end %>
-</div>
+  <section class="card">
+    <div class="card-header">
+      <div class="flex items-center gap-2">
+        <h2 class="card-title">Proposals that wait</h2>
+        <%= badge(@pending.size.to_s, tone: @pending.any? ? :warning : :neutral) %>
+      </div>
+    </div>
+    <% if @pending.any? %>
+      <div class="card-body">
+        <ul class="record-list">
+          <% @pending.each do |proposal| %>
+            <li class="record flex-wrap">
+              <div class="record-main">
+                <p class="record-title flex flex-wrap items-baseline gap-x-2">
+                  <%= link_to proposal.public_id, identity_governance_proposal_path(proposal), class: "link mono" %>
+                  <span><%= proposal.description.upcase_first %></span>
+                </p>
+              </div>
+              <span class="record-meta">
+                Proposed by <%= proposal.proposed_by&.full_name || "a deleted user" %>.
+                <%= proposal.expired_now? ? "Expired." : "Expires #{proposal.expires_at.utc.strftime('%Y-%m-%d')}." %>
+              </span>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% else %>
+      <p class="card-body text-sm text-ink-faint">Nothing waits.</p>
+    <% end %>
+  </section>
 
-<h3 class="font-display text-lg font-bold text-ink mb-3">NDA records</h3>
-<div class="patch overflow-hidden mb-8">
-  <% if @ndas.any? %>
-    <ul class="divide-y divide-ink-soft/10">
-      <% @ndas.each do |nda| %>
-        <li class="px-6 py-3 text-sm text-ink">
-          <%= nda.user&.full_name || "A deleted user" %>: version <%= nda.nda_version %>, signed <%= nda.signed_on.iso8601 %>,
-          <%= nda.signature_reference %>. Recorded by <%= nda.recorded_by&.full_name || "a deleted user" %> on <%= nda.created_at.utc.strftime("%Y-%m-%d") %>.
-        </li>
-      <% end %>
-    </ul>
-  <% else %>
-    <p class="px-6 py-4 text-sm text-ink-faint">No NDA recorded yet.</p>
+  <% if IdentityGovernance.can_propose?(current_user) %>
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Propose a change</h2>
+      </div>
+      <div class="card-body">
+        <%= form_with url: identity_governance_proposals_path, method: :post, class: "space-y-4" do |form| %>
+          <div class="field-group">
+            <%= form.label :person, "Person (Weave ID or email)", class: "field-label" %>
+            <%= form.text_field :person, required: true, class: "field" %>
+          </div>
+          <div class="field-group">
+            <%= form.label :kind, "Change", class: "field-label" %>
+            <%= form.select :kind, IdentityGovernance.proposable_kinds.map { |kind| [IdentityGovernanceProposal.describe(kind, "this person").upcase_first, kind] },
+                  {}, class: "field" %>
+          </div>
+          <div class="field-group">
+            <%= form.label :scope, "Program (for a patch lead only)", class: "field-label" %>
+            <%= form.select :scope, KnotSettings.programs.map { |program| [program.name, program.key] }, { include_blank: "None" },
+                  class: "field" %>
+          </div>
+          <div class="field-group">
+            <%= form.label :reason, "Reason", class: "field-label" %>
+            <%= form.text_area :reason, required: true, rows: 3, class: "field" %>
+          </div>
+          <%= form.submit "Propose", class: "btn btn-primary" %>
+        <% end %>
+      </div>
+    </section>
   <% end %>
-</div>
 
-<h3 class="font-display text-lg font-bold text-ink mb-3">Log</h3>
-<div class="patch overflow-hidden">
-  <% if @events.any? %>
-    <ul class="divide-y divide-ink-soft/10">
-      <% @events.each do |event| %>
-        <li class="px-6 py-3 text-sm text-ink">
-          <span class="text-ink-faint"><%= event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %></span>
-          <%= event.summary %>
-          <% if event.data["reason"].present? %><span class="text-ink-soft">Reason: <%= event.data["reason"] %></span><% end %>
-        </li>
-      <% end %>
-    </ul>
-  <% else %>
-    <p class="px-6 py-4 text-sm text-ink-faint">Nothing logged yet.</p>
-  <% end %>
-</div>
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Closed proposals</h2>
+    </div>
+    <% if @recent.any? %>
+      <div class="card-body">
+        <ul class="record-list">
+          <% @recent.each do |proposal| %>
+            <li class="record">
+              <p class="record-title">
+                <%= link_to proposal.public_id, identity_governance_proposal_path(proposal), class: "link mono" %>
+                <%= proposal.description.upcase_first %>: <%= proposal.status %>.
+              </p>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% else %>
+      <p class="card-body text-sm text-ink-faint">None yet.</p>
+    <% end %>
+  </section>
 
-<h3 id="permanent-log" class="mt-8 font-display text-lg font-bold text-ink mb-3">Permanent log of privileged attributes</h3>
-<p class="text-sm text-ink-soft mb-3">Every grant and revoke of a role (with its scope), and every change to the admin tier (role). Database triggers write it. Nobody can change or delete a row.</p>
-<div class="patch overflow-hidden mt-8">
-  <% if @privileged_changes.any? %>
-    <ul class="divide-y divide-ink-soft/10">
-      <% @privileged_changes.each do |change| %>
-        <li class="px-6 py-3 text-sm text-ink">
-          <span class="text-ink-faint"><%= change.changed_at.utc.strftime("%Y-%m-%d %H:%M UTC") %></span>
-          <%= change.summary %>
-          <span class="text-ink-soft">By <%= change.actor_name %>.</span>
-        </li>
-      <% end %>
-    </ul>
-  <% else %>
-    <p class="px-6 py-4 text-sm text-ink-faint">No changes logged yet.</p>
-  <% end %>
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Log</h2>
+    </div>
+    <% if @events.any? %>
+      <div class="card-body">
+        <ul class="record-list">
+          <% @events.each do |event| %>
+            <li class="record">
+              <div class="record-main">
+                <p class="record-title"><%= event.summary %></p>
+                <p class="record-meta">
+                  <%= event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>
+                  <% if event.data["reason"].present? %><span class="text-ink-soft">Reason: <%= event.data["reason"] %></span><% end %>
+                </p>
+              </div>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% else %>
+      <p class="card-body text-sm text-ink-faint">Nothing logged yet.</p>
+    <% end %>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2 id="permanent-log" class="card-title">Permanent log of privileged attributes</h2>
+        <p class="card-lede">Every grant and revoke of a role (with its scope), and every change to the admin tier (role). Database triggers write it. Nobody can change or delete a row.</p>
+      </div>
+    </div>
+    <% if @privileged_changes.any? %>
+      <div class="card-body">
+        <ul class="record-list">
+          <% @privileged_changes.each do |change| %>
+            <li class="record">
+              <div class="record-main">
+                <p class="record-title"><%= change.summary %></p>
+                <p class="record-meta"><%= change.changed_at.utc.strftime("%Y-%m-%d %H:%M UTC") %> <span class="text-ink-soft">By <%= change.actor_name %>.</span></p>
+              </div>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% else %>
+      <p class="card-body text-sm text-ink-faint">No changes logged yet.</p>
+    <% end %>
+  </section>
 </div>

@@ -12,6 +12,11 @@ shared: &shared
   # The youngest age at which a person can join the identity team.
   verifier_minimum_age: 18 # LOCKED
 
+  # Weave p_ids that may join the identity team under verifier_minimum_age.
+  # Each one is a decision by Jasper. The person still needs a birthday on
+  # record and a pass by another verifier.
+  verifier_age_exceptions: []
+
 development:
   <<: *shared
 
@@ -20,3 +25,7 @@ test:
 
 production:
   <<: *shared
+  # 2026-10-24, Jasper: Adam (Ganymede patch lead) runs calls before he turns
+  # 18. His parent signs his NDA.
+  verifier_age_exceptions:
+    - PWL8724F96B89

@@ -6,7 +6,8 @@
 # - Add a verifier: an owner proposes with a reason, and a different board
 #   member approves. Nobody approves their own proposal or a proposal about
 #   themselves. At the approval, the candidate must be verified (by another
-#   person), at least verifier_minimum_age, and have a signed NDA on record.
+#   person) and at least verifier_minimum_age. NDAs are signed outside Weave
+#   (Adobe Acrobat Sign): the approver confirms the NDA before they approve.
 # - Make or unmake a lead: the same two-person rule. A new lead must be
 #   verified by another verifier.
 # - Add or remove a key holder: an owner proposes, and every board member at
@@ -63,7 +64,7 @@ module IdentityGovernance
   }.freeze
 
   # The keys of .preconditions for the precondition names of the config.
-  PRECONDITION_KEYS = { "verified_by_another" => :verified, "adult" => :adult, "nda" => :nda }.freeze
+  PRECONDITION_KEYS = { "verified_by_another" => :verified, "adult" => :adult }.freeze
 
   class << self
     # -- Who may do what -------------------------------------------------
@@ -73,8 +74,6 @@ module IdentityGovernance
     def can_view?(user) = user.present? && (user.owner? || user.is_board || lead?(user))
 
     def can_propose?(user) = user.present? && user.owner?
-
-    def can_record_nda?(user) = user.present? && user.owner?
 
     def can_remove?(by, subject)
       by.present? && subject.present? && subject.identity_team && (by.owner? || lead?(by))
@@ -119,7 +118,7 @@ module IdentityGovernance
       verified = user.identity_verified? && latest.verifier_id != user.id
       age = user.age_in_years
       minimum = IdentityGovernanceSettings.verifier_minimum_age
-      nda = user.current_identity_nda
+      age_exception = IdentityGovernanceSettings.verifier_age_exceptions.include?(user.p_id.to_s)
 
       [
         Precondition.new(
@@ -131,12 +130,11 @@ module IdentityGovernance
                   end
         ),
         Precondition.new(
-          key: :adult, met: age.present? && age >= minimum,
-          detail: age.nil? ? "No birthday on record." : "#{age} years old (at least #{minimum} needed)."
-        ),
-        Precondition.new(
-          key: :nda, met: nda.present?,
-          detail: nda ? "NDA version #{nda.nda_version}, signed #{nda.signed_on.iso8601} (#{nda.signature_reference})." : "No signed NDA on record."
+          key: :adult, met: age.present? && (age >= minimum || age_exception),
+          detail: if age.nil? then "No birthday on record."
+                  elsif age < minimum && age_exception then "#{age} years old: under #{minimum}, allowed by an age exception in the config."
+                  else "#{age} years old (at least #{minimum} needed)."
+                  end
         )
       ]
     end
@@ -157,6 +155,7 @@ module IdentityGovernance
       role_key, = kind_role(kind)
       rule = kind_rule(kind)
       return failure(base: "This change does not need a proposal: #{RoleGrants.rule_text(*kind_role(kind))}") unless rule.proposal?
+
       unless RoleRegistry.valid_scope?(role_key, scope)
         return failure(scope: "must be one of: #{RoleRegistry.scopes_for(role_key).join(', ')}") if RoleRegistry.fetch(role_key).scopable?
 
@@ -273,24 +272,6 @@ module IdentityGovernance
       errors.any? ? failure(errors) : success(event)
     end
 
-    # -- NDAs ------------------------------------------------------------
-
-    def record_nda(user, by:, signed_on:, version:, reference:)
-      return failure(base: "Only an owner can record an NDA.") unless can_record_nda?(by)
-      return failure(base: "Choose a person by their Weave ID or email.") if user.nil?
-
-      nda = IdentityNda.new(user:, recorded_by: by, signed_on:, nda_version: version.to_s.strip, signature_reference: reference.to_s.strip)
-      return failure(nda.errors.to_hash.transform_values { |messages| messages.to_sentence }) unless nda.valid?
-
-      IdentityNda.transaction do
-        nda.save!
-        IdentityGovernanceEvent.record!(:nda_recorded, actor: by, subject: user, nda: nda.public_id,
-                                                       nda_version: nda.nda_version, signed_on: nda.signed_on.iso8601,
-                                                       signature_reference: nda.signature_reference)
-      end
-      success(nda)
-    end
-
     # -- Bootstrap -------------------------------------------------------
 
     # True before the first bootstrap, while no member of the identity team is
@@ -303,7 +284,7 @@ module IdentityGovernance
     # The one-time start of the identity team (docs/KYC_ROLLOUT.md). Nobody is
     # verified yet, so nobody can meet the verifier preconditions. An owner
     # adds the first verifiers at once. Each must be at least
-    # verifier_minimum_age and have a signed NDA on record. Then they verify
+    # verifier_minimum_age. Then they verify
     # each other in a circle: each person's verifier is the person before
     # them in the list, and the first person's verifier is the last person.
     #

@@ -351,7 +351,7 @@ RSpec.describe BreakGlass do
       end.join
     end
 
-    it "keeps only the Lockbox ciphertext of a waiting share, and nothing after the combine" do # rubocop:disable RSpec/ExampleLength
+    it "keeps only the Lockbox ciphertext of a waiting share, and nothing after the combine" do # rubocop:disable RSpec/ExampleLength, RSpec/MultipleExpectations
       record = ask
       shares = [holder_a, holder_b].map { |holder| open_share(key_of(holder), custody.first.key_set) }
 
@@ -379,7 +379,7 @@ RSpec.describe BreakGlass do
   end
 
   describe "the sealed handoff to the requester" do
-    it "seals the data key to the requester at the second approval, and the approver sees no image" do
+    it "seals the data key to the requester at the second approval, and the approver sees no image" do # rubocop:disable RSpec/MultipleExpectations
       record = ask
       approve(record, holder_a)
 
@@ -397,7 +397,7 @@ RSpec.describe BreakGlass do
       expect(KeyCustodyPendingShare.count).to eq(0)
     end
 
-    it "opens once, for the requester, logs the decryption for them and enqueues the notices" do
+    it "opens once, for the requester, logs the decryption for them and enqueues the notices" do # rubocop:disable RSpec/MultipleExpectations
       record = granted_record
 
       handoff = described_class.open!(record, by: requester, ip: "203.0.113.5", user_agent: "Browser")

@@ -108,9 +108,10 @@ module FunderReport
         per_person = group.group_by { |row| row.user_id || "detached-#{row.id}" }.transform_values { |items| items.sum(&:amount_cents) }
         if profile.totals?
           recipients = per_person.size
-          { "recipients" => recipients >= profile.threshold ? recipients : nil,
+          { "recipients"  => recipients >= profile.threshold ? recipients : nil,
             "total_cents" => recipients >= profile.threshold ? per_person.values.sum : nil,
-            "currency" => group.map(&:currency).uniq.join(", ") }
+            "currency"    => group.map(&:currency).uniq.join(", ")
+}
         else
           bands = per_person.values.each_with_object(Hash.new(0)) { |cents, counts| counts[DataRetention.amount_band(cents)] += 1 }
           DemographicsReport.suppress({ "respondents" => per_person.size, "fields" => { "amount_band" => bands } }, profile.threshold)

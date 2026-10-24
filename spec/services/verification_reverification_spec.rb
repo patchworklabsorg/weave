@@ -4,7 +4,7 @@ require "rails_helper"
 
 # A pass has no time limit. Only a trigger (a birthday change, a legal name
 # change or a blacklist review) ends it (see VerificationFlow.require_reverification).
-RSpec.describe VerificationFlow, "re-verification" do # rubocop:disable RSpec/DescribeMethod
+RSpec.describe VerificationFlow, "re-verification" do # rubocop:disable RSpec/DescribeMethod, RSpec/SpecFilePathFormat
   include ActiveJob::TestHelper
 
   let(:member) { create(:user, :verified, legal_first_name: "Erika", legal_last_name: "Mustermann") }

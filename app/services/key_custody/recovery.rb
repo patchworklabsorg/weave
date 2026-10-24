@@ -45,7 +45,8 @@ module KeyCustody
                        .merge(wrapped: old_keys.to_h { |key| [key.external_id, key.wrapped_shares.find_by!(share:).blob] }),
         new: { credential_id: new_key.external_id, seal_public_key: new_key.seal_public_key,
                aad: KeyCustodyWrappedShare.aad(key_set: share.key_set, holder: user, hardware_key_external_id: new_key.external_id,
-                                               x: share.x) }
+                                               x: share.x)
+}
       }
     end
 

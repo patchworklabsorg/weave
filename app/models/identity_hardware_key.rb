@@ -12,25 +12,26 @@
 # A revoked key stays as a record. Its wrapped shares are deleted, so the
 # key can't open a share again, also when somebody finds it.
 # == Schema Information
+# Schema version: 20261023120000
 #
 # Table name: identity_hardware_keys
 # Database name: primary
 #
-#  id             :bigint           not null, primary key
-#  last_used_at   :datetime
-#  nickname       :string
-#  public_key     :text             not null
-#  revoked_at     :datetime
-#  revoked_reason :text
-#  role           :string           not null
+#  id              :bigint           not null, primary key
+#  last_used_at    :datetime
+#  nickname        :string
+#  public_key      :text             not null
+#  revoked_at      :datetime
+#  revoked_reason  :text
+#  role            :string           not null
 #  seal_public_key :string
-#  seal_salt      :string           not null
-#  sign_count     :bigint           default(0), not null
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
-#  external_id    :string           not null
-#  revoked_by_id  :bigint
-#  user_id        :bigint           not null
+#  seal_salt       :string           not null
+#  sign_count      :bigint           default(0), not null
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  external_id     :string           not null
+#  revoked_by_id   :bigint
+#  user_id         :bigint           not null
 #
 # Indexes
 #

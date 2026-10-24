@@ -175,7 +175,7 @@ RSpec.describe DemographicsVault do
   end
 
   describe ".age_band" do
-    it "bands ages with the configured starts" do
+    it "bands ages with the configured starts" do # rubocop:disable RSpec/MultipleExpectations
       today = Date.new(2026, 10, 12)
 
       expect(described_class.age_band(Date.new(2013, 10, 12), on: today)).to eq("13-15")

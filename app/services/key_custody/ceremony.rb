@@ -83,7 +83,8 @@ module KeyCustody
           { id: holder.public_id, name: holder.full_name,
             keys: holder.identity_hardware_keys.select(&:sealable?).map do |key|
               { id: key.external_id, label: key.label, seal_public_key: key.seal_public_key }
-            end }
+            end
+}
         end,
         operator_id: by.public_id,
         # One touch: the operator's own key. PRF on its seal salt opens the

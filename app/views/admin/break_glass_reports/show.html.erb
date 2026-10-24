@@ -1,129 +1,170 @@
 <% content_for :title, "Break-glass report" %>
 
-<div class="mb-6 flex flex-wrap justify-between items-end gap-4">
-  <div>
-    <h2 class="font-display text-2xl font-bold text-ink mb-2">Break-glass report: <%= @report.month.strftime("%B %Y") %></h2>
-    <p class="text-ink-soft">Every request and decryption of a stored ID image in the month, with the state of each notice.</p>
-  </div>
-  <div class="flex gap-2">
-    <%= link_to "Previous month", admin_break_glass_report_path(month: @report.month.prev_month.iso8601), class: "btn-stitch-ghost" %>
-    <%= link_to "Next month", admin_break_glass_report_path(month: @report.month.next_month.iso8601), class: "btn-stitch-ghost" %>
-  </div>
-</div>
+<%= page_header("Break-glass report: #{@report.month.strftime('%B %Y')}",
+      lede: "Every request and decryption of a stored ID image in the month, with the state of each notice.") do %>
+  <%= link_to admin_break_glass_report_path(month: @report.month.prev_month.iso8601), class: "btn btn-secondary btn-sm" do %>
+    <%= icon(:chevron_left) %>Previous month
+  <% end %>
+  <%= link_to admin_break_glass_report_path(month: @report.month.next_month.iso8601), class: "btn btn-secondary btn-sm" do %>
+    Next month<%= icon(:chevron_right) %>
+  <% end %>
+<% end %>
 
-<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-  <% { "Requests" => @report.requests.size, "Decryptions" => @report.decryptions.size,
-       "Pre-review views" => @report.pre_review_views, "Delayed notices now" => @report.delayed_notices.size }.each do |label, count| %>
-    <div class="patch p-4">
-      <p class="text-xs text-ink-faint"><%= label %></p>
-      <p class="font-display text-2xl font-bold text-ink"><%= count %></p>
+<div class="space-y-6">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <% { "Requests" => @report.requests.size, "Decryptions" => @report.decryptions.size,
+         "Pre-review views" => @report.pre_review_views, "Delayed notices now" => @report.delayed_notices.size }.each do |label, count| %>
+      <div class="card stat">
+        <span class="stat-label"><%= label %></span>
+        <span class="stat-value"><%= count %></span>
+      </div>
+    <% end %>
+  </div>
+
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Decryptions</h2>
     </div>
-  <% end %>
-</div>
-
-<h3 class="font-display text-lg font-bold text-ink mb-3">Decryptions</h3>
-<div class="patch overflow-hidden mb-8">
-  <% if @report.decryptions.any? %>
-    <ul class="divide-y divide-ink-soft/10">
-      <% @report.decryptions.each do |decryption| %>
-        <% record = decryption.break_glass_record %>
-        <li class="px-6 py-3 text-sm text-ink space-y-1">
-          <p><%= decryption.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>: <%= decryption.viewer&.full_name || "A deleted user" %> decrypted the image for <%= record.public_id %>.</p>
-          <p class="text-ink-soft">Reason: <%= record.reason %></p>
-          <p class="text-xs text-ink-faint">
-            Notices: <%= decryption.notices.map { |notice| "#{notice.recipient_kind} (#{notice.recipient&.full_name || 'a deleted user'}): #{notice.sent? ? 'sent' : (notice.delayed? ? 'delayed' : 'waiting')}" }.join("; ") %>
-          </p>
-        </li>
-      <% end %>
-    </ul>
-  <% else %>
-    <p class="px-6 py-4 text-sm text-ink-faint">No decryptions in this month.</p>
-  <% end %>
-</div>
-
-<h3 class="font-display text-lg font-bold text-ink mb-3">Requests</h3>
-<div class="patch overflow-hidden mb-8">
-  <% if @report.requests.any? %>
-    <ul class="divide-y divide-ink-soft/10">
-      <% @report.requests.each do |record| %>
-        <li class="px-6 py-3 text-sm text-ink">
-          <%= record.created_at.utc.strftime("%Y-%m-%d") %>: <%= record.public_id %>, <%= record.status %>,
-          asked by <%= record.requested_by&.full_name || "a deleted user" %>, approved by <%= record.approvers.map(&:full_name).to_sentence.presence || "nobody" %>.
-          Reason: <%= record.reason %>
-        </li>
-      <% end %>
-    </ul>
-  <% else %>
-    <p class="px-6 py-4 text-sm text-ink-faint">No requests in this month.</p>
-  <% end %>
-</div>
-
-<h3 class="font-display text-lg font-bold text-ink mb-3">Member notices delayed now</h3>
-<div class="patch overflow-hidden">
-  <% if @report.delayed_notices.any? %>
-    <ul class="divide-y divide-ink-soft/10">
-      <% @report.delayed_notices.each do |notice| %>
-        <li class="px-6 py-3 text-sm text-ink">
-          <%= notice.break_glass_record.public_id %>: delayed since <%= notice.delayed_at.utc.strftime("%Y-%m-%d") %> by
-          <%= notice.delayed_by&.full_name || "a deleted user" %>. Reason: <%= notice.delay_reason %>.
-          <% if notice.delay_signed_off? %>
-            Signed off by <%= notice.delay_signed_off_by&.full_name || "a deleted user" %>, holds until <%= notice.delay_ends_at.utc.strftime("%Y-%m-%d") %> at the latest.
-          <% else %>
-            Not signed off: it does not hold the notice.
+    <% if @report.decryptions.any? %>
+      <div class="card-body">
+        <div class="record-list">
+          <% @report.decryptions.each do |decryption| %>
+            <% record = decryption.break_glass_record %>
+            <div class="record">
+              <div class="record-main space-y-1">
+                <p class="record-title"><%= decryption.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>: <%= decryption.viewer&.full_name || "A deleted user" %> decrypted the image for <span class="mono"><%= record.public_id %></span>.</p>
+                <p class="text-sm text-ink-soft">Reason: <%= record.reason %></p>
+                <p class="record-meta">
+                  Notices: <%= decryption.notices.map { |notice| "#{notice.recipient_kind} (#{notice.recipient&.full_name || 'a deleted user'}): #{notice.sent? ? 'sent' : (notice.delayed? ? 'delayed' : 'waiting')}" }.join("; ") %>
+                </p>
+              </div>
+            </div>
           <% end %>
-        </li>
-      <% end %>
-    </ul>
-  <% else %>
-    <p class="px-6 py-4 text-sm text-ink-faint">None.</p>
-  <% end %>
-</div>
+        </div>
+      </div>
+    <% else %>
+      <%= empty_state("No decryptions in this month.", icon: :lock_keyhole) %>
+    <% end %>
+  </section>
 
-<h3 class="font-display text-lg font-bold text-ink mt-8 mb-3">Identity team governance</h3>
-<div class="patch overflow-hidden mb-8">
-  <% if @report.governance_events.any? %>
-    <ul class="divide-y divide-ink-soft/10">
-      <% @report.governance_events.each do |event| %>
-        <li class="px-6 py-3 text-sm text-ink">
-          <%= event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>: <%= event.summary %>
-          <% if event.data["reason"].present? %><span class="text-ink-soft">Reason: <%= event.data["reason"] %></span><% end %>
-        </li>
-      <% end %>
-    </ul>
-  <% else %>
-    <p class="px-6 py-4 text-sm text-ink-faint">No governance steps in this month.</p>
-  <% end %>
-</div>
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Requests</h2>
+    </div>
+    <% if @report.requests.any? %>
+      <div class="card-body">
+        <div class="record-list">
+          <% @report.requests.each do |record| %>
+            <div class="record">
+              <div class="record-main text-sm text-ink">
+                <%= record.created_at.utc.strftime("%Y-%m-%d") %>: <span class="mono"><%= record.public_id %></span>, <%= record.status %>,
+                asked by <%= record.requested_by&.full_name || "a deleted user" %>, approved by <%= record.approvers.map(&:full_name).to_sentence.presence || "nobody" %>.
+                <span class="text-ink-soft">Reason: <%= record.reason %></span>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <%= empty_state("No requests in this month.", icon: :inbox) %>
+    <% end %>
+  </section>
 
-<h3 class="font-display text-lg font-bold text-ink mb-3">Changes to privileged attributes</h3>
-<p class="text-sm text-ink-soft mb-3">From the permanent log: every grant and revoke of a role (board member, verifier, key holder, identity lead, staff, contractor, patch lead) and every change to the admin role. Database triggers write it, so console and SQL changes are in it too.</p>
-<div class="patch overflow-hidden mb-8">
-  <% if @report.privileged_changes.any? %>
-    <ul class="divide-y divide-ink-soft/10">
-      <% @report.privileged_changes.each do |change| %>
-        <li class="px-6 py-3 text-sm text-ink">
-          <span class="text-ink-faint"><%= change.changed_at.utc.strftime("%Y-%m-%d %H:%M UTC") %></span>
-          <%= change.summary %>
-          <span class="text-ink-soft">By <%= change.actor_name %>.</span>
-        </li>
-      <% end %>
-    </ul>
-  <% else %>
-    <p class="px-6 py-4 text-sm text-ink-faint">No changes in this month.</p>
-  <% end %>
-</div>
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Member notices delayed now</h2>
+    </div>
+    <% if @report.delayed_notices.any? %>
+      <div class="card-body">
+        <div class="record-list">
+          <% @report.delayed_notices.each do |notice| %>
+            <div class="record">
+              <div class="record-main text-sm text-ink">
+                <span class="mono"><%= notice.break_glass_record.public_id %></span>: delayed since <%= notice.delayed_at.utc.strftime("%Y-%m-%d") %> by
+                <%= notice.delayed_by&.full_name || "a deleted user" %>. Reason: <%= notice.delay_reason %>.
+                <% if notice.delay_signed_off? %>
+                  Signed off by <%= notice.delay_signed_off_by&.full_name || "a deleted user" %>, holds until <%= notice.delay_ends_at.utc.strftime("%Y-%m-%d") %> at the latest.
+                <% else %>
+                  <span class="text-warning">Not signed off: it does not hold the notice.</span>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <%= empty_state("None.", icon: :bell) %>
+    <% end %>
+  </section>
 
-<h3 class="font-display text-lg font-bold text-ink mb-3">The identity team now</h3>
-<div class="patch overflow-hidden">
-  <% if @report.identity_team.any? %>
-    <ul class="divide-y divide-ink-soft/10">
-      <% @report.identity_team.each do |member| %>
-        <li class="px-6 py-3 text-sm text-ink">
-          <%= member.full_name %><%= ", key holder" if member.identity_key_holder %><%= ", lead" if member.identity_lead %>
-        </li>
-      <% end %>
-    </ul>
-  <% else %>
-    <p class="px-6 py-4 text-sm text-ink-faint">Nobody is on the identity team.</p>
-  <% end %>
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Identity team governance</h2>
+    </div>
+    <% if @report.governance_events.any? %>
+      <div class="card-body">
+        <div class="record-list">
+          <% @report.governance_events.each do |event| %>
+            <div class="record">
+              <div class="record-main">
+                <p class="record-title"><%= event.summary %></p>
+                <p class="record-meta">
+                  <%= event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>
+                  <% if event.data["reason"].present? %>· Reason: <%= event.data["reason"] %><% end %>
+                </p>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <%= empty_state("No governance steps in this month.", icon: :users) %>
+    <% end %>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">Changes to privileged attributes</h2>
+        <p class="card-lede">From the permanent log: every grant and revoke of a role (board member, verifier, key holder, identity lead, staff, contractor, patch lead) and every change to the admin role. Database triggers write it, so console and SQL changes are in it too.</p>
+      </div>
+    </div>
+    <% if @report.privileged_changes.any? %>
+      <div class="card-body">
+        <div class="record-list">
+          <% @report.privileged_changes.each do |change| %>
+            <div class="record">
+              <div class="record-main">
+                <p class="record-title"><%= change.summary %></p>
+                <p class="record-meta"><%= change.changed_at.utc.strftime("%Y-%m-%d %H:%M UTC") %> · By <%= change.actor_name %>.</p>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <%= empty_state("No changes in this month.", icon: :history) %>
+    <% end %>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">The identity team now</h2>
+    </div>
+    <% if @report.identity_team.any? %>
+      <div class="card-body">
+        <div class="record-list">
+          <% @report.identity_team.each do |member| %>
+            <div class="record">
+              <div class="record-main record-title">
+                <%= member.full_name %><span class="font-normal text-ink-soft"><%= ", key holder" if member.identity_key_holder %><%= ", lead" if member.identity_lead %></span>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <%= empty_state("Nobody is on the identity team.", icon: :users) %>
+    <% end %>
+  </section>
 </div>

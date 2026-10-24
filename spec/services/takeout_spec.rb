@@ -38,7 +38,8 @@ RSpec.describe Takeout do
     data = described_class.build(user)["categories"]["account_profile"]["data"]
 
     expect(data["passkeys"]).to eq([{ "nickname" => "Work laptop", "created_at" => passkey.created_at.iso8601,
-                                      "last_used_at" => nil }])
+                                      "last_used_at" => nil
+}])
     expect(data.to_json).not_to include(passkey.public_key, passkey.external_id)
   end
 

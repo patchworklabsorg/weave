@@ -65,7 +65,7 @@ module KeyCustody
     # so each key gets its own salt. The same value serves both paths: PRF at
     # creation and the later seal key assertion.
     def seal_salt_for(challenge)
-      Base64.urlsafe_encode64(OpenSSL::Digest::SHA256.digest("weave key custody seal salt v1|#{challenge}"), padding: false)
+      Base64.urlsafe_encode64(OpenSSL::Digest.digest("SHA256", "weave key custody seal salt v1|#{challenge}"), padding: false)
     end
 
     # Registers a hardware key. credential is the JSON of the new

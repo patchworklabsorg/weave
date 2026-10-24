@@ -1,43 +1,44 @@
 # frozen_string_literal: true
 
 # == Schema Information
+# Schema version: 20261023120000
 #
 # Table name: verifications
 # Database name: primary
 #
-#  id                        :bigint           not null, primary key
-#  account_deleted_at        :datetime
-#  age_consistent            :boolean
-#  call_scheduled_for        :datetime
-#  decided_at                :datetime
-#  decision_reason           :text
-#  document_purged_at        :datetime
-#  document_type             :string
-#  escalated_at              :datetime
-#  escalation_note           :text
-#  escalation_resolution     :string
-#  escalation_resolved_at    :datetime
-#  guardian_attended         :boolean          default(FALSE), not null
-#  knot_review_reason        :string
-#  pre_review_started_at     :datetime
-#  pre_reviewed_at           :datetime
-#  region_consistent         :boolean
-#  resubmission_note         :text
-#  reverification_reason     :string
+#  id                         :bigint           not null, primary key
+#  account_deleted_at         :datetime
+#  age_consistent             :boolean
+#  call_scheduled_for         :datetime
+#  decided_at                 :datetime
+#  decision_reason            :text
+#  document_purged_at         :datetime
+#  document_type              :string
+#  escalated_at               :datetime
+#  escalation_note            :text
+#  escalation_resolution      :string
+#  escalation_resolved_at     :datetime
+#  guardian_attended          :boolean          default(FALSE), not null
+#  knot_review_reason         :string
+#  pre_review_started_at      :datetime
+#  pre_reviewed_at            :datetime
+#  region_consistent          :boolean
+#  resubmission_note          :text
+#  reverification_reason      :string
 #  reverification_required_at :datetime
-#  status                    :string           default("submitted"), not null
-#  verification_method       :string           default("document_call"), not null
-#  created_at                :datetime         not null
-#  updated_at                :datetime         not null
-#  call_scheduled_by_id      :bigint
-#  escalation_resolved_by_id :bigint
-#  guardian_consent_id       :bigint
-#  knot_id                   :bigint
-#  pre_reviewer_id           :bigint
-#  previous_attempt_id       :bigint
-#  second_verifier_id        :bigint
-#  user_id                   :bigint
-#  verifier_id               :bigint
+#  status                     :string           default("submitted"), not null
+#  verification_method        :string           default("document_call"), not null
+#  created_at                 :datetime         not null
+#  updated_at                 :datetime         not null
+#  call_scheduled_by_id       :bigint
+#  escalation_resolved_by_id  :bigint
+#  guardian_consent_id        :bigint
+#  knot_id                    :bigint
+#  pre_reviewer_id            :bigint
+#  previous_attempt_id        :bigint
+#  second_verifier_id         :bigint
+#  user_id                    :bigint
+#  verifier_id                :bigint
 #
 # Indexes
 #

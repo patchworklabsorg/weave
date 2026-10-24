@@ -13,7 +13,7 @@ RSpec.describe RoleRegistry do
     raw
   end
 
-  def parse(raw) = described_class.parse(raw)
+  delegate :parse, to: :described_class
 
   it "loads every role of the locked set from config/roles.yml" do
     expect(described_class.keys).to eq(%w[verifier identity_lead key_holder board staff contractor patch_lead])
@@ -25,19 +25,19 @@ RSpec.describe RoleRegistry do
     rules = described_class.definitions.transform_values { |definition| [definition.grant.rule, definition.revoke.rule] }
 
     expect(rules).to eq(
-      "verifier" => %w[owner_proposes_board_approves owner_or_identity_lead],
+      "verifier"      => %w[owner_proposes_board_approves owner_or_identity_lead],
       "identity_lead" => %w[owner_proposes_board_approves owner_proposes_board_approves],
-      "key_holder" => %w[owner_proposes_all_board_approve owner_proposes_all_board_approve],
-      "board" => %w[any_owner any_owner],
-      "staff" => %w[admin admin],
-      "contractor" => %w[admin admin],
-      "patch_lead" => %w[owner_proposes_board_approves owner]
+      "key_holder"    => %w[owner_proposes_all_board_approve owner_proposes_all_board_approve],
+      "board"         => %w[any_owner any_owner],
+      "staff"         => %w[admin admin],
+      "contractor"    => %w[admin admin],
+      "patch_lead"    => %w[owner_proposes_board_approves owner]
     )
-    expect(described_class.fetch("verifier").grant.preconditions_at_approval).to eq(%w[verified_by_another adult nda])
+    expect(described_class.fetch("verifier").grant.preconditions_at_approval).to eq(%w[verified_by_another adult])
     expect(described_class.fetch("verifier").grant.preconditions_at_proposal).to eq([])
     expect(described_class.fetch("identity_lead").grant.preconditions_at_proposal).to eq(%w[verified_by_another])
     expect(described_class.fetch("patch_lead").grant).to have_attributes(preconditions_at_proposal: %w[verified_by_another],
-                                                                          preconditions_at_approval: %w[verified_by_another])
+                                                                         preconditions_at_approval: %w[verified_by_another])
   end
 
   it "validates the file at boot without an error" do
@@ -67,10 +67,12 @@ RSpec.describe RoleRegistry do
 
     it "refuses an unknown precondition, and a precondition on a rule that applies at once" do
       unknown = changed { |roles| roles["verifier"]["grant"]["preconditions_at_approval"] = %w[verified_by_another tall] }
-      immediate = changed { |roles| roles["staff"]["grant"]["preconditions_at_approval"] = %w[nda] }
+      immediate = changed { |roles| roles["staff"]["grant"]["preconditions_at_approval"] = %w[adult] }
+      nda = changed { |roles| roles["verifier"]["grant"]["preconditions_at_approval"] = %w[verified_by_another adult nda] }
 
       expect { parse(unknown) }.to raise_error(described_class::ConfigError, /unknown precondition\(s\) tall/)
       expect { parse(immediate) }.to raise_error(described_class::ConfigError, /preconditions need a proposal rule/)
+      expect { parse(nda) }.to raise_error(described_class::ConfigError, /unknown precondition\(s\) nda/)
     end
 
     it "refuses a missing role that the code needs" do

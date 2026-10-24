@@ -11,7 +11,8 @@ RSpec.describe FunderReport do
     {
       open_funder: { name: "Open Funder", report_fields: %w[age_band gender_identity] },
       consent_funder: { name: "Consent Funder", report_fields: %w[age_band], small_count_threshold: 5, amount_reporting: "totals",
-                        requires_member_consent: true },
+                        requires_member_consent: true
+},
       narrow_funder: { name: "Narrow Funder", report_fields: %w[age_band], small_count_threshold: 4 }
     }
   end

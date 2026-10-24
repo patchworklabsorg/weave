@@ -391,7 +391,7 @@ Jasper locked this design on 2026-10-20. Staff and identity roles are rows in a 
 
 | Role | Key | Scope | Grant | Revoke |
 | --- | --- | --- | --- | --- |
-| Verifier (the identity team) | `verifier` | none | an owner proposes, a different board member approves. At the approval: verified by another verifier, 18 or older, NDA on record | one owner or identity lead, at once |
+| Verifier (the identity team) | `verifier` | none | an owner proposes, a different board member approves. At the approval: verified by another verifier, 18 or older | one owner or identity lead, at once |
 | Identity lead | `identity_lead` | none | an owner proposes, a different board member approves. Verified by another verifier | an owner proposes, a different board member approves |
 | Key holder | `key_holder` | none | an owner proposes, every board member approves. Verified by another verifier. At most `max_key_holders` (3) | an owner proposes, every board member approves |
 | Board member | `board` | none | one owner, at once, for any person (other owners too). Logged and emailed to the board | one owner, at once, for any person. Logged and emailed |
@@ -488,17 +488,13 @@ stateDiagram-v2
 `IdentityGovernance.preconditions` checks these at the approval, and the proposal page shows each one:
 
 1. The candidate is verified: `verification_status` is `verified`, and another person recorded the decision.
-2. The candidate is at least `verifier_minimum_age` (18).
-3. The candidate has a signed NDA on record.
+2. The candidate is at least `verifier_minimum_age` (18), or their p_id is in `verifier_age_exceptions` (`config/kyc/identity_governance.yml`). Production has one exception: Adam (`PWL8724F96B89`), decided by Jasper on 2026-10-24. His parent signs his NDA.
 
-A proposal can wait for a missing precondition. When the owner records the NDA, a board member can approve the same proposal.
+A proposal can wait for a missing precondition. When the precondition is met, a board member can approve the same proposal.
 
-### NDA records
+### NDAs
 
-NDAs are signed with Adobe Acrobat Sign. An owner records each signed NDA on the governance page: the date it was signed, the NDA version and the Adobe Acrobat Sign agreement ID (`IdentityNda`). There is no upload, and Weave keeps no copy of the document.
-
-- The rows are append-only. A newer row supersedes an older one (`User#current_identity_nda`).
-- The rows stay after the account is deleted. The database empties `user_id`. They are staff records, not member data, so they are not in the data-category registry.
+Each member of the identity team signs the identity team NDA. NDAs are signed with Adobe Acrobat Sign, outside Weave. Weave does not record NDAs, and no precondition checks them. The proposal page tells the approver to confirm the NDA before they approve a new verifier or key holder. Migration `20261023120000_drop_identity_ndas` drops the old `identity_ndas` table.
 
 ### Verifiers and the admin role
 
@@ -521,7 +517,7 @@ After the commit of every change to the key holder set, Weave sends the `ActiveS
 
 ### Bootstrap
 
-Nobody is verified when the team starts, so nobody can meet the preconditions. `IdentityGovernance.bootstrap!` (`bin/rails identity:bootstrap`) adds the first verifiers at once. Each must be at least 18 and have an NDA on record. Then they verify each other in a circle, so each one is verified by another person. The bootstrap runs one time only: it refuses after its first run (a `bootstrap_member_added` event exists), and when any member of the identity team is verified. The steps are in `docs/KYC_ROLLOUT.md`.
+Nobody is verified when the team starts, so nobody can meet the preconditions. `IdentityGovernance.bootstrap!` (`bin/rails identity:bootstrap`) adds the first verifiers at once. Each must be at least 18. Then they verify each other in a circle, so each one is verified by another person. The bootstrap runs one time only: it refuses after its first run (a `bootstrap_member_added` event exists), and when any member of the identity team is verified. The steps are in `docs/KYC_ROLLOUT.md`.
 
 `VerificationFlow.decide` enforces the circle. A member who joined in the bootstrap and is not verified yet can record a call outcome only for the person after them in the circle (`IdentityGovernance.bootstrap_decision_error`). When they are verified, this limit stops. A member who joined through a proposal was verified before they joined, so the limit does not apply to them.
 
@@ -534,9 +530,9 @@ flowchart LR
 
 ### Audit
 
-- Every step adds an `IdentityGovernanceEvent` row: `proposed`, `approved`, `rejected`, `withdrawn`, `expired`, `cancelled`, `applied`, `member_removed`, `nda_recorded`, `bootstrap_member_added`, `board_member_added`, `board_member_removed`. The rows are append-only.
+- Every step adds an `IdentityGovernanceEvent` row: `proposed`, `approved`, `rejected`, `withdrawn`, `expired`, `cancelled`, `applied`, `member_removed`, `bootstrap_member_added`, `board_member_added`, `board_member_removed`. The rows are append-only.
 - PaperTrail records each change to a proposal. Each role row names who granted or revoked it, the reason and the proposal, and the permanent log records each grant and revoke.
-- The governance page shows the team, the proposals, the NDA records and the log.
+- The governance page shows the team, the proposals and the log.
 - The monthly board report (`BreakGlassReport`, the page and the email) lists every governance step of the month, every change in the permanent log of the month, and the team as it is now.
 
 ### The permanent log
@@ -590,6 +586,7 @@ The values are in `config/kyc/identity_governance.yml`.
 | --- | --- | --- |
 | `proposal_expiry_days` | 14 | Locked |
 | `verifier_minimum_age` | 18 | Locked |
+| `verifier_age_exceptions` | production: `PWL8724F96B89` (Adam) | Jasper, 2026-10-24 |
 
 ## Key custody
 

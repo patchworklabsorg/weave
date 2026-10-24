@@ -18,7 +18,7 @@ module RoleRegistry
   IMMEDIATE_RULES = %w[owner any_owner admin owner_or_identity_lead].freeze
   RULES = (PROPOSAL_RULES + IMMEDIATE_RULES).freeze
 
-  PRECONDITIONS = %w[verified_by_another adult nda].freeze
+  PRECONDITIONS = %w[verified_by_another adult].freeze
   SCOPE_SOURCES = %w[knot_programs].freeze
 
   # Code reads these roles by key, so the config must define each of them.
@@ -43,7 +43,7 @@ module RoleRegistry
   class << self
     def definitions = @definitions ||= parse(load_file)
 
-    def keys = definitions.keys
+    delegate :keys, to: :definitions
 
     def fetch(key)
       definitions.fetch(key.to_s) { raise ArgumentError, "Unknown role #{key.inspect}. Known roles: #{keys.join(', ')}." }

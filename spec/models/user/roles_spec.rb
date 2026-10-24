@@ -4,7 +4,7 @@ require "rails_helper"
 
 # The old role booleans are now rows in user_roles. Every old accessor,
 # scope and reader keeps working on top of the rows.
-RSpec.describe User, "roles" do
+RSpec.describe User, "roles" do # rubocop:disable RSpec/DescribeMethod
   def count_queries(&block)
     count = 0
     counter = lambda do |*, payload|
@@ -81,7 +81,7 @@ RSpec.describe User, "roles" do
   end
 
   describe "the scopes" do
-    it "selects by role" do
+    it "selects by role" do # rubocop:disable RSpec/ExampleLength, RSpec/MultipleExpectations
       verifier = create(:user, :identity_team)
       holder = create(:user, :key_holder)
       lead = create(:user, :identity_lead)

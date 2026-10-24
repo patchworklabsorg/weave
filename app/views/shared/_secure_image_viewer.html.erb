@@ -1,8 +1,8 @@
 <%# The secure ID image viewer (see app/javascript/lib/secure_viewer.js). url is the POST endpoint that returns the bytes. %>
 <%= tag.div class: "space-y-2", data: { controller: "secure-image", secure_image_url_value: url,
                                         secure_image_confirm_value: local_assigns[:confirm] } do %>
-  <button type="button" class="<%= local_assigns[:button_class] || "btn-stitch-ghost" %>"
-          data-secure-image-target="button" data-action="secure-image#show"><%= label %></button>
-  <p class="text-xs text-ink-faint" data-secure-image-target="status" aria-live="polite"></p>
+  <button type="button" class="<%= local_assigns[:button_class] || "btn btn-secondary" %>"
+          data-secure-image-target="button" data-action="secure-image#show"><%= icon(:eye) %><%= label %></button>
+  <p class="field-hint" data-secure-image-target="status" aria-live="polite"></p>
   <div data-secure-image-target="canvas"></div>
 <% end %>

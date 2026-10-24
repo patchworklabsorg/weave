@@ -1,66 +1,84 @@
 <%# The member asks to delete their account (see DeletionRequestsController). %>
 <% content_for :title, t("data_handling.deletion.title") %>
-<%
-  link_class = "text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2"
-  input_class = "mt-1 w-full px-4 py-3 rounded-lg border-2 border-neutral-300 bg-paper text-ink focus:ring-2 focus:ring-grape focus:border-grape transition-colors"
-%>
 
-<div class="min-h-full flex items-center justify-center px-4 py-12">
-  <div class="patch patch-bound w-full max-w-lg">
-    <div class="quilt-binding"></div>
+<div class="page page-narrow space-y-6">
+  <%= page_header(t("data_handling.deletion.title"), lede: t("data_handling.deletion.intro")) %>
 
-    <div class="p-9 pb-5">
-      <h1 class="font-display text-3xl font-bold text-ink text-center"><%= t("data_handling.deletion.title") %></h1>
-      <p class="text-ink-soft mt-2"><%= t("data_handling.deletion.intro") %></p>
-    </div>
-
-    <div class="px-9 pb-9 space-y-5 text-sm text-ink">
+  <section class="card">
+    <div class="card-body space-y-3 text-sm text-ink">
       <p><%= t("data_handling.deletion.sla", review_days: DataRetention.review_sla.in_days.to_i, complete_days: DataRetention.complete_within.in_days.to_i) %></p>
       <p>
-        <%= link_to t("data_handling.data_page_link"), Weave.data_page_url, class: link_class, target: "_blank", rel: "noopener noreferrer" %>
+        <%= link_to t("data_handling.data_page_link"), Weave.data_page_url, class: "link", target: "_blank", rel: "noopener noreferrer" %>
       </p>
-
-      <div>
-        <h2 class="font-display text-lg font-bold text-ink mb-2"><%= t("data_handling.deletion.what_happens") %></h2>
-        <ul class="space-y-2">
-          <% @categories.each do |category| %>
-            <li>
-              <span class="font-semibold"><%= category.name %></span>:
-              <%= t("data_handling.deletion.outcomes.#{category.outcome}") %>.
-              <span class="text-ink-soft"><%= category.legal_basis %></span>
-            </li>
-          <% end %>
-        </ul>
-        <p class="text-ink-soft mt-2"><%= t("data_handling.deletion.knot_note") %></p>
-      </div>
-
-      <% if @deletion_request&.pending_review? %>
-        <div class="patch border-2 border-grape bg-grape-soft/40 p-5">
-          <p><%= t("data_handling.deletion.pending", date: @deletion_request.review_due_at.to_date.to_fs(:long)) %></p>
-        </div>
-        <%= button_to t("data_handling.deletion.cancel"), deletion_request_path, method: :delete, class: "btn-stitch-ghost w-full justify-center" %>
-      <% elsif @deletion_request %>
-        <div class="patch border-2 border-grape bg-grape-soft/40 p-5">
-          <p><%= t("data_handling.deletion.in_progress") %></p>
-        </div>
-      <% else %>
-        <p><%= t("data_handling.deletion.export_first") %> <%= link_to t("data_handling.profile.export"), takeout_path, class: link_class %></p>
-
-        <%= form_with url: deletion_request_path, method: :post, class: "space-y-4" do |form| %>
-          <% if @form_errors&.any? %>
-            <p class="text-sm text-orchid"><%= @form_errors.values.to_sentence %></p>
-          <% end %>
-          <div class="flex items-start gap-2">
-            <%= form.check_box :understand, { required: true, class: "mt-1" }, "1", nil %>
-            <%= form.label :understand, t("data_handling.deletion.understand"), class: "text-sm text-ink" %>
-          </div>
-          <div>
-            <%= form.label :confirmation, t("data_handling.deletion.confirmation_label"), class: "block text-sm font-medium text-ink" %>
-            <%= form.text_field :confirmation, required: true, autocomplete: "off", class: input_class %>
-          </div>
-          <%= form.submit t("data_handling.deletion.button"), class: "btn-stitch w-full justify-center" %>
-        <% end %>
-      <% end %>
     </div>
-  </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title"><%= t("data_handling.deletion.what_happens") %></h2>
+    </div>
+    <div class="card-body space-y-4 text-sm">
+      <div class="record-list">
+        <% @categories.each do |category| %>
+          <div class="record">
+            <div class="record-main">
+              <p class="text-ink">
+                <span class="font-semibold"><%= category.name %></span>:
+                <%= t("data_handling.deletion.outcomes.#{category.outcome}") %>.
+              </p>
+              <p class="record-meta"><%= category.legal_basis %></p>
+            </div>
+          </div>
+        <% end %>
+      </div>
+      <p class="text-ink-soft"><%= t("data_handling.deletion.knot_note") %></p>
+    </div>
+  </section>
+
+  <% if @deletion_request&.pending_review? %>
+    <section class="card">
+      <div class="card-body space-y-4">
+        <div class="callout callout-grape">
+          <%= icon(:info, size: 18) %>
+          <div class="callout-body">
+            <p><%= t("data_handling.deletion.pending", date: @deletion_request.review_due_at.to_date.to_fs(:long)) %></p>
+          </div>
+        </div>
+        <%= button_to t("data_handling.deletion.cancel"), deletion_request_path, method: :delete, class: "btn btn-secondary btn-block" %>
+      </div>
+    </section>
+  <% elsif @deletion_request %>
+    <div class="callout callout-grape">
+      <%= icon(:info, size: 18) %>
+      <div class="callout-body">
+        <p><%= t("data_handling.deletion.in_progress") %></p>
+      </div>
+    </div>
+  <% else %>
+    <section class="card">
+      <div class="card-body space-y-5">
+        <p class="text-sm text-ink"><%= t("data_handling.deletion.export_first") %> <%= link_to t("data_handling.profile.export"), takeout_path, class: "link" %></p>
+
+        <%= form_with url: deletion_request_path, method: :post, class: "space-y-5" do |form| %>
+          <% if @form_errors&.any? %>
+            <div class="callout callout-danger" role="alert">
+              <%= icon(:circle_alert, size: 18) %>
+              <div class="callout-body">
+                <p><%= @form_errors.values.to_sentence %></p>
+              </div>
+            </div>
+          <% end %>
+          <div class="choice">
+            <%= form.check_box :understand, { required: true, class: "checkbox" }, "1", nil %>
+            <%= form.label :understand, t("data_handling.deletion.understand") %>
+          </div>
+          <div class="field-group">
+            <%= form.label :confirmation, t("data_handling.deletion.confirmation_label"), class: "field-label" %>
+            <%= form.text_field :confirmation, required: true, autocomplete: "off", class: "field" %>
+          </div>
+          <%= form.submit t("data_handling.deletion.button"), class: "btn btn-danger-solid btn-block" %>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
 </div>

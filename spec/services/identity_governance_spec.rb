@@ -13,7 +13,6 @@ RSpec.describe IdentityGovernance do
   def ready_candidate(**attributes)
     user = create(:user, :verified, **attributes)
     create(:verification, :verified, user:)
-    create(:identity_nda, user:)
     user
   end
 
@@ -81,7 +80,6 @@ RSpec.describe IdentityGovernance do
     describe "preconditions at the approval" do
       it "refuses a candidate who is not verified" do
         candidate = create(:user, :verified)
-        create(:identity_nda, user: candidate)
         proposal = propose("add_member", candidate)
 
         result = described_class.approve(proposal, by: board_member)
@@ -100,21 +98,17 @@ RSpec.describe IdentityGovernance do
         expect(candidate.reload.identity_team).to be(false)
       end
 
-      it "refuses a candidate with no NDA on record" do
-        candidate = create(:user, :verified)
-        create(:verification, :verified, user: candidate)
-        proposal = propose("add_member", candidate)
-
-        expect(described_class.approve(proposal, by: board_member).message).to include("No signed NDA")
+      it "does not check an NDA: NDAs are signed outside Weave" do
+        expect(described_class::PRECONDITION_KEYS.values).to eq(%i[verified adult])
+        expect(described_class.approve(propose("add_member", candidate), by: board_member)).to be_success
       end
 
       it "checks at the approval, not at the proposal" do
         candidate = create(:user, :verified)
-        create(:verification, :verified, user: candidate)
         proposal = propose("add_member", candidate)
         expect(described_class.approve(proposal, by: board_member)).not_to be_success
 
-        create(:identity_nda, user: candidate)
+        create(:verification, :verified, user: candidate)
 
         expect(described_class.approve(proposal, by: board_member)).to be_success
         expect(candidate.reload.identity_team).to be(true)
@@ -125,7 +119,7 @@ RSpec.describe IdentityGovernance do
 
         checks = described_class.preconditions(candidate).to_h { |check| [check.key, check.met] }
 
-        expect(checks).to eq(verified: false, adult: true, nda: false)
+        expect(checks).to eq(verified: false, adult: true)
       end
 
       it "needs the verification to be decided by another person" do
@@ -133,6 +127,16 @@ RSpec.describe IdentityGovernance do
         candidate.latest_verification.update_columns(verifier_id: candidate.id) # rubocop:disable Rails/SkipsModelValidations
 
         expect(described_class.preconditions(candidate).find { |check| check.key == :verified }.met).to be(false)
+      end
+
+      it "lets a person on the age exception list in under the minimum age" do
+        candidate = ready_candidate(birthday: 16.years.ago.to_date)
+        expect(described_class.preconditions_met?(candidate)).to be(false)
+
+        allow(IdentityGovernanceSettings).to receive(:verifier_age_exceptions).and_return([candidate.p_id])
+
+        expect(described_class.preconditions_met?(candidate)).to be(true)
+        expect(described_class.preconditions(candidate).find { |check| check.key == :adult }.detail).to include("age exception")
       end
 
       it "uses the minimum age from the config" do
@@ -257,17 +261,18 @@ RSpec.describe IdentityGovernance do
   describe "key holder changes" do
     let(:member) { verified_member }
 
+    before do
+      owner
+      board_member
+      other_board_member
+    end
+
     it "refuses a key holder who is not verified" do
       result = described_class.propose(kind: "add_key_holder", subject: create(:user, :identity_team), by: owner, reason: "x")
 
       expect(result.message).to include("must be verified")
     end
 
-    before do
-      owner
-      board_member
-      other_board_member
-    end
 
     it "needs every board member at proposal time, and applies only after the last approval" do
       proposal = propose("add_key_holder", member)
@@ -428,45 +433,12 @@ RSpec.describe IdentityGovernance do
     end
   end
 
-  describe "NDA records" do
-    let(:person) { create(:user, :verified) }
-
-    it "lets an owner record one, with a log row" do
-      result = described_class.record_nda(person, by: owner, signed_on: Date.new(2026, 10, 1), version: "v1", reference: "Adobe agreement 42")
-
-      expect(result).to be_success
-      expect(person.current_identity_nda).to have_attributes(nda_version: "v1", signature_reference: "Adobe agreement 42", recorded_by: owner)
-      expect(IdentityGovernanceEvent.find_by(kind: "nda_recorded").data).to include("nda_version" => "v1")
-    end
-
-    it "does not let anyone else record one" do
-      expect(described_class.record_nda(person, by: board_member, signed_on: Date.current, version: "v1", reference: "x"))
-        .not_to be_success
-    end
-
-    it "needs the date, the version and the reference" do
-      result = described_class.record_nda(person, by: owner, signed_on: nil, version: "", reference: "")
-
-      expect(result.errors.keys).to include(:signed_on, :nda_version, :signature_reference)
-    end
-
-    it "lets a newer record supersede an older one" do
-      described_class.record_nda(person, by: owner, signed_on: Date.new(2026, 1, 1), version: "v1", reference: "a")
-      described_class.record_nda(person, by: owner, signed_on: Date.new(2026, 9, 1), version: "v2", reference: "b")
-
-      expect(person.current_identity_nda.nda_version).to eq("v2")
-      expect(person.identity_ndas.count).to eq(2)
-    end
-  end
-
   describe "bootstrap" do
-    let(:circle) { %w[Jasper Kieran Adam].map { |name| create(:user, :verified, first_name: name) } }
+    let!(:circle) { %w[Jasper Kieran Adam].map { |name| create(:user, :verified, first_name: name) } }
 
     def jasper = circle[0]
     def kieran = circle[1]
     def adam = circle[2]
-
-    before { circle.each { |user| create(:identity_nda, user:) } }
 
     it "adds the first verifiers at once and plans a circle of verification" do
       result = described_class.bootstrap!(circle, by: owner)
@@ -510,7 +482,7 @@ RSpec.describe IdentityGovernance do
 
     it "refuses after its first run, even while nobody is verified" do
       described_class.bootstrap!(circle, by: owner)
-      later = %w[Mo Lu].map { |name| create(:user, :verified, first_name: name).tap { |user| create(:identity_nda, user:) } }
+      later = %w[Mo Lu].map { |name| create(:user, :verified, first_name: name) }
 
       result = described_class.bootstrap!(later, by: owner)
 
@@ -571,14 +543,13 @@ RSpec.describe IdentityGovernance do
       expect(described_class.bootstrap!([jasper], by: owner)).not_to be_success
     end
 
-    it "needs each person to be an adult with an NDA on record" do
-      no_nda = create(:user, :verified, first_name: "Nonda")
+    it "needs each person to be an adult, and does not ask for an NDA" do
       minor = create(:user, :verified, :minor, first_name: "Young")
-      create(:identity_nda, user: minor)
 
-      result = described_class.bootstrap!([jasper, no_nda, minor], by: owner)
+      result = described_class.bootstrap!([jasper, kieran, minor], by: owner)
 
-      expect(result.message).to include("Nonda", "No signed NDA", "Young", "15 years old")
+      expect(result.message).to include("Young", "15 years old")
+      expect(result.message).not_to include("Jasper", "Kieran", "NDA")
       expect(jasper.reload.identity_team).to be(false)
     end
   end
@@ -624,7 +595,7 @@ RSpec.describe IdentityGovernance do
       described_class.propose(kind: "add_patch_lead", subject:, by:, reason: "Leads Ganymede.", scope:)
     end
 
-    it "needs an owner to propose with a program and a different board member to approve" do
+    it "needs an owner to propose with a program and a different board member to approve" do # rubocop:disable RSpec/MultipleExpectations
       result = propose_lead
       expect(result).to be_success
       proposal = result.record

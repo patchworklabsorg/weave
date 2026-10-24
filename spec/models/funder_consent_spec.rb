@@ -2,6 +2,30 @@
 
 require "rails_helper"
 
+# == Schema Information
+# Schema version: 20261023120000
+#
+# Table name: funder_consents
+# Database name: primary
+#
+#  id           :bigint           not null, primary key
+#  funder       :string           not null
+#  given_at     :datetime         not null
+#  withdrawn_at :datetime
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#  user_id      :bigint           not null
+#
+# Indexes
+#
+#  index_funder_consents_on_funder                (funder)
+#  index_funder_consents_on_user_and_funder_live  (user_id,funder) UNIQUE WHERE (withdrawn_at IS NULL)
+#  index_funder_consents_on_user_id               (user_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (user_id => users.id) ON DELETE => cascade
+#
 RSpec.describe FunderConsent do
   let(:member) { create(:user, :verified) }
 

@@ -66,7 +66,7 @@ class UserRole < ApplicationRecord
 
   def revoked? = !active?
 
-  def key = role.key
+  delegate :key, to: :role
 
   def proposal = identity_governance_proposal
 

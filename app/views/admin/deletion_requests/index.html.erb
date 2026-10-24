@@ -1,16 +1,20 @@
 <% content_for :title, "Deletion requests" %>
 
-<div class="mb-6 flex flex-wrap justify-between items-start gap-4">
+<header class="page-header">
   <div>
-    <h2 class="font-display text-2xl font-bold text-ink mb-2">Deletion requests</h2>
-    <p class="text-ink-soft">
+    <h1 class="page-title">Deletion requests</h1>
+    <p class="page-lede">
       Check that each request is authentic: it came from the member, or the account is really dormant. This is not a
       judgment call. Review each request by its due date (<%= DataRetention.review_sla.in_days.to_i %> days).
-      <%= link_to "What we do with your data", Weave.data_page_url, target: "_blank", rel: "noopener noreferrer", class: "text-grape underline" %>
+      <%= link_to "What we do with your data", Weave.data_page_url, target: "_blank", rel: "noopener noreferrer", class: "link" %>
     </p>
   </div>
-  <%= link_to "Departed totals", admin_delete_time_aggregates_path, class: "btn-stitch-ghost" %>
-</div>
+  <div class="page-actions">
+    <%= link_to admin_delete_time_aggregates_path, class: "btn btn-secondary" do %>
+      <%= icon(:chart_column) %>Departed totals
+    <% end %>
+  </div>
+</header>
 
 <%
   sections = [
@@ -20,24 +24,39 @@
   ]
 %>
 
-<% sections.each do |title, requests, detail| %>
-  <h3 class="font-display text-lg font-bold text-ink mb-3"><%= title %></h3>
-  <div class="patch overflow-hidden mb-8">
-    <% if requests.any? %>
-      <ul class="divide-y divide-ink-soft/10">
-        <% requests.each do |request| %>
-          <li class="px-6 py-3 flex flex-wrap justify-between gap-2">
-            <span class="text-sm text-ink">
-              <%= link_to request.public_id, admin_deletion_request_path(request), class: "font-mono hover:text-grape" %>
-              <%= request.user&.full_name || "A deleted account" %>
-              <span class="text-ink-faint">(<%= request.source %>)</span>
-            </span>
-            <span class="text-sm <%= request.review_overdue? ? 'text-red-600' : 'text-ink-soft' %>"><%= detail.call(request) %></span>
-          </li>
-        <% end %>
-      </ul>
-    <% else %>
-      <p class="px-6 py-4 text-sm text-ink-faint">Nothing here.</p>
-    <% end %>
-  </div>
-<% end %>
+<div class="space-y-6">
+  <% sections.each do |title, requests, detail| %>
+    <section class="card">
+      <div class="card-header">
+        <div class="flex items-center gap-2">
+          <h2 class="card-title"><%= title %></h2>
+          <%= badge(requests.size.to_s) %>
+        </div>
+      </div>
+      <% if requests.any? %>
+        <div class="card-body">
+          <div class="record-list">
+            <% requests.each do |request| %>
+              <div class="record flex-wrap">
+                <div class="record-main">
+                  <p class="record-title">
+                    <%= link_to request.public_id, admin_deletion_request_path(request), class: "link mono" %>
+                    <%= request.user&.full_name || "A deleted account" %>
+                  </p>
+                  <p class="record-meta"><%= request.source %></p>
+                </div>
+                <% if request.review_overdue? %>
+                  <%= badge detail.call(request), tone: :danger, icon: :clock_alert %>
+                <% else %>
+                  <span class="text-sm text-ink-soft"><%= detail.call(request) %></span>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% else %>
+        <%= empty_state("Nothing here.", icon: :inbox) %>
+      <% end %>
+    </section>
+  <% end %>
+</div>

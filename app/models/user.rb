@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 # == Schema Information
+# Schema version: 20261023120000
 #
 # Table name: users
 # Database name: primary
@@ -12,15 +13,10 @@
 #  confirmation_sent_at     :datetime
 #  confirmation_token       :string
 #  directory_linked_at      :datetime
+#  directory_object_guid    :string
 #  email                    :string           not null
 #  email_confirmed_at       :datetime
 #  first_name               :string           not null
-#  identity_key_holder      :boolean          default(FALSE), not null
-#  identity_lead            :boolean          default(FALSE), not null
-#  identity_team            :boolean          default(FALSE), not null
-#  is_board                 :boolean          default(FALSE), not null
-#  is_contractor            :boolean          default(FALSE), not null
-#  is_staff                 :boolean          default(FALSE), not null
 #  last_name                :string           not null
 #  legal_first_name         :string
 #  legal_last_name          :string
@@ -202,12 +198,12 @@ class User < ApplicationRecord
   # ignored, so a stray user.is_board reads the role and never the stale
   # column. Do not query them with where(is_board: true): use the scopes.
   LEGACY_ROLE_COLUMNS = {
-    "identity_team" => "verifier",
-    "identity_lead" => "identity_lead",
+    "identity_team"       => "verifier",
+    "identity_lead"       => "identity_lead",
     "identity_key_holder" => "key_holder",
-    "is_board" => "board",
-    "is_staff" => "staff",
-    "is_contractor" => "contractor"
+    "is_board"            => "board",
+    "is_staff"            => "staff",
+    "is_contractor"       => "contractor"
   }.freeze
   self.ignored_columns += LEGACY_ROLE_COLUMNS.keys
 
@@ -233,9 +229,6 @@ class User < ApplicationRecord
   # Account deletion revokes every role first, so the rows stay as history
   # (the database refuses to delete them).
   before_destroy :revoke_roles_for_deletion
-  # Signed NDAs, recorded by hand by an owner (see IdentityNda). The rows
-  # stay after the account is deleted: the database empties user_id.
-  has_many :identity_ndas, dependent: nil
   # The hardware keys (YubiKeys) of a key holder (see KeyCustody). Staff
   # records: the database deletes them with the account.
   has_many :identity_hardware_keys, dependent: nil
@@ -769,9 +762,6 @@ class User < ApplicationRecord
     years
   end
 
-  # The newest signed NDA on record (see IdentityNda).
-  def current_identity_nda = identity_ndas.newest_first.first
-
   # The blacklist flag of the member's Knot (see Knot). Program grants check
   # it (see KnotGrants).
   def knot_blacklisted? = knot&.blacklisted || false
@@ -1042,7 +1032,7 @@ class User < ApplicationRecord
     @pending_role_changes = nil
     reload_roles!
     grants, revokes = changes.partition { |_key, value| value }
-    revokes.each { |key, _value| RoleGrants.revoke!(self, key, reason: "set through User##{LEGACY_ROLE_COLUMNS.key(key)}=") }
+    revokes.map(&:first).each { |key| RoleGrants.revoke!(self, key, reason: "set through User##{LEGACY_ROLE_COLUMNS.key(key)}=") }
     grants.map(&:first).sort_by { |key| RoleRegistry.fetch(key).requires.size }.each do |key|
       RoleGrants.grant!(self, key, reason: "set through User##{LEGACY_ROLE_COLUMNS.key(key)}=")
     end

@@ -45,7 +45,7 @@ RSpec.describe RoleGrants do
   end
 
   describe "board: any owner, at once, for any person, logged and emailed" do
-    it "lets an owner change the board role of another owner, which skips the peer rule of the other roles" do
+    it "lets an owner change the board role of another owner, which skips the peer rule of the other roles" do # rubocop:disable RSpec/MultipleExpectations
       other_owner = create(:user, :owner, :verified)
 
       expect(described_class.grant(other_owner, "board", by: owner)).to be_success
@@ -59,7 +59,7 @@ RSpec.describe RoleGrants do
       expect(UserAdminPermissions.new(owner, other_owner).change_board?).to be(true)
     end
 
-    it "lets an owner grant and revoke, with a governance event and an email to the board" do
+    it "lets an owner grant and revoke, with a governance event and an email to the board" do # rubocop:disable RSpec/MultipleExpectations
       sitting = create(:user, :verified, is_board: true)
 
       perform_enqueued_jobs { expect(described_class.grant(member, "board", by: owner)).to be_success }

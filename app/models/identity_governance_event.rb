@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # The append-only log of identity team governance (see IdentityGovernance).
-# Each proposal, approval, rejection, expiry, removal, NDA record,
+# Each proposal, approval, rejection, expiry, removal,
 # bootstrap step and board membership change adds one row. A row never changes and the app never deletes
 # one. The governance page and the monthly board report read these rows.
 # == Schema Information
@@ -36,7 +36,7 @@ class IdentityGovernanceEvent < ApplicationRecord
 
   KINDS = %w[
     proposed approved rejected withdrawn expired cancelled applied
-    member_removed nda_recorded bootstrap_member_added
+    member_removed bootstrap_member_added
     board_member_added board_member_removed
   ].freeze
 
@@ -74,7 +74,6 @@ class IdentityGovernanceEvent < ApplicationRecord
     when "cancelled" then "Cancelled: #{IdentityGovernanceProposal.describe(data['proposal_kind'], about, data['proposal_scope'])}."
     when "applied" then "Applied: #{IdentityGovernanceProposal.describe(data['proposal_kind'], about, data['proposal_scope'])}."
     when "member_removed" then "#{who} removed #{about} from the identity team."
-    when "nda_recorded" then "#{who} recorded an NDA for #{about} (version #{data['nda_version']}, signed #{data['signed_on']})."
     when "bootstrap_member_added" then "#{who} added #{about} to the identity team in the bootstrap."
     when "board_member_added" then "#{who} added #{about} to the board."
     when "board_member_removed" then "#{who} removed #{about} from the board."

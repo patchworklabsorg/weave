@@ -55,7 +55,7 @@ RSpec.describe DataRetention do
     expect(described_class.individual_record_until("consent_funder")).to be_nil
   end
 
-  it "bands an amount, never the figure" do
+  it "bands an amount, never the figure" do # rubocop:disable RSpec/MultipleExpectations
     expect(described_class.amount_band(0)).to eq("none")
     expect(described_class.amount_band(nil)).to eq("none")
     expect(described_class.amount_band(50)).to eq("1-99")

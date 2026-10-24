@@ -1246,6 +1246,11 @@
   -webkit-touch-callout: none;
 }
 .secure-viewer-canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-control);
   pointer-events: none;
   transition: filter 120ms ease-out;
 }

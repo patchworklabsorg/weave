@@ -1,45 +1,46 @@
 <%# The member's data export page (see TakeoutsController). %>
 <% content_for :title, t("data_handling.takeout.title") %>
-<% link_class = "text-grape hover:text-ink font-medium underline decoration-dashed underline-offset-2" %>
 
-<div class="min-h-full flex items-center justify-center px-4 py-12">
-  <div class="patch patch-bound w-full max-w-lg">
-    <div class="quilt-binding"></div>
+<div class="page page-narrow space-y-6">
+  <%= page_header(t("data_handling.takeout.title"), lede: t("data_handling.takeout.intro")) %>
 
-    <div class="p-9 pb-5">
-      <h1 class="font-display text-3xl font-bold text-ink text-center"><%= t("data_handling.takeout.title") %></h1>
-      <p class="text-ink-soft mt-2"><%= t("data_handling.takeout.intro") %></p>
-    </div>
-
-    <div class="px-9 pb-9 space-y-5 text-sm text-ink">
+  <section class="card">
+    <div class="card-body space-y-4 text-sm text-ink">
       <p><%= t("data_handling.takeout.download_window", days: DataRetention.takeout_download_window.in_days.to_i) %></p>
       <p class="text-ink-soft"><%= t("data_handling.takeout.not_included") %></p>
       <p>
-        <%= link_to t("data_handling.data_page_link"), Weave.data_page_url, class: link_class, target: "_blank", rel: "noopener noreferrer" %>
+        <%= link_to t("data_handling.data_page_link"), Weave.data_page_url, class: "link", target: "_blank", rel: "noopener noreferrer" %>
       </p>
-
-      <%= button_to t("data_handling.takeout.button"), takeout_path, method: :post, class: "btn-stitch w-full justify-center" %>
-
-      <% if @takeouts.any? %>
-        <div>
-          <h2 class="font-display text-lg font-bold text-ink mb-2"><%= t("data_handling.takeout.history") %></h2>
-          <ul class="space-y-2">
-            <% @takeouts.each do |takeout| %>
-              <li class="flex items-center justify-between gap-4">
-                <span>
-                  <%= takeout.created_at.to_date.to_fs(:long) %>:
-                  <%= t("data_handling.takeout.statuses.#{takeout.status}", date: takeout.expires_at&.to_date&.to_fs(:long)) %>
-                </span>
-                <% if takeout.downloadable? %>
-                  <%= link_to t("data_handling.takeout.download"), download_takeout_path(takeout), class: link_class %>
-                <% end %>
-              </li>
-            <% end %>
-          </ul>
-        </div>
+      <%= button_to takeout_path, method: :post, class: "btn btn-primary btn-block" do %>
+        <%= icon(:download) %><%= t("data_handling.takeout.button") %>
       <% end %>
-
-      <p class="text-center"><%= link_to t("data_handling.profile.delete"), deletion_request_path, class: link_class %></p>
     </div>
-  </div>
+  </section>
+
+  <% if @takeouts.any? %>
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title"><%= t("data_handling.takeout.history") %></h2>
+      </div>
+      <div class="card-body">
+        <div class="record-list">
+          <% @takeouts.each do |takeout| %>
+            <div class="record flex-wrap">
+              <div class="record-main">
+                <div class="record-title"><%= takeout.created_at.to_date.to_fs(:long) %></div>
+                <div class="record-meta"><%= t("data_handling.takeout.statuses.#{takeout.status}", date: takeout.expires_at&.to_date&.to_fs(:long)) %></div>
+              </div>
+              <% if takeout.downloadable? %>
+                <div class="record-actions">
+                  <%= link_to t("data_handling.takeout.download"), download_takeout_path(takeout), class: "btn btn-secondary btn-sm" %>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </section>
+  <% end %>
+
+  <p class="text-sm text-center"><%= link_to t("data_handling.profile.delete"), deletion_request_path, class: "link" %></p>
 </div>
