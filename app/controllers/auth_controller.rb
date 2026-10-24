@@ -12,12 +12,12 @@ class AuthController < ApplicationController
   content_security_policy do |policy|
     policy.form_action(:self, *pending_oauth_client_origins)
   end
-  skip_before_action :authenticate_user!, only: [:login, :new_session, :password_login, :oauth_login, :send_magic_link, :magic_link_login, :confirm_magic_link, :check_password_login, :passkey_options, :passkey_login, :logout]
+  skip_before_action :authenticate_user!, only: [:login, :new_session, :oauth_login, :send_magic_link, :magic_link_login, :confirm_magic_link, :check_password_login, :passkey_options, :passkey_login, :logout]
   # A user with an unverified email must still be able to log out. Under
   # authenticate_user! the logout went to the email confirmation page instead.
   before_action :authenticate_user_without_email_verification!, only: [:logout]
 
-  layout "sessions", only: [:new_session, :password_login, :oauth_login, :magic_link_login]
+  layout "sessions", only: [:new_session, :oauth_login, :magic_link_login]
 
   # Why a link was refused, phrased so the reader knows which of these it is.
   # The old flow collapsed all of them into "Invalid or expired magic link",
@@ -42,13 +42,6 @@ class AuthController < ApplicationController
     redirect_to(root_path) and return if current_user
 
     @user = User.new
-  end
-
-  def password_login
-    redirect_to(root_path) and return if current_user
-
-    @user = User.new
-    @is_password_login = true
   end
 
   def oauth_login
@@ -88,7 +81,7 @@ class AuthController < ApplicationController
 
     user = User.find_for_any_email(email)
 
-    # Password login flow (from /login/pw). Users with an Active Directory
+    # Password login flow. Users with an Active Directory
     # account check their AD password (see DirectoryPasswords). Everyone else
     # keeps Weave's own password check, which is for admins only.
     if user_password.present?

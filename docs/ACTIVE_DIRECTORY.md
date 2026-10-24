@@ -36,7 +36,7 @@ Weave links a user at these times:
 - When the user opens `/password`.
 - When an operator runs `bin/rails active_directory:link` (all users except admins) or `bin/rails active_directory:link_user` (one user, admins too).
 
-The sign-in page shows the password field only for admins and for linked users. It reads Weave's database only, so the page can not be used to ask AD about an email address. A user who is not linked yet can use `/login/pw`.
+The sign-in page shows the password field only for admins and for linked users. It reads Weave's database only, so the page can not be used to ask AD about an email address. A user who is not linked yet signs in with an email link. `LinkDirectoryAccountJob` then links the account, and the next sign-in shows the password field.
 
 If a linked user's AD account goes away, password sign-in stops with "Contact an administrator". To unlink the user, an operator sets `directory_linked_at` and `directory_object_guid` to `NULL` in the console. The user then signs in with an email link.
 
@@ -238,7 +238,7 @@ Weave always verifies the DC certificate against `AD_CA_FILE` and checks the hos
 Run each step on `weave-staging.patchworklabs.org` with test accounts only.
 
 1. `bin/rails active_directory:doctor` shows `usable: true`.
-2. A test AD user with `employeeID` = its `SPWL…` id signs in at `/login/pw` with the AD password. The user row gets `directory_linked_at`.
+2. A test AD user with `employeeID` = its `SPWL…` id signs in with an email link. The user row gets `directory_linked_at`. The user then signs in at `/login` with the AD password.
 3. A wrong password shows "Invalid email or password". The AD `badPwdCount` goes up by one only.
 4. Disable the AD user. Sign-in shows "Invalid email or password", and the log shows the disabled account. Enable it again.
 5. Set "User must change password at next logon". Sign-in goes to `/password/expired`. Change the password there. Sign in with the new password.
