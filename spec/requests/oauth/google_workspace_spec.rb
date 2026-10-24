@@ -87,6 +87,7 @@ RSpec.describe "Google Workspace sign-in", type: :request do
     before do
       create(:group_membership, group: hackboston, user: hackboston_user)
       directory.add_user(hackboston_user.p_id, password: "Hack-password-1", ou: "OU=HackBoston,OU=Sponsored-Projects,OU=Users")
+      DirectoryPasswords.link(hackboston_user)
     end
 
     it "signs in with the AD password and lands on the profile, not the Slack onboarding" do
@@ -125,6 +126,7 @@ RSpec.describe "Google Workspace sign-in", type: :request do
     before do
       create(:group_membership, group: google_group, user: staff_user)
       directory.add_user(staff_user.p_id, password: "Staff-password-1")
+      DirectoryPasswords.link(staff_user)
     end
 
     it "uses the Google app without having accepted the code of conduct" do
@@ -160,6 +162,7 @@ RSpec.describe "Google Workspace sign-in", type: :request do
     before do
       create(:group_membership, group: google_group, user: member)
       directory.add_user(member.p_id, password: "Member-password-1")
+      DirectoryPasswords.link(member)
     end
 
     it "is the confirmed Workspace address, not the personal primary address" do

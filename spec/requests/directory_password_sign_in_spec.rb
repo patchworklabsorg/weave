@@ -10,14 +10,30 @@ RSpec.describe "Password sign-in with Active Directory", type: :request do
     post "/login", params: { user: { email: email, password: password } }
   end
 
-  before { directory.add_user(user.p_id, password: "Ad-password-1") }
+  before do
+    directory.add_user(user.p_id, password: "Ad-password-1")
+    DirectoryPasswords.link(user)
+    directory.binds.clear
+  end
 
-  it "signs in a regular member with their AD password" do
+  it "signs in a linked member with their AD password" do
     expect { sign_in_with_password(user.email, "Ad-password-1") }.to change { user.user_sessions.count }.by(1)
 
     expect(response).to have_http_status(:redirect)
     expect(session[:user_id]).to eq(user.id)
-    expect(user.reload.directory_linked_at).to be_present
+  end
+
+  it "refuses a password from a member who is not linked yet, and does not ask AD" do
+    member = create(:user, :verified)
+    directory.add_user(member.p_id, password: "Ad-password-1")
+
+    sign_in_with_password(member.email, "Ad-password-1")
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.body).to include("Invalid email or password")
+    expect(session[:user_id]).to be_nil
+    expect(directory.binds).to be_empty
+    expect(member.reload.directory_linked_at).to be_nil
   end
 
   it "has no separate password sign-in page" do
@@ -171,13 +187,66 @@ RSpec.describe "Password sign-in with Active Directory", type: :request do
       expect(admin.reload.directory_linked_at).to be_nil
     end
 
-    it "keeps password sign-in admin-only" do
+    it "refuses Weave's own password for a member, with the wrong-password message" do
       member = create(:user, :verified)
 
       sign_in_with_password(member.email, "SecurePassword123!")
 
-      expect(response.body).to include("only available for administrators")
+      expect(response.body).to include("Invalid email or password")
+      expect(session[:user_id]).to be_nil
     end
+  end
+
+  describe "an admin linked to AD" do
+    let(:admin) { create(:user, :admin, :verified) }
+
+    before do
+      directory.add_user(admin.p_id, password: "Admin-ad-password-1")
+      DirectoryPasswords.link(admin, explicit: true)
+      directory.binds.clear
+    end
+
+    it "signs in with the AD password, not the old Weave password" do
+      sign_in_with_password(admin.email, "SecurePassword123!")
+      expect(response.body).to include("Invalid email or password")
+      expect(session[:user_id]).to be_nil
+
+      sign_in_with_password(admin.email, "Admin-ad-password-1")
+      expect(session[:user_id]).to eq(admin.id)
+      expect(directory.binds.map(&:last)).to include(directory.account(admin.p_id).dn)
+    end
+  end
+
+  describe "with AD turned off" do
+    before { use_fake_directory(FakeDirectory.new, env: { "AD_ENABLED" => "false" }) }
+
+    it "keeps Weave's own password sign-in for admins" do
+      admin = create(:user, :admin, :verified)
+
+      sign_in_with_password(admin.email, "SecurePassword123!")
+
+      expect(session[:user_id]).to eq(admin.id)
+    end
+
+    it "refuses a member's Weave password" do
+      member = create(:user, :verified)
+
+      sign_in_with_password(member.email, "SecurePassword123!")
+
+      expect(response.body).to include("Invalid email or password")
+      expect(session[:user_id]).to be_nil
+    end
+  end
+
+  it "answers a JSON password attempt from an unlinked member with 401 and the wrong-password message" do
+    member = create(:user, :verified)
+    directory.add_user(member.p_id, password: "Ad-password-1")
+
+    post "/login.json", params: { user: { email: member.email, password: "Ad-password-1" } }
+
+    expect(response).to have_http_status(:unauthorized)
+    expect(response.parsed_body["error"]).to eq("Invalid email or password")
+    expect(directory.binds).to be_empty
   end
 
   describe "POST /auth/check_password_login" do
@@ -192,7 +261,7 @@ RSpec.describe "Password sign-in with Active Directory", type: :request do
     end
 
     it "does not offer it to a member who is not linked yet" do
-      directory
+      user.update_column(:directory_linked_at, nil) # rubocop:disable Rails/SkipsModelValidations
 
       post "/auth/check_password_login", params: { email: user.email }, as: :json
 
@@ -201,7 +270,7 @@ RSpec.describe "Password sign-in with Active Directory", type: :request do
   end
 
   it "links the user in the background after an email-link sign-in" do
-    directory
+    user.update_columns(directory_linked_at: nil, directory_object_guid: nil) # rubocop:disable Rails/SkipsModelValidations
     expect { sign_in_via_magic_link(user) }.to have_enqueued_job(LinkDirectoryAccountJob).with(user.id)
 
     perform_enqueued_jobs { LinkDirectoryAccountJob.perform_later(user.id) }
