@@ -31,12 +31,11 @@ Give write access to `employeeID` only to the people who manage Weave accounts. 
 
 Weave links a user at these times:
 
-- At a password sign-in.
-- In the background after any other sign-in (`LinkDirectoryAccountJob`).
+- In the background after a sign-in (`LinkDirectoryAccountJob`).
 - When the user opens `/password`.
 - When an operator runs `bin/rails active_directory:link` (all users except admins) or `bin/rails active_directory:link_user` (one user, admins too).
 
-The sign-in page shows the password field only for admins and for linked users. It reads Weave's database only, so the page can not be used to ask AD about an email address. A user who is not linked yet signs in with an email link. `LinkDirectoryAccountJob` then links the account, and the next sign-in shows the password field.
+Only admins and linked users can sign in with a password. The sign-in page shows the password field only to them, and `POST /login` refuses a password from anyone else with "Invalid email or password". Both checks read Weave's database only, so a sign-in attempt can not be used to ask AD about an email address or to link an account. A user who is not linked yet signs in with an email link. `LinkDirectoryAccountJob` then links the account, and the next sign-in shows the password field.
 
 If a linked user's AD account goes away, password sign-in stops with "Contact an administrator". To unlink the user, an operator sets `directory_linked_at` and `directory_object_guid` to `NULL` in the console. The user then signs in with an email link.
 
@@ -49,7 +48,7 @@ sequenceDiagram
     participant L as loom (DC)
     participant S as spindle (DC)
     B->>W: POST /login (email, password)
-    W->>W: Rack::Attack limits, account state, failure count
+    W->>W: Rack::Attack limits, account state, admin or linked, failure count
     W->>L: LDAPS bind as svc-weave-ldap
     W->>L: search employeeID = p_id
     L-->>W: user DN
@@ -232,6 +231,7 @@ Weave always verifies the DC certificate against `AD_CA_FILE` and checks the hos
 7. Super admins always sign in with their Google password at `admin.google.com`. SSO does not apply to them there. Keep at least one super admin with a Google password and 2-step verification.
 8. Turn off user account recovery for the SSO OUs (Security > Account recovery), so Google can not reset a password that AD keeps.
 9. In Weave, add each SSO user to the `google-workspace` group, and make sure each has a confirmed address on a Workspace domain.
+10. Run `bin/rails active_directory:link`. Run it again after you make new AD accounts. Password sign-in is only for linked users, and an SSO user whose Weave address is the Workspace mailbox can not open an email link before the first sign-in.
 
 ## Staging test plan (real AD)
 

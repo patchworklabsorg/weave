@@ -81,9 +81,9 @@ class AuthController < ApplicationController
 
     user = User.find_for_any_email(email)
 
-    # Password login flow. Users with an Active Directory
-    # account check their AD password (see DirectoryPasswords). Everyone else
-    # keeps Weave's own password check, which is for admins only.
+    # Password login flow, for admins and users linked to Active Directory
+    # (see DirectoryPasswords.password_sign_in?). Linked users check their AD
+    # password. Admins with no AD account keep Weave's own password check.
     if user_password.present?
       password_login_for(user, user_password, email)
       return
@@ -220,7 +220,7 @@ class AuthController < ApplicationController
   def check_password_login
     email = params[:email].to_s.strip.downcase
     user = User.find_for_any_email(email) if email.present?
-    password_enabled = user.present? && (user.admin? || (DirectoryPasswords.enabled? && DirectoryPasswords.linked?(user)))
+    password_enabled = user.present? && DirectoryPasswords.password_sign_in?(user)
 
     render json: { password_login_enabled: password_enabled, password_required: password_enabled }
   end
@@ -307,13 +307,14 @@ class AuthController < ApplicationController
     locked: "Too many failed sign-in attempts. Wait 15 minutes, or sign in with an email link.",
     throttled: "Too many failed sign-in attempts. Wait 15 minutes, or sign in with an email link.",
     unlinked: "This account can't sign in with a password. Contact an administrator for help.",
-    unavailable: "Password sign-in is not available now. Sign in with an email link, or try again later.",
-    admin_only: "Password login is only available for administrators. Please use the magic link."
+    unavailable: "Password sign-in is not available now. Sign in with an email link, or try again later."
   }.freeze
 
   def password_login_for(user, password, email)
-    # Don't ask AD about accounts Weave would refuse anyway.
-    return handle_login_error(PASSWORD_ERRORS[:invalid], email) if user.nil? || !user.can_authenticate?
+    # Don't ask AD about accounts Weave would refuse anyway. A user who is not
+    # an admin and not linked yet gets the same message as a wrong password,
+    # so the form does not tell who may use one.
+    return handle_login_error(PASSWORD_ERRORS[:invalid], email) if user.nil? || !user.can_authenticate? || !DirectoryPasswords.password_sign_in?(user)
 
     case DirectoryPasswords.sign_in(user, password)
     when :authenticated
@@ -330,14 +331,13 @@ class AuthController < ApplicationController
     end
   end
 
-  # Weave's own password, for users with no AD account. Admins only, as before.
+  # Weave's own password, for admins with no AD account. The admin check
+  # repeats the gate in password_login_for, with the same message.
   def local_password_login(user, password, email)
-    if !user.authenticate(password)
-      handle_login_error(PASSWORD_ERRORS[:invalid], email)
-    elsif user.admin?
+    if user.admin? && user.authenticate(password)
       complete_login(user)
     else
-      handle_login_error(PASSWORD_ERRORS[:admin_only], email)
+      handle_login_error(PASSWORD_ERRORS[:invalid], email)
     end
   end
 

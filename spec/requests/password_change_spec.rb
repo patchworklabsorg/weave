@@ -75,7 +75,10 @@ RSpec.describe "Changing a password", type: :request do
   end
 
   context "when Google sends a person without a Weave session" do
-    before { directory.add_user(user.p_id, password: "Ad-password-1") }
+    before do
+      directory.add_user(user.p_id, password: "Ad-password-1")
+      DirectoryPasswords.link(user)
+    end
 
     it "signs them in first and brings them back to /password" do
       get password_path

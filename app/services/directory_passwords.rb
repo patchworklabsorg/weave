@@ -66,6 +66,11 @@ module DirectoryPasswords
 
     def linked?(user) = user.directory_linked_at.present?
 
+    # Who may sign in with a password: admins, and users already linked to AD.
+    # Reads Weave's database only, so a password from anyone else never
+    # reaches AD and can't link an account.
+    def password_sign_in?(user) = user.admin? || (enabled? && linked?(user))
+
     # Admins are linked only by an operator (see the module comment).
     def auto_linkable?(user) = !user.admin?
 
