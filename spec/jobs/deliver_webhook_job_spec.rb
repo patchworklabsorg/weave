@@ -18,10 +18,14 @@ RSpec.describe DeliverWebhookJob do
     allow(Net::HTTP).to receive(:new).with("hooks.example.com", 443, nil).and_return(http)
   end
 
-  def answer(code, body = "")
-    allow(http).to receive(:request) do |request|
+  # The receiver answers with `code`, and sends the body in `chunks`.
+  def answer(code, *chunks)
+    allow(http).to receive(:request) do |request, &block|
       requests << request
-      instance_double(Net::HTTPResponse, code: code.to_s, body: body)
+      result = instance_double(Net::HTTPResponse, code: code.to_s)
+      allow(result).to receive(:read_body) { |&reader| chunks.each { |chunk| reader.call(chunk) } }
+      block.call(result)
+      result
     end
   end
 
@@ -110,6 +114,45 @@ RSpec.describe DeliverWebhookJob do
 
     expect(delivery.reload.response["error"]).to include("blocked address")
     expect(webhook.reload.failure_count).to eq(1)
+  end
+
+  it "asks for an uncompressed answer and stores a body with a NUL character" do
+    answer(200, "ok\u0000done")
+
+    described_class.perform_now(delivery)
+
+    expect(requests.sole["Accept-Encoding"]).to eq("identity")
+    expect(delivery.reload).to be_delivered
+    expect(delivery.response["body"]).to eq("okdone")
+  end
+
+  it "stops reading a long answer after the limit" do
+    chunks = Array.new(100) { "x" * 500 }
+    answer(200, *chunks)
+
+    described_class.perform_now(delivery)
+
+    expect(delivery.reload).to be_delivered
+    expect(delivery.response["body"].length).to be <= DeliverWebhookJob::BODY_LIMIT
+  end
+
+  it "counts any other error in the request as a failed attempt" do
+    allow(http).to receive(:request).and_raise(Zlib::DataError, "invalid stored block lengths")
+
+    expect { described_class.perform_now(delivery) }.to have_enqueued_job(described_class)
+
+    expect(delivery.reload).to be_pending
+    expect(delivery.response["error"]).to include("Zlib::DataError")
+  end
+
+  it "turns off a webhook saved before the https and event checks" do
+    webhook.update_columns(url: "http://hooks.example.com/weave", event_type: "user.renamed", failure_count: 9) # rubocop:disable Rails/SkipsModelValidations
+    allow(WebhookUrlGuard).to receive(:check!).and_raise(WebhookUrlGuard::Blocked, "the URL must use https")
+
+    described_class.perform_now(delivery)
+
+    expect(webhook.reload).to be_inactive
+    expect(delivery.reload).to be_cancelled
   end
 
   it "counts a timeout as a failed attempt" do

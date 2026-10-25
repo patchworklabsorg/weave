@@ -69,7 +69,7 @@ Weave sends a `POST` with a JSON body:
 | `X-Weave-Timestamp` | Unix time of this attempt, in seconds. |
 | `X-Weave-Signature` | `sha256=<hex HMAC-SHA256>` of `<timestamp>.<body>`. |
 
-Answer with a `2xx` status in 10 seconds or less. Weave does not follow redirects. Do the slow work after you answer.
+Answer with a `2xx` status in 10 seconds or less. Weave waits at most 20 seconds for the full answer, reads only its first 1000 bytes, and asks for an uncompressed answer (`Accept-Encoding: identity`). Weave does not follow redirects. Do the slow work after you answer.
 
 ## Verify the signature
 
@@ -107,7 +107,7 @@ Users are named by their Patchwork Labs ID (`p_id`, the OAuth `sub` claim). Payl
 }
 ```
 
-`changed` is in `user.updated` only. It lists the `user` fields that the change touched. A change to other columns sends no `user.updated`. `active` is false when the account is locked or not active.
+`changed` is in `user.updated` only. When an admin gives a user a new Patchwork Labs ID, `changed` holds `id` and `user.previous_id` holds the old ID: move your record to the new ID. It lists the `user` fields that the change touched. A change to other columns sends no `user.updated`. `active` is false when the account is locked or not active.
 
 ### `user.deleted`
 
@@ -185,4 +185,4 @@ A blocked URL is a failed attempt. It counts toward the 10 failures that turn th
 
 ## Delivery log and retention
 
-Each `WebhookDelivery` row keeps the event, the URL, the number of attempts and the last response (status and the first 1000 characters of the body, or the error). The request body holds user data, so Weave clears it when the delivery is done. `DataRetentionJob` deletes the rows after 30 days (`WebhookDelivery::KEEP`).
+Each `WebhookDelivery` row keeps the event, the URL, the number of attempts and the last response (status and the first 1000 characters of the body, or the error). The request body holds user data, so Weave clears it when the delivery is done. When an account is deleted, Weave also removes its ID from the log rows. `DataRetentionJob` deletes the rows after 30 days (`WebhookDelivery::KEEP`).

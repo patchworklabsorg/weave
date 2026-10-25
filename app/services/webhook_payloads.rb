@@ -8,6 +8,7 @@ module WebhookPayloads
   # User columns that change the `user` payload. A save that changes none of
   # them sends no user.updated.
   USER_FIELDS = {
+    "p_id"               => "id",
     "first_name"         => "name",
     "last_name"          => "name",
     "email"              => "email",

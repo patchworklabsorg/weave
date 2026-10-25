@@ -15,10 +15,17 @@ require "net/http"
 # the same, so the receiver can drop a delivery it already handled.
 class DeliverWebhookJob < ApplicationJob
   class AttemptFailed < StandardError; end
+  # Raised inside the body read to stop it. Net::HTTP then closes the socket.
+  class StopReading < StandardError; end
 
   ATTEMPTS = 8
   OPEN_TIMEOUT = 5
   READ_TIMEOUT = 10
+  # The whole answer, from the first byte to the last. read_timeout applies
+  # to each read, so a receiver that sends a byte every few seconds would
+  # hold the worker without it.
+  TOTAL_TIMEOUT = 20
+  BODY_LIMIT = 1000
   USER_AGENT = "Weave-Webhooks/1.0"
 
   queue_as :default
@@ -56,11 +63,12 @@ class DeliverWebhookJob < ApplicationJob
   private
 
   def attempt(delivery, webhook)
+    # Anything that goes wrong in the request is a failed attempt, so the
+    # delivery always ends delivered, failed or cancelled.
     response = begin
       post(webhook, delivery)
-    rescue WebhookUrlGuard::Blocked, SocketError, SystemCallError, IOError, Timeout::Error,
-           OpenSSL::SSL::SSLError, Net::HTTPBadResponse, Net::ProtocolError => e
-      { error: "#{e.class}: #{e.message}".truncate(500) }
+    rescue => e
+      { error: clean("#{e.class}: #{e.message}").truncate(500) }
     end
 
     delivery.update!(url: webhook.url, attempts: delivery.attempts + 1, last_attempt_at: Time.current,
@@ -74,6 +82,8 @@ class DeliverWebhookJob < ApplicationJob
 
     request = Net::HTTP::Post.new(uri.request_uri)
     request["Content-Type"] = "application/json"
+    # No compressed answer: Net::HTTP would inflate all of it in memory.
+    request["Accept-Encoding"] = "identity"
     request["User-Agent"] = USER_AGENT
     request["X-Weave-Event"] = delivery.event
     request["X-Weave-Event-Id"] = delivery.event_id
@@ -92,8 +102,30 @@ class DeliverWebhookJob < ApplicationJob
     http.read_timeout = READ_TIMEOUT
     http.write_timeout = READ_TIMEOUT
 
-    result = http.request(request)
-    { status: result.code.to_i, body: result.body.to_s.dup.force_encoding(Encoding::UTF_8).scrub.truncate(1000) }
+    read(http, request)
   end
+
+  # Reads at most BODY_LIMIT bytes of the answer, within TOTAL_TIMEOUT.
+  def read(http, request)
+    status = nil
+    body = +""
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + TOTAL_TIMEOUT
+    begin
+      http.request(request) do |result|
+        status = result.code.to_i
+        result.read_body do |chunk|
+          body << chunk
+          raise StopReading if body.bytesize >= BODY_LIMIT
+          raise Timeout::Error, "the answer took more than #{TOTAL_TIMEOUT}s" if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+        end
+      end
+    rescue StopReading
+      # The status and the first part of the body are enough for the log.
+    end
+    { status: status, body: clean(body).truncate(BODY_LIMIT) }
+  end
+
+  # PostgreSQL jsonb takes neither invalid UTF-8 nor a NUL character.
+  def clean(text) = text.to_s.dup.force_encoding(Encoding::UTF_8).scrub.delete("\u0000")
 
 end

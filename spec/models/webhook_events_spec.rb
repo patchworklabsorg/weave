@@ -129,6 +129,28 @@ RSpec.describe "Webhook events" do # rubocop:disable RSpec/DescribeClass
       expect(sent("user.deleted")).to contain_exactly("user" => { "id" => p_id })
     end
 
+    it "sends the new ID with the previous one when the p_id is regenerated" do
+      user = create(:user)
+      listen("user.updated")
+      user.update!(first_name: "Grace")
+      old_id = user.p_id
+
+      new_id = user.regen_pid
+
+      expect(sent("user.updated").last).to include("user" => include("id" => new_id, "previous_id" => old_id), "changed" => ["id"])
+      expect(WebhookDelivery.distinct.pluck(:subject_id)).to eq([new_id])
+    end
+
+    it "unlinks the delivery log from a deleted account" do
+      user = create(:user)
+      listen("session.created")
+      user.user_sessions.create!(session_token: SecureRandom.hex(16), expiration_at: 1.day.from_now)
+
+      user.destroy!
+
+      expect(WebhookDelivery.where(event: "session.created").pluck(:subject_id)).to eq([nil])
+    end
+
     it "cancels the queued user.updated deliveries of a deleted account, so the name and email are not sent" do
       user = create(:user)
       listen("user.updated")
@@ -137,11 +159,12 @@ RSpec.describe "Webhook events" do # rubocop:disable RSpec/DescribeClass
       other = create(:user)
       other.update!(first_name: "Ada")
       queued = WebhookDelivery.where(event: "user.updated").index_by(&:subject_id)
+      p_id = user.p_id
 
       user.destroy!
 
-      expect(queued[user.p_id].reload).to be_cancelled
-      expect(queued[user.p_id].payload).to be_nil
+      expect(queued[p_id].reload).to be_cancelled
+      expect(queued[p_id].payload).to be_nil
       expect(queued[other.p_id].reload).to be_pending
       expect(WebhookDelivery.find_by(event: "user.deleted")).to be_pending
     end

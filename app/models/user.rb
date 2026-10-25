@@ -962,16 +962,26 @@ class User < ApplicationRecord
     PushPronounsToSlackJob.perform_later(id)
   end
 
+  # A new p_id (regen_pid) goes out as `previous_id`, so a service can move
+  # its record to the new ID. The queued deliveries follow the new ID too.
   def emit_user_updated
     data = WebhookPayloads.user(self).merge(changed: WebhookPayloads.changed_user_fields(saved_changes))
+    if saved_change_to_p_id?
+      previous_id = p_id_before_last_save
+      data[:user][:previous_id] = previous_id
+      WebhookDelivery.where(subject_id: previous_id).update_all(subject_id: p_id) # rubocop:disable Rails/SkipsModelValidations
+    end
     WebhookDispatcher.emit("user.updated", data)
   end
 
   # The queued user.created and user.updated deliveries hold the name and
-  # email of the account. Cancel them: only the ID goes out from now on.
+  # email of the account. Cancel them: only the ID goes out from now on. Then
+  # unlink the delivery log from the ID, so it no longer ties the deleted
+  # account to its activity.
   def emit_user_deleted
     WebhookDispatcher.cancel_pending_for(p_id, events: %w[user.created user.updated])
     WebhookDispatcher.emit("user.deleted", WebhookPayloads.deleted_user(self))
+    WebhookDelivery.where(subject_id: p_id).update_all(subject_id: nil) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def generate_confirmation_token

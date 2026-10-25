@@ -77,24 +77,27 @@ class Service::Webhook < ApplicationRecord
     status == "inactive"
   end
 
+  # The state changes below skip validation: a webhook saved before the
+  # event and https checks existed must still turn off, count failures and
+  # take a new secret.
   def activate!
-    update!(status: "active", failure_count: 0)
+    update_columns(status: "active", failure_count: 0, updated_at: Time.current)
   end
 
   # Queued deliveries are cancelled: they would not be sent anyway.
   def deactivate!
     transaction do
-      update!(status: "inactive")
+      update_columns(status: "inactive", updated_at: Time.current)
       deliveries.pending.find_each { |delivery| delivery.finish!("cancelled") }
     end
   end
 
   def rotate_secret!
-    update!(secret_token: SecureRandom.hex(32))
+    update_columns(secret_token: SecureRandom.hex(32), updated_at: Time.current)
   end
 
   def record_trigger!
-    update!(last_triggered_at: Time.current)
+    update_columns(last_triggered_at: Time.current)
   end
 
   def record_failure!
@@ -103,7 +106,7 @@ class Service::Webhook < ApplicationRecord
   end
 
   def reset_failures!
-    update!(failure_count: 0)
+    update_columns(failure_count: 0)
   end
 
   private
