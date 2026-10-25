@@ -277,6 +277,17 @@ RSpec.describe "Identity verification pages", type: :request do
       expect(response.body).not_to include("Mustermann", "1990-08-12")
     end
 
+    it "keeps the chosen attestation answers and the Choose placeholder after a mismatch" do
+      patch decide_identity_verification_path(verification), params: params.deep_merge(identifiers: { legal_name: "Erika Musterfrau" })
+
+      page = Nokogiri::HTML(response.body)
+      %w[age_consistent region_consistent us_resident].each do |name|
+        select = page.css("select[name='#{name}']")
+        expect(select.css("option").map(&:text)).to eq(%w[Choose Yes No])
+        expect(select.css("option[selected]").map { |option| option["value"] }).to eq(["yes"])
+      end
+    end
+
     it "fails the call for details that don't match the account" do
       patch decide_identity_verification_path(verification), params: { details_mismatch: "1", reason: "" }
 
