@@ -25,6 +25,20 @@ class Admin::GroupMembershipsController < Admin::BaseController
     end
   end
 
+  # Makes a member a manager of the group, or a manager a plain member (see
+  # Group::MembershipPolicy).
+  def role
+    membership = @group.memberships.find_by_public_param!(params[:id])
+    authorize membership, :update_role?
+
+    if membership.update(role: params.require(:role))
+      label = membership.role_manager? ? "a manager" : "a member"
+      redirect_to admin_group_path(@group), notice: "#{membership.user.full_name} is now #{label} of #{@group.name}."
+    else
+      redirect_to admin_group_path(@group), alert: membership.errors.full_messages.to_sentence
+    end
+  end
+
   def destroy
     membership = @group.memberships.find_by_public_param!(params[:id])
     membership.destroy!

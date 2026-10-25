@@ -9,6 +9,10 @@
 # `source` says who manages the row. `system` rows belong to the attribute sync
 # for system groups and are never touched by hand; `manual` rows are added in
 # the admin panel.
+#
+# `role` is `member` or `manager`. A manager of a manual group approves access
+# requests for the group and adds and removes its members (see GroupPolicy).
+# Only a superadmin makes someone a manager. A system row is always a member.
 # == Schema Information
 #
 # Table name: group_memberships
@@ -16,6 +20,7 @@
 #
 #  id          :bigint           not null, primary key
 #  expires_at  :datetime
+#  role        :string           default("member"), not null
 #  source      :string           default("manual"), not null
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
@@ -45,6 +50,7 @@ class Group::Membership < ApplicationRecord
   has_paper_trail
 
   enum :source, { manual: "manual", system: "system" }, default: "manual", validate: true
+  enum :role, { member: "member", manager: "manager" }, default: "member", validate: true, prefix: :role
 
   belongs_to :group
   belongs_to :user
@@ -58,6 +64,7 @@ class Group::Membership < ApplicationRecord
 
   validates :user_id, uniqueness: { scope: :group_id, message: "is already in this group" }
   validate :expires_in_the_future, if: -> { expires_at.present? && will_save_change_to_expires_at? }
+  validate :manager_is_manual, if: :role_manager?
 
   def expired? = expires_at.present? && expires_at <= Time.current
 
@@ -67,6 +74,10 @@ class Group::Membership < ApplicationRecord
 
   def expires_in_the_future
     errors.add(:expires_at, "must be in the future") if expires_at <= Time.current
+  end
+
+  def manager_is_manual
+    errors.add(:role, "can be manager only in a manual group") unless manual? && group&.manual?
   end
 
 end

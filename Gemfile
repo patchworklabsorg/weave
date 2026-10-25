@@ -34,6 +34,7 @@ gem "bcrypt", "~> 3.1.7" # Secure password hashing
 gem "webauthn", "~> 3.4" # Passkey sign-in and break-glass hardware keys (KeyCustody)
 gem "doorkeeper"                         # OAuth 2.0 provider
 gem "doorkeeper-openid_connect"          # OIDC id_tokens on top of Doorkeeper
+gem "pundit", "~> 2.5"                   # Authorization policies (fail-closed, see ApplicationPolicy)
 gem "rack-attack"                        # Rate limiting
 gem "validates_email_format_of"          # Email validation
 gem "disposable_mail"                    # Block disposable email domains

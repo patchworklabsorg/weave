@@ -143,6 +143,13 @@ class User < ApplicationRecord
                                      foreign_key: :added_by_id, dependent: :nullify, inverse_of: :added_by
   has_many :created_groups, class_name: "Group",
                             foreign_key: :created_by_id, dependent: :nullify, inverse_of: :created_by
+  # Manual groups this user manages (see GroupPolicy).
+  has_many :managed_group_memberships, -> { active.role_manager.manual }, class_name: "Group::Membership", inverse_of: :user, dependent: nil
+  has_many :managed_groups, through: :managed_group_memberships, source: :group
+
+  # Requests for access to restricted apps (see AccessRequest). The database
+  # empties decided_by_id when the person who decided is deleted.
+  has_many :access_requests, dependent: :destroy
 
   # Parent or guardian consent requests for a member under 18 (see
   # GuardianConsent). They stay after the account is deleted: the database

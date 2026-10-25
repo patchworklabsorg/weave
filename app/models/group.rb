@@ -60,6 +60,10 @@ class Group < ApplicationRecord
   has_many :memberships, class_name: "Group::Membership", dependent: :destroy
   has_many :active_memberships, -> { active }, class_name: "Group::Membership", inverse_of: :group, dependent: nil
   has_many :users, through: :active_memberships
+  # Managers approve access requests for the group (see GroupPolicy).
+  has_many :manager_memberships, -> { active.role_manager }, class_name: "Group::Membership", inverse_of: :group, dependent: nil
+  has_many :managers, through: :manager_memberships, source: :user
+  has_many :access_requests, dependent: nil
   has_many :application_access_grants, as: :grantee, dependent: :destroy
   has_many :application_role_assignments, as: :assignee, dependent: :destroy
 
@@ -75,12 +79,16 @@ class Group < ApplicationRecord
 
   # Turning a waiver off can end app access for the members.
   after_update_commit :revoke_lost_app_access, if: :waiver_removed?
+  # A deleted group decides no more access requests.
+  after_destroy_commit :cancel_access_requests
 
   def to_param = slug
 
   # Hand edits (rename, delete, member changes) are allowed on manual groups
   # only. System groups follow user attributes.
   def editable? = manual?
+
+  def managed_by?(user) = user.present? && manual? && manager_memberships.exists?(user_id: user.id)
 
   private
 
@@ -121,6 +129,10 @@ class Group < ApplicationRecord
       before, after = saved_changes[attribute]
       before == true && after == false
     end
+  end
+
+  def cancel_access_requests
+    access_requests.pending.find_each { |request| request.update!(status: "cancelled", decided_at: Time.current) }
   end
 
   def revoke_lost_app_access

@@ -1,0 +1,14 @@
+<%# Asks for access to one app (see AccessRequests). %>
+<%= form_with model: access_request, url: access_requests_path, local: true, class: "space-y-4" do |form| %>
+  <%= form_errors(access_request) %>
+  <%= form.hidden_field :application, value: application.to_param %>
+
+  <div class="field-group">
+    <%= form.label :reason, "Why do you need access?", class: "field-label" %>
+    <%= form.text_area :reason, rows: 4, required: true, maxlength: AccessRequest::REASON_MAX_LENGTH, class: "field",
+        placeholder: "Tell the group managers what you will use #{application.name} for." %>
+    <p class="field-hint">The managers of <%= application.access_request_group&.name || "the group" %> read this and decide.</p>
+  </div>
+
+  <%= form.submit "Request access", class: "btn btn-primary btn-block" %>
+<% end %>

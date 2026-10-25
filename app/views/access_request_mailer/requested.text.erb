@@ -1,0 +1,15 @@
+An access request is waiting
+
+Hi <%= @approver.first_name %>,
+
+<%= @requester.full_name %> (<%= @requester.email %>) asks for access to
+<%= @application.name %>. If you approve, Weave adds them to the
+<%= @request.group.name %> group.
+
+Their reason:
+
+<%= @request.reason %>
+
+Review the request: <%= @group_url %>
+
+<%= @why %>

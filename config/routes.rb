@@ -84,6 +84,14 @@
 #                             deletion_request GET    /profile/delete(.:format)                                                                         deletion_requests#show
 #                                              DELETE /profile/delete(.:format)                                                                         deletion_requests#destroy
 #                                              POST   /profile/delete(.:format)                                                                         deletion_requests#create
+#                       approve_access_request PATCH  /access_requests/:id/approve(.:format)                                                            access_requests#approve
+#                          deny_access_request PATCH  /access_requests/:id/deny(.:format)                                                               access_requests#deny
+#                              access_requests POST   /access_requests(.:format)                                                                        access_requests#create
+#                           new_access_request GET    /access_requests/new(.:format)                                                                    access_requests#new
+#                                group_members POST   /groups/:group_id/members(.:format)                                                               group_members#create
+#                                 group_member DELETE /groups/:group_id/members/:id(.:format)                                                           group_members#destroy
+#                                       groups GET    /groups(.:format)                                                                                 groups#index
+#                                        group GET    /groups/:id(.:format)                                                                             groups#show
 #                           email_confirmation GET    /email_confirmation(.:format)                                                                     email_confirmations#show
 #                                confirm_email GET    /confirm_email/:token(.:format)                                                                   email_confirmations#confirm
 #                    resend_email_confirmation POST   /email_confirmation/resend(.:format)                                                              email_confirmations#resend
@@ -187,6 +195,7 @@
 #                     admin_break_glass_report GET    /admin/break_glass_report(.:format)                                                               admin/break_glass_reports#show
 #                review_admin_guardian_consent PATCH  /admin/guardian_consents/:id/review(.:format)                                                     admin/guardian_consents#review
 #                      admin_guardian_consents GET    /admin/guardian_consents(.:format)                                                                admin/guardian_consents#index
+#                  role_admin_group_membership PATCH  /admin/groups/:group_id/memberships/:id/role(.:format)                                            admin/group_memberships#role
 #                      admin_group_memberships POST   /admin/groups/:group_id/memberships(.:format)                                                     admin/group_memberships#create
 #                       admin_group_membership DELETE /admin/groups/:group_id/memberships/:id(.:format)                                                 admin/group_memberships#destroy
 #                                 admin_groups GET    /admin/groups(.:format)                                                                           admin/groups#index
@@ -245,6 +254,7 @@
 #     guardian_consent_admin_oauth_application PATCH  /admin/oauth_applications/:id/guardian_consent(.:format)                                          admin/oauth_applications#guardian_consent
 #        email_domains_admin_oauth_application PATCH  /admin/oauth_applications/:id/email_domains(.:format)                                             admin/oauth_applications#email_domains
 #         verification_admin_oauth_application PATCH  /admin/oauth_applications/:id/verification(.:format)                                              admin/oauth_applications#verification
+# access_request_group_admin_oauth_application PATCH  /admin/oauth_applications/:id/access_request_group(.:format)                                      admin/oauth_applications#access_request_group
 #        admin_oauth_application_access_grants POST   /admin/oauth_applications/:oauth_application_id/access_grants(.:format)                           admin/oauth_application_access_grants#create
 #         admin_oauth_application_access_grant DELETE /admin/oauth_applications/:oauth_application_id/access_grants/:id(.:format)                       admin/oauth_application_access_grants#destroy
 #     admin_oauth_application_role_assignments POST   /admin/oauth_applications/:oauth_application_id/roles/:role_id/assignments(.:format)              admin/oauth_application_role_assignments#create
@@ -558,6 +568,21 @@ Rails.application.routes.draw do
   get "profile/export/:id/download", to: "takeouts#download", as: :download_takeout
   resource :deletion_request, path: "profile/delete", only: [:show, :create, :destroy]
 
+  # Self-service access to restricted apps (see AccessRequests). A member asks;
+  # a manager of the app's access request group decides.
+  resources :access_requests, only: [:new, :create] do
+    member do
+      patch :approve
+      patch :deny
+    end
+  end
+
+  # Groups a member manages (see GroupPolicy). Superadmins also use the admin
+  # panel.
+  resources :groups, only: [:index, :show] do
+    resources :members, controller: "group_members", only: [:create, :destroy]
+  end
+
   # Email confirmation routes
   get "/email_confirmation", to: "email_confirmations#show", as: :email_confirmation
   get "/confirm_email/:token", to: "email_confirmations#confirm", as: :confirm_email
@@ -767,7 +792,9 @@ Rails.application.routes.draw do
       end
 
       resources :groups do
-        resources :memberships, controller: "group_memberships", only: [:create, :destroy]
+        resources :memberships, controller: "group_memberships", only: [:create, :destroy] do
+          patch :role, on: :member
+        end
       end
 
       # Demographics aggregates for funder reports. Counts only, never a
@@ -820,6 +847,7 @@ Rails.application.routes.draw do
           patch :guardian_consent
           patch :email_domains
           patch :verification
+          patch :access_request_group
         end
 
         resources :access_grants, controller: "oauth_application_access_grants", only: [:create, :destroy]

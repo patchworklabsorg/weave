@@ -40,6 +40,14 @@
       </dl>
       <% if @group.system? %>
         <p class="mt-3 text-sm text-ink-soft">Weave keeps this group in sync from user attributes. You can't change it by hand.</p>
+      <% elsif current_user.superadmin? %>
+        <p class="mt-3 text-sm text-ink-soft">
+          Managers approve access requests and manage members on the
+          <%= link_to "group page", group_path(@group), class: "link" %>.
+          <% if (pending = @group.access_requests.pending.count).positive? %>
+            <%= pluralize(pending, "request") %> waiting.
+          <% end %>
+        </p>
       <% end %>
     </div>
   </div>
@@ -93,6 +101,7 @@
                 <tr>
                   <td>
                     <%= link_to membership.user.full_name, admin_user_path(membership.user), class: "link-quiet font-medium" %>
+                    <%= badge("Manager", tone: :grape) if membership.role_manager? %>
                     <span class="table-sub"><%= membership.user.email %></span>
                   </td>
                   <td class="text-ink-soft">
@@ -110,9 +119,21 @@
                   </td>
                   <td class="actions">
                     <% if can_change && membership.manual? %>
+                      <div class="btn-row justify-end">
+                      <% if membership.role_manager? %>
+                        <%= button_to "Make member", role_admin_group_membership_path(@group, membership), method: :patch,
+                            params: { role: "member" }, class: "btn btn-secondary btn-sm", form_class: "inline-block",
+                            data: { turbo_confirm: "#{membership.user.full_name} will no longer decide access requests for #{@group.name}. Continue?" } %>
+                      <% else %>
+                        <%= button_to "Make manager", role_admin_group_membership_path(@group, membership), method: :patch,
+                            params: { role: "manager" }, class: "btn btn-secondary btn-sm", form_class: "inline-block",
+                            data: { turbo_confirm: "#{membership.user.full_name} will approve access requests and manage the members of #{@group.name}. Continue?" } %>
+                      <% end %>
                       <%= button_to "Remove", admin_group_membership_path(@group, membership), method: :delete,
                           class: "btn btn-danger btn-sm",
+                          form_class: "inline-block",
                           data: { turbo_confirm: "Remove #{membership.user.full_name} from #{@group.name}?" } %>
+                      </div>
                     <% end %>
                   </td>
                 </tr>

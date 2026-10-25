@@ -1,0 +1,17 @@
+<% if @request.approved? -%>
+You have access to <%= @application.name %>
+<% else -%>
+Your access request was not approved
+<% end -%>
+
+Hi <%= @user.first_name %>,
+
+<% if @request.approved? -%>
+Your request for access to <%= @application.name %> was approved. Sign in to
+the app with your Patchwork Labs account.
+<% else -%>
+Your request for access to <%= @application.name %> was not approved. If you
+think this is a mistake, reply to this email.
+<% end -%>
+
+Go to your apps: <%= @profile_url %>

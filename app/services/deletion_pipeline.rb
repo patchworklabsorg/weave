@@ -37,6 +37,7 @@ module DeletionPipeline
     "User::Session"             => { "user_id" => :id },
     "User::Passkey"             => { "user_id" => :id },
     "GuardianConsent"           => { "user_id" => :id },
+    "AccessRequest"             => { "user_id" => :id },
     "ApplicationAccessGrant"    => { "grantee_type" => "User", "grantee_id" => :id },
     "ApplicationRoleAssignment" => { "assignee_type" => "User", "assignee_id" => :id }
   }.freeze
@@ -211,6 +212,7 @@ module DeletionPipeline
         "User::Passkey"             => user.passkeys.ids,
         "ApplicationAccessGrant"    => user.application_access_grants.ids,
         "ApplicationRoleAssignment" => user.application_role_assignments.ids,
+        "AccessRequest"             => user.access_requests.ids,
         "GuardianConsent"           => GuardianConsent.where(user_id: user.id).ids
       }
     end

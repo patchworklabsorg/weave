@@ -82,6 +82,10 @@ module Oauth
       ahoy.track "OAuth access denied", application_uid: application.uid, user_id: current_resource_owner.id
       @application = application
       @decision = decision
+      # A member may ask the app's group managers for access from this page
+      # (see AccessRequests).
+      @pending_request = AccessRequests.pending_for(current_resource_owner, application)
+      @access_request = AccessRequest.new(user: current_resource_owner, application:) if AccessRequests.requestable?(current_resource_owner, application)
       render "doorkeeper/authorizations/access_denied", status: :forbidden
     end
 

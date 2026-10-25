@@ -52,6 +52,8 @@
     </div>
   </header>
 
+  <%= render "launcher", launcher: @launcher, managed_groups: @managed_groups %>
+
   <%# Identity verification gates program resources only, never the community. %>
   <section class="card mb-6">
     <div class="card-header">
