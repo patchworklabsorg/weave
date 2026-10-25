@@ -705,6 +705,16 @@ class User < ApplicationRecord
 
   def minor? = birthday.present? && birthday.after?(ADULT_AGE.years.ago.to_date)
 
+  # The age group an app with the age scope gets instead of the birthday:
+  # under_13, 13_17 or 18_plus, or nil without a birthday. Derived each time,
+  # never stored, so it changes on the day the member turns 13 or 18.
+  def age_band
+    return if birthday.blank?
+    return "under_13" if under_minimum_age?
+
+    minor? ? "13_17" : "18_plus"
+  end
+
   def guardian_consent_granted? = guardian_consents.granted.exists?
 
   def guardian_consent_missing? = minor? && !guardian_consent_granted?

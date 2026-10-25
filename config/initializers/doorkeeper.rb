@@ -298,7 +298,7 @@ Doorkeeper.configure do
   # - `introspect`: introspect the `client_credentials` tokens of other apps
   #   (see `allow_token_introspection` below). Only a superadmin may allow it
   #   on an app (see Admin::OauthApplicationsController).
-  user_scopes = %i[profile openid email phone admin slack groups roles verification residency]
+  user_scopes = %i[profile openid email phone admin slack groups roles verification residency age]
   app_scopes = %i[directory fulfillment quilt introspect]
 
   default_scopes :profile
