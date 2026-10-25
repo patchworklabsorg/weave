@@ -9,6 +9,7 @@
 #  delivered_to :string
 #  expires_at   :datetime         not null
 #  requested_ip :string
+#  return_to    :string
 #  token_digest :string           not null
 #  used_at      :datetime
 #  created_at   :datetime         not null
@@ -60,14 +61,20 @@ class User
         OpenSSL::Digest::SHA256.hexdigest(token)
       end
 
-      def issue!(user, requested_ip: nil)
+      # return_to is the authorize request the link was asked for in. The
+      # session that asked keeps it too, but people often open the email in
+      # another browser (a phone, a different default browser), and that
+      # session has nothing to resume. Only a local /oauth/authorize path is
+      # kept, so the column can't become an open redirect.
+      def issue!(user, requested_ip: nil, return_to: nil)
         raw = SecureRandom.urlsafe_base64(TOKEN_BYTES)
 
         link = create!(
           user: user,
           token_digest: digest_for(raw),
           expires_at: EXPIRATION.from_now,
-          requested_ip: requested_ip
+          requested_ip: requested_ip,
+          return_to: authorize_path(return_to)
         )
         link.token = raw
         link
@@ -81,6 +88,11 @@ class User
         find_by(token_digest: digest_for(token))
       end
 
+      def authorize_path(value)
+        value = value.to_s
+        value if value.start_with?("/oauth/authorize")
+      end
+
     end
 
     def used? = used_at.present?
@@ -88,6 +100,16 @@ class User
     def expired? = expires_at <= Time.current
 
     def live? = !used? && !expired?
+
+    # The OAuth app whose authorize request the link resumes, if any.
+    def pending_application
+      return nil if return_to.blank?
+
+      client_id = Rack::Utils.parse_query(URI.parse(return_to).query)["client_id"]
+      Doorkeeper::Application.find_by(uid: client_id) if client_id.is_a?(String)
+    rescue URI::InvalidURIError
+      nil
+    end
 
     # Atomic claim: the UPDATE only matches while the row is still live, so two
     # concurrent requests for the same link can't both win. That matters because
