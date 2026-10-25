@@ -40,6 +40,25 @@ RSpec.describe "US residency check", type: :request do
       expect(member.residency_checks).to be_empty
     end
 
+    it "refuses a residency document with no type on the identity form" do
+      expect do
+        post verification_path, params: { document_type: "passport", id_document: document, data_notice_read: "1",
+                                          residency_evidence_type: "", residency_document: document }
+      end.not_to change(Verification, :count)
+
+      expect(response.body).to include(CGI.escapeHTML(I18n.t("residency.errors.evidence_type_or_remove")))
+    end
+
+    it "refuses a residency type with no document on the identity form" do
+      expect do
+        post verification_path, params: { document_type: "passport", id_document: document, data_notice_read: "1",
+                                          residency_evidence_type: "school_enrollment" }
+      end.not_to change(Verification, :count)
+
+      expect(response.body).to include(I18n.t("residency.errors.document_missing"))
+      expect(member.residency_checks).to be_empty
+    end
+
     it "uploads a document after identity verification" do
       create(:verification, :verified, user: member)
 
