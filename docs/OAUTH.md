@@ -75,6 +75,7 @@ The OAuth provider supports the following scopes:
 - `slack`: Patchwork Labs Slack membership (`slack_member`, `slack_id`)
 - `groups`: the user's groups that are linked to this app (`groups`)
 - `roles`: the user's roles in this app (`roles`)
+- `age`: the user's age group, not the birthday (`age_band`, see "Age band claim")
 - `directory`: the directory API, for `client_credentials` tokens only (see "Directory API")
 - `quilt`: the Quilt patch API, for `client_credentials` tokens only (see "Resource servers")
 - `introspect`: introspect the `client_credentials` tokens of other apps (see "Resource servers")
@@ -112,6 +113,33 @@ stateDiagram-v2
     pending --> member: accept Code of Conduct (promoted)
     member --> pending: made a guest or deactivated in Slack
     [*] --> member: imported from Slack as a full member
+```
+
+### Age band claim
+
+Each patch sets its own age rules. For example, a patch can have a minimum age
+of 13 and give priority to high school students. Request the `age` scope to
+check these rules. Weave sends the age group, never the birthday.
+
+| `age_band` | Meaning |
+|------------|---------|
+| `under_13` | The user is younger than 13. |
+| `13_17` | The user is 13 to 17. |
+| `18_plus` | The user is 18 or older. |
+
+Rules:
+
+- The claim is in the ID token and the userinfo response. The directory API sends it as a field only when the app's scopes list `age`.
+- Weave calculates the value from the birthday on each request and does not store it. The value changes on the day the user turns 13 or 18. Do not keep an old value for a long time.
+- Weave omits the claim when it does not know the birthday. Weave asks for a missing birthday at the next sign-in.
+- Weave never sends `birthday`, `slack_birthday` or `acknowledged_over_13_at` to an app.
+- Guardian consent for users under 18 is a different check. Weave does it for all apps (see `docs/GUARDIAN_CONSENT.md`).
+
+```mermaid
+flowchart LR
+  B[(users.birthday)] --> W[Weave]
+  W -- "age_band: 13_17" --> P[Patch app]
+  P -. "never gets" .-> B
 ```
 
 ## Using the OAuth Provider
@@ -318,7 +346,8 @@ Each user has the same fields as the claims:
   "minor": false,
   "guardian_verified": false,
   "verification_status": "verified",
-  "demographics_answered": true
+  "demographics_answered": true,
+  "age_band": "18_plus"
 }
 ```
 
@@ -330,6 +359,7 @@ Rules:
 - `active` is `false` when the user can no longer sign in.
 - `minor` is `true` when the user is under 18, from their birthday. It is `false` when Weave does not know the birthday yet. Weave asks for a missing birthday at the next sign-in. Only the directory sends this field. It is not a claim.
 - `guardian_verified` is `true` for a minor whose guardian a Weave admin verified with a signed form and a call or video check. The email consent alone does not set it. Ask for it before your app gives a minor money or other risk. It is `false` for adults.
+- `age_band` is in the response only when the app's scopes list `age` and Weave knows the birthday (see "Age band claim").
 - `demographics_answered` is `true` when the user saved answers to the demographics form. Weave never sends the answers. Ask for it before a user's first grant application. To send the user to the form, link to `/profile/demographics?return_to=<url>`. After a save, Weave sends the user back to `return_to` when its origin matches a redirect URI of a registered app. Weave ignores any other `return_to`.
 - `?group=` works only for a group linked to the app. `?role=` works only for a role of the app. Other values give `404`.
 - Pass exactly one of `role` and `group`, or the API answers `400`.

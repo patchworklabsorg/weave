@@ -70,6 +70,31 @@ RSpec.describe "Directory API", type: :request do
       expect(body.to_json).not_to include("NY")
     end
 
+    it "leaves out the age band when the app is not allowed the age scope" do
+      body = directory_get(api_v1_directory_user_path(reviewer.p_id))
+
+      expect(body).not_to include("age_band", "birthday", "slack_birthday", "acknowledged_over_13_at")
+    end
+
+    it "returns the age band, never the birthday, when the app is allowed the age scope" do
+      application.update!(scopes: "openid profile groups roles directory age")
+      reviewer.update!(birthday: 15.years.ago.to_date, slack_birthday: 15.years.ago.to_date)
+      create(:guardian_consent, :granted, user: reviewer)
+
+      body = directory_get(api_v1_directory_user_path(reviewer.p_id))
+
+      expect(body).to include("age_band" => "13_17")
+      expect(body).not_to include("birthday", "slack_birthday", "acknowledged_over_13_at")
+      expect(body.to_json).not_to include(reviewer.birthday.iso8601)
+    end
+
+    it "leaves out the age band when the birthday is not known" do
+      application.update!(scopes: "openid profile groups roles directory age")
+      reviewer.update!(birthday: nil)
+
+      expect(directory_get(api_v1_directory_user_path(reviewer.p_id))).not_to have_key("age_band")
+    end
+
     it "says when a Weave admin verified the guardian" do
       reviewer.update!(birthday: 15.years.ago.to_date)
       create(:guardian_consent, :granted, user: reviewer, verified_at: 1.day.ago)

@@ -240,6 +240,35 @@ RSpec.describe User, type: :model do
     end
   end
 
+  describe "#age_band" do
+    let(:today) { Date.new(2026, 10, 25) }
+
+    around { |example| travel_to(today) { example.run } }
+
+    def band(birthday) = described_class.new(birthday:).age_band
+
+    it "is nil without a birthday" do
+      expect(band(nil)).to be_nil
+    end
+
+    it "is under_13 until the 13th birthday" do
+      expect(band(today - 13.years + 1.day)).to eq("under_13")
+    end
+
+    it "is 13_17 from the 13th birthday" do
+      expect(band(today - 13.years)).to eq("13_17")
+    end
+
+    it "is 13_17 on the day before the 18th birthday" do
+      expect(band(today - 18.years + 1.day)).to eq("13_17")
+    end
+
+    it "is 18_plus from the 18th birthday" do
+      expect(band(today - 18.years)).to eq("18_plus")
+      expect(band(today - 40.years)).to eq("18_plus")
+    end
+  end
+
   describe "#username" do
     it "returns first three letters of first name plus last name" do
       user = build(:user, first_name: "John", last_name: "Doe")

@@ -224,5 +224,12 @@ Doorkeeper::OpenidConnect.configure do
     normal_claim :us_residency_checked_on, scope: :residency, response: [:id_token, :user_info] do |user|
       user.us_residency_checked_on&.iso8601
     end
+
+    # The age group from the birthday: under_13, 13_17 or 18_plus (see
+    # User#age_band). Omitted when Weave has no birthday. Patches check their
+    # own age rules with it. The birthday itself is never sent.
+    normal_claim :age_band, scope: :age, response: [:id_token, :user_info] do |user|
+      user.age_band
+    end
   end
 end
