@@ -72,7 +72,7 @@
     <div class="card-header">
       <div>
         <h2 class="card-title">Current members</h2>
-        <p class="card-lede"><%= @report.generated_at ? "From the reporting run of #{@report.generated_at.strftime('%b %-d, %Y %H:%M')}." : "No reporting run yet." %></p>
+        <p class="card-lede"><% if @report.generated_at %>From the reporting run of <%= time_label(@report.generated_at, :datetime) %>.<% else %>No reporting run yet.<% end %></p>
       </div>
     </div>
     <div class="card-body space-y-4">

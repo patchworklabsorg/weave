@@ -7,10 +7,12 @@
   </head>
 
   <body class="h-full quilt-bg text-ink font-sans">
+    <a href="#main" class="skip-link">Skip to content</a>
     <%= render "shared/staging_badge" %>
     <div id="flash"><%= render "shared/flash" %></div>
 
-    <main class="h-full relative">
+    <main id="main" class="focus-main relative" tabindex="-1">
+
       <%= yield %>
     </main>
 

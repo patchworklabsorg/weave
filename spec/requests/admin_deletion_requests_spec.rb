@@ -31,7 +31,7 @@ RSpec.describe "Admin deletion requests", type: :request do
 
     get admin_deletion_requests_path
 
-    expect(response.body).to include(deletion_request.public_id, deletion_request.review_due_at.to_date.to_fs(:long))
+    expect(response.body).to include(deletion_request.public_id, deletion_request.review_due_at.to_date.strftime(TimeHelper::FORMATS[:date]))
   end
 
   it "approves a request and runs the pipeline in a job" do

@@ -10,7 +10,7 @@
     <h1 class="page-title"><span class="mono"><%= @check.public_id %></span>: <%= @check.status.humanize %></h1>
     <p class="page-lede">
       <%= @user ? "#{@user.full_name} (#{@user.p_id})" : "A deleted account" %>.
-      Evidence the member chose: <%= @check.evidence_label.downcase %>. Uploaded <%= @check.created_at.to_fs(:long) %>.
+      Evidence the member chose: <%= @check.evidence_label.downcase %>. Uploaded <%= time_label(@check.created_at, :datetime) %>.
     </p>
   </div>
   <% if !own && @check.submitted? && @check.document_review? %>
@@ -91,12 +91,12 @@
           <% elsif @check.us_resident %>
             <%= dl_row "Lives in the US", "yes, #{@check.us_state_name}" %>
             <%= dl_row "Evidence", @check.evidence_label.downcase %>
-            <%= dl_row "Good until", "#{@check.expires_at.to_date.to_fs(:long)}#{". Ended: #{@check.end_reason.humanize.downcase}, #{@check.ended_at.to_fs(:long)}" if @check.ended_at}" %>
+            <%= dl_row "Good until" do %><%= time_label(@check.expires_at) %><% if @check.ended_at %>. Ended: <%= @check.end_reason.humanize.downcase %>, <%= time_label(@check.ended_at, :datetime) %><% end %><% end %>
           <% else %>
             <%= dl_row "Lives in the US", "no" %>
           <% end %>
-          <%= dl_row "Decided by", "#{@check.decided_by&.full_name || "the member's own statement"}, #{(@check.decided_at || @check.pre_reviewed_at)&.to_fs(:long)}" %>
-          <%= dl_row "Document", @check.document_purged_at ? "deleted #{@check.document_purged_at.to_fs(:long)}" : (@check.document_sealed? ? "sealed" : "none") %>
+          <%= dl_row "Decided by" do %><%= @check.decided_by&.full_name || "the member's own statement" %>, <%= time_label(@check.decided_at || @check.pre_reviewed_at, :datetime) %><% end %>
+          <%= dl_row "Document" do %><% if @check.document_purged_at %>deleted <%= time_label(@check.document_purged_at, :datetime) %><% else %><%= @check.document_sealed? ? "sealed" : "none" %><% end %><% end %>
         </dl>
       </div>
     </section>

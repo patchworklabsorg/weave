@@ -7,13 +7,15 @@
   </head>
 
   <body class="bg-quilt text-ink font-sans">
+    <a href="#main" class="skip-link">Skip to content</a>
     <%= render "shared/staging_badge" %>
 
     <div class="admin-shell" data-controller="drawer" data-action="keydown@window->drawer#keydown">
       <%= render "shared/sidebar" %>
       <div class="sidebar-scrim" data-drawer-target="scrim" data-action="click->drawer#close" aria-hidden="true"></div>
 
-      <div class="admin-main">
+      <%# data-drawer-target="content" goes inert while the drawer is open. %>
+      <div class="admin-main" data-drawer-target="content">
         <%= render "shared/impersonation_banner" %>
 
         <header class="admin-topbar">
@@ -38,7 +40,8 @@
           </div>
         </header>
 
-        <main class="page page-wide">
+        <main id="main" class="page page-wide" tabindex="-1">
+
           <%= yield %>
         </main>
         <%= render "shared/data_footer" %>

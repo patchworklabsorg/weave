@@ -146,7 +146,7 @@ RSpec.feature "OAuth authorize resumes after sign-in", type: :feature do
     request_magic_link(user.email)
     open_magic_link(magic_link_path_from_last_email)
 
-    expect(page).to have_text("Logged in successfully")
+    expect(page).to have_text("Signed in.")
     expect(page).to have_no_current_path(/\A\/oauth\/authorize/)
   end
 end

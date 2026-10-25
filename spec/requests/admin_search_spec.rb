@@ -27,7 +27,8 @@ RSpec.describe "Admin search", type: :request do
       expect(response.media_type).to eq("application/json")
 
       user_hit = results.find { |r| r["type"] == "user" && r["label"] == "Ada Lovelace" }
-      expect(user_hit).to include("hint" => "ada@example.com", "path" => admin_user_path(member))
+      expect(user_hit).to include("hint" => "ada@example.com · #{member.p_id}", "path" => admin_user_path(member))
+
 
       app_hit = results.find { |r| r["type"] == "application" }
       expect(app_hit).to include("label" => "Adagio", "hint" => application.uid, "path" => admin_oauth_application_path(application))

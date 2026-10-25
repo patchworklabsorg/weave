@@ -25,7 +25,7 @@
                 <p class="record-meta">
                   Guardian: <%= consent.guardian_name %> (<%= consent.guardian_email %>), signed as <%= consent.signed_name %>
                 </p>
-                <p class="record-meta">Consented <%= consent.granted_at.strftime("%b %-d, %Y %H:%M") %></p>
+                <p class="record-meta">Consented <%= time_label(consent.granted_at, :datetime) %></p>
                 <ul class="space-y-1.5" aria-label="Signs">
                   <% consent.flags.each do |flag| %>
                     <li class="callout callout-warning py-2 text-sm">
@@ -80,7 +80,7 @@
                   <td><%= link_to consent.user.full_name, admin_user_path(consent.user), class: "link-quiet font-medium" %></td>
                   <td><%= consent.reviewed_by&.full_name || "A deleted user" %></td>
                   <td class="text-ink-soft"><%= consent.review_note %></td>
-                  <td class="whitespace-nowrap text-ink-soft"><%= time_ago_in_words(consent.reviewed_at) %> ago</td>
+                  <td class="whitespace-nowrap text-ink-soft"><%= time_label(consent.reviewed_at, :relative) %></td>
                 </tr>
               <% end %>
             </tbody>

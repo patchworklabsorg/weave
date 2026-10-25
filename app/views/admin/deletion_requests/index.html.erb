@@ -18,9 +18,9 @@
 
 <%
   sections = [
-    ["Waiting for review", @pending, ->(r) { "Review due #{r.review_due_at.to_date.to_fs(:long)}#{' (overdue)' if r.review_overdue?}" }],
-    ["Approved, running or failed", @active, ->(r) { "#{r.status.humanize}, complete by #{r.complete_by.to_date.to_fs(:long)}" }],
-    ["Recently closed", @recent, ->(r) { "#{r.status.humanize}, #{time_ago_in_words(r.updated_at)} ago" }]
+    ["Waiting for review", @pending, ->(r) { safe_join(["Review due ", time_label(r.review_due_at), (" (overdue)" if r.review_overdue?)]) }],
+    ["Approved, running or failed", @active, ->(r) { safe_join([r.status.humanize, ", complete by ", time_label(r.complete_by)]) }],
+    ["Recently closed", @recent, ->(r) { safe_join([r.status.humanize, ", ", time_label(r.updated_at, :relative)]) }]
   ]
 %>
 

@@ -53,7 +53,7 @@
                   <% end %>
                 </td>
                 <td><%= request.user&.full_name %></td>
-                <td class="text-ink-faint"><%= request.created_at.strftime("%b %-d, %Y %H:%M") %></td>
+                <td class="text-ink-faint"><%= time_label(request.created_at, :datetime) %></td>
               </tr>
             <% end %>
           </tbody>

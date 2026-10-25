@@ -18,8 +18,7 @@ application.register("command-bar", CommandBarController)
 import ConfirmSubmitController from "./confirm_submit_controller"
 application.register("confirm-submit", ConfirmSubmitController)
 
-import CountdownController from "./countdown_controller"
-application.register("countdown", CountdownController)
+
 
 import DrawerController from "./drawer_controller"
 application.register("drawer", DrawerController)

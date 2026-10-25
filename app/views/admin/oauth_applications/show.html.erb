@@ -25,7 +25,7 @@
   </div>
   <% if current_user.superadmin? %>
     <div class="page-actions">
-      <%= link_to edit_admin_oauth_application_path(@application), class: "btn btn-secondary" do %><%= icon(:pencil) %>Edit<% end %>
+      <%= link_to edit_admin_oauth_application_path(@application), class: "btn btn-primary" do %><%= icon(:pencil) %>Edit<% end %>
     </div>
   <% end %>
 </header>
@@ -38,7 +38,7 @@
     <div class="card-body">
       <dl class="dl">
         <%= dl_row "Name", @application.name %>
-        <%= dl_row("Application Type") do %>
+        <%= dl_row("Application type") do %>
           <%= badge(@application.confidential? ? "Confidential" : "Public", tone: @application.confidential? ? :info : :neutral) %>
         <% end %>
         <%= dl_row("Scopes") do %>
@@ -53,8 +53,8 @@
           <% end %>
         <% end %>
         <%= dl_row("Created") do %>
-          <%= @application.created_at.strftime("%B %d, %Y at %I:%M %p") %>
-          (<%= time_ago_in_words(@application.created_at) %> ago)
+          <%= time_label(@application.created_at, :datetime) %>
+          (<%= time_label(@application.created_at, :relative) %>)
         <% end %>
       </dl>
     </div>
@@ -130,7 +130,7 @@
               data: { turbo_confirm: "Let everyone who can sign in use #{@application.name}?" } %>
         <% else %>
           <%= button_to "Restrict access", access_policy_admin_oauth_application_path(@application),
-              method: :patch, params: { access_policy: "restricted" }, class: "btn btn-primary",
+              method: :patch, params: { access_policy: "restricted" }, class: "btn btn-secondary",
               data: { turbo_confirm: "Only users and groups with a grant will be able to use #{@application.name}. Continue?" } %>
         <% end %>
       <% end %>
@@ -403,10 +403,15 @@
     </div>
   </div>
 
-  <div class="card lg:col-span-2">
-    <div class="card-header">
-      <h2 class="card-title">Integration Instructions</h2>
-    </div>
+  <%# Reference material for the app's developer: folded by default. %>
+  <details class="card lg:col-span-2">
+    <summary class="card-header">
+      <div>
+        <h2 class="card-title">Integration instructions</h2>
+        <p class="card-lede">The three requests an app makes to sign a member in.</p>
+      </div>
+      <%= icon(:chevron_down, class: "text-ink-faint") %>
+    </summary>
     <div class="card-body space-y-5">
       <div>
         <h3 class="section-title">1. Authorization URL</h3>
@@ -414,7 +419,7 @@
       </div>
 
       <div>
-        <h3 class="section-title">2. Token Exchange</h3>
+        <h3 class="section-title">2. Token exchange</h3>
         <pre class="code-block">POST /oauth/token
 Content-Type: application/x-www-form-urlencoded
 
@@ -422,10 +427,11 @@ grant_type=authorization_code&client_id=<%= @application.uid %>&client_secret=YO
       </div>
 
       <div>
-        <h3 class="section-title">3. User Info</h3>
+        <h3 class="section-title">3. User info</h3>
+
         <pre class="code-block">GET /oauth/userinfo
 Authorization: Bearer ACCESS_TOKEN</pre>
       </div>
     </div>
-  </div>
+  </details>
 </div>

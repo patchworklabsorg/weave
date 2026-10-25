@@ -23,7 +23,7 @@ RSpec.describe "Admin groups", type: :request do
       get admin_group_path(group)
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(member.email)
-      expect(response.body).not_to include("Add Member")
+      expect(response.body).not_to include("Add member")
     end
 
     it "can't create, edit or delete a group" do
