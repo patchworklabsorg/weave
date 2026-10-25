@@ -245,6 +245,16 @@ RSpec.describe "Identity verification pages", type: :request do
                                 "identifiers[legal_name]", "identifiers[date_of_birth]")
     end
 
+    it "gives each attestation select one placeholder, Choose, and no empty option" do
+      get identity_verification_path(verification)
+
+      page = Nokogiri::HTML(response.body)
+      %w[age_consistent region_consistent us_resident].each do |name|
+        options = page.css("select[name='#{name}'] option").map { |option| [option["value"], option.text] }
+        expect(options).to eq([["", "Choose"], ["yes", "Yes"], ["no", "No"]])
+      end
+    end
+
     it "records a pass and stores no identifier" do
       patch decide_identity_verification_path(verification), params: params
 

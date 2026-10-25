@@ -176,7 +176,7 @@
                 <% { age_consistent: "The self-reported age does not contradict the ID", region_consistent: "The self-reported region does not contradict the ID" }.each do |field, label| %>
                   <div class="field-group">
                     <%= form.label field, label, class: "field-label font-normal" %>
-                    <%= form.select field, [["Choose", ""], ["Yes", "yes"], ["No", "no"]], { selected: values[field] }, required: true, class: "field" %>
+                    <%= form.select field, [["Yes", "yes"], ["No", "no"]], { prompt: "Choose", selected: values[field] }, required: true, class: "field" %>
                   </div>
                 <% end %>
               </div>
@@ -216,7 +216,7 @@
               <div class="form-grid form-grid-3">
                 <div class="field-group">
                   <%= form.label :us_resident, "Lives in the US", class: "field-label font-normal" %>
-                  <%= form.select :us_resident, [["Choose", ""], ["Yes", "yes"], ["No", "no"]], { selected: values[:us_resident] }, class: "field" %>
+                  <%= form.select :us_resident, [["Yes", "yes"], ["No", "no"]], { prompt: "Choose", selected: values[:us_resident] }, class: "field" %>
                 </div>
                 <div class="field-group">
                   <%= form.label :us_state, "US state (for yes)", class: "field-label font-normal" %>
