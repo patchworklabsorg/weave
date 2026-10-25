@@ -89,6 +89,19 @@ RSpec.describe "Return to the requested page after sign-in", type: :request do
     expect(session[ReturnAfterSignIn::SESSION_KEY]).to be_nil
   end
 
+  it "does not let a Turbo prefetch replace the stored page" do
+    get profile_sessions_path
+    get password_path, headers: { "X-Sec-Purpose" => "prefetch" }
+
+    expect(session[ReturnAfterSignIn::SESSION_KEY]).to eq(profile_sessions_path)
+  end
+
+  it "does not store a form post" do
+    post email_addresses_path
+
+    expect(session[ReturnAfterSignIn::SESSION_KEY]).to be_nil
+  end
+
   it "accepts a local path" do
     expect(take_return_path("/profile/sessions?tab=active")).to eq("/profile/sessions?tab=active")
   end

@@ -27,9 +27,11 @@ module ReturnAfterSignIn
   private
 
   # Only a full-page GET: a form post can't be replayed, and a Turbo Frame or
-  # JSON request is not a page the person can land on.
+  # JSON request is not a page the person can land on. A Turbo hover prefetch
+  # is not a visit either, and would replace the page the person asked for.
   def store_return_path
     return unless request.get? && request.format.html? && !turbo_frame_request?
+    return if request.headers["X-Sec-Purpose"].to_s.include?("prefetch")
 
     path = safe_return_path(request.fullpath)
     session[SESSION_KEY] = path if path
