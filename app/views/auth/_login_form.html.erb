@@ -21,7 +21,7 @@
         </div>
 
         <%# Shown by the login-form controller when the account uses a password. %>
-        <div class="field-group" data-login-form-target="passwordContainer" style="display: none;">
+        <div class="field-group" data-login-form-target="passwordContainer" hidden>
           <%= f.label :password, "Password", class: "field-label" %>
           <%= f.password_field :password,
                 class: "field",
@@ -29,7 +29,8 @@
                 data: { login_form_target: "password" } %>
         </div>
 
-        <div class="text-center text-sm text-ink-soft" data-login-form-target="loadingIndicator" style="display: none;">
+        <div class="text-center text-sm text-ink-soft" data-login-form-target="loadingIndicator" hidden>
+
           <span class="inline-flex items-center gap-2">
             <%= icon(:loader, class: "spinner text-grape") %>
             Checking account...

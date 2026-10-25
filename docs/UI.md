@@ -37,7 +37,10 @@ Weave is the reference implementation of the Patchwork design system. The guide 
 
 ## Rules the audit enforces
 
-- Show every date through `time_label`. No `strftime`, `to_fs` or `time_ago_in_words` in a view outside the mailers.
+`spec/ui/view_conventions_spec.rb` checks the rules below that a file scan can hold (dates, the identifier name, tokens, inline styles, emoji and em dashes, confirms on Turbo-off forms, titles, skip links, table wrappers, light-dark tokens). Run it before you commit a view, and add a check when you add a rule.
+
+- Show every date through `time_label`. No `strftime`, `to_fs`, `l` or `time_ago_in_words` in a view outside the mailers. Inside a `t()` interpolation, where a tag would be escaped, use `TimeHelper::FORMATS`.
+
 - The public identifier is the "Weave ID" everywhere. Not "PWL ID", not "P_ID".
 - A form with `data: { turbo: false }` never sees `data-turbo-confirm`. Confirm through the `confirm-submit` controller on the form (`admin/users/index` has the pattern).
 - Every layout starts with the `.skip-link` and gives `<main>` the id `main`. Keep both when you add a layout.

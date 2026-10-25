@@ -96,7 +96,7 @@ export default class extends Controller {
   }
 
   showPasswordField() {
-    this.passwordContainerTarget.style.display = "block"
+    this.passwordContainerTarget.hidden = false
     this.passwordTarget.required = true
     
     // A short fade, unless the person asked for reduced motion.
@@ -113,17 +113,17 @@ export default class extends Controller {
   }
 
   hidePasswordField() {
-    this.passwordContainerTarget.style.display = "none"
+    this.passwordContainerTarget.hidden = true
     this.passwordTarget.required = false
     this.passwordTarget.value = ""
   }
 
   showLoadingIndicator() {
-    this.loadingIndicatorTarget.style.display = "block"
+    this.loadingIndicatorTarget.hidden = false
   }
 
   hideLoadingIndicator() {
-    this.loadingIndicatorTarget.style.display = "none"
+    this.loadingIndicatorTarget.hidden = true
   }
 
   // Handle form submission
