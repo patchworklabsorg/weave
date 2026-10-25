@@ -257,7 +257,7 @@ module IdentityGovernance
       with_whodunnit(by) do
         User.transaction do
           lock_key_holders!
-          subject.lock!
+          lock_user_row!(subject)
           subject.reload_roles!
           was_key_holder = subject.identity_key_holder
           roles = { key_holder: subject.identity_key_holder, lead: subject.identity_lead }
@@ -311,7 +311,7 @@ module IdentityGovernance
       with_whodunnit(by) do
         User.transaction do
           plan.each do |user, verifier|
-            user.lock!
+            lock_user_row!(user)
             RoleGrants.grant!(user, "verifier", by:, reason: "Bootstrap of the identity team.") unless user.identity_team
             IdentityGovernanceEvent.record!(:bootstrap_member_added, actor: by, subject: user, verified_by_id: verifier.id,
                                                                      verified_by_p_id: verifier.p_id, circle: users.map(&:p_id))
@@ -415,6 +415,11 @@ module IdentityGovernance
 
     def lead?(user) = user.identity_team && user.identity_lead
 
+    # A row lock on the user for the rest of the transaction. Not User#lock!:
+    # that locks the account (it can't sign in, and its sessions and OAuth
+    # tokens go).
+    def lock_user_row!(user) = User.where(id: user.id).lock.pick(:id)
+
     def lock_key_holders!
       ActiveRecord::Base.connection.execute("SELECT pg_advisory_xact_lock(#{KEY_HOLDER_LOCK})")
     end
@@ -500,7 +505,7 @@ module IdentityGovernance
     # Applies an approved proposal. Returns errors, or {} on success.
     def apply!(proposal, by)
       subject = proposal.subject
-      subject.lock!
+      lock_user_row!(subject)
       subject.reload_roles!
       role_key, action = kind_role(proposal.kind)
       begin

@@ -288,7 +288,7 @@ RSpec.describe IdentityGovernance do
     end
 
 
-    it "needs every board member at proposal time, and applies only after the last approval" do
+    it "needs every board member at proposal time, and applies only after the last approval" do # rubocop:disable RSpec/MultipleExpectations
       proposal = propose("add_key_holder", member)
       expect(proposal.required_approver_ids).to contain_exactly(owner.id, board_member.id, other_board_member.id)
 
@@ -299,6 +299,7 @@ RSpec.describe IdentityGovernance do
 
       expect(described_class.approve(proposal, by: owner)).to be_success
       expect(member.reload.identity_key_holder).to be(true)
+      expect(member.can_authenticate?).to be(true)
       expect(proposal.reload.approvals.count).to eq(3)
     end
 
@@ -444,6 +445,7 @@ RSpec.describe IdentityGovernance do
       described_class.remove_member(member, by: owner, reason: "Left.")
 
       expect(member.reload.groups.pluck(:slug)).not_to include("identity-team")
+      expect(member.can_authenticate?).to be(true)
     end
   end
 
@@ -461,6 +463,8 @@ RSpec.describe IdentityGovernance do
       expect(circle.map { |user| user.reload.identity_team }).to all(be(true))
       expect(result.record.map { |user, verifier| [user, verifier] }).to eq([[jasper, adam], [kieran, jasper], [adam, kieran]])
       expect(IdentityGovernanceEvent.where(kind: "bootstrap_member_added").count).to eq(3)
+      # A row lock, not User#lock!, which locks the account.
+      expect(circle.map { |user| user.reload.can_authenticate? }).to all(be(true))
     end
 
     it "lets them verify each other in the circle, each by a different person, and then closes" do
