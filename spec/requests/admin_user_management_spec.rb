@@ -320,7 +320,7 @@ RSpec.describe "Admin user management permissions", type: :request do
       get new_admin_user_path
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("New User")
+      expect(response.body).to include("New user")
     end
 
     it "creates a user who signs in by magic link, with no password needed" do
@@ -339,7 +339,7 @@ RSpec.describe "Admin user management permissions", type: :request do
       post admin_users_path, params: { user: new_user_params.merge(first_name: "") }
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include("New User")
+      expect(response.body).to include("New user")
     end
 
     it "does not let a plain admin create an admin" do

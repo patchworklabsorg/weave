@@ -8,7 +8,8 @@
     <% end %>
   </p>
 
-  <%= page_header "Edit User", lede: "Update user information and settings" %>
+  <%= page_header "Edit user", lede:
+ "Update user information and settings" %>
 
   <%= form_with(model: [:admin, @user], local: true, class: "space-y-6") do |form| %>
     <%= form_errors(@user) %>
@@ -82,7 +83,7 @@
 
     <section class="card">
       <div class="card-header">
-        <h2 class="card-title">Staff &amp; Organization</h2>
+        <h2 class="card-title">Staff and organization</h2>
       </div>
       <div class="card-body space-y-4">
         <p class="field-hint">Board member, staff and contractor are roles. Change them in the Roles section of the user page. Each role has its own grant rule.</p>

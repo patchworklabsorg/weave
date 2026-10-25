@@ -6,10 +6,10 @@
     elsif @latest.reverification_required? then t("verification.page.reverification_required", reason: t("verification.reverification_reasons.#{@latest.reverification_reason}"))
     elsif @latest.ineligible? then t("verification.page.ineligible")
     elsif @latest.escalation_open? then t("verification.page.escalated")
-    elsif @latest.failed? && @blocker == :cooldown then t("verification.page.failed", retry_date: @latest.retry_available_at.to_date.to_fs(:long))
+    elsif @latest.failed? && @blocker == :cooldown then t("verification.page.failed", retry_date: @latest.retry_available_at.to_date.strftime(TimeHelper::FORMATS[:date]))
     elsif @latest.failed? then t("verification.page.failed_can_retry")
     elsif @latest.needs_resubmission? then t("verification.page.needs_resubmission", note: @latest.resubmission_note)
-    elsif @latest.call_scheduled? then t("verification.page.call_scheduled", call_time: @latest.call_scheduled_for.utc.strftime("%B %-d, %Y at %H:%M UTC"))
+    elsif @latest.call_scheduled? then t("verification.page.call_scheduled", call_time: @latest.call_scheduled_for.utc.strftime(TimeHelper::FORMATS[:datetime]))
     else t("verification.page.#{@latest.status}")
     end
   accept = "image/jpeg,image/png,image/heic,image/heif,.heic,.heif,application/pdf"
@@ -62,7 +62,7 @@
           <summary class="text-sm text-ink-soft cursor-pointer"><%= t("verification.page.history") %></summary>
           <ul class="mt-2 space-y-1 text-sm text-ink-faint">
             <% @attempts.each do |attempt| %>
-              <li><%= attempt.created_at.to_date.to_fs(:long) %>: <%= attempt.status.humanize %></li>
+              <li><%= time_label(attempt.created_at) %>: <%= attempt.status.humanize %></li>
             <% end %>
           </ul>
         </details>

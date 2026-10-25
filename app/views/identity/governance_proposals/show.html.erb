@@ -7,9 +7,9 @@
     <h1 class="page-title"><%= @proposal.description.upcase_first %></h1>
     <p class="page-lede">
       <span class="mono"><%= @proposal.public_id %></span>.
-      Proposed by <%= @proposal.proposed_by&.full_name || "a deleted user" %> on <%= @proposal.created_at.utc.strftime("%Y-%m-%d") %>.
+      Proposed by <%= @proposal.proposed_by&.full_name || "a deleted user" %> on <%= time_label(@proposal.created_at) %>.
       Status: <%= status %>.
-      <% if @proposal.pending? %>Expires <%= @proposal.expires_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>.<% end %>
+      <% if @proposal.pending? %>Expires <%= time_label(@proposal.expires_at, :datetime) %>.<% end %>
     </p>
   </div>
   <% if IdentityGovernance.can_withdraw?(@proposal, current_user) %>
@@ -82,7 +82,7 @@
         <% else %>
           <% @proposal.approvals.includes(:approver).each do |approval| %>
             <li class="record">
-              <span class="record-title"><%= approval.approver&.full_name || "A deleted user" %> approved on <%= approval.created_at.utc.strftime("%Y-%m-%d") %>.</span>
+              <span class="record-title"><%= approval.approver&.full_name || "A deleted user" %> approved on <%= time_label(approval.created_at) %>.</span>
             </li>
           <% end %>
         <% end %>
@@ -122,7 +122,7 @@
             <div class="record-main">
               <p class="record-title"><%= event.summary %></p>
               <p class="record-meta">
-                <%= event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>
+                <%= time_label(event.created_at, :datetime) %>
                 <% if event.data["reason"].present? %><span class="text-ink-soft">Reason: <%= event.data["reason"] %></span><% end %>
               </p>
             </div>

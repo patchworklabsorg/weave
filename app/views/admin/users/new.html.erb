@@ -1,8 +1,9 @@
 <% permissions = admin_permissions_for(@user) %>
-<% content_for :title, "New User" %>
+<% content_for :title, "New user" %>
 
 <div class="page-narrow mx-auto">
-  <%= page_header "New User", lede: "The user signs in with a magic link sent to this email address." %>
+  <%= page_header "New user", lede:
+ "The user signs in with a magic link sent to this email address." %>
 
   <%= form_with(model: [:admin, @user], local: true, class: "space-y-6") do |form| %>
     <%= form_errors(@user) %>
@@ -58,7 +59,7 @@
 
     <section class="card">
       <div class="card-header">
-        <h2 class="card-title">Staff &amp; Organization</h2>
+        <h2 class="card-title">Staff and organization</h2>
       </div>
       <div class="card-body space-y-4">
         <p class="field-hint">Board member, staff and contractor are roles. Give them in the Roles section of the user page after you create the account. Each role has its own grant rule.</p>

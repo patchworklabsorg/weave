@@ -55,7 +55,7 @@
       <dl class="dl">
         <%= dl_row "Method", @verification.verification_method.humanize %>
         <%= dl_row "Document", @verification.document_type&.humanize || "none" %>
-        <%= dl_row "Image", @verification.document_stored? ? "stored, encrypted" : (@verification.document_purged_at ? "purged #{@verification.document_purged_at.to_date.to_fs(:long)}" : "none") %>
+        <%= dl_row "Image" do %><% if @verification.document_stored? %>stored, encrypted<% elsif @verification.document_purged_at %>purged <%= time_label(@verification.document_purged_at) %><% else %>none<% end %><% end %>
         <% if @verification.knot && current_user.identity_team && current_user.admin? %>
           <%= dl_row("Knot") do %>
             <span class="flex flex-wrap items-center gap-2">
@@ -140,7 +140,7 @@
         <div>
           <h2 class="card-title">Record the call outcome</h2>
           <p class="card-lede">
-            Call on <%= @verification.call_scheduled_for.utc.strftime("%b %-d, %Y %H:%M UTC") %>. You are the verifier.
+            Call on <%= time_label(@verification.call_scheduled_for, :datetime) %>. You are the verifier.
             Do not record the call. Write what you checked.
           </p>
         </div>
@@ -284,7 +284,7 @@
       </div>
       <div class="card-body space-y-4">
         <dl class="dl">
-          <%= dl_row "Outcome", "#{@verification.status.humanize}, #{@verification.decided_at.to_fs(:long)}" %>
+          <%= dl_row "Outcome" do %><%= @verification.status.humanize %>, <%= time_label(@verification.decided_at, :datetime) %><% end %>
           <%= dl_row "Verifier", "#{@verification.verifier&.full_name || 'a deleted user'}#{", second verifier: #{@verification.second_verifier&.full_name || 'a deleted user'}" if @verification.second_verifier_id}" %>
           <%= dl_row "Guardian attended", @verification.guardian_attended ? "yes" : "no" %>
           <%= dl_row "Age consistent", @verification.age_consistent ? "yes" : "no" %>
@@ -298,7 +298,7 @@
           <div class="callout callout-warning">
             <%= icon(:triangle_alert, size: 18) %>
             <div class="callout-body">
-              <p>This pass no longer stands: <%= @verification.reverification_reason.humanize %>, <%= @verification.reverification_required_at.to_fs(:long) %>. The member needs a new call.</p>
+              <p>This pass no longer stands: <%= @verification.reverification_reason.humanize %>, <%= time_label(@verification.reverification_required_at, :datetime) %>. The member needs a new call.</p>
             </div>
           </div>
         <% end %>
@@ -353,7 +353,7 @@
             <div class="record-main">
               <p class="record-title">
                 <%= link_to_unless attempt == @verification, attempt.public_id, identity_verification_path(attempt), class: "link mono" do %><span class="mono"><%= attempt.public_id %></span><% end %>:
-                <%= attempt.status.humanize %>, <%= attempt.created_at.to_date.to_fs(:long) %>
+                <%= attempt.status.humanize %>, <%= time_label(attempt.created_at) %>
               </p>
               <% if attempt.decided? %>
                 <p class="record-meta">(verifier: <%= attempt.verifier&.full_name || "a deleted user" %>)</p>
@@ -383,7 +383,7 @@
         <tbody>
           <% @events.each do |event| %>
             <tr>
-              <td class="whitespace-nowrap text-xs text-ink-soft"><%= event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %></td>
+              <td class="whitespace-nowrap text-xs text-ink-soft"><%= time_label(event.created_at, :datetime) %></td>
               <td><%= event.kind.humanize %></td>
               <td><%= event.actor&.full_name || (event.actor_id ? "A deleted user" : "Weave") %></td>
               <td class="mono text-ink-soft break-all"><%= event.data.to_json %></td>

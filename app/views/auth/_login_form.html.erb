@@ -36,10 +36,12 @@
           </span>
         </div>
 
-        <%= f.submit "Continue",
+        <%# Enabled in the markup so the form still submits without scripts;
+            the login-form controller disables it only while it checks the email. %>
+        <%= f.submit "Send magic link",
               data: { login_form_target: "submitButton" },
-              class: "btn btn-primary btn-block",
-              disabled: true %>
+              class: "btn btn-primary btn-block" %>
+
 
         <p class="text-center text-sm text-ink-soft">
           Don't have an account? <%= link_to "Sign up", signup_path, class: "link" %>

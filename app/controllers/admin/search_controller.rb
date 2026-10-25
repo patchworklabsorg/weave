@@ -24,7 +24,8 @@ class Admin::SearchController < Admin::BaseController
         .order(:first_name, :last_name).limit(LIMIT * 3)
         .select { |user| UserAdminPermissions.new(current_user, user).view? }
         .first(LIMIT).map do |user|
-      { type: "user", label: user.full_name, hint: user.email, path: admin_user_path(user) }
+      { type: "user", label: user.full_name, hint: "#{user.email} · #{user.p_id}", path: admin_user_path(user) }
+
     end
   end
 

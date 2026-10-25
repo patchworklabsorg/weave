@@ -102,7 +102,7 @@ class AuthController < ApplicationController
     # Send magic link to existing user
     if user.send_magic_link(requested_ip: request.remote_ip, return_to: session[:oauth_return_to])
       respond_to do |format|
-        format.html { redirect_to login_path, notice: "Magic link sent! Check your email to continue." }
+        format.html { redirect_to login_path, notice: "Check your email for the sign-in link." }
         format.json { render json: { message: "Magic link sent to your email" }, status: :ok }
       end
     else
@@ -132,7 +132,7 @@ class AuthController < ApplicationController
 
     if user.send_magic_link(requested_ip: request.remote_ip, return_to: session[:oauth_return_to])
       respond_to do |format|
-        format.html { redirect_to login_path, notice: "Magic link sent! Check your email to continue." }
+        format.html { redirect_to login_path, notice: "Check your email for the sign-in link." }
         format.json { render json: { message: "Magic link sent to your email" }, status: :ok }
       end
     else
@@ -245,7 +245,7 @@ class AuthController < ApplicationController
       if original_admin.nil?
         reset_session
         respond_to do |format|
-          format.html { redirect_to login_path, notice: "Logged out successfully" }
+          format.html { redirect_to login_path, notice: "Signed out." }
           format.json { render json: { message: "Logged out successfully" } }
         end
         return
@@ -263,7 +263,7 @@ class AuthController < ApplicationController
       # signed in until the row expired.
       sign_out
       respond_to do |format|
-        format.html { redirect_to login_path, notice: "Logged out successfully" }
+        format.html { redirect_to login_path, notice: "Signed out." }
         format.json { render json: { message: "Logged out successfully" } }
       end
     end
@@ -393,7 +393,7 @@ class AuthController < ApplicationController
     destination = post_login_destination
 
     respond_to do |format|
-      format.html { redirect_to destination, notice: "Logged in successfully" }
+      format.html { redirect_to destination, notice: "Signed in." }
       format.json { render json: { user: UserSerializer.render(user) }, status: :ok }
     end
   end

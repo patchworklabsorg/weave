@@ -5,8 +5,8 @@
   message =
     if status == "pending" then t("residency.page.pending")
     elsif latest&.needs_resubmission? && latest.document_review? then t("residency.page.needs_resubmission", note: latest.resubmission_note)
-    elsif check&.us_resident && blocker.nil? then t("residency.page.us_resident_renew", state: check.us_state_name, date: check.expires_at.to_date.to_fs(:long))
-    elsif check&.us_resident then t("residency.page.us_resident", state: check.us_state_name, date: check.expires_at.to_date.to_fs(:long))
+    elsif check&.us_resident && blocker.nil? then t("residency.page.us_resident_renew", state: check.us_state_name, date: check.expires_at.to_date.strftime(TimeHelper::FORMATS[:date]))
+    elsif check&.us_resident then t("residency.page.us_resident", state: check.us_state_name, date: check.expires_at.to_date.strftime(TimeHelper::FORMATS[:date]))
     elsif check then t("residency.page.not_us_resident")
     elsif latest&.end_reason == "address_changed" then t("residency.page.ended_address")
     elsif blocker == :not_open then t("residency.blockers.not_open")
