@@ -119,10 +119,11 @@
           <fieldset class="field-group">
             <legend class="field-label"><%= t("residency.page.submission_title") %></legend>
             <p class="field-hint"><%= t("residency.page.submission_hint") %></p>
+            <%= form.label :residency_evidence_type, t("residency.page.evidence_type"), class: "field-label" %>
             <%= form.select :residency_evidence_type,
                   ResidencyCheck::UPLOAD_EVIDENCE.map { |type| [t("residency.page.evidence.#{type}"), type] },
-                  { include_blank: t("residency.page.evidence_type"), selected: params[:residency_evidence_type] },
-                  aria: { label: t("residency.page.evidence_type") }, class: "field" %>
+                  { include_blank: t("residency.page.evidence_none"), selected: params[:residency_evidence_type] },
+                  class: "field" %>
             <%= form.file_field :residency_document, accept: accept,
                   aria: { label: t("residency.page.document") }, class: "field" %>
             <% %i[residency_evidence_type residency_document].each do |key| %>

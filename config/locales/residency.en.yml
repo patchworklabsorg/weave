@@ -20,6 +20,7 @@ en:
       needs_resubmission: "Your document has a problem: %{note}"
       identity_first: "You get a residency result with your identity verification. Verify your identity first."
       evidence_type: "What does the document show?"
+      evidence_none: "No document"
       document: "Photo or scan of the document"
       document_hint: "JPEG, PNG, HEIC or PDF, up to %{megabytes} MB. We encrypt it and delete it %{days} days after the check, like an ID image."
       submit: "Upload for the residency check"
@@ -39,6 +40,7 @@ en:
       standing: "Your residency result is still good. You can renew it in the last %{days} days."
     errors:
       evidence_type: "Choose what the document shows."
+      evidence_type_or_remove: "Choose what the residency document shows, or remove the residency document."
       document_missing: "Upload a photo or a scan of the document."
     submitted: "We got your document. Our identity team will check it."
     declared: "We recorded that you do not live in the US."
