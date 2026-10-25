@@ -27,6 +27,7 @@ en:
       verification: 'See if you passed identity verification (not your ID details)'
       residency: 'See if you live in the US, and when Weave checked it (not your address)'
       directory: 'Look up users of this app (app tokens only)'
+      fulfillment: 'Read the shipping address of a user of this app (app tokens only)'
       quilt: 'Call the Quilt patch API (app tokens only)'
       introspect: 'Check the app tokens of other apps (app tokens only)'
 

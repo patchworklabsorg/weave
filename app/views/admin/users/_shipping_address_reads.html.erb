@@ -1,0 +1,41 @@
+<%# Admin only: which patch apps read this user's shipping address (Api::V1::Directory::ShippingAddressesController). %>
+<section class="card card-flush" id="shipping-address-reads">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Shipping address reads</h2>
+      <p class="card-lede">Apps that read this user's shipping address to print a label. The latest 50.</p>
+    </div>
+  </div>
+  <% if reads.any? %>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>App</th>
+            <th>Read</th>
+            <th>IP</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% reads.each do |read| %>
+            <tr>
+              <td>
+                <% if read.viewer %>
+                  <%= link_to read.viewer.name, admin_oauth_application_path(read.viewer), class: "link" %>
+                <% else %>
+                  <span class="text-ink-faint">Deleted app</span>
+                <% end %>
+              </td>
+              <td class="whitespace-nowrap text-ink-soft" title="<%= read.created_at.iso8601 %>">
+                <%= time_ago_in_words(read.created_at) %> ago
+              </td>
+              <td class="whitespace-nowrap mono text-ink-soft"><%= read.ip || "Unknown" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <%= empty_state "No app has read this user's shipping address.", icon: :package %>
+  <% end %>
+</section>

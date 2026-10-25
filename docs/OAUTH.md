@@ -76,12 +76,13 @@ The OAuth provider supports the following scopes:
 - `groups`: the user's groups that are linked to this app (`groups`)
 - `roles`: the user's roles in this app (`roles`)
 - `directory`: the directory API, for `client_credentials` tokens only (see "Directory API")
+- `fulfillment`: read a user's shipping address, for `client_credentials` tokens only (see "Shipping address API")
 - `quilt`: the Quilt patch API, for `client_credentials` tokens only (see "Resource servers")
 - `introspect`: introspect the `client_credentials` tokens of other apps (see "Resource servers")
 
-`directory`, `quilt` and `introspect` are app scopes. A user can't grant them:
-the authorization endpoint answers `invalid_scope` for each one. Any admin can
-allow `directory` and `quilt` on an app. Only a superadmin can add or remove
+`directory`, `fulfillment`, `quilt` and `introspect` are app scopes. A user
+can't grant them: the authorization endpoint answers `invalid_scope` for each
+one. Any admin can allow `directory`, `fulfillment` and `quilt` on an app. Only a superadmin can add or remove
 `introspect`.
 
 The `profile` scope also includes `pronouns`, a non-standard claim (a free-text
@@ -334,6 +335,67 @@ Rules:
 - `?group=` works only for a group linked to the app. `?role=` works only for a role of the app. Other values give `404`.
 - Pass exactly one of `role` and `group`, or the API answers `400`.
 - A token with a user, a token without the `directory` scope, or a token of an app whose scopes do not list `directory` gives `403`.
+
+### Shipping address API
+
+A patch app that ships hardware or other things to members reads the shipping
+address from Weave when it ships. Weave keeps the only copy.
+
+**Do not store the address.** Read it, print the label, and discard it. Read
+it again for the next shipment. Do not write it to your database, your logs,
+a cache, or a spreadsheet. A carrier or a fulfillment service can keep it only
+as long as the shipment needs it. When a member changes or deletes the address
+in Weave, the next read gets the change.
+
+To turn it on for an app, add `fulfillment` to the app's scopes in
+`/admin/oauth_applications`. Then request a token:
+
+```bash
+curl -u "$CLIENT_ID:$CLIENT_SECRET" -d grant_type=client_credentials -d scope=fulfillment \
+  https://weave.patchworklabs.org/oauth/token
+```
+
+```mermaid
+sequenceDiagram
+  participant P as Patch app
+  participant W as Weave
+  P->>W: POST /oauth/token (client_credentials, scope=fulfillment)
+  W-->>P: access_token
+  P->>W: GET /api/v1/directory/users/:sub/shipping_address
+  W->>W: AppAccess.permitted? and write audit row
+  W-->>P: address (Cache-Control: no-store)
+  P->>P: print the label, do not save the address
+```
+
+`GET /api/v1/directory/users/:sub/shipping_address` gives the fields that a
+label needs:
+
+```json
+{
+  "sub": "PWL1A2B3C4D5E",
+  "name": "Ada Lovelace",
+  "phone": "+15555550123",
+  "id": "addr_...",
+  "line1": "1 Main St",
+  "line2": "Apt 2",
+  "line3": null,
+  "city": "Boston",
+  "state": "MA",
+  "postal_code": "02115",
+  "country": "US"
+}
+```
+
+Rules:
+
+- `name` is the contact name on the address. When the address has no contact name, it is the user's first and last name. It is `null` when Weave has neither.
+- `phone` is the contact phone number in E.164 format, or `null`. Carriers ask for it on most international labels.
+- `country` is the ISO 3166-1 alpha-2 code.
+- An unknown `sub`, a user that the app may not serve, and a user with no complete shipping address all give `404`.
+- A token with a user, a token without the `fulfillment` scope, or a token of an app whose scopes do not list `fulfillment` gives `403`. The `directory` scope is not enough.
+- Each read that gives an address writes an audit row with the app, the `sub`, the IP and the time. Admins see the reads on the user's page in `/admin/users`.
+- The response has `Cache-Control: no-store`.
+- The endpoint allows 30 requests per minute for each IP, and 30 for each token.
 
 ### Resource servers
 
