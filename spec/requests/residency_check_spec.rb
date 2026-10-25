@@ -21,6 +21,25 @@ RSpec.describe "US residency check", type: :request do
       expect(response.body).not_to match(/name="[^"]*citizen/i)
     end
 
+    it "can choose no residency document on the identity form" do
+      get verification_path
+
+      select = Nokogiri::HTML(response.body).at_css("select[name='residency_evidence_type']")
+      expect(select.css("option").map(&:text)).to eq(
+        [I18n.t("residency.page.evidence_none")] +
+          ResidencyCheck::UPLOAD_EVIDENCE.map { |type| I18n.t("residency.page.evidence.#{type}") }
+      )
+      expect(select.at_css("option").attr("value")).to eq("")
+    end
+
+    it "submits the identity form without a residency document" do
+      post verification_path, params: { document_type: "passport", id_document: document, data_notice_read: "1",
+                                        residency_evidence_type: "" }
+
+      expect(member.latest_verification).to be_present
+      expect(member.residency_checks).to be_empty
+    end
+
     it "uploads a document after identity verification" do
       create(:verification, :verified, user: member)
 
