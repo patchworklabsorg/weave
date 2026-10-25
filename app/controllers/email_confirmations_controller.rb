@@ -9,7 +9,7 @@ class EmailConfirmationsController < ApplicationController
   def show
     # Show the confirmation required page
     @user = current_user
-    redirect_to root_path if @user&.email_verified?
+    redirect_to(take_return_path || root_path) if @user&.email_verified?
   end
 
   def confirm
@@ -27,9 +27,9 @@ class EmailConfirmationsController < ApplicationController
       # acceptance); if they're already in the workspace this just syncs their ID.
       InviteToSlackJob.perform_later(@user.id)
       NotifyOpsOnNewUserJob.perform_later(@user)
-      flash[:notice] = "Your email has been successfully confirmed! You can now log in."
+      flash[:notice] = "Your email has been successfully confirmed!#{" You can now log in." unless current_user == @user}"
     end
-    redirect_to login_path
+    redirect_after_confirm
   end
 
   def resend
@@ -73,6 +73,21 @@ class EmailConfirmationsController < ApplicationController
           render turbo_stream: turbo_stream.replace("resend_section", partial: "resend_section", locals: { user: @user })
         end
       end
+    end
+  end
+
+  private
+
+  # Still signed in as the person who confirmed (the usual case: they opened
+  # the email link in the same browser): send them on to the page they were
+  # trying to reach when authenticate_user! stopped them (see
+  # ReturnAfterSignIn). Anyone else signs in first, and the stored page
+  # survives that sign-in.
+  def redirect_after_confirm
+    if @user && current_user == @user
+      redirect_to(take_return_path || root_path)
+    else
+      redirect_to login_path
     end
   end
 

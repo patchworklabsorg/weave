@@ -3,7 +3,7 @@
 # The change-password page, /password. Google Workspace links here as the SSO
 # profile's "Change password URL", so a person who arrives from Google without
 # a Weave session signs in first and then comes back here (see
-# AuthController#post_login_destination).
+# ReturnAfterSignIn).
 #
 # For a user with an Active Directory account the new password goes to AD and
 # nowhere else (see DirectoryPasswords):
@@ -19,7 +19,6 @@ class PasswordsController < ApplicationController
 
   RESET_WINDOW = 15.minutes
 
-  prepend_before_action :remember_return_to_password, only: :show
   before_action :load_mode
 
   def show
@@ -43,12 +42,6 @@ class PasswordsController < ApplicationController
   end
 
   private
-
-  # Only when nobody is signed in: authenticate_user! then sends the person
-  # to the sign-in page, which brings them back here afterwards.
-  def remember_return_to_password
-    session[:return_to_password] = true if current_user.nil?
-  end
 
   def load_mode
     @mode = password_mode

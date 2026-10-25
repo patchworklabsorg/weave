@@ -402,14 +402,15 @@ class AuthController < ApplicationController
   # only a local /oauth/authorize path is honoured — anything else is discarded
   # rather than turned into an open redirect.
   #
-  # The change-password page (the Google "Change password URL") asks for a
-  # sign-in first and sets a flag, not a path, so it can't become an open
-  # redirect either.
+  # Otherwise, return to the protected page that asked for the sign-in (see
+  # ReturnAfterSignIn). Both keys are taken out, so neither one outlives this
+  # sign-in.
   def post_login_destination
-    return_to = session.delete(:oauth_return_to).to_s
-    return return_to if return_to.start_with?("/oauth/authorize")
+    oauth_return_to = session.delete(:oauth_return_to).to_s
+    return_to = take_return_path
+    return oauth_return_to if oauth_return_to.start_with?("/oauth/authorize")
 
-    session.delete(:return_to_password) ? password_path : root_path
+    return_to || root_path
   end
 
 
