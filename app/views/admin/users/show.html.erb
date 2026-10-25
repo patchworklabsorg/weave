@@ -17,7 +17,7 @@
     <div class="min-w-0">
       <h1 class="page-title"><%= @user.full_name %></h1>
       <div class="page-lede flex flex-wrap items-center gap-2">
-        <span>PWL ID: <span class="mono"><%= @user.p_id %></span></span>
+        <span>Weave ID: <span class="mono"><%= @user.p_id %></span></span>
         <%= badge @user.role.titleize, tone: role_tone %>
         <%= badge @user.status.titleize, tone: (@user.status == "active" ? :success : :neutral) %>
         <%= badge (@user.email_verified? ? "Verified" : "Unverified"), tone: (@user.email_verified? ? :success : :warning) %>
@@ -26,16 +26,20 @@
   </div>
   <div class="page-actions">
     <% if admin_permissions_for(@user).manage? %>
-      <%= link_to edit_admin_user_path(@user), class: "btn btn-secondary" do %>
-        <%= icon(:pencil) %>Edit User
+      <%= link_to edit_admin_user_path(@user), class: "btn btn-primary" do %>
+        <%= icon(:pencil) %>Edit user
       <% end %>
     <% end %>
     <% if @user.is_impersonatable?(current_user) && !impersonating? %>
-      <%= button_to "Impersonate", impersonate_admin_user_path(@user), method: :post,
-            class: "btn btn-primary",
-            form: { data: { turbo: false } },
-            local: true,
-            data: { turbo_confirm: "Are you sure you want to impersonate #{@user.full_name}?" } %>
+      <%# Turbo is off on this form (the sign-in swap must be a real
+          navigation), so the confirm goes through confirm-submit. %>
+      <%= button_to impersonate_admin_user_path(@user), method: :post,
+            class: "btn btn-secondary",
+            form: { data: { turbo: false, controller: "confirm-submit", action: "submit->confirm-submit#submit",
+                            confirm_submit_message_value: "Sign in as #{@user.full_name}? Everything you do is recorded under your name." } },
+            local: true do %>
+        <%= icon(:eye) %>Impersonate
+      <% end %>
     <% end %>
   </div>
 </header>
@@ -72,24 +76,25 @@
             <%= dl_row "Pronouns", @user.pronouns %>
           <% end %>
           <% if @user.birthday.present? %>
-            <%= dl_row "Birthday", @user.birthday.strftime("%B %d, %Y") %>
+            <%= dl_row "Birthday" do %><%= time_label(@user.birthday) %><% end %>
           <% end %>
           <% if @user.referral_source.present? || @user.referral_source_detail.present? %>
             <%= dl_row "Heard about Patchwork from", [User::REFERRAL_SOURCES[@user.referral_source], @user.referral_source_detail].compact_blank.join(": ") %>
           <% end %>
-          <%= dl_row("P_ID") do %>
+          <%= dl_row("Weave ID") do %>
             <span class="flex flex-wrap items-center justify-between gap-2">
               <span class="mono"><%= @user.p_id %></span>
               <% if current_user.owner? %>
                 <%= button_to "Regenerate", regen_pid_admin_user_path(@user), method: :patch,
                       class: "btn btn-danger btn-sm",
-                      data: { turbo_confirm: "Are you sure you want to regenerate the P_ID for #{@user.full_name}? This cannot be undone." } %>
+                      data: { turbo_confirm: "Give #{@user.full_name} a new Weave ID? The old ID stops working everywhere. This cannot be undone." } %>
+
               <% end %>
             </span>
           <% end %>
-          <%= dl_row "Created", @user.created_at.strftime("%B %d, %Y at %I:%M %p") %>
-          <%= dl_row "Last sign-in", (@user.last_login_at ? @user.last_login_at.strftime("%B %d, %Y at %I:%M %p") : "Never") %>
-          <%= dl_row "Last seen", (@user.last_seen_at ? "#{time_ago_in_words(@user.last_seen_at)} ago" : "Never") %>
+          <%= dl_row "Created" do %><%= time_label(@user.created_at, :datetime) %><% end %>
+          <%= dl_row "Last sign-in" do %><%= time_label(@user.last_login_at, :datetime) || "Never" %><% end %>
+          <%= dl_row "Last seen" do %><%= time_label(@user.last_seen_at, :relative) || "Never" %><% end %>
         </dl>
       </div>
     </section>
@@ -107,7 +112,7 @@
           <h3 class="section-title">Code of conduct</h3>
           <p class="record-meta">
             <% if @user.slack_coc_accepted_at.present? %>
-              Accepted <%= @user.slack_coc_accepted_at.strftime("%b %-d, %Y") %>.
+              Accepted <%= time_label(@user.slack_coc_accepted_at) %>.
             <% elsif @user.code_of_conduct_exempt %>
               Not accepted. This user is exempt, so they can use apps anyway.
             <% else %>
@@ -217,7 +222,7 @@
                   <li>
                     <%= link_to membership.group.name, admin_group_path(membership.group), class: "link" %>
                     <% if membership.expires_at %>
-                      <span class="text-xs text-ink-faint">until <%= membership.expires_at.strftime("%b %d, %Y") %></span>
+                      <span class="text-xs text-ink-faint">until <%= time_label(membership.expires_at) %></span>
                     <% end %>
                   </li>
                 <% end %>
@@ -265,24 +270,24 @@
               <% if @user.slack_member? %>
                 <%= badge "Full member", tone: :success %>
                 <% if @user.slack_coc_accepted_at.present? %>
-                  <span class="text-ink-faint text-xs">accepted CoC <%= @user.slack_coc_accepted_at.strftime("%b %-d, %Y") %></span>
+                  <span class="text-ink-faint text-xs">accepted CoC <%= time_label(@user.slack_coc_accepted_at) %></span>
                 <% else %>
                   <%= badge "CoC pending", tone: :sky %>
                   <% if @user.slack_coc_requested_at.present? %>
-                    <span class="text-ink-faint text-xs">asked <%= @user.slack_coc_requested_at.strftime("%b %-d, %Y") %></span>
+                    <span class="text-ink-faint text-xs">asked <%= time_label(@user.slack_coc_requested_at) %></span>
                   <% end %>
                 <% end %>
               <% elsif @user.in_slack_workspace? && @user.slack_coc_accepted_at.present? %>
                 <%= badge "Guest · promotion pending", tone: :orchid %>
-                <span class="text-ink-faint text-xs">accepted CoC <%= @user.slack_coc_accepted_at.strftime("%b %-d, %Y") %></span>
+                <span class="text-ink-faint text-xs">accepted CoC <%= time_label(@user.slack_coc_accepted_at) %></span>
               <% elsif @user.in_slack_workspace? %>
                 <%= badge "Guest · CoC pending", tone: :sky %>
                 <% if @user.slack_invited_at.present? %>
-                  <span class="text-ink-faint text-xs">invited <%= @user.slack_invited_at.strftime("%b %-d, %Y") %></span>
+                  <span class="text-ink-faint text-xs">invited <%= time_label(@user.slack_invited_at) %></span>
                 <% end %>
               <% elsif @user.slack_invited_at.present? %>
                 <%= badge "Invited · not joined yet", tone: :sky %>
-                <span class="text-ink-faint text-xs">invited <%= @user.slack_invited_at.strftime("%b %-d, %Y") %></span>
+                <span class="text-ink-faint text-xs">invited <%= time_label(@user.slack_invited_at) %></span>
               <% else %>
                 <span class="text-ink-faint">Not invited yet</span>
               <% end %>
@@ -372,9 +377,9 @@
                     <span class="table-sub"><%= session.timezone %></span>
                   <% end %>
                 </td>
-                <td class="whitespace-nowrap text-ink-soft"><%= session.created_at.strftime("%m/%d/%Y %I:%M %p") %></td>
+                <td class="whitespace-nowrap text-ink-soft"><%= time_label(session.created_at, :datetime) %></td>
                 <td class="whitespace-nowrap text-ink-soft">
-                  <%= session.last_seen_at ? "#{time_ago_in_words(session.last_seen_at)} ago" : "Never" %>
+                  <%= time_label(session.last_seen_at, :relative) || "Never" %>
                 </td>
                 <td>
                   <% if session.fingerprint %>

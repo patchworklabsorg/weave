@@ -9,13 +9,14 @@
 <section class="card card-flush">
   <div class="card-header">
     <div class="w-full">
-      <%= render "shared/search_form", url: admin_users_path, frame: "users_table", placeholder: "Search by name, email or PWL ID", autofocus: true %>
+      <%= render "shared/search_form", url: admin_users_path, frame: "users_table", placeholder: "Search by name, email or Weave ID", autofocus: true %>
     </div>
   </div>
 
   <%= turbo_frame_tag "users_table" do %>
     <% if params[:search].present? %>
-      <p class="px-5 pt-3 text-sm text-ink-soft">
+      <p class="px-5 pt-3 text-sm text-ink-soft" role="status">
+
         <%= pluralize(@users.size, "user") %> <%= @users.size == 1 ? "matches" : "match" %> &ldquo;<%= params[:search] %>&rdquo;
       </p>
     <% end %>
@@ -26,7 +27,7 @@
           <thead>
             <tr>
               <th>Name</th>
-              <th>PWL ID</th>
+              <th>Weave ID</th>
               <th>Role</th>
               <th>Joined</th>
               <th class="actions"><span class="sr-only">Actions</span></th>
@@ -43,19 +44,22 @@
                 <td>
                   <%= badge user.role.titleize, tone: (user.superadmin? ? :grape : (user.admin? ? :violet : :neutral)) %>
                 </td>
-                <td class="whitespace-nowrap text-ink-soft" title="<%= user.created_at.iso8601 %>">
-                  <%= time_ago_in_words(user.created_at) %> ago
+                <td class="whitespace-nowrap text-ink-soft">
+                  <%= time_label(user.created_at, :relative) %>
                 </td>
                 <td class="actions">
                   <% if user.is_viewable?(current_user) %>
                     <%= link_to "View", admin_user_path(user), class: "btn btn-quiet btn-sm", data: { turbo_frame: "_top" } %>
                   <% end %>
                   <% if user.is_impersonatable?(current_user) && !impersonating? %>
+                    <%# Turbo is off on this form (the sign-in swap must be a real
+                        navigation), so the confirm goes through confirm-submit. %>
                     <%= button_to "Impersonate", impersonate_admin_user_path(user), method: :post,
                           class: "btn btn-quiet btn-sm",
-                          form: { class: "inline-block", data: { turbo: false } },
-                          local: true,
-                          data: { turbo_confirm: "Are you sure you want to impersonate #{user.full_name}?" } %>
+                          form: { class: "inline-block",
+                                  data: { turbo: false, controller: "confirm-submit", action: "submit->confirm-submit#submit",
+                                          confirm_submit_message_value: "Sign in as #{user.full_name}? Everything you do is recorded under your name." } },
+                          local: true %>
                   <% end %>
                 </td>
               </tr>
@@ -64,7 +68,7 @@
         </table>
       </div>
     <% elsif params[:search].present? %>
-      <%= empty_state "No users match", body: "Try a different name, email or PWL ID.", icon: :search_x %>
+      <%= empty_state "No users match", body: "Try a different name, email or Weave ID.", icon: :search_x %>
     <% else %>
       <%= empty_state "No users yet", icon: :users %>
     <% end %>
