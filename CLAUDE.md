@@ -163,7 +163,7 @@ Weave is the reference implementation of the Patchwork design system. Read `docs
 - Helpers: `page_header`, `badge`, `nav_link`, `empty_state`, `form_errors`, `copy_button`, `avatar`, `dl_row` (`app/helpers/ui_helper.rb`) and `icon(:name)` (Lucide, `app/helpers/icon_helper.rb`). No emoji in the interface.
 - One `btn-primary` per view. Danger actions confirm first. Every page works at 390px and in dark mode.
 - Admin pages go in the sidebar (`shared/_sidebar`) and the command bar (`shared/_command_bar`).
-- A PR that changes views, helpers, CSS or JS shows screenshots: run the `pr-screenshots` skill (`.claude/skills/pr-screenshots/`) before `gh pr create`. A hook in `.claude/settings.json` blocks `gh pr create` until it has run.
+- A PR that changes views, helpers, CSS, JS or locale copy shows screenshots: run the `pr-screenshots` skill (`.claude/skills/pr-screenshots/`) before `gh pr create`. A hook in `.claude/settings.json` blocks `gh pr create` until it has run.
 
 ## Deployment
 Production runs as Docker containers on the `alastor` NixOS host. The image is built on Ruby Alpine (`Dockerfile`). Thruster handles HTTP acceleration inside the image.
