@@ -63,6 +63,8 @@ module RoleGrants
     # Grants a role with an immediate rule. Returns a Result.
     def grant(user, key, by:, reason: nil, scope: nil)
       key = key.to_s
+      # A form sends an empty scope for a role without scopes.
+      scope = scope.presence&.to_s
       return failure(base: "Choose a person.") if user.nil?
       return failure(base: proposal_message(key, "grant")) if proposal?(key, :grant)
       return failure(base: "You can't grant the #{RoleRegistry.fetch(key).name.downcase} role to #{user.full_name}.") unless allowed_now?(by, user, key, :grant)
@@ -83,6 +85,8 @@ module RoleGrants
     # Revokes a role with an immediate rule. Returns a Result.
     def revoke(user, key, by:, reason: nil, scope: nil)
       key = key.to_s
+      # A form sends an empty scope for a role without scopes.
+      scope = scope.presence&.to_s
       return failure(base: "Choose a person.") if user.nil?
       return failure(base: proposal_message(key, "revoke")) if proposal?(key, :revoke)
       return failure(base: "You can't revoke the #{RoleRegistry.fetch(key).name.downcase} role of #{user.full_name}.") unless allowed_now?(by, user, key, :revoke)

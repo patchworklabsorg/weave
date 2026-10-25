@@ -367,8 +367,9 @@ RSpec.describe "Admin user management permissions", type: :request do
 
     def grant_board(user) = post admin_role_assignments_path, params: { user_id: user.p_id, role: "board", return_to: "user" }
 
+    # The roles form sends scope: "" for a role without scopes.
     def revoke_board(user, reason: "Left the board")
-      post revoke_admin_role_assignments_path, params: { user_id: user.p_id, role: "board", reason:, return_to: "user" }
+      post revoke_admin_role_assignments_path, params: { user_id: user.p_id, role: "board", scope: "", reason:, return_to: "user" }
     end
 
     it "lets an owner add a member to the board, with a log row and an email to the board" do
