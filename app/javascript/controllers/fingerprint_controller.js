@@ -19,16 +19,20 @@ export default class extends Controller {
   }
 
   disconnect() {
-    document.removeEventListener("DOMContentLoaded", this.onReady)
+    this.script?.removeEventListener("load", this.onLoad)
   }
 
-  // The deferred script may land after this controller connects on a full
-  // page load; on a Turbo visit it is already there.
+  // On a full page load the deferred library script runs after the module
+  // bundle, so this controller usually connects first: wait for that script
+  // element's load event. On a Turbo visit the library is already there.
   whenLibraryReady(callback) {
-    if (window.FingerprintJS || document.readyState !== "loading") return callback()
-    this.onReady = () => callback()
-    document.addEventListener("DOMContentLoaded", this.onReady, { once: true })
+    if (window.FingerprintJS) return callback()
+    this.script = document.querySelector('script[src*="fingerprintjs"]')
+    if (!this.script) return callback()
+    this.onLoad = () => callback()
+    this.script.addEventListener("load", this.onLoad, { once: true })
   }
+
 
   async fillFingerprint() {
     if (!this.hasFingerprintTarget || !window.FingerprintJS) return

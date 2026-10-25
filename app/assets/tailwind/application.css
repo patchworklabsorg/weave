@@ -145,6 +145,9 @@
     transform: translateY(-200%);
   }
   .skip-link:focus { transform: none; }
+  /* The skip link's target takes focus so the next Tab starts there; it
+     needs no ring of its own. */
+  main:focus-visible, [tabindex="-1"]:focus-visible { outline: none; }
 
   code, kbd, pre, samp { font-family: var(--font-mono); }
 
@@ -1130,8 +1133,11 @@
     box-shadow: var(--shadow-card);
   }
   .theme-toggle-floating:focus-visible { border-radius: 9999px; }
-  /* The focus pages keep the bottom corner clear for the floating toggle. */
-  .focus-main { min-height: 100%; padding-bottom: 4.5rem; }
+  /* The focus pages: a grid so the page's wrapper fills the viewport (a
+     percentage min-height on the wrapper would not), minus the bottom
+     corner, which stays clear for the floating toggle. */
+  .focus-main { display: grid; min-height: 100dvh; padding-bottom: 4.5rem; }
+
 
 
   /* ── Command bar (⌘K) ───────────────────────────────────── */

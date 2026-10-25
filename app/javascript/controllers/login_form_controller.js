@@ -35,7 +35,7 @@ export default class extends Controller {
     // Hide password field and disable submit while checking
     this.hidePasswordField()
     this.submitButtonTarget.disabled = true
-    this.submitButtonTarget.textContent = "Send magic link"
+    this.submitButtonTarget.value = "Send magic link"
 
     if (email === "") {
       this.hideLoadingIndicator()
@@ -74,11 +74,11 @@ export default class extends Controller {
 
       if (data.password_login_enabled) {
         this.showPasswordField()
-        this.submitButtonTarget.textContent = "Sign in"
+        this.submitButtonTarget.value = "Sign in"
         this.passwordLoginEnabled = true
       } else {
         this.hidePasswordField()
-        this.submitButtonTarget.textContent = "Send magic link"
+        this.submitButtonTarget.value = "Send magic link"
         this.passwordLoginEnabled = false
       }
 
@@ -89,7 +89,7 @@ export default class extends Controller {
       this.hideLoadingIndicator()
       // Default to magic link on error
       this.hidePasswordField()
-      this.submitButtonTarget.textContent = "Send magic link"
+      this.submitButtonTarget.value = "Send magic link"
       this.passwordLoginEnabled = false
       this.submitButtonTarget.disabled = false
     }

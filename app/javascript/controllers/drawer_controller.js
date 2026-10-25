@@ -15,12 +15,19 @@ export default class extends Controller {
   connect() {
     this.closeOnVisit = () => this.close()
     document.addEventListener("turbo:before-visit", this.closeOnVisit)
+    // Past 64rem the CSS shows the panel in place, so an open drawer must
+    // let go of the page (inert, scrim) when the viewport grows past it.
+    this.wide = window.matchMedia("(min-width: 64rem)")
+    this.closeOnWide = (event) => { if (event.matches) this.close() }
+    this.wide.addEventListener("change", this.closeOnWide)
   }
 
   disconnect() {
     document.removeEventListener("turbo:before-visit", this.closeOnVisit)
+    this.wide.removeEventListener("change", this.closeOnWide)
     this.contentTargets.forEach((content) => content.removeAttribute("inert"))
   }
+
 
   toggle(event) {
     this.isOpen ? this.close() : this.open(event)

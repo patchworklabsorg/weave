@@ -119,7 +119,12 @@ export default class extends Controller {
     const title = document.createElement("div")
     title.className = "cmdk-section-title"
     title.textContent = "Recent"
-    section.append(title, ...items.map((item) => item.cloneNode(true)))
+    section.append(title, ...items.map((item) => {
+      const clone = item.cloneNode(true)
+      clone.removeAttribute("id") // select() gives the clone its own id
+      return clone
+    }))
+
   }
 
   // ── Server search (admins) ─────────────────────────────────────
