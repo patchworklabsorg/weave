@@ -27,7 +27,7 @@ class Admin::ServiceKeysController < Admin::BaseController
     if @key.save
       # Show the API key once (only time it's available)
       flash[:api_key] = api_key
-      flash[:notice] = "API key was successfully created. Make sure to copy it now - you won't be able to see it again!"
+      flash[:notice] = "The API key was created. Copy it now. You cannot see it again."
       redirect_to [:admin, @service, @key]
     else
       render :new, status: :unprocessable_content
@@ -39,7 +39,7 @@ class Admin::ServiceKeysController < Admin::BaseController
 
   def update
     if @key.update(key_params)
-      redirect_to [:admin, @service, @key], notice: "API key was successfully updated."
+      redirect_to [:admin, @service, @key], notice: "The API key was updated."
     else
       render :edit, status: :unprocessable_content
     end
@@ -47,7 +47,7 @@ class Admin::ServiceKeysController < Admin::BaseController
 
   def destroy
     @key.destroy
-    redirect_to admin_service_keys_path(@service), notice: "API key was successfully deleted."
+    redirect_to admin_service_keys_path(@service), notice: "The API key was deleted."
   end
 
   def revoke

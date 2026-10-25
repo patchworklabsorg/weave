@@ -2,7 +2,7 @@
 <% content_for :title, "Impersonation of #{@user.full_name}" %>
 <% summary = capture do %>
   By <%= @impersonation.admin&.full_name || "a deleted admin" %>,
-  started <%= l(@impersonation.started_at, format: :long) %>.
+  started <%= time_label(@impersonation.started_at, :datetime) %>.
   <% if @impersonation.active? %>
     Not ended.
   <% elsif @impersonation.duration %>
@@ -43,7 +43,7 @@
             <% @actions.each do |action| %>
               <tr>
                 <td class="whitespace-nowrap text-ink-soft" title="<%= action.created_at.iso8601 %>">
-                  <%= l(action.created_at, format: :short) %>
+                  <%= time_label(action.created_at, :datetime) %>
                 </td>
                 <td class="whitespace-nowrap">
                   <%= badge action.http_method, tone: (action.state_changing? ? :warning : :neutral) %>
@@ -92,7 +92,8 @@
             <% @versions.each do |version| %>
               <tr>
                 <td class="whitespace-nowrap text-ink-soft" title="<%= version.created_at&.iso8601 %>">
-                  <%= version.created_at ? l(version.created_at, format: :short) : "—" %>
+                  <%= time_label(version.created_at, :datetime) || "—" %>
+
                 </td>
                 <td class="whitespace-nowrap"><%= version.event %></td>
                 <td class="whitespace-nowrap mono text-ink-soft"><%= version.item_type %> #<%= version.item_id %></td>

@@ -9,6 +9,7 @@ Weave is the reference implementation of the Patchwork design system. The guide 
 | Tokens and component classes | `app/assets/tailwind/application.css` |
 | Fonts (self-hosted Geist, Shantell Sans) | `app/assets/tailwind/fonts.css`, `public/fonts` |
 | View helpers (`badge`, `page_header`, `nav_link`, `empty_state`, `form_errors`, `copy_button`, `avatar`, `dl_row`) | `app/helpers/ui_helper.rb` |
+| Dates and times (`time_label(time, style)`, styles `:date`, `:datetime`, `:relative`, `:month`, `:day`) | `app/helpers/time_helper.rb` |
 | Icons (`icon(:name)`, Lucide through `lucide-rails`) | `app/helpers/icon_helper.rb` |
 | Layouts | `app/views/layouts/application.html.erb` (member), `admin.html.erb` (admin), `sessions.html.erb` and `doorkeeper/application.html.erb` (focus) |
 | Shared partials | `app/views/shared/`: `_head`, `_topbar`, `_sidebar`, `_wordmark`, `_theme`, `_theme_toggle`, `_flash`, `_form_errors`, `_search_form`, `_command_bar`, `_impersonation_banner`, `_staging_badge` |
@@ -33,6 +34,20 @@ Weave is the reference implementation of the Patchwork design system. The guide 
 5. For a list that can grow, add `render "shared/search_form", url:, frame:, placeholder:` in the card header, `turbo_frame_tag` around the table, and `params[:search]` in the controller (see `Admin::GroupsController#index`).
 6. For an admin page, add it to `app/views/shared/_sidebar.html.erb` and to the `pages` list in `app/views/shared/_command_bar.html.erb`.
 7. Run the request spec. No rubocop on views, but keep the ERB tidy.
+
+## Rules the audit enforces
+
+`spec/ui/view_conventions_spec.rb` checks the rules below that a file scan can hold (dates, the identifier name, tokens, inline styles, emoji and em dashes, confirms on Turbo-off forms, titles, skip links, table wrappers, light-dark tokens). Run it before you commit a view, and add a check when you add a rule.
+
+- Show every date through `time_label`. No `strftime`, `to_fs`, `l` or `time_ago_in_words` in a view outside the mailers. Inside a `t()` interpolation, where a tag would be escaped, use `TimeHelper::FORMATS`.
+
+- The public identifier is the "Weave ID" everywhere. Not "PWL ID", not "P_ID".
+- A form with `data: { turbo: false }` never sees `data-turbo-confirm`. Confirm through the `confirm-submit` controller on the form (`admin/users/index` has the pattern).
+- Every layout starts with the `.skip-link` and gives `<main>` the id `main`. Keep both when you add a layout.
+- Keyboard focus is an outline (`:focus-visible` in `application.css`). Do not set `outline: none` on a control.
+- A long reference block (integration notes, an optional address) folds into `<details class="card">` with the `.card-header` as the `<summary>`.
+- Faint text (`text-ink-faint`) is tuned to 4.5:1 on paper and panel. Do not lighten it for effect.
+
 
 ## Dark mode
 

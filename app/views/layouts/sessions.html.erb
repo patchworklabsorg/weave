@@ -5,14 +5,17 @@
   <head>
     <title><%= [content_for(:title), "Weave"].compact_blank.join(" · ") %></title>
     <%= render "shared/head" %>
-    <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@4/dist/fp.min.js"></script>
+    <%# defer: the fingerprint controller waits for it (see fingerprint_controller.js). %>
+    <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@4/dist/fp.min.js" defer></script>
   </head>
 
   <body class="h-full quilt-bg text-ink font-sans">
+    <a href="#main" class="skip-link">Skip to content</a>
     <%= render "shared/staging_badge" %>
     <div id="flash"><%= render "shared/flash" %></div>
 
-    <main class="h-full relative">
+    <main id="main" class="focus-main relative" tabindex="-1">
+
       <%= yield %>
     </main>
 

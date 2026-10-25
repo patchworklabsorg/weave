@@ -19,7 +19,7 @@
           <p>You become a full member once you're in the Slack and have accepted the Code of Conduct.</p>
         <% end %>
       </div>
-      <%= link_to "Continue", slack_onboarding_path, class: "btn btn-primary btn-sm shrink-0" %>
+      <%= link_to "Continue", slack_onboarding_path, class: "btn btn-secondary btn-sm shrink-0" %>
     </div>
   <% end %>
 
@@ -55,7 +55,7 @@
   <%# Identity verification gates program resources only, never the community. %>
   <section class="card mb-6">
     <div class="card-header">
-      <div class="min-w-0 flex-1">
+      <div class="min-w-0 flex-1 basis-64">
         <h2 class="card-title flex flex-wrap items-center gap-2">
           <%= t("verification.page.title") %>
           <%= badge(t("verification.statuses.#{@user.verification_status}"), tone: @user.verification_status == "verified" ? :success : :grape) %>
@@ -80,16 +80,19 @@
         <dl class="dl">
           <%= dl_row "Weave ID", @user.p_id %>
           <%= dl_row "Email", @user.email %>
-          <% if @user.phone_number.present? || @user.slack_phone.present? %>
-            <%= dl_row "Phone", @user.phone_number.presence || @user.slack_phone %>
+          <%# The Slack phone field is free text, so only a value with digits
+              in it belongs under this label. %>
+          <% phone = @user.phone_number.presence || (@user.slack_phone if @user.slack_phone.to_s.count("0-9") >= 7) %>
+          <% if phone.present? %>
+            <%= dl_row "Phone", phone %>
           <% end %>
           <% if @user.pronouns.present? %>
             <%= dl_row "Pronouns", @user.pronouns %>
           <% end %>
           <% if @user.birthday.present? %>
-            <%= dl_row "Birthday", @user.birthday.strftime("%B %-d") %>
+            <%= dl_row "Birthday" do %><%= time_label(@user.birthday, :day) %><% end %>
           <% end %>
-          <%= dl_row "Member since", @user.created_at.strftime("%B %-d, %Y") %>
+          <%= dl_row "Member since" do %><%= time_label(@user.created_at) %><% end %>
           <%= dl_row "Active sessions", @user.user_sessions.not_expired.count %>
         </dl>
       </div>
@@ -115,7 +118,7 @@
               <%= dl_row "Location", location %>
             <% end %>
             <% if @user.slack_start_date.present? %>
-              <%= dl_row "Started", @user.slack_start_date.strftime("%B %Y") %>
+              <%= dl_row "Started" do %><%= time_label(@user.slack_start_date, :month) %><% end %>
             <% end %>
             <% if links.any? %>
               <%= dl_row("Links") do %>
@@ -159,15 +162,16 @@
   <%# Takeout and deletion (see Takeout and DeletionReview). %>
   <section class="card mt-6">
     <div class="card-header">
-      <div class="min-w-0 flex-1">
+      <div class="min-w-0 flex-1 basis-64">
         <h2 class="card-title"><%= t("data_handling.profile.title") %></h2>
         <p class="card-lede">
           <%= t("data_handling.profile.intro") %>
           <%= link_to t("data_handling.data_page_link"), Weave.data_page_url, class: "link", target: "_blank", rel: "noopener noreferrer" %>
         </p>
       </div>
-      <div class="btn-row shrink-0">
+      <div class="btn-row">
         <%= link_to takeout_path, class: "btn btn-secondary" do %>
+
           <%= icon(:download) %><%= t("data_handling.profile.export") %>
         <% end %>
         <%= link_to deletion_request_path, class: "btn btn-danger" do %>

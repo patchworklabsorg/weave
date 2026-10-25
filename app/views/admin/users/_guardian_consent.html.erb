@@ -11,9 +11,9 @@
       <% if !user.minor? %>
         Not needed: this member is 18 or older, or has no birthday on file.
       <% elsif current&.granted? %>
-        Granted <%= current.granted_at.strftime("%b %-d, %Y") %> by <%= current.signed_name %> (<%= current.guardian_email %>)<%= current.offline? ? ", recorded offline by #{current.recorded_by&.full_name || 'a deleted user'}" : "" %>.
+        Granted <%= time_label(current.granted_at) %> by <%= current.signed_name %> (<%= current.guardian_email %>)<%= current.offline? ? ", recorded offline by #{current.recorded_by&.full_name || 'a deleted user'}" : "" %>.
       <% elsif current&.pending? %>
-        Requested from <%= current.guardian_name %> (<%= current.guardian_email %>) on <%= current.sent_at.strftime("%b %-d, %Y") %>.
+        Requested from <%= current.guardian_name %> (<%= current.guardian_email %>) on <%= time_label(current.sent_at) %>.
         <%= current.link_expired? ? "The link has expired." : "Waiting for the guardian." %>
         This member can't join the Slack or use apps that require guardian consent.
       <% else %>
@@ -24,7 +24,7 @@
     <% if current&.granted? %>
       <p class="record-meta">
         <% if current.verified? %>
-          Verified guardian: <%= current.verified_at.strftime("%b %-d, %Y") %> by <%= current.verified_by&.full_name || "a deleted user" %>. <%= current.verification_note %>
+          Verified guardian: <%= time_label(current.verified_at) %> by <%= current.verified_by&.full_name || "a deleted user" %>. <%= current.verification_note %>
         <% else %>
           Not verified. Apps that ask for a verified guardian (for example Krater budgets) will refuse this member.
         <% end %>
@@ -47,7 +47,7 @@
     <% if current&.granted? && current.flags.any? %>
       <% if current.reviewed_at %>
         <p class="record-meta">
-          Checked <%= current.reviewed_at.strftime("%b %-d, %Y") %> by <%= current.reviewed_by&.full_name || "a deleted user" %>: <%= current.review_note %>
+          Checked <%= time_label(current.reviewed_at) %> by <%= current.reviewed_by&.full_name || "a deleted user" %>: <%= current.review_note %>
         </p>
       <% else %>
         <div class="callout callout-warning">
@@ -95,7 +95,7 @@
         <summary class="link text-sm cursor-pointer">History</summary>
         <ul class="well mt-2 space-y-1 text-xs text-ink-soft">
           <% consents.each do |consent| %>
-            <li><%= consent.created_at.strftime("%b %-d, %Y") %>: <%= consent.status %>, <%= consent.guardian_email %></li>
+            <li><%= time_label(consent.created_at) %>: <%= consent.status %>, <%= consent.guardian_email %></li>
           <% end %>
         </ul>
       </details>

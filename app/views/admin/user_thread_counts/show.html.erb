@@ -32,7 +32,7 @@
       </div>
       <div class="card-body space-y-3">
         <% if @own_vouch %>
-          <p class="field-hint">You vouched for this member on <%= @own_vouch.created_at.strftime("%b %-d, %Y") %>. To renew it, vouch again and tick the renew box.</p>
+          <p class="field-hint">You vouched for this member on <%= time_label(@own_vouch.created_at) %>. To renew it, vouch again and tick the renew box.</p>
         <% end %>
         <%= form_with url: admin_user_thread_count_entries_path(@user), method: :post, class: "space-y-3" do |form| %>
           <%= form.hidden_field :kind, value: "vouch" %>
@@ -109,12 +109,12 @@
                 <% recorder = entry.recorded_by %>
                 <% service = entry.service %>
                 <tr class="<%= 'opacity-60' if entry.reversal? || line.reversed? %>">
-                  <td class="whitespace-nowrap text-ink-faint"><%= entry.created_at.strftime("%b %-d, %Y") %></td>
+                  <td class="whitespace-nowrap text-ink-faint"><%= time_label(entry.created_at) %></td>
                   <td>
                     <%= thread_count_label(entry.kind, entry.level) %>
                     <% reversed_entry = entries_by_id[entry.reverses_id] %>
                     <% if reversed_entry %>
-                      <span class="table-sub">of the <%= thread_count_label(reversed_entry.kind, reversed_entry.level).downcase %> from <%= reversed_entry.created_at.strftime("%b %-d, %Y") %></span>
+                      <span class="table-sub">of the <%= thread_count_label(reversed_entry.kind, reversed_entry.level).downcase %> from <%= time_label(reversed_entry.created_at) %></span>
                     <% elsif line.reversed? %>
                       <span class="table-sub">(reversed)</span>
                     <% end %>

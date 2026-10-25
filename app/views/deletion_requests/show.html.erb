@@ -41,7 +41,7 @@
         <div class="callout callout-grape">
           <%= icon(:info, size: 18) %>
           <div class="callout-body">
-            <p><%= t("data_handling.deletion.pending", date: @deletion_request.review_due_at.to_date.to_fs(:long)) %></p>
+            <p><%= t("data_handling.deletion.pending", date: @deletion_request.review_due_at.to_date.strftime(TimeHelper::FORMATS[:date])) %></p>
           </div>
         </div>
         <%= button_to t("data_handling.deletion.cancel"), deletion_request_path, method: :delete, class: "btn btn-secondary btn-block" %>

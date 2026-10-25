@@ -47,7 +47,8 @@
       </div>
     </div>
     <% if @requests.empty? %>
-      <%= empty_state("Nothing waits for you.", icon: :circle_check) %>
+      <%= empty_state("Nothing is waiting for you.", icon: :circle_check) %>
+
     <% else %>
       <div class="card-body">
         <div class="record-list">
@@ -62,7 +63,7 @@
                   <% else %>
                     <span class="mono"><%= request.knot.public_id %></span>
                   <% end %>,
-                  asked by <%= request.requested_by&.full_name || "a deleted user" %>, <%= time_ago_in_words(request.created_at) %> ago.
+                  asked by <%= request.requested_by&.full_name || "a deleted user" %>, <%= time_label(request.created_at, :relative) %>.
                 </p>
                 <% reason = request.verification.events.where(kind: "knot_change_requested").order(:created_at).last&.data&.dig("reason") %>
                 <p class="record-meta">Reason in the audit record: <%= reason %></p>

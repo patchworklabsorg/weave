@@ -125,7 +125,7 @@ RSpec.describe "Identity verification", type: :request do
     sign_in_via_magic_link(member)
 
     get verification_path
-    expect(response.body).to include(failed.retry_available_at.to_date.to_fs(:long))
+    expect(response.body).to include(failed.retry_available_at.to_date.strftime(TimeHelper::FORMATS[:date]))
 
     expect { post verification_path, params: }.not_to change(Verification, :count)
   end

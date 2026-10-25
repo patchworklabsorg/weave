@@ -1,10 +1,10 @@
 <div class="form-grid form-grid-2">
   <div class="field-group">
-    <%= form.label :contact_first_name, "First Name", class: "field-label" %>
+    <%= form.label :contact_first_name, "First name", class: "field-label" %>
     <%= form.text_field :contact_first_name, class: "field" %>
   </div>
   <div class="field-group">
-    <%= form.label :contact_last_name, "Last Name", class: "field-label" %>
+    <%= form.label :contact_last_name, "Last name", class: "field-label" %>
     <%= form.text_field :contact_last_name, class: "field" %>
   </div>
   <div class="field-group">
@@ -12,16 +12,16 @@
     <%= form.email_field :contact_email, class: "field" %>
   </div>
   <div class="field-group">
-    <%= form.label :contact_phone_number, "Phone Number", class: "field-label" %>
+    <%= form.label :contact_phone_number, "Phone number", class: "field-label" %>
     <%= form.telephone_field :contact_phone_number, class: "field" %>
   </div>
   <div class="field-group span-2">
-    <%= form.label :line1, "Address Line 1", class: "field-label" %>
+    <%= form.label :line1, "Address line 1", class: "field-label" %>
     <%= form.text_field :line1, class: "field" %>
   </div>
   <div class="field-group span-2">
     <%= form.label :line2, class: "field-label" do %>
-      Address Line 2 <span class="optional">(Optional)</span>
+      Address line 2 <span class="optional">(optional)</span>
     <% end %>
     <%= form.text_field :line2, class: "field" %>
   </div>
@@ -30,11 +30,11 @@
     <%= form.text_field :city, class: "field" %>
   </div>
   <div class="field-group">
-    <%= form.label :state, "State/Province", class: "field-label" %>
+    <%= form.label :state, "State or province", class: "field-label" %>
     <%= form.text_field :state, class: "field" %>
   </div>
   <div class="field-group">
-    <%= form.label :postal_code, "ZIP/Postal Code", class: "field-label" %>
+    <%= form.label :postal_code, "ZIP or postal code", class: "field-label" %>
     <%= form.text_field :postal_code, class: "field" %>
   </div>
   <div class="field-group">
@@ -53,11 +53,11 @@
       <span>Weekend deliveries OK</span>
     </label>
     <div class="field-group span-2">
-      <%= form.label :shipping_notes, "Shipping Notes", class: "field-label" %>
+      <%= form.label :shipping_notes, "Shipping notes", class: "field-label" %>
       <%= form.text_area :shipping_notes, rows: 3,
             placeholder: "e.g., Ring doorbell twice, use gate code 1234, leave at side door",
             class: "field" %>
-      <p class="field-hint">Special instructions for delivery (door codes, gate access, etc.)</p>
+      <p class="field-hint">Instructions for the courier, such as a door code or a gate.</p>
     </div>
   <% end %>
 </div>

@@ -40,8 +40,8 @@
                   <span class="text-ink-faint">Deleted admin</span>
                 <% end %>
               </td>
-              <td class="whitespace-nowrap text-ink-soft" title="<%= impersonation.started_at.iso8601 %>">
-                <%= time_ago_in_words(impersonation.started_at) %> ago
+              <td class="whitespace-nowrap text-ink-soft">
+                <%= time_label(impersonation.started_at, :relative) %>
               </td>
               <td class="whitespace-nowrap text-ink-soft">
                 <%= impersonation.duration ? distance_of_time_in_words(impersonation.duration) : "—" %>

@@ -31,7 +31,7 @@ RSpec.describe "Account deletion requests", type: :request do
     expect(User.exists?(member.id)).to be(true)
 
     get deletion_request_path
-    expect(response.body).to include(request.review_due_at.to_date.to_fs(:long))
+    expect(response.body).to include(request.review_due_at.to_date.strftime(TimeHelper::FORMATS[:date]))
   end
 
   it "lets the member cancel while the request waits" do

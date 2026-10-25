@@ -27,7 +27,7 @@ class Admin::OauthApplicationsController < Admin::BaseController
     @application = Doorkeeper::Application.new(application_params)
 
     if introspect_change_allowed? && @application.save
-      show_secret_once("OAuth application was successfully created. Copy the client secret now: Weave shows it only once.")
+      show_secret_once("The OAuth application was created. Copy the client secret now. Weave shows it only once.")
     else
       render :new, status: :unprocessable_content
     end
@@ -40,7 +40,7 @@ class Admin::OauthApplicationsController < Admin::BaseController
     @application.assign_attributes(application_params)
 
     if introspect_change_allowed? && @application.save
-      redirect_to admin_oauth_application_path(@application), notice: "OAuth application was successfully updated."
+      redirect_to admin_oauth_application_path(@application), notice: "The OAuth application was updated."
     else
       render :edit, status: :unprocessable_content
     end
@@ -48,7 +48,7 @@ class Admin::OauthApplicationsController < Admin::BaseController
 
   def destroy
     @application.destroy
-    redirect_to admin_oauth_applications_path, notice: "OAuth application was successfully deleted."
+    redirect_to admin_oauth_applications_path, notice: "The OAuth application was deleted."
   end
 
   # Weave stores client secrets hashed (hash_application_secrets), so the

@@ -159,11 +159,17 @@ All console access is audited via Console1984. In production and staging, `bin/r
 ## UI
 Weave is the reference implementation of the Patchwork design system. Read `docs/UI.md` before you touch a view. The guide (principles, tokens, components, icons) is in internal-docs under `design/`.
 
-- Tokens and component classes: `app/assets/tailwind/application.css`. Use token utilities (`bg-paper`, `text-ink-soft`, `border-hairline`), never a hex or a raw Tailwind palette color.
-- Helpers: `page_header`, `badge`, `nav_link`, `empty_state`, `form_errors`, `copy_button`, `avatar`, `dl_row` (`app/helpers/ui_helper.rb`) and `icon(:name)` (Lucide, `app/helpers/icon_helper.rb`). No emoji in the interface.
-- One `btn-primary` per view. Danger actions confirm first. Every page works at 390px and in dark mode.
-- Admin pages go in the sidebar (`shared/_sidebar`) and the command bar (`shared/_command_bar`).
-- A PR that changes views, helpers, CSS, JS or locale copy shows screenshots: run the `pr-screenshots` skill (`.claude/skills/pr-screenshots/`) before `gh pr create`. A hook in `.claude/settings.json` blocks `gh pr create` until it has run.
+- Tokens and component classes: `app/assets/tailwind/application.css`. Use token utilities (`bg-paper`, `text-ink-soft`, `border-hairline`), never a hex, a raw Tailwind palette color or an inline `style=""`.
+- Helpers: `page_header`, `badge`, `nav_link`, `empty_state`, `form_errors`, `copy_button`, `avatar`, `dl_row` (`app/helpers/ui_helper.rb`), `time_label` (`app/helpers/time_helper.rb`) and `icon(:name)` (Lucide, `app/helpers/icon_helper.rb`). No emoji in the interface.
+- Every date and time goes through `time_label`. Never call `strftime`, `to_fs`, `l` or `time_ago_in_words` in a view.
+- The public identifier is the "Weave ID" in every label and message. Not "PWL ID", not "P_ID".
+- One `btn-primary` per rendered page: the main safe action, never a destructive or high-risk one. Danger actions confirm first. A form with `data: { turbo: false }` confirms through the `confirm-submit` controller, because Turbo ignores `data-turbo-confirm` on it.
+- Every page works at 390px and in dark mode, and with the keyboard: the skip link and `id="main"` stay in every layout, focus is an outline, a drawer moves focus in and out, a wide table sits in `.table-wrap`.
+- Copy: sentence case for labels and buttons, no title case. Flash notices read as plain sentences ("The group was updated.", not "Group was successfully updated."). Optional fields say "(optional)" in the label; required fields carry no marker.
+- Long optional blocks (addresses, integration notes) fold into `<details class="card">` with the `.card-header` as the `<summary>`.
+- Every page has `content_for :title`. Admin pages go in the sidebar (`shared/_sidebar`) and the command bar (`shared/_command_bar`).
+- `spec/ui/view_conventions_spec.rb` enforces the rules a file scan can hold. Run it before you commit a view. When you add a rule to `docs/UI.md`, add a check there too.
+- Before a UI pull request, look at every changed page at 1280 and 390 wide, light and dark, and tab through it once. Screenshots in the PR body.
 
 ## Deployment
 Production runs as Docker containers on the `alastor` NixOS host. The image is built on Ruby Alpine (`Dockerfile`). Thruster handles HTTP acceleration inside the image.
