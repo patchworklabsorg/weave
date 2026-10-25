@@ -91,3 +91,28 @@ To change the list, edit the staging credentials and redeploy:
 ```bash
 WEAVE_ENV=staging bin/rails credentials:edit
 ```
+
+## Identity team seed
+
+Staging does not copy verifications from production. Production rows hold ID data, and production images are sealed to the production key set, so staging cannot open them.
+
+To put the staging identity team in the production state without a second verification circle, run this in a one-off staging container:
+
+```bash
+bin/rails identity:staging_seed BY=<owner email> MEMBERS=<email>,<email>,<email> LEAD=<email>
+```
+
+- The task refuses to run unless `WEAVE_ENV=staging`.
+- Each member gets a passed verification. The verifier is the person before them in `MEMBERS`, and the first member's verifier is the last member.
+- A member who is already verified keeps their verification. A member who is not on the identity team joins it.
+- `LEAD` is optional and must be one of the members.
+- The task writes no ID image, no document data and no residency check. Each verification and its `decided` event say "Staging seed", so the governance and verification logs show where the data came from.
+- Key holders and the key ceremony stay separate. The staging key set must be its own.
+
+```mermaid
+flowchart LR
+  A[bootstrap ran on staging] --> B[identity:staging_seed]
+  B --> C[members verified, bootstrap closed]
+  C --> D[lead set]
+  C --> E[staging key ceremony, separate]
+```

@@ -331,6 +331,47 @@ module IdentityGovernance
       end
     end
 
+    STAGING_SEED_REASON = "Staging seed: copies the production state of the identity team. No call took place."
+
+    # Staging only (lib/tasks/identity.rake identity:staging_seed). Puts the
+    # identity team in the production state without a second circle: each
+    # member gets a passed verification by the person before them in the
+    # list, and LEAD gets the lead role. It writes no ID image and no
+    # document data, because production images are sealed to the production
+    # key set and the identity rules keep ID data out of staging.
+    def staging_seed!(users, by:, lead: nil)
+      users = Array(users).compact.uniq
+      return failure(base: "This runs on staging only.") unless Weave.staging?
+      return failure(base: "Only an owner can seed the identity team.") unless can_propose?(by)
+      return failure(base: "Give at least two people, so each one is verified by another person.") if users.size < 2
+      return failure(base: "The lead must be one of the members.") if lead && !users.include?(lead)
+
+      plan = users.each_with_index.map { |user, index| [user, users[index - 1]] }
+      with_whodunnit(by) do
+        User.transaction do
+          plan.each do |user, verifier|
+            lock_user_row!(user)
+            RoleGrants.grant!(user, "verifier", by:, reason: STAGING_SEED_REASON) unless user.identity_team
+            next if user.identity_verified?
+
+            verification = Verification.new(
+              user:, verification_method: "document_call", document_type: "other", status: "verified",
+              verifier:, decided_at: Time.current, decision_reason: STAGING_SEED_REASON,
+              age_consistent: true, region_consistent: true, previous_attempt: user.latest_verification
+            )
+            # The seed has no ID image on purpose, so skip the attachment check.
+            verification.save!(validate: false)
+            VerificationEvent.record!(verification, :decided, actor: by, outcome: "verified", reason: STAGING_SEED_REASON,
+                                                                   verifier_id: verifier.id, staging_seed: true)
+          end
+          RoleGrants.grant!(lead.reload_roles!, "identity_lead", by:, reason: STAGING_SEED_REASON) if lead
+        end
+      end
+      success(plan)
+    rescue RoleGrants::Error => error
+      failure(base: error.message)
+    end
+
     # A member who joined in the bootstrap is not verified at first. Until
     # they are, they may record a call outcome only for the person after them
     # in the circle (VerificationFlow.decide asks). Returns the error, or nil.
