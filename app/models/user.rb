@@ -548,8 +548,8 @@ class User < ApplicationRecord
 
   # Issues a fresh link and mails it. Existing unused links stay valid — see
   # User::MagicLink for why.
-  def send_magic_link(requested_ip: nil)
-    link = User::MagicLink.issue!(self, requested_ip: requested_ip)
+  def send_magic_link(requested_ip: nil, return_to: nil)
+    link = User::MagicLink.issue!(self, requested_ip: requested_ip, return_to: return_to)
     MagicLinkJob.perform_later(self, link.token)
     true
   rescue ActiveRecord::RecordInvalid => e

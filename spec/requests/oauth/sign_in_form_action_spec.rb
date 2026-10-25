@@ -51,6 +51,15 @@ RSpec.describe "form-action on the sign-in pages", type: :request do
     expect(form_action(response)).to eq("form-action 'self' https://krater.example.org")
   end
 
+  it "applies to a magic link opened in another browser, from the authorize request the link carries" do
+    user = create(:user, :verified)
+    token = User::MagicLink.issue!(user, return_to: "/oauth/authorize?client_id=#{application.uid}").token
+
+    get "/auth/magic_link/#{token}"
+
+    expect(form_action(response)).to eq("form-action 'self' https://krater.example.org")
+  end
+
   it "stays 'self' when no OAuth authorization is pending" do
     get "/login"
 

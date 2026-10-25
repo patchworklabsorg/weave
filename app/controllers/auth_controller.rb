@@ -100,7 +100,7 @@ class AuthController < ApplicationController
     end
 
     # Send magic link to existing user
-    if user.send_magic_link(requested_ip: request.remote_ip)
+    if user.send_magic_link(requested_ip: request.remote_ip, return_to: session[:oauth_return_to])
       respond_to do |format|
         format.html { redirect_to login_path, notice: "Magic link sent! Check your email to continue." }
         format.json { render json: { message: "Magic link sent to your email" }, status: :ok }
@@ -130,7 +130,7 @@ class AuthController < ApplicationController
       return
     end
 
-    if user.send_magic_link(requested_ip: request.remote_ip)
+    if user.send_magic_link(requested_ip: request.remote_ip, return_to: session[:oauth_return_to])
       respond_to do |format|
         format.html { redirect_to login_path, notice: "Magic link sent! Check your email to continue." }
         format.json { render json: { message: "Magic link sent to your email" }, status: :ok }
@@ -183,6 +183,9 @@ class AuthController < ApplicationController
     end
 
     link.user.confirm_email_from_magic_link!
+    # A link opened in another browser finds no authorize request in this
+    # session. Resume the one the link was asked for in (see User::MagicLink).
+    session[:oauth_return_to] = link.return_to if session[:oauth_return_to].blank? && link.return_to.present?
     complete_login(link.user)
   end
 
@@ -268,10 +271,17 @@ class AuthController < ApplicationController
 
   private
 
+  # The magic link confirmation page asks about the link itself, because a
+  # link opened in another browser brings its authorize request with it (see
+  # #confirm_magic_link). The page's form must allow that client too.
   def pending_oauth_client_origins
-    return [] if session[:oauth_return_to].blank? || session[:oauth_client_id].blank?
-
-    redirect_origins_for(Doorkeeper::Application.find_by(uid: session[:oauth_client_id]))
+    if session[:oauth_return_to].present? && session[:oauth_client_id].present?
+      redirect_origins_for(Doorkeeper::Application.find_by(uid: session[:oauth_client_id]))
+    elsif action_name == "magic_link_login" && params[:token].present?
+      redirect_origins_for(User::MagicLink.for_token(params[:token])&.pending_application)
+    else
+      []
+    end
   end
 
   # Returns the link, or nil after having already redirected. Callers bail on nil.

@@ -30,7 +30,12 @@ class UsersController < ApplicationController
     end
 
     if @user.save
-      redirect_to email_confirmation_path, notice: "Account created! Please check your email to verify your account."
+      # Signing up does not sign anyone in. The member confirms the address
+      # and signs in with this link, and it resumes a pending OAuth authorize
+      # request. /email_confirmation needs a signed-in user, so it is no place
+      # to wait.
+      @user.send_magic_link(requested_ip: request.remote_ip, return_to: session[:oauth_return_to])
+      redirect_to login_path, notice: "Account created! We sent a sign-in link to #{@user.email}. Open it to confirm your email."
     else
       # Check if this is a username conflict error
       if @user.errors[:base]&.any? { |message| message.include?("snafu") }

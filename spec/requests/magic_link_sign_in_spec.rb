@@ -155,6 +155,33 @@ RSpec.describe "Magic link sign-in", type: :request do
     end
   end
 
+  # The email is often opened in another browser than the one that started the
+  # authorize request, and that browser's session has nothing to resume.
+  describe "a pending OAuth authorize request" do
+    let(:authorize_path) { "/oauth/authorize?client_id=abc&response_type=code" }
+
+    it "is kept on the link it was requested in" do
+      get oauth_authorization_path, params: { client_id: "abc", response_type: "code" }
+      post login_path, params: { user: { email: user.email } }
+
+      expect(user.magic_links.last.return_to).to start_with("/oauth/authorize?")
+    end
+
+    it "resumes from the link in a session that has none" do
+      link = User::MagicLink.issue!(user, return_to: authorize_path)
+
+      post confirm_magic_link_path(token: link.token)
+
+      expect(response).to redirect_to(authorize_path)
+    end
+
+    it "keeps only a local authorize path" do
+      link = User::MagicLink.issue!(user, return_to: "https://evil.example.com/oauth/authorize")
+
+      expect(link.return_to).to be_nil
+    end
+  end
+
   it "confirms an unconfirmed address on sign-in" do
     unconfirmed = create(:user, :unverified)
     link = User::MagicLink.issue!(unconfirmed)
