@@ -135,9 +135,18 @@ class Rack::Attack
 
   # A patch app reads one shipping address for each label it prints. A
   # lower limit than the rest of the API stops an app that reads them in bulk.
+  # The router also serves the path with a trailing or doubled slash, so the
+  # match allows them. Count by IP and by token: an app behind a shared IP and
+  # a token used from many IPs both hit a limit.
+  SHIPPING_ADDRESS_PATH = /\A\/+api\/+v1\/+directory\/+users\/+[^\/]+\/+shipping_address\/*(\.\w+)?\z/
+
   throttle("shipping_address/ip", limit: 30, period: 1.minute) do |req|
-    if req.path.start_with?("/api/v1/directory/users/") && req.path.sub(/\.\w+\z/, "").end_with?("/shipping_address")
-      req.ip
+    req.ip if req.path.match?(SHIPPING_ADDRESS_PATH)
+  end
+
+  throttle("shipping_address/token", limit: 30, period: 1.minute) do |req|
+    if req.path.match?(SHIPPING_ADDRESS_PATH) && (authorization = req.get_header("HTTP_AUTHORIZATION")).present?
+      Digest::SHA256.hexdigest(authorization)
     end
   end
 

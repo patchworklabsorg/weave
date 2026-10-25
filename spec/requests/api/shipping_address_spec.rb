@@ -47,6 +47,13 @@ RSpec.describe "Shipping address API", type: :request do
       expect(shipping_get(path)).to include("name" => "Ada Lovelace", "phone" => nil)
     end
 
+    it "gives a null name when Weave has no name for the member" do
+      member.update_columns(first_name: "", last_name: "") # rubocop:disable Rails/SkipsModelValidations
+      add_address
+
+      expect(shipping_get(path)).to include("name" => nil)
+    end
+
     it "leaves out the coordinates, the delivery notes and the contact email" do
       add_address(contact_name: "Grace H.", contact_first_name: "Grace", contact_last_name: "Hopper",
                   contact_email: "grace@example.com")
@@ -176,6 +183,31 @@ RSpec.describe "Shipping address API", type: :request do
       token = app_token
 
       31.times { shipping_get(path, token: token) }
+
+      expect(response).to have_http_status(:too_many_requests)
+    end
+
+    it "counts the path with a trailing or doubled slash" do
+      add_address
+      token = app_token
+
+      15.times { shipping_get("#{path}/", token: token) }
+      15.times { shipping_get(path.sub("/shipping_address", "//shipping_address"), token: token) }
+      expect(response).to have_http_status(:ok)
+
+      shipping_get(path, token: token)
+
+      expect(response).to have_http_status(:too_many_requests)
+    end
+
+    it "throttles one token used from many IPs" do
+      add_address
+      token = app_token
+
+      30.times { |n| get path, headers: { "Authorization" => "Bearer #{token}", "REMOTE_ADDR" => "10.0.0.#{n + 1}" } }
+      expect(response).to have_http_status(:ok)
+
+      get path, headers: { "Authorization" => "Bearer #{token}", "REMOTE_ADDR" => "10.0.1.1" }
 
       expect(response).to have_http_status(:too_many_requests)
     end

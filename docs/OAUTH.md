@@ -388,14 +388,14 @@ label needs:
 
 Rules:
 
-- `name` is the contact name on the address. When the address has no contact name, it is the user's preferred name.
+- `name` is the contact name on the address. When the address has no contact name, it is the user's first and last name. It is `null` when Weave has neither.
 - `phone` is the contact phone number in E.164 format, or `null`. Carriers ask for it on most international labels.
 - `country` is the ISO 3166-1 alpha-2 code.
 - An unknown `sub`, a user that the app may not serve, and a user with no complete shipping address all give `404`.
 - A token with a user, a token without the `fulfillment` scope, or a token of an app whose scopes do not list `fulfillment` gives `403`. The `directory` scope is not enough.
 - Each read that gives an address writes an audit row with the app, the `sub`, the IP and the time. Admins see the reads on the user's page in `/admin/users`.
 - The response has `Cache-Control: no-store`.
-- The endpoint allows 30 requests per minute for each IP.
+- The endpoint allows 30 requests per minute for each IP, and 30 for each token.
 
 ### Resource servers
 

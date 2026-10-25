@@ -21,11 +21,12 @@ class ShippingLabelSerializer
 
   private
 
-  # The contact name on the address, or the member's preferred name.
+  # The contact name on the address, or the member's first and last name. Nil
+  # when Weave has neither.
   def recipient_name
     [@address.contact_first_name, @address.contact_last_name].compact_blank.join(" ").presence ||
       @address.contact_name.presence ||
-      @user.full_name
+      @user.full_name.presence
   end
 
 end
