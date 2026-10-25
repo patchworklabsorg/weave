@@ -237,6 +237,14 @@ RSpec.describe "Identity verification pages", type: :request do
       expect(response.body).not_to match(/name="[^"]*(video|recording)/)
     end
 
+    it "names the identifier fields so the decision receives them" do
+      get identity_verification_path(verification)
+
+      fields = Nokogiri::HTML(response.body).css("[name^='identifiers[']").map { |field| field["name"] }
+      expect(fields).to include("identifiers[document_type]", "identifiers[issuing_country]", "identifiers[document_number]",
+                                "identifiers[legal_name]", "identifiers[date_of_birth]")
+    end
+
     it "records a pass and stores no identifier" do
       patch decide_identity_verification_path(verification), params: params
 

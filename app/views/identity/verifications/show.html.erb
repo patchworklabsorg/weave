@@ -186,7 +186,7 @@
               <legend class="field-label">Weave keeps document and national ID numbers only as one-way hashes for the fraud check. The name and birthday must match the member's account.</legend>
               <p class="field-hint">Type the legal name and the birthday from the ID. Weave compares them with the account when you record a pass.</p>
               <div class="form-grid form-grid-2">
-                <%= form.fields_for :identifiers do |ids| %>
+                <%= fields_for :identifiers do |ids| %>
                   <%= ids.select :document_type, Verification::DOCUMENT_TYPES.map { |type| [type.humanize, type] },
                         { selected: typed[:document_type].presence || @verification.document_type }, aria: { label: "Document type" }, class: "field" %>
                   <%= ids.text_field :issuing_country, value: typed[:issuing_country], maxlength: 2, placeholder: "Issuing country (two letters)", aria: { label: "Issuing country" }, class: "field" %>

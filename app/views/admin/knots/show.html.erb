@@ -77,7 +77,7 @@
             <%= form.select :evidence, [["Change-of-name record", "change_of_name_record"], ["New document", "new_document"]], {},
                   aria: { label: "Evidence" }, class: "field" %>
             <div class="form-grid form-grid-2">
-              <%= form.fields_for :identifiers do |ids| %>
+              <%= fields_for :identifiers do |ids| %>
                 <%= ids.text_field :legal_name, required: true, placeholder: "New legal name", aria: { label: "New legal name" }, class: "field" %>
                 <%= ids.date_field :date_of_birth, required: true, aria: { label: "Date of birth" }, class: "field" %>
                 <%= ids.select :document_type, [["No new document", ""]] + Verification::DOCUMENT_TYPES.map { |type| [type.humanize, type] }, {},
