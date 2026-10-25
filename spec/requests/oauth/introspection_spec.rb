@@ -111,7 +111,7 @@ RSpec.describe "OAuth token introspection", type: :request do
       expect(response.parsed_body["error"]).to eq("invalid_scope")
     end
 
-    %w[quilt introspect directory].each do |scope|
+    %w[quilt introspect directory fulfillment].each do |scope|
       it "can't be asked for at the authorization endpoint (#{scope})" do
         app = Doorkeeper::Application.create!(name: "Client", redirect_uri: "https://client.example.com/cb",
                                               scopes: "openid profile #{scope}")

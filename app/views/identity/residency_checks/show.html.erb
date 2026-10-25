@@ -44,7 +44,7 @@
             <div class="form-grid form-grid-3">
               <div class="field-group">
                 <%= form.label :us_resident, "Lives in the US", class: "field-label" %>
-                <%= form.select :us_resident, [["Choose", ""], ["Yes", "yes"], ["No", "no"]], {}, required: true, class: "field" %>
+                <%= form.select :us_resident, [["Yes", "yes"], ["No", "no"]], { include_blank: "Choose" }, required: true, class: "field" %>
               </div>
               <div class="field-group">
                 <%= form.label :us_state, "US state (for yes)", class: "field-label" %>

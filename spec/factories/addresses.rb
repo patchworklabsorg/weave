@@ -40,22 +40,22 @@
 #  unique_address_per_addressable_type_and_address_type  (addressable_type,addressable_id,type,address_type) UNIQUE
 #
 FactoryBot.define do
-  factory :address do
+  factory :address, class: "UserAddress" do
     association :addressable, factory: :user
-    street_address { "123 Main St" }
-    street_address_2 { nil }
+    line1 { "123 Main St" }
+    line2 { nil }
     city { "Springfield" }
     state { "IL" }
     postal_code { "62701" }
     country { "US" }
-    address_type { "UserAddress" }
+    address_type { "shipping" }
 
-    factory :shipping_address, class: "ShippingAddress" do
-      address_type { "Shipping" }
+    factory :shipping_address do
+      address_type { "shipping" }
     end
 
-    factory :billing_address, class: "BillingAddress" do
-      address_type { "Billing" }
+    factory :billing_address do
+      address_type { "billing" }
     end
   end
 end
