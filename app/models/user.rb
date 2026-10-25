@@ -112,6 +112,7 @@ class User < ApplicationRecord
   has_many :user_sessions, class_name: "User::Session", dependent: :destroy
   has_many :magic_links, class_name: "User::MagicLink", dependent: :destroy
   has_many :passkeys, class_name: "User::Passkey", dependent: :destroy
+  has_many :social_profiles, dependent: :destroy
 
   # All email addresses belonging to this user. users.email stays the canonical
   # primary address and is mirrored into this table (is_primary flag).

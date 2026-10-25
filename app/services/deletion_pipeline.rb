@@ -36,6 +36,7 @@ module DeletionPipeline
     "Group::Membership"         => { "user_id" => :id },
     "User::Session"             => { "user_id" => :id },
     "User::Passkey"             => { "user_id" => :id },
+    "SocialProfile"             => { "user_id" => :id },
     "GuardianConsent"           => { "user_id" => :id },
     "ApplicationAccessGrant"    => { "grantee_type" => "User", "grantee_id" => :id },
     "ApplicationRoleAssignment" => { "assignee_type" => "User", "assignee_id" => :id }
@@ -209,6 +210,7 @@ module DeletionPipeline
         "Group::Membership"         => user.group_memberships.ids,
         "User::Session"             => user.user_sessions.ids,
         "User::Passkey"             => user.passkeys.ids,
+        "SocialProfile"             => user.social_profiles.ids,
         "ApplicationAccessGrant"    => user.application_access_grants.ids,
         "ApplicationRoleAssignment" => user.application_role_assignments.ids,
         "GuardianConsent"           => GuardianConsent.where(user_id: user.id).ids

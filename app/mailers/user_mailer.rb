@@ -74,4 +74,20 @@ class UserMailer < ApplicationMailer
     )
   end
 
+  # Sent when a social profile is linked. Apps can read linked accounts (the
+  # social scope), so the member finds out if someone else linked one. Takes
+  # values, not the record: an unlink before the job runs must not drop the
+  # email.
+  def social_profile_linked(user, provider_name, username)
+    @user = user
+    @provider_name = provider_name
+    @username = username
+    @social_profiles_url = social_profiles_url
+
+    mail(
+      to: @user.email,
+      subject: env_subject("A #{@provider_name} account was linked to your account")
+    )
+  end
+
 end

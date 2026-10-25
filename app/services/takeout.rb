@@ -104,6 +104,11 @@ module Takeout
             "last_used_at" => passkey.last_used_at&.iso8601
 }
         end,
+        "social_profiles" => user.social_profiles.order(:provider).map do |profile|
+          { "provider" => profile.provider, "id" => profile.uid, "username" => profile.username,
+            "linked_at" => profile.created_at.iso8601
+}
+        end,
         "groups"          => user.groups.map(&:name),
         "authorized_apps" => user.oauth_access_tokens.includes(:application).filter_map { |token| token.application&.name }.uniq,
         "funder_consents" => user.funder_consents.order(:given_at).map do |consent|

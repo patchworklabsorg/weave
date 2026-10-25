@@ -226,6 +226,9 @@
               <span class="text-ink-faint">Not in any group</span>
             <% end %>
           <% end %>
+          <% @user.social_profiles.order(:provider).each do |profile| %>
+            <%= dl_row(profile.provider_name) { external_link(profile.username, profile.profile_url) } %>
+          <% end %>
         </dl>
       </div>
     </section>
