@@ -3,6 +3,7 @@
 class ApplicationController < ActionController::Base
   # First, so it wraps every other callback. See the concern.
   include RecordsImpersonationActions
+  include ReturnAfterSignIn
 
   before_action :authenticate_user!
   before_action :track_user_session
@@ -68,12 +69,12 @@ class ApplicationController < ActionController::Base
   end
 
   # Rotate the session id to defeat session fixation, carrying forward the small
-  # set of pre-login keys an in-progress OAuth flow depends on.
+  # set of pre-login keys that say where to go after sign-in.
   def reset_session_preserving_oauth
     preserved = {
       oauth_client_id: session[:oauth_client_id],
       oauth_return_to: session[:oauth_return_to],
-      return_to_password: session[:return_to_password]
+      ReturnAfterSignIn::SESSION_KEY => session[ReturnAfterSignIn::SESSION_KEY]
     }.compact
     reset_session
     preserved.each { |key, value| session[key] = value }
@@ -107,6 +108,7 @@ class ApplicationController < ActionController::Base
     unless current_user
       respond_to do |format|
         format.html do
+          store_return_path
           flash[:alert] = "You need to sign in before continuing"
           redirect_to "/login"
         end
@@ -132,6 +134,7 @@ class ApplicationController < ActionController::Base
 
     respond_to do |format|
       format.html do
+        store_return_path
         flash[:alert] = "You need to sign in before continuing"
         redirect_to "/login"
       end
