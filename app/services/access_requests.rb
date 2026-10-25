@@ -31,7 +31,9 @@ module AccessRequests
     # The group an approval adds the member to, while it still gives access
     # to the app. nil when the app takes no requests.
     def request_group_for(application)
-      group = application.access_request_group
+      return if application.access_request_group_id.nil?
+
+      group = application.association(:access_request_group).loaded? ? application.access_request_group : Group.find_by(id: application.access_request_group_id)
       return unless group&.manual?
       # Joining a sponsored project group turns off onboarding steps (see
       # Group), so it never takes requests.

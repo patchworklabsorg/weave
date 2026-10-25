@@ -18,7 +18,8 @@ class GroupsController < ApplicationController
   def show
     authorize @group
     requests = policy_scope(AccessRequest).where(group: @group).includes(:user, :application)
-    @pending_requests = requests.pending.order(:created_at)
+    # The approve check reads each request's group.
+    @pending_requests = requests.pending.includes(:group).order(:created_at)
     @recent_decisions = requests.where.not(status: "pending").includes(:decided_by).order(decided_at: :desc).limit(RECENT_DECISIONS)
     @memberships = @group.memberships.active.includes(:user).order(:created_at)
     @membership = @group.memberships.build

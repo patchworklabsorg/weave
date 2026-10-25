@@ -53,6 +53,18 @@ RSpec.describe "App launcher", type: :request do
     expect(response.body).not_to include("https://krater.example.com\"")
   end
 
+  it "offers requests for several apps without an N+1 query" do
+    %w[Krater Compute].each do |name|
+      application = launcher_app(name, access_policy: "restricted")
+      ApplicationAccessGrant.create!(application:, grantee: group)
+      application.update!(access_request_group: group)
+    end
+
+    get profile_path
+
+    expect(response.body.scan("Request access").size).to eq(2)
+  end
+
   it "shows a pending request" do
     application = launcher_app("Krater", access_policy: "restricted")
     ApplicationAccessGrant.create!(application:, grantee: group)
