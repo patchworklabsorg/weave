@@ -121,6 +121,7 @@ class ApplicationController < ActionController::Base
 
     respond_to do |format|
       format.html do
+        store_return_path
         flash[:alert] = "Please verify your email address before continuing"
         redirect_to email_confirmation_path
       end

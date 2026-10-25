@@ -77,6 +77,54 @@ RSpec.describe "Return to the requested page after sign-in", type: :request do
     expect(session[ReturnAfterSignIn::SESSION_KEY]).to be_nil
   end
 
+  # authenticate_user! sends a signed-in user with an unconfirmed address to
+  # /email_confirmation. The page they wanted waits until they confirm.
+  describe "with an unconfirmed email address" do
+    before do
+      sign_in_with_magic_link
+      # The magic link confirmed the address. Put it back to unconfirmed.
+      user.reload.update!(email_confirmed_at: nil)
+      user.send_confirmation_email
+    end
+
+    it "returns to the page after the confirmation link" do
+      get profile_sessions_path
+      expect(response).to redirect_to(email_confirmation_path)
+
+      get confirm_email_path(token: user.confirmation_token)
+
+      expect(response).to redirect_to(profile_sessions_path)
+      expect(user.reload).to be_email_verified
+    end
+
+    it "returns to the page when the confirmation page reloads after a confirmation in another tab" do
+      get profile_sessions_path
+      user.verify_email
+
+      get email_confirmation_path
+
+      expect(response).to redirect_to(profile_sessions_path)
+    end
+
+    it "lands on the dashboard after the confirmation link when no page was stored" do
+      get confirm_email_path(token: user.confirmation_token)
+
+      expect(response).to redirect_to(root_path)
+    end
+
+    it "keeps the page for the sign-in that follows when nobody is signed in" do
+      delete logout_path
+      get profile_sessions_path
+
+      get confirm_email_path(token: user.confirmation_token)
+      expect(response).to redirect_to(login_path)
+
+      sign_in_with_magic_link
+
+      expect(response).to redirect_to(profile_sessions_path)
+    end
+  end
+
   it "does not store a JSON request" do
     get profile_sessions_path, headers: { "Accept" => "application/json" }
 
