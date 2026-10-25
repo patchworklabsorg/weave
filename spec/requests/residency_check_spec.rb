@@ -66,6 +66,14 @@ RSpec.describe "US residency check", type: :request do
 
     before { sign_in_via_magic_link(verifier) }
 
+    it "gives the residency select one placeholder, Choose, and no empty option" do
+      patch start_pre_review_identity_residency_check_path(check)
+      get identity_residency_check_path(check)
+
+      options = Nokogiri::HTML(response.body).css("select[name='us_resident'] option").map { |option| [option["value"], option.text] }
+      expect(options).to eq([["", "Choose"], ["yes", "Yes"], ["no", "No"]])
+    end
+
     it "lists the check, takes it, and records a yes" do
       get identity_residency_checks_path
       expect(response.body).to include(check.public_id)

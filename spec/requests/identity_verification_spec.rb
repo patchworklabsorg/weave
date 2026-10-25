@@ -245,6 +245,16 @@ RSpec.describe "Identity verification pages", type: :request do
                                 "identifiers[legal_name]", "identifiers[date_of_birth]")
     end
 
+    it "gives each attestation select one placeholder, Choose, and no empty option" do
+      get identity_verification_path(verification)
+
+      page = Nokogiri::HTML(response.body)
+      %w[age_consistent region_consistent us_resident].each do |name|
+        options = page.css("select[name='#{name}'] option").map { |option| [option["value"], option.text] }
+        expect(options).to eq([["", "Choose"], ["yes", "Yes"], ["no", "No"]])
+      end
+    end
+
     it "records a pass and stores no identifier" do
       patch decide_identity_verification_path(verification), params: params
 
@@ -265,6 +275,17 @@ RSpec.describe "Identity verification pages", type: :request do
                                        "The name does not match the account.", "The birthday does not match the account.",
                                        'value="Erika Musterfrau"', "Failed: details don&#39;t match the account")
       expect(response.body).not_to include("Mustermann", "1990-08-12")
+    end
+
+    it "keeps the chosen attestation answers and the Choose placeholder after a mismatch" do
+      patch decide_identity_verification_path(verification), params: params.deep_merge(identifiers: { legal_name: "Erika Musterfrau" })
+
+      page = Nokogiri::HTML(response.body)
+      %w[age_consistent region_consistent us_resident].each do |name|
+        select = page.css("select[name='#{name}']")
+        expect(select.css("option").map(&:text)).to eq(%w[Choose Yes No])
+        expect(select.css("option[selected]").map { |option| option["value"] }).to eq(["yes"])
+      end
     end
 
     it "fails the call for details that don't match the account" do
