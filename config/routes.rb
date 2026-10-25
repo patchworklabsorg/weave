@@ -270,6 +270,7 @@
 #                                              GET    /admin/*path(.:format)                                                                            redirect(301, /login)
 #                            letter_opener_web        /letter_opener                                                                                    LetterOpenerWeb::Engine
 #                                api_v1_health GET    /api/v1/health(.:format)                                                                          api/v1/health#index
+#       api_v1_directory_user_shipping_address GET    /api/v1/directory/users/:user_sub/shipping_address(.:format)                                      api/v1/directory/shipping_addresses#show
 #                       api_v1_directory_users GET    /api/v1/directory/users(.:format)                                                                 api/v1/directory/users#index
 #                        api_v1_directory_user GET    /api/v1/directory/users/:sub(.:format)                                                            api/v1/directory/users#show
 #           api_v1_thread_count_project_events POST   /api/v1/thread_count/project_events(.:format)                                                     api/v1/project_events#create
@@ -857,7 +858,9 @@ Rails.application.routes.draw do
       get "health", to: "health#index"
 
       namespace :directory do
-        resources :users, only: [:index, :show], param: :sub
+        resources :users, only: [:index, :show], param: :sub do
+          resource :shipping_address, only: :show
+        end
       end
 
       # Project review outcomes for Thread Count, from services such as

@@ -28,6 +28,7 @@ class Admin::UsersController < Admin::BaseController
   def show
     @impersonations = Impersonation.where(user: @user).includes(:admin).recent_first.limit(50)
     @impersonation_action_counts = Impersonation::Action.where(impersonation: @impersonations).group(:impersonation_id).count
+    @shipping_address_reads = LockboxAudit.shipping_address_reads.where(subject: @user).includes(:viewer).recent_first.limit(50)
   end
 
   def new

@@ -48,12 +48,14 @@ class AddressSerializer
     {
       id: @address.public_id,
       address_type: @address.address_type,
-      street_address: @address.street_address,
-      street_address_2: @address.street_address_2,
+      line1: @address.line1,
+      line2: @address.line2,
+      line3: @address.line3,
       city: @address.city,
       state: @address.state,
       postal_code: @address.postal_code,
-      country: @address.country,
+      # The ISO 3166 code. Address#country gives a country object.
+      country: @address[:country],
       latitude: @address.latitude,
       longitude: @address.longitude
     }
