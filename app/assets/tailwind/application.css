@@ -27,7 +27,7 @@
   /* Ink */
   --color-ink: light-dark(#2a2050, #e9e4f7);        /* primary text, the stitch color */
   --color-ink-soft: light-dark(#5d5584, #a79ecb);   /* secondary text */
-  --color-ink-faint: light-dark(#8a83a8, #7d74a1);  /* captions, placeholders */
+  --color-ink-faint: light-dark(#6b6490, #938bb7);  /* captions, placeholders; 4.5:1 on paper and panel */
 
   /* Lines */
   --color-seam: light-dark(rgb(42 32 80 / 0.24), rgb(233 228 247 / 0.2));      /* dashed stitch lines */
@@ -48,13 +48,13 @@
 
   /* Semantic. Success is the teal patch and info is the sky patch;
      warning and danger are the only colors from outside the quilt. */
-  --color-success: light-dark(#1f8a73, #4fc4a9);
+  --color-success: light-dark(#187261, #4fc4a9);
   --color-success-soft: light-dark(#daf1ea, #163a32);
   --color-info: light-dark(#2f7cd6, #74a9eb);
   --color-info-soft: light-dark(#dfebfa, #1d2c49);
-  --color-warning: light-dark(#a65d05, #f0b45a);
+  --color-warning: light-dark(#935203, #f0b45a);
   --color-warning-soft: light-dark(#fdf1dc, #3d2a0f);
-  --color-danger: light-dark(#c53a57, #f28aa0);
+  --color-danger: light-dark(#ad2e49, #f28aa0);
   --color-danger-soft: light-dark(#fbe6ea, #47202b);
 
   /* Text on a grape fill */
@@ -95,7 +95,8 @@
 /* Plumbing the motifs need outside of Tailwind utilities */
 :root {
   --lattice-line: light-dark(rgb(108 62 193 / 0.045), rgb(169 136 233 / 0.05));
-  --focus-ring: 0 0 0 3px light-dark(rgb(155 127 212 / 0.55), rgb(169 136 233 / 0.5));
+  --focus-ring-color: light-dark(rgb(108 62 193 / 0.7), rgb(169 136 233 / 0.75));
+  --focus-ring: 0 0 0 3px var(--focus-ring-color);
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -119,11 +120,31 @@
     color: var(--color-on-grape);
   }
 
+  /* Keyboard focus is an outline, not a box-shadow, so a component's own
+     shadow (btn-primary, the floating theme toggle, the current nav link)
+     can never cover it. */
   :focus-visible {
-    outline: none;
-    box-shadow: var(--focus-ring);
+    outline: 3px solid var(--focus-ring-color);
+    outline-offset: 1px;
     border-radius: var(--radius-control);
   }
+
+  /* Keyboard users skip the top bar and the sidebar. Visible on focus only. */
+  .skip-link {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 100;
+    padding: 0.5rem 0.875rem;
+    border-radius: var(--radius-control);
+    background-color: var(--color-grape);
+    color: var(--color-on-grape);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    transform: translateY(-200%);
+  }
+  .skip-link:focus { transform: none; }
 
   code, kbd, pre, samp { font-family: var(--font-mono); }
 
@@ -139,6 +160,12 @@
 
   details > summary { cursor: pointer; }
   details > summary::-webkit-details-marker { display: none; }
+  details > summary { list-style: none; }
+  /* A folded card: the header is the summary, with a chevron that turns. */
+  details.card:not([open]) > summary.card-header { border-bottom: 0; }
+  details.card > summary.card-header > svg:last-child { flex: none; transition: transform var(--duration-fast) var(--ease-out); }
+  details.card[open] > summary.card-header > svg:last-child { transform: rotate(180deg); }
+
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -146,6 +173,8 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
+    /* The remaining-time bar only means something while it moves. */
+    .toast-bar { display: none; }
   }
 }
 
@@ -565,7 +594,7 @@
   .badge-violet  { background-color: var(--color-violet-soft);  color: light-dark(#6b4fb3, #cdbdf0); }
   .badge-orchid  { background-color: var(--color-orchid-soft);  color: light-dark(#8a3dab, #e0a8f0); }
   .badge-sky     { background-color: var(--color-sky-soft);     color: light-dark(#2463ad, #97bff2); }
-  .badge-teal    { background-color: var(--color-teal-soft);    color: light-dark(#1f7d69, #7bd6bf); }
+  .badge-teal    { background-color: var(--color-teal-soft);    color: light-dark(#1a6b5a, #7bd6bf); }
   .badge-success { background-color: var(--color-success-soft); color: var(--color-success); }
   .badge-info    { background-color: var(--color-info-soft);    color: light-dark(#2463ad, #97bff2); }
   .badge-warning { background-color: var(--color-warning-soft); color: var(--color-warning); }
@@ -621,7 +650,10 @@
 
   /* ── Tables ─────────────────────────────────────────────── */
 
-  .table-wrap { overflow-x: auto; }
+  /* position: relative keeps an absolutely positioned child (an .sr-only
+     column header) inside the scroll box, so a wide table scrolls here
+     instead of widening the page. */
+  .table-wrap { position: relative; overflow-x: auto; }
   .table {
     width: 100%;
     border-collapse: collapse;
@@ -870,9 +902,12 @@
     inset: 0 auto 0 0;
     z-index: 40;
     transform: translateX(-100%);
-    transition: transform var(--duration-base) var(--ease-out);
+    /* Closed, the drawer leaves the tab order too (visibility waits for the
+       slide to finish). */
+    visibility: hidden;
+    transition: transform var(--duration-base) var(--ease-out), visibility 0s linear var(--duration-base);
   }
-  .sidebar[data-open="true"] { transform: none; box-shadow: var(--shadow-overlay); }
+  .sidebar[data-open="true"] { transform: none; visibility: visible; transition-delay: 0s; box-shadow: var(--shadow-overlay); }
   .sidebar-scrim {
     position: fixed;
     inset: 0;
@@ -882,7 +917,7 @@
   }
   .sidebar-scrim[data-open="true"] { display: block; }
   @media (min-width: 64rem) {
-    .sidebar { position: sticky; top: 0; height: 100dvh; transform: none; box-shadow: none; }
+    .sidebar { position: sticky; top: 0; height: 100dvh; transform: none; visibility: visible; box-shadow: none; }
     .sidebar-scrim, .sidebar-scrim[data-open="true"] { display: none; }
   }
   .sidebar-brand {
@@ -1094,6 +1129,10 @@
     border: 1px dashed var(--color-seam);
     box-shadow: var(--shadow-card);
   }
+  .theme-toggle-floating:focus-visible { border-radius: 9999px; }
+  /* The focus pages keep the bottom corner clear for the floating toggle. */
+  .focus-main { min-height: 100%; padding-bottom: 4.5rem; }
+
 
   /* ── Command bar (⌘K) ───────────────────────────────────── */
 

@@ -35,7 +35,7 @@ export default class extends Controller {
     // Hide password field and disable submit while checking
     this.hidePasswordField()
     this.submitButtonTarget.disabled = true
-    this.submitButtonTarget.textContent = "Continue"
+    this.submitButtonTarget.textContent = "Send magic link"
 
     if (email === "") {
       this.hideLoadingIndicator()
@@ -74,11 +74,11 @@ export default class extends Controller {
 
       if (data.password_login_enabled) {
         this.showPasswordField()
-        this.submitButtonTarget.textContent = "Sign In"
+        this.submitButtonTarget.textContent = "Sign in"
         this.passwordLoginEnabled = true
       } else {
         this.hidePasswordField()
-        this.submitButtonTarget.textContent = "Send Magic Link"
+        this.submitButtonTarget.textContent = "Send magic link"
         this.passwordLoginEnabled = false
       }
 
@@ -89,7 +89,7 @@ export default class extends Controller {
       this.hideLoadingIndicator()
       // Default to magic link on error
       this.hidePasswordField()
-      this.submitButtonTarget.textContent = "Send Magic Link"
+      this.submitButtonTarget.textContent = "Send magic link"
       this.passwordLoginEnabled = false
       this.submitButtonTarget.disabled = false
     }
@@ -99,15 +99,17 @@ export default class extends Controller {
     this.passwordContainerTarget.style.display = "block"
     this.passwordTarget.required = true
     
-    // Add smooth transition
+    // A short fade, unless the person asked for reduced motion.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
     this.passwordContainerTarget.style.opacity = "0"
     this.passwordContainerTarget.style.transform = "translateY(-10px)"
-    
+
     setTimeout(() => {
-      this.passwordContainerTarget.style.transition = "all 0.3s ease"
+      this.passwordContainerTarget.style.transition = "opacity 0.18s ease, transform 0.18s ease"
       this.passwordContainerTarget.style.opacity = "1"
       this.passwordContainerTarget.style.transform = "translateY(0)"
     }, 10)
+
   }
 
   hidePasswordField() {

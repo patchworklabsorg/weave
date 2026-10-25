@@ -55,9 +55,34 @@
         --orchid: #a44fc8;
         --sky: #2f7cd6;
         --teal: #2aa187;
+        --grape-deep: #5a31a6;
+        --on-grape: #fff;
+        --btn-seam: rgb(255 255 255 / 0.55);
         --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         --font-display: "Shantell Sans", "Geist", ui-sans-serif, sans-serif;
+        color-scheme: light;
       }
+
+      /* The dark side of the tokens in the main stylesheet. */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --quilt: #16112a;
+          --paper: #1f1938;
+          --ink: #e9e4f7;
+          --ink-soft: #a79ecb;
+          --ink-faint: #938bb7;
+          --grape: #a988e9;
+          --violet: #b8a1e4;
+          --orchid: #cd8ce6;
+          --sky: #74a9eb;
+          --teal: #4fc4a9;
+          --grape-deep: #9271d6;
+          --on-grape: #16112a;
+          --btn-seam: rgb(22 17 42 / 0.5);
+          color-scheme: dark;
+        }
+      }
+
 
       body {
         font-family: var(--font-sans);
@@ -168,19 +193,21 @@
         justify-content: center;
         margin-top: 28px;
         background-color: var(--grape);
-        color: #fff;
+        color: var(--on-grape);
         font-weight: 600;
         font-size: 15px;
         text-decoration: none;
-        border: 2px dashed rgb(255 255 255 / 0.55);
+        border: 2px dashed var(--btn-seam);
+
         border-radius: 0.6rem;
         padding: 0.65rem 1.25rem;
         transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
       }
 
       .btn-stitch:hover {
-        background-color: #5a31a6;
+        background-color: var(--grape-deep);
         transform: translateY(-1px);
+
         box-shadow: 3px 4px 0 rgb(42 32 80 / 0.18);
       }
 

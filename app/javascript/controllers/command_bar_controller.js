@@ -193,14 +193,22 @@ export default class extends Controller {
     })
   }
 
+  // The input is the combobox; aria-activedescendant tells assistive tech
+  // which option the arrow keys are on. Options get an id the first time
+  // they are selected.
   select(index, items, { scroll = true } = {}) {
     this.selected = items.length === 0 ? -1 : index
+    this.inputTarget.removeAttribute("aria-activedescendant")
     items.forEach((item, i) => {
       const on = i === this.selected
       item.setAttribute("aria-selected", String(on))
-      if (on && scroll) item.scrollIntoView({ block: "nearest" })
+      if (!on) return
+      if (!item.id) item.id = `command_bar_option_${(this.optionCount = (this.optionCount || 0) + 1)}`
+      this.inputTarget.setAttribute("aria-activedescendant", item.id)
+      if (scroll) item.scrollIntoView({ block: "nearest" })
     })
   }
+
 
   run(item) {
     const { href, command } = item.dataset
