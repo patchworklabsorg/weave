@@ -152,9 +152,11 @@ class AuthController < ApplicationController
 
     # Re-opening a link you already used in this browser (back button, second
     # click) shouldn't read as an error — you're signed in, which is what you
-    # wanted.
+    # wanted. A link that is still live and was asked for during an authorize
+    # request goes on to that request, so a phone that is already signed in
+    # still resumes it.
     if current_user == link.user
-      redirect_to root_path
+      redirect_to((link.live? && link.return_to) || root_path)
       return
     end
 
@@ -164,6 +166,10 @@ class AuthController < ApplicationController
     end
 
     @magic_link_user = link.user
+    # Someone else can ask for a link to this address while an authorize
+    # request is pending in their browser. Name the app, so the owner of the
+    # address sees where the link goes before they sign in.
+    @continues_to = link.pending_application&.name
   end
 
   def confirm_magic_link
@@ -184,8 +190,9 @@ class AuthController < ApplicationController
 
     link.user.confirm_email_from_magic_link!
     # A link opened in another browser finds no authorize request in this
-    # session. Resume the one the link was asked for in (see User::MagicLink).
-    session[:oauth_return_to] = link.return_to if session[:oauth_return_to].blank? && link.return_to.present?
+    # session, or an old one that was never finished. Resume the one the link
+    # was asked for in (see User::MagicLink): it is the newest intent.
+    session[:oauth_return_to] = link.return_to if link.return_to.present?
     complete_login(link.user)
   end
 
@@ -273,12 +280,15 @@ class AuthController < ApplicationController
 
   # The magic link confirmation page asks about the link itself, because a
   # link opened in another browser brings its authorize request with it (see
-  # #confirm_magic_link). The page's form must allow that client too.
+  # #confirm_magic_link), and that request wins over the session's. The
+  # page's form must allow that client.
   def pending_oauth_client_origins
-    if session[:oauth_return_to].present? && session[:oauth_client_id].present?
+    link_application = User::MagicLink.for_token(params[:token])&.pending_application if action_name == "magic_link_login"
+
+    if link_application
+      redirect_origins_for(link_application)
+    elsif session[:oauth_return_to].present? && session[:oauth_client_id].present?
       redirect_origins_for(Doorkeeper::Application.find_by(uid: session[:oauth_client_id]))
-    elsif action_name == "magic_link_login" && params[:token].present?
-      redirect_origins_for(User::MagicLink.for_token(params[:token])&.pending_application)
     else
       []
     end

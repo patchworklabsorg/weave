@@ -1,6 +1,8 @@
 <h2 style="margin: 0 0 16px 0; color: #2a2050; font-size: 20px; font-weight: 700;">Sign in to your account</h2>
 
-<p style="margin: 0 0 16px 0; color: #2a2050;">Hi <%= @user.first_name %>,</p>
+<%# Anyone can sign up with any address, so the name on an unconfirmed
+    account is the signer's text, not the owner's. Leave it out. %>
+<p style="margin: 0 0 16px 0; color: #2a2050;">Hi<%= " #{@user.first_name}" if @user.email_verified? %>,</p>
 
 <p style="margin: 0 0 16px 0; color: #2a2050;">Click the button below to sign in to your account:</p>
 

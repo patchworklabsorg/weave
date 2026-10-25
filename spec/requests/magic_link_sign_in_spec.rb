@@ -180,6 +180,33 @@ RSpec.describe "Magic link sign-in", type: :request do
 
       expect(link.return_to).to be_nil
     end
+
+    it "wins over an old authorize request this browser never finished" do
+      get oauth_authorization_path, params: { client_id: "old", response_type: "code" }
+      link = User::MagicLink.issue!(user, return_to: authorize_path)
+
+      post confirm_magic_link_path(token: link.token)
+
+      expect(response).to redirect_to(authorize_path)
+    end
+
+    it "resumes in a browser that is already signed in" do
+      sign_in_via_magic_link(user)
+      link = User::MagicLink.issue!(user, return_to: authorize_path)
+
+      get magic_link_login_path(token: link.token)
+
+      expect(response).to redirect_to(authorize_path)
+    end
+
+    it "names the app on the confirmation page" do
+      application = Doorkeeper::Application.create!(name: "Krater", redirect_uri: "https://krater.example.org/cb", scopes: "openid")
+      link = User::MagicLink.issue!(user, return_to: "/oauth/authorize?client_id=#{application.uid}")
+
+      get magic_link_login_path(token: link.token)
+
+      expect(response.body).to include("you continue to <strong>Krater</strong>")
+    end
   end
 
   it "confirms an unconfirmed address on sign-in" do

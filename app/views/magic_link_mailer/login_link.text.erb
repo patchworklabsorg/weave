@@ -1,6 +1,6 @@
 Sign in to your account
 
-Hi <%= @user.first_name %>,
+Hi<%= " #{@user.first_name}" if @user.email_verified? %>,
 
 Click the link below to sign in to your account:
 
