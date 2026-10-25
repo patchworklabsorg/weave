@@ -11,6 +11,8 @@ RSpec.describe "US residency check", type: :request do
   before { active_key_set_without_holders }
 
   describe "the member" do
+    let(:id_form) { { document_type: "passport", id_document: document, data_notice_read: "1" } }
+
     before { sign_in_via_magic_link(member) }
 
     it "sees that the check comes with identity verification, and never a question about citizenship" do
@@ -33,8 +35,7 @@ RSpec.describe "US residency check", type: :request do
     end
 
     it "submits the identity form without a residency document" do
-      post verification_path, params: { document_type: "passport", id_document: document, data_notice_read: "1",
-                                        residency_evidence_type: "" }
+      post verification_path, params: id_form.merge(residency_evidence_type: "")
 
       expect(member.latest_verification).to be_present
       expect(member.residency_checks).to be_empty
@@ -42,8 +43,7 @@ RSpec.describe "US residency check", type: :request do
 
     it "refuses a residency document with no type on the identity form" do
       expect do
-        post verification_path, params: { document_type: "passport", id_document: document, data_notice_read: "1",
-                                          residency_evidence_type: "", residency_document: document }
+        post verification_path, params: id_form.merge(residency_evidence_type: "", residency_document: document)
       end.not_to change(Verification, :count)
 
       expect(response.body).to include(CGI.escapeHTML(I18n.t("residency.errors.evidence_type_or_remove")))
@@ -51,8 +51,7 @@ RSpec.describe "US residency check", type: :request do
 
     it "refuses a residency type with no document on the identity form" do
       expect do
-        post verification_path, params: { document_type: "passport", id_document: document, data_notice_read: "1",
-                                          residency_evidence_type: "school_enrollment" }
+        post verification_path, params: id_form.merge(residency_evidence_type: "school_enrollment")
       end.not_to change(Verification, :count)
 
       expect(response.body).to include(I18n.t("residency.errors.document_missing"))
