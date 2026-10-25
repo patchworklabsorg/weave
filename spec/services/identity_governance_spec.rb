@@ -491,6 +491,16 @@ RSpec.describe IdentityGovernance do
       expect(Verification.count).to eq(0)
     end
 
+    it "refuses a member with an open verification or an account that can't sign in" do
+      create(:verification, :call_scheduled, user: circle[1])
+      circle[2].update_column(:locked_at, Time.current) # rubocop:disable Rails/SkipsModelValidations
+
+      result = described_class.staging_seed!(circle, by: owner)
+
+      expect(result.message).to include("Kieran", "A verification is open", "Adam", "can't sign in")
+      expect(Verification.where(status: "verified").count).to eq(0)
+    end
+
     it "refuses a non-owner and a lead who is not a member" do
       expect(described_class.staging_seed!(circle, by: board_member).message).to include("Only an owner")
       expect(described_class.staging_seed!(circle, by: owner, lead: board_member).message).to include("one of the members")

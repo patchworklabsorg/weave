@@ -106,6 +106,7 @@ bin/rails identity:staging_seed BY=<owner email> MEMBERS=<email>,<email>,<email>
 - Each member gets a passed verification. The verifier is the person before them in `MEMBERS`, and the first member's verifier is the last member.
 - A member who is already verified keeps their verification. A member who is not on the identity team joins it.
 - `LEAD` is optional and must be one of the members.
+- The task refuses a member whose account can't sign in, who is under the verifier minimum age (with no exception), or who has an open verification. Finish or close that verification first.
 - The task writes no ID image, no document data and no residency check. Each verification and its `decided` event say "Staging seed", so the governance and verification logs show where the data came from.
 - Key holders and the key ceremony stay separate. The staging key set must be its own.
 

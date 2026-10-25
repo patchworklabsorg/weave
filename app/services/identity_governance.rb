@@ -346,6 +346,15 @@ module IdentityGovernance
       return failure(base: "Give at least two people, so each one is verified by another person.") if users.size < 2
       return failure(base: "The lead must be one of the members.") if lead && !users.include?(lead)
 
+      blocked = users.filter_map do |user|
+        latest = user.latest_verification
+        unmet = preconditions(user).reject { |check| check.key == :verified || check.met }.map(&:detail)
+        unmet << "The account can't sign in." unless user.can_authenticate?
+        unmet << "A verification is open. Finish or close it first." if latest && (latest.in_progress? || latest.escalation_open?)
+        "#{user.full_name}: #{unmet.join(' ')}" if unmet.any?
+      end
+      return failure(base: "Not ready: #{blocked.join(' ')}") if blocked.any?
+
       plan = users.each_with_index.map { |user, index| [user, users[index - 1]] }
       with_whodunnit(by) do
         User.transaction do
