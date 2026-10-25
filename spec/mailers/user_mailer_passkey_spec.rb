@@ -27,4 +27,15 @@ RSpec.describe UserMailer do
       expect(mail.text_part.body.to_s).to include("Old phone")
     end
   end
+
+  describe "#social_profile_linked" do
+    it "names the account and links to the social profiles page" do
+      mail = described_class.social_profile_linked(user, "GitHub", "octocat")
+
+      expect(mail.to).to eq([user.email])
+      expect(mail.subject).to include("A GitHub account was linked to your account")
+      expect(mail.text_part.body.to_s).to include("octocat").and include("/profile/social")
+      expect(mail.html_part.body.to_s).to include("octocat")
+    end
+  end
 end

@@ -134,6 +134,28 @@
     </section>
   </div>
 
+  <%# Linked accounts on other sites (see SocialProfilesController). %>
+  <section class="card mt-6">
+    <div class="card-header">
+      <div class="min-w-0 flex-1">
+        <h2 class="card-title">Social profiles</h2>
+        <p class="card-lede">Link your accounts on other sites, for example GitHub.</p>
+      </div>
+      <%= link_to social_profiles_path, class: "btn btn-secondary shrink-0" do %>
+        <%= icon(:link) %>Manage social profiles
+      <% end %>
+    </div>
+    <% if (social_profiles = @user.social_profiles.order(:provider)).any? %>
+      <div class="card-body">
+        <dl class="dl">
+          <% social_profiles.each do |profile| %>
+            <%= dl_row(profile.provider_name) { external_link(profile.username, profile.profile_url) } %>
+          <% end %>
+        </dl>
+      </div>
+    <% end %>
+  </section>
+
   <%# Takeout and deletion (see Takeout and DeletionReview). %>
   <section class="card mt-6">
     <div class="card-header">

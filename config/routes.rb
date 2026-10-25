@@ -96,6 +96,10 @@
 #                                     passkeys GET    /profile/passkeys(.:format)                                                                       passkeys#index
 #                                              POST   /profile/passkeys(.:format)                                                                       passkeys#create
 #                                      passkey DELETE /profile/passkeys/:id(.:format)                                                                   passkeys#destroy
+#                              social_profiles GET    /profile/social(.:format)                                                                         social_profiles#index
+#                               social_profile DELETE /profile/social/:id(.:format)                                                                     social_profiles#destroy
+#                      social_profile_callback GET    /auth/:provider/callback(.:format)                                                                social_profiles#create {provider: /github/}
+#                       social_profile_failure GET    /auth/failure(.:format)                                                                           social_profiles#failure
 #                           user_profile_photo GET    /user/:p_id/pfp(.:format)                                                                         profile_photos#show
 #                                  user_avatar GET    /user/:p_id/avatar/:variant(.:format)                                                             profile_photos#avatar
 #                           user_avatar_square GET    /user/:p_id/avatar/:variant/square(.:format)                                                      profile_photos#avatar_square
@@ -581,6 +585,15 @@ Rails.application.routes.draw do
       post :options, on: :collection
     end
   end
+
+  # Social profiles (see SocialProfilesController). OmniAuth answers
+  # POST /auth/:provider itself and sends the member back to the callback.
+  # Keep the provider list in step with SocialProfile::PROVIDERS.
+  scope "/profile" do
+    resources :social_profiles, path: "social", only: [:index, :destroy]
+  end
+  get "/auth/:provider/callback", to: "social_profiles#create", as: :social_profile_callback, constraints: { provider: /github/ }
+  get "/auth/failure", to: "social_profiles#failure", as: :social_profile_failure
 
   # Profile photo routes (public, no auth required)
   get "/user/:p_id/pfp", to: "profile_photos#show", as: :user_profile_photo

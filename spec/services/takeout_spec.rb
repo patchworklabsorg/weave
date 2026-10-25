@@ -43,6 +43,15 @@ RSpec.describe Takeout do
     expect(data.to_json).not_to include(passkey.public_key, passkey.external_id)
   end
 
+  it "lists the member's social profiles" do
+    profile = user.social_profiles.create!(provider: "github", uid: "583231", username: "octocat")
+
+    data = described_class.build(user)["categories"]["account_profile"]["data"]
+
+    expected = { "provider" => "github", "id" => "583231", "username" => "octocat", "linked_at" => profile.created_at.iso8601 }
+    expect(data["social_profiles"]).to eq([expected])
+  end
+
   it "never holds demographics or Thread Count" do
     DemographicsVault.record(user, { "gender_identity" => "woman" })
     create(:thread_count_entry, user:, kind: "board_vouch", level: nil, reason: "SECRET-REASON")
