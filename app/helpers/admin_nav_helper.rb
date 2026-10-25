@@ -108,8 +108,10 @@ module AdminNavHelper
     [
       NavLink.new("Dashboard", admin_root_path, :layout_dashboard, "admin home", %w[admin/dashboard], false),
       admin_nav_entry("OAuth apps", admin_oauth_applications_path, :app_window, "admin applications clients",
-                      %w[oauth_applications oauth_application_roles oauth_application_role_assignments oauth_application_access_grants
-                         services service_keys service_webhooks], :admin),
+                      %w[oauth_applications oauth_application_roles oauth_application_role_assignments oauth_application_access_grants],
+                      :admin),
+      admin_nav_entry("Services", admin_services_path, :plug, "admin api keys webhooks integrations",
+                      %w[services service_keys service_webhooks], :admin),
       NavLink.new("Jobs", "/admin/jobs", :activity, "admin mission control queue", [], true),
       NavLink.new("Feature flags", "/admin/flipper", :flag, "admin flipper", [], true),
       NavLink.new("Blazer", "/admin/blazer", :database, "admin sql queries reports", [], true),

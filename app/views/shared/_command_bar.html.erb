@@ -16,8 +16,9 @@
   admin_actions = current_user.admin? ? [
     ["New user", new_admin_user_path, :plus, "create add"],
     ["New group", new_admin_group_path, :plus, "create add"],
-    ["New OAuth app", new_admin_oauth_application_path, :plus, "create add application"]
-  ] : []
+    ["New OAuth app", new_admin_oauth_application_path, :plus, "create add application"],
+    (["New service", new_admin_service_path, :plus, "create add api key webhook"] if current_user.superadmin?)
+  ].compact : []
 %>
 <div data-controller="command-bar"
      data-action="keydown@window->command-bar#keydown click@window->command-bar#trigger"

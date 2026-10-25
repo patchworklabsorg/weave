@@ -56,6 +56,12 @@ class Group::Membership < ApplicationRecord
   # Leaving a group can end access to apps granted to it.
   after_destroy_commit -> { RevokeLostAppAccessJob.perform_later(user_id: user_id) }
 
+  # Services keep their own access in sync from these (docs/WEBHOOKS.md).
+  # They run in the transaction: the user and group rows still exist when an
+  # account or a group is deleted.
+  after_create :emit_member_added
+  after_destroy :emit_member_removed
+
   validates :user_id, uniqueness: { scope: :group_id, message: "is already in this group" }
   validate :expires_in_the_future, if: -> { expires_at.present? && will_save_change_to_expires_at? }
 
@@ -64,6 +70,26 @@ class Group::Membership < ApplicationRecord
   def active? = !expired?
 
   private
+
+  def emit_member_added
+    data = WebhookPayloads.group_membership(self, reason: "added", actor: added_by || WebhookPayloads.current_actor)
+    WebhookDispatcher.emit("group.member_added", data)
+  end
+
+  def emit_member_removed
+    data = WebhookPayloads.group_membership(self, reason: removal_reason, actor: WebhookPayloads.current_actor)
+    WebhookDispatcher.emit("group.member_removed", data)
+  end
+
+  # A membership ends by hand (or by a system sync), by expiry, or with its
+  # group or its account.
+  def removal_reason
+    case destroyed_by_association&.active_record&.name
+    when "Group" then "group_deleted"
+    when "User" then "account_deleted"
+    else expired? ? "expired" : "removed"
+    end
+  end
 
   def expires_in_the_future
     errors.add(:expires_at, "must be in the future") if expires_at <= Time.current

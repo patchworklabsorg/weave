@@ -1,0 +1,13 @@
+<% content_for :title, "New API key" %>
+
+<div class="page-narrow mx-auto">
+  <header class="page-header">
+    <div>
+      <p class="text-sm"><%= link_to @service.name, admin_service_path(@service, anchor: "keys"), class: "link-quiet text-ink-soft" %></p>
+      <h1 class="page-title">New API key</h1>
+      <p class="page-lede">Weave shows the key once, on the next page.</p>
+    </div>
+  </header>
+
+  <%= render "form", service: @service, key: @key %>
+</div>

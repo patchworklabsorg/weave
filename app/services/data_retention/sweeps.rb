@@ -12,7 +12,8 @@ module DataRetention
           financial_anonymized: anonymize_financial!,
           funder_records_folded: fold_expired_funder_records!,
           guardian_contacts_purged: purge_adult_guardian_contacts!,
-          takeouts_expired: expire_takeouts!
+          takeouts_expired: expire_takeouts!,
+          webhook_deliveries_purged: purge_webhook_deliveries!
         }
       end
 
@@ -99,6 +100,12 @@ module DataRetention
           expired += 1
         end
         expired
+      end
+
+      # Webhook delivery logs: removed after WebhookDelivery::KEEP. A finished
+      # delivery holds no payload, only its status and the last response.
+      def purge_webhook_deliveries!
+        WebhookDelivery.expired.in_batches.delete_all
       end
 
       private

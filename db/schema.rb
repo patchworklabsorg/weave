@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_25_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_25_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -1177,6 +1177,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_120000) do
     t.float "longitude"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "expiry_notified_at"
+    t.index ["expiration_at"], name: "index_user_sessions_on_expiration_at"
     t.index ["impersonated_by_id"], name: "index_user_sessions_on_impersonated_by_id"
     t.index ["user_id"], name: "index_user_sessions_on_user_id"
   end
@@ -1322,6 +1324,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_120000) do
     t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
   end
 
+  create_table "webhook_deliveries", force: :cascade do |t|
+    t.bigint "service_webhook_id", null: false
+    t.string "event", null: false
+    t.uuid "event_id", null: false
+    t.string "subject_id"
+    t.string "url", null: false
+    t.text "payload"
+    t.string "status", default: "pending", null: false
+    t.integer "attempts", default: 0, null: false
+    t.datetime "last_attempt_at"
+    t.datetime "delivered_at"
+    t.jsonb "response", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_webhook_deliveries_on_created_at"
+    t.index ["event_id"], name: "index_webhook_deliveries_on_event_id"
+    t.index ["service_webhook_id"], name: "index_webhook_deliveries_on_service_webhook_id"
+    t.index ["subject_id"], name: "index_webhook_deliveries_on_subject_id"
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "application_access_grants", "oauth_applications", column: "application_id", on_delete: :cascade
@@ -1441,6 +1463,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_120000) do
   add_foreign_key "verifications", "users", column: "verifier_id", on_delete: :nullify
   add_foreign_key "verifications", "users", on_delete: :nullify
   add_foreign_key "verifications", "verifications", column: "previous_attempt_id", on_delete: :nullify
+  add_foreign_key "webhook_deliveries", "service_webhooks", on_delete: :cascade
 
   create_function :log_privileged_attribute_changes, sql_definition: <<-'SQL'
       CREATE OR REPLACE FUNCTION public.log_privileged_attribute_changes()

@@ -263,6 +263,11 @@ class User < ApplicationRecord
   before_save :note_system_group_attribute_changes
   after_commit :sync_system_groups, on: [:create, :update], if: -> { @system_group_attributes_changed }
 
+  # Webhook events for services (docs/WEBHOOKS.md).
+  after_create -> { WebhookDispatcher.emit("user.created", WebhookPayloads.user(self)) }
+  after_update :emit_user_updated, if: -> { WebhookPayloads.changed_user_fields(saved_changes).any? }
+  after_destroy :emit_user_deleted
+
   # Pronouns are one field, kept in sync with the Slack profile:
   # - An edit in Weave is pushed to Slack (blank clears Slack too) by
   #   PushPronounsToSlackJob, which retries until Slack accepts it.
@@ -955,6 +960,18 @@ class User < ApplicationRecord
 
   def push_pronouns_to_slack
     PushPronounsToSlackJob.perform_later(id)
+  end
+
+  def emit_user_updated
+    data = WebhookPayloads.user(self).merge(changed: WebhookPayloads.changed_user_fields(saved_changes))
+    WebhookDispatcher.emit("user.updated", data)
+  end
+
+  # The queued user.created and user.updated deliveries hold the name and
+  # email of the account. Cancel them: only the ID goes out from now on.
+  def emit_user_deleted
+    WebhookDispatcher.cancel_pending_for(p_id, events: %w[user.created user.updated])
+    WebhookDispatcher.emit("user.deleted", WebhookPayloads.deleted_user(self))
   end
 
   def generate_confirmation_token

@@ -1,0 +1,24 @@
+<%= form_with model: key, scope: :service_key,
+      url: key.persisted? ? admin_service_key_path(service, key) : admin_service_keys_path(service),
+      local: true, data: { turbo: false }, class: "card" do |form| %>
+  <div class="card-body space-y-5">
+    <%= form_errors(key) %>
+
+    <div class="field-group">
+      <%= form.label :name, class: "field-label" %>
+      <%= form.text_field :name, class: "field", placeholder: "Production" %>
+      <p class="field-hint">Where the service uses the key, so you know which one to revoke.</p>
+    </div>
+
+    <div class="field-group">
+      <%= form.label :expires_at, class: "field-label" do %>Expires <span class="optional">(optional)</span><% end %>
+      <%= form.datetime_local_field :expires_at, class: "field" %>
+      <p class="field-hint">After this time Weave refuses the key. Leave it empty for a key that does not expire.</p>
+    </div>
+
+    <div class="form-actions">
+      <%= link_to "Cancel", key.persisted? ? admin_service_key_path(service, key) : admin_service_path(service, anchor: "keys"), class: "btn btn-secondary" %>
+      <%= form.submit key.persisted? ? "Save Key" : "Create Key", class: "btn btn-primary" %>
+    </div>
+  </div>
+<% end %>

@@ -1,0 +1,13 @@
+<% content_for :title, "New webhook" %>
+
+<div class="page-narrow mx-auto">
+  <header class="page-header">
+    <div>
+      <p class="text-sm"><%= link_to @service.name, admin_service_path(@service, anchor: "webhooks"), class: "link-quiet text-ink-soft" %></p>
+      <h1 class="page-title">New webhook</h1>
+      <p class="page-lede">Weave sends one event to a URL of <%= @service.name %>. The format is in docs/WEBHOOKS.md.</p>
+    </div>
+  </header>
+
+  <%= render "form", service: @service, webhook: @webhook %>
+</div>

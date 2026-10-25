@@ -1,0 +1,13 @@
+<% content_for :title, "Edit webhook" %>
+
+<div class="page-narrow mx-auto">
+  <header class="page-header">
+    <div>
+      <p class="text-sm"><%= link_to @webhook.event_type, admin_service_webhook_path(@service, @webhook), class: "link-quiet text-ink-soft mono" %></p>
+      <h1 class="page-title">Edit webhook</h1>
+      <p class="page-lede">Queued retries go to the new URL.</p>
+    </div>
+  </header>
+
+  <%= render "form", service: @service, webhook: @webhook %>
+</div>

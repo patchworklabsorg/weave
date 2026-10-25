@@ -1,0 +1,166 @@
+<% content_for :title, "#{@webhook.event_type} webhook" %>
+<% can_change = current_user.superadmin? %>
+<% if can_change %>
+  <%# The page holds the signing secret: keep it out of the Turbo cache. %>
+  <% content_for :head do %>
+    <meta name="turbo-cache-control" content="no-cache">
+  <% end %>
+<% end %>
+
+<header class="page-header">
+  <div>
+    <p class="text-sm"><%= link_to @service.name, admin_service_path(@service, anchor: "webhooks"), class: "link-quiet text-ink-soft" %></p>
+    <h1 class="page-title"><%= @webhook.event_type %></h1>
+    <div class="page-lede flex flex-wrap items-center gap-1.5">
+      <span>Webhook</span>
+      <%= webhook_status_badge(@webhook) %>
+      <% if @webhook.failure_count.to_i.positive? %>
+        <%= badge(pluralize(@webhook.failure_count, "failure"), tone: :warning) %>
+      <% end %>
+    </div>
+  </div>
+  <% if can_change %>
+    <div class="page-actions">
+      <% if @webhook.active? && @service.active? %>
+        <%= button_to test_admin_service_webhook_path(@service, @webhook), method: :post, class: "btn btn-primary" do %>
+          <%= icon(:send) %>Send test
+        <% end %>
+      <% end %>
+      <%= link_to edit_admin_service_webhook_path(@service, @webhook), class: "btn btn-secondary" do %><%= icon(:pencil) %>Edit<% end %>
+      <% if @webhook.active? %>
+        <%= button_to deactivate_admin_service_webhook_path(@service, @webhook), method: :patch, class: "btn btn-secondary",
+            data: { turbo_confirm: "Deactivate this webhook? Weave stops sending it events and cancels the queued deliveries." } do %>
+          <%= icon(:circle_pause) %>Deactivate
+        <% end %>
+      <% else %>
+        <%= button_to activate_admin_service_webhook_path(@service, @webhook), method: :patch, class: "btn btn-secondary" do %>
+          <%= icon(:power) %>Activate
+        <% end %>
+      <% end %>
+      <%= button_to admin_service_webhook_path(@service, @webhook), method: :delete, class: "btn btn-danger",
+          data: { turbo_confirm: "Delete this webhook and its delivery log? Queued deliveries are not sent." } do %>
+        <%= icon(:trash_2) %>Delete
+      <% end %>
+    </div>
+  <% end %>
+</header>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Details</h2>
+    </div>
+    <div class="card-body">
+      <dl class="dl dl-stack">
+        <%= dl_row("URL") { tag.span(@webhook.url, class: "mono break-all") } %>
+        <%= dl_row "Event", webhook_event_description(@webhook.event_type) %>
+        <%= dl_row("Status") { webhook_status_badge(@webhook) } %>
+        <%= dl_row "Failures in a row", "#{@webhook.failure_count.to_i} of 10" %>
+        <%= dl_row "Last delivered", @webhook.last_triggered_at ? "#{time_ago_in_words(@webhook.last_triggered_at)} ago" : "Never" %>
+        <%= dl_row("Created") do %>
+          <%= @webhook.created_at.strftime("%B %d, %Y") %>
+          <% if @webhook.created_by %>by <%= @webhook.created_by.full_name %><% end %>
+        <% end %>
+      </dl>
+      <% if @webhook.inactive? && @webhook.failure_count.to_i >= 10 %>
+        <p class="mt-3 text-sm text-ink-soft">
+          Weave turned this webhook off after 10 failed attempts in a row. Fix the receiver, then activate the webhook and send a test.
+        </p>
+      <% elsif !@service.active? %>
+        <p class="mt-3 text-sm text-ink-soft">The service is not active, so Weave sends this webhook nothing.</p>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Signing secret</h2>
+      <% if can_change %>
+        <%= button_to rotate_secret_admin_service_webhook_path(@service, @webhook), method: :patch, class: "btn btn-danger btn-sm",
+            data: { turbo_confirm: "Rotate the signing secret? The service must use the new secret at once, or it will refuse the next delivery." } do %>
+          <%= icon(:refresh_cw) %>Rotate
+        <% end %>
+      <% end %>
+    </div>
+    <div class="card-body space-y-2">
+      <% if can_change %>
+        <div class="copyable"
+             data-controller="reveal clipboard"
+             data-reveal-secret-value="<%= @webhook.secret_token %>"
+             data-reveal-mask-value="<%= "•" * 20 %>"
+             data-clipboard-text-value="<%= @webhook.secret_token %>">
+          <code class="code-chip" data-reveal-target="output"><%= "•" * 20 %></code>
+          <button type="button" data-action="reveal#toggle" data-reveal-target="toggle" class="btn btn-secondary btn-sm btn-icon"
+                  title="Show/Hide secret" aria-label="Show/Hide secret" aria-pressed="false">
+            <%= icon(:eye, class: "reveal-show") %><%= icon(:eye_off, class: "reveal-hide", hidden: true) %>
+          </button>
+          <button type="button" data-action="clipboard#copy" data-clipboard-target="button" class="btn btn-secondary btn-sm btn-icon"
+                  title="Copy to clipboard" aria-label="Copy to clipboard">
+            <%= icon(:copy, class: "copy-idle") %><%= icon(:check, class: "copy-done", hidden: true) %>
+          </button>
+        </div>
+        <p class="text-sm text-ink-soft">
+          The service checks <code class="mono">X-Weave-Signature</code>: HMAC-SHA256 of the timestamp, a dot and the body, with this secret as the key.
+        </p>
+      <% else %>
+        <p class="text-sm text-ink-soft">Only a superadmin can see the signing secret.</p>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="card card-flush lg:col-span-2">
+    <div class="card-header">
+      <div class="flex flex-wrap items-center gap-2">
+        <h2 class="card-title">Delivery log</h2>
+        <% WebhookDelivery.statuses.each_key do |status| %>
+          <% count = @delivery_counts.fetch(status, 0) %>
+          <% if count.positive? %>
+            <%= badge("#{count} #{status}", tone: ServicesHelper::DELIVERY_STATUS_TONES.fetch(status)) %>
+          <% end %>
+        <% end %>
+      </div>
+      <p class="text-sm text-ink-faint">Last <%= Admin::ServiceWebhooksController::DELIVERIES_SHOWN %>, kept for 30 days</p>
+    </div>
+    <% if @deliveries.any? %>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Event</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="num">Attempts</th>
+              <th scope="col">Last result</th>
+              <th scope="col">Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @deliveries.each do |delivery| %>
+              <tr>
+                <td>
+                  <span class="mono"><%= delivery.event %></span>
+                  <span class="table-sub mono" title="Event ID <%= delivery.event_id %>"><%= delivery.event_id.first(8) %></span>
+                </td>
+                <td><%= webhook_delivery_status_badge(delivery) %></td>
+                <td class="num"><%= delivery.attempts %></td>
+                <td class="max-w-80">
+                  <span class="break-all"><%= webhook_delivery_result(delivery) %></span>
+                  <% if delivery.response["body"].present? %>
+                    <span class="table-sub mono truncate" title="<%= delivery.response["body"] %>"><%= delivery.response["body"].truncate(80) %></span>
+                  <% end %>
+                </td>
+                <td class="whitespace-nowrap text-ink-soft">
+                  <%= time_ago_in_words(delivery.created_at) %> ago
+                  <% if delivery.last_attempt_at %>
+                    <span class="table-sub">tried <%= time_ago_in_words(delivery.last_attempt_at) %> ago</span>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <%= empty_state("No deliveries yet", body: "Each event Weave sends to this webhook shows here, with the last response.", icon: :webhook) %>
+    <% end %>
+  </div>
+</div>

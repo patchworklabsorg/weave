@@ -1,0 +1,28 @@
+<%= form_with model: webhook, scope: :service_webhook,
+      url: webhook.persisted? ? admin_service_webhook_path(service, webhook) : admin_service_webhooks_path(service),
+      local: true, class: "card" do |form| %>
+  <div class="card-body space-y-5">
+    <%= form_errors(webhook) %>
+
+    <div class="field-group">
+      <%= form.label :url, "URL", class: "field-label" %>
+      <%= form.url_field :url, class: "field", placeholder: "https://example.com/weave/webhooks" %>
+      <p class="field-hint">
+        Weave sends a signed POST here. In production the URL must use https, and it must not point to a private, loopback or
+        link-local address. Weave does not follow redirects.
+      </p>
+    </div>
+
+    <div class="field-group">
+      <%= form.label :event_type, "Event", class: "field-label" %>
+      <%= form.select :event_type, webhook_event_options, { include_blank: "Select an event" }, class: "field" %>
+      <p class="field-hint">One event for each webhook. To get more events, add more webhooks with the same URL.</p>
+    </div>
+
+    <div class="form-actions">
+      <%= link_to "Cancel", webhook.persisted? ? admin_service_webhook_path(service, webhook) : admin_service_path(service, anchor: "webhooks"),
+          class: "btn btn-secondary" %>
+      <%= form.submit webhook.persisted? ? "Save Webhook" : "Create Webhook", class: "btn btn-primary" %>
+    </div>
+  </div>
+<% end %>

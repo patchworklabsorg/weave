@@ -38,10 +38,13 @@ class Service::Webhook < ApplicationRecord
   # Associations
   belongs_to :service
   belongs_to :created_by, class_name: "User"
+  has_many :deliveries, class_name: "WebhookDelivery", foreign_key: :service_webhook_id,
+                        inverse_of: :webhook, dependent: :delete_all
 
   # Validations
   validates :url, presence: true, format: { with: URI::DEFAULT_PARSER.make_regexp(%w[http https]) }
-  validates :event_type, presence: true
+  validates :event_type, presence: true, inclusion: { in: ->(_) { EVENT_TYPES } }
+  validate :url_uses_https, if: -> { WebhookUrlGuard.https_only? }
   validates :status, presence: true, inclusion: { in: %w[active inactive] }
 
   # Callbacks
@@ -51,6 +54,8 @@ class Service::Webhook < ApplicationRecord
   scope :active, -> { where(status: "active") }
   scope :inactive, -> { where(status: "inactive") }
   scope :for_event, ->(event_type) { where(event_type: event_type) }
+  # Active webhooks of active services: the ones that get deliveries.
+  scope :deliverable, -> { active.joins(:service).merge(Service.active) }
 
   # Constants
   EVENT_TYPES = %w[
@@ -59,6 +64,8 @@ class Service::Webhook < ApplicationRecord
     user.deleted
     session.created
     session.expired
+    group.member_added
+    group.member_removed
   ].freeze
 
   # Methods
@@ -74,8 +81,16 @@ class Service::Webhook < ApplicationRecord
     update!(status: "active", failure_count: 0)
   end
 
+  # Queued deliveries are cancelled: they would not be sent anyway.
   def deactivate!
-    update!(status: "inactive")
+    transaction do
+      update!(status: "inactive")
+      deliveries.pending.find_each { |delivery| delivery.finish!("cancelled") }
+    end
+  end
+
+  def rotate_secret!
+    update!(secret_token: SecureRandom.hex(32))
   end
 
   def record_trigger!
@@ -92,6 +107,10 @@ class Service::Webhook < ApplicationRecord
   end
 
   private
+
+  def url_uses_https
+    errors.add(:url, "must use https") unless url.to_s.start_with?("https://")
+  end
 
   def generate_secret_token
     self.secret_token ||= SecureRandom.hex(32)

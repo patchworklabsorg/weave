@@ -103,9 +103,9 @@ Uses Solid Queue (database-backed Active Job adapter). Jobs live in `app/jobs/`.
 - Monitor via Mission Control at `/admin/jobs`
 
 ### Webhooks System
-Services can register webhooks for events (user created, updated, etc.). Webhook deliveries are tracked in `webhook_deliveries` table with retry logic.
+Services register webhooks for the events in `Service::Webhook::EVENT_TYPES` (users, sessions, group memberships). Models call `WebhookDispatcher.emit(event, data)`, which writes a `WebhookDelivery` per active webhook in the same transaction. `DeliverWebhookJob` sends the signed POST, retries, and checks the URL with `WebhookUrlGuard` (SSRF). Build payloads in `WebhookPayloads`, and add a new event to `EVENT_TYPES` first. Payload and signature format: `docs/WEBHOOKS.md`.
 
-Admin can manage webhooks at `/admin/services/:id/webhooks`.
+Admins manage services, API keys and webhooks at `/admin/services` (changes and signing secrets: superadmin only). The webhook page shows the delivery log.
 
 ### Database Migrations
 Uses `strong_migrations` gem to catch dangerous migration patterns. If a migration is flagged:

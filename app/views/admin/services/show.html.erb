@@ -1,0 +1,133 @@
+<% content_for :title, @service.name %>
+<% can_change = current_user.superadmin? %>
+
+<header class="page-header">
+  <div>
+    <p class="text-sm"><%= link_to "Services", admin_services_path, class: "link-quiet text-ink-soft" %></p>
+    <h1 class="page-title"><%= @service.name %></h1>
+    <div class="page-lede flex flex-wrap items-center gap-1.5">
+      <span class="mono"><%= @service.public_id %></span>
+      <%= service_status_badge(@service) %>
+    </div>
+  </div>
+  <% if can_change %>
+    <div class="page-actions">
+      <%= link_to edit_admin_service_path(@service), class: "btn btn-secondary" do %><%= icon(:pencil) %>Edit<% end %>
+      <% if @service.active? %>
+        <%= button_to deactivate_admin_service_path(@service), method: :patch, class: "btn btn-secondary",
+            data: { turbo_confirm: "Deactivate #{@service.name}? Its API keys and webhooks stop working." } do %>
+          <%= icon(:circle_pause) %>Deactivate
+        <% end %>
+        <%= button_to suspend_admin_service_path(@service), method: :patch, class: "btn btn-danger",
+            data: { turbo_confirm: "Suspend #{@service.name}? Its API keys and webhooks stop working at once." } do %>
+          <%= icon(:ban) %>Suspend
+        <% end %>
+      <% else %>
+        <%= button_to activate_admin_service_path(@service), method: :patch, class: "btn btn-secondary" do %>
+          <%= icon(:power) %>Activate
+        <% end %>
+      <% end %>
+      <%= button_to admin_service_path(@service), method: :delete, class: "btn btn-danger",
+          data: { turbo_confirm: "Delete #{@service.name}? Its API keys stop working and its webhooks and delivery logs are deleted." } do %>
+        <%= icon(:trash_2) %>Delete
+      <% end %>
+    </div>
+  <% end %>
+</header>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Details</h2>
+    </div>
+    <div class="card-body">
+      <dl class="dl dl-stack">
+        <%= dl_row("Status") { service_status_badge(@service) } %>
+        <% if @service.description.present? %>
+          <%= dl_row "Description", @service.description %>
+        <% end %>
+        <%= dl_row("Created") do %>
+          <%= @service.created_at.strftime("%B %d, %Y") %>
+          <% if @service.created_by %>by <%= @service.created_by.full_name %><% end %>
+        <% end %>
+      </dl>
+      <% unless @service.active? %>
+        <p class="mt-3 text-sm text-ink-soft">The service is not active. Its API keys are refused and Weave sends it no webhooks.</p>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="lg:col-span-2 space-y-6">
+    <section id="keys" class="card">
+      <div class="card-header">
+        <div class="flex items-center gap-2">
+          <h2 class="card-title">API keys</h2>
+          <%= badge(@keys.size.to_s) %>
+        </div>
+        <% if can_change %>
+          <%= link_to new_admin_service_key_path(@service), class: "btn btn-secondary btn-sm" do %><%= icon(:plus) %>New key<% end %>
+        <% end %>
+      </div>
+      <% if @keys.any? %>
+        <div class="card-body">
+          <ul class="record-list">
+            <% @keys.each do |key| %>
+              <li class="record flex-wrap">
+                <div class="record-main">
+                  <p class="record-title flex flex-wrap items-center gap-2">
+                    <%= link_to key.name, admin_service_key_path(@service, key), class: "link" %>
+                    <%= service_key_status_badge(key) %>
+                  </p>
+                  <p class="record-meta">
+                    Created <%= time_ago_in_words(key.created_at) %> ago
+                    · <%= key.last_used_at ? "used #{time_ago_in_words(key.last_used_at)} ago" : "never used" %>
+                    <% if key.expires_at %>· expires <%= key.expires_at.strftime("%b %d, %Y") %><% end %>
+                  </p>
+                </div>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      <% else %>
+        <%= empty_state("No API keys", body: "A key lets the service call the Weave API. Weave shows it only once.", icon: :key_round) %>
+      <% end %>
+    </section>
+
+    <section id="webhooks" class="card">
+      <div class="card-header">
+        <div class="flex items-center gap-2">
+          <h2 class="card-title">Webhooks</h2>
+          <%= badge(@webhooks.size.to_s) %>
+        </div>
+        <% if can_change %>
+          <%= link_to new_admin_service_webhook_path(@service), class: "btn btn-secondary btn-sm" do %><%= icon(:plus) %>New webhook<% end %>
+        <% end %>
+      </div>
+      <% if @webhooks.any? %>
+        <div class="card-body">
+          <ul class="record-list">
+            <% @webhooks.each do |webhook| %>
+              <li class="record flex-wrap">
+                <div class="record-main">
+                  <p class="record-title flex flex-wrap items-center gap-2">
+                    <%= link_to webhook.event_type, admin_service_webhook_path(@service, webhook), class: "link mono" %>
+                    <%= webhook_status_badge(webhook) %>
+                    <% if webhook.failure_count.to_i.positive? %>
+                      <%= badge(pluralize(webhook.failure_count, "failure"), tone: :warning) %>
+                    <% end %>
+                  </p>
+                  <p class="record-meta break-all"><%= webhook.url %></p>
+                </div>
+                <span class="record-meta">
+                  <%= webhook.last_triggered_at ? "Last delivered #{time_ago_in_words(webhook.last_triggered_at)} ago" : "Nothing delivered yet" %>
+                </span>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      <% else %>
+        <%= empty_state("No webhooks", body: "A webhook sends one Weave event to a URL of the service.", icon: :webhook) %>
+      <% end %>
+    </section>
+  </div>
+</div>
