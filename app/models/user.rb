@@ -782,13 +782,12 @@ class User < ApplicationRecord
   #
   # Full members who joined before the code-of-conduct flow still have to
   # accept it. They are not demoted for that, so they skip :awaiting_promotion.
-  # Everyone starts with a birthday, and a member under 18 with their
-  # guardian's consent: Weave sends no Slack invite before them (see
-  # InviteToSlackJob).
+  # Everyone starts with a birthday: Weave sends no Slack invite before it (see
+  # InviteToSlackJob). A member under 18 needs no guardian consent for the
+  # Slack, only for the apps that require it (see AppAccess).
   def slack_onboarding_step
     return :add_birthday if birthday.nil?
     return :under_minimum_age if under_minimum_age?
-    return :guardian_consent if guardian_consent_missing?
     return slack_coc_accepted_at.present? ? :member : :accept_code_of_conduct if slack_member?
     return :awaiting_promotion if in_slack_workspace? && slack_coc_accepted_at.present?
     return :accept_code_of_conduct if in_slack_workspace?
@@ -812,10 +811,10 @@ class User < ApplicationRecord
   def slack_required? = !groups.exists?(waives_slack: true)
 
   # True while the profile and the home page should send the person to the
-  # onboarding page. Birthday and guardian consent apply to everyone. The
-  # Slack steps apply only when the person's project requires Slack.
+  # onboarding page. The birthday applies to everyone. The Slack steps apply
+  # only when the person's project requires Slack.
   def onboarding_pending?
-    return true if birthday.nil? || under_minimum_age? || guardian_consent_missing?
+    return true if birthday.nil? || under_minimum_age?
 
     slack_required? && !slack_onboarding_complete?
   end

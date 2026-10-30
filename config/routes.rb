@@ -37,8 +37,9 @@
 #                             slack_onboarding GET    /slack(.:format)                                                                                  slack_onboarding#show
 #                                              POST   /slack(.:format)                                                                                  slack_onboarding#create
 #                                     birthday POST   /slack/birthday(.:format)                                                                         birthdays#create
-#                     guardian_consent_request POST   /slack/guardian-consent(.:format)                                                                 guardian_consent_requests#create
-#              resend_guardian_consent_request POST   /slack/guardian-consent/resend(.:format)                                                          guardian_consent_requests#resend
+#              resend_guardian_consent_request POST   /guardian-consent/resend(.:format)                                                                guardian_consent_requests#resend
+#                     guardian_consent_request GET    /guardian-consent(.:format)                                                                       guardian_consent_requests#show
+#                                              POST   /guardian-consent(.:format)                                                                       guardian_consent_requests#create
 #                             guardian_consent GET    /guardian/:token(.:format)                                                                        guardian_consents#show
 #                                              POST   /guardian/:token(.:format)                                                                        guardian_consents#create
 #                                              DELETE /guardian/:token(.:format)                                                                        guardian_consents#destroy
@@ -491,10 +492,11 @@ Rails.application.routes.draw do
   # the Slack (see BirthdaysController).
   post "slack/birthday", to: "birthdays#create", as: :birthday
 
-  # A member under 18 asks a parent or guardian for consent, as a step of
-  # joining the Slack (see GuardianConsentFlow).
-  post "slack/guardian-consent", to: "guardian_consent_requests#create", as: :guardian_consent_request
-  post "slack/guardian-consent/resend", to: "guardian_consent_requests#resend", as: :resend_guardian_consent_request
+  # A member under 18 asks a parent or guardian for consent, for the apps
+  # that require it (see GuardianConsentFlow and AppAccess).
+  resource :guardian_consent_request, path: "guardian-consent", only: [:show, :create] do
+    post :resend
+  end
 
   # The page the parent or guardian opens from the email. The token is the
   # proof, so no account is needed.

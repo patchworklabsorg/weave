@@ -36,7 +36,12 @@
       <% end %>
 
       <% if current_user.minor? && @status != "verified" %>
-        <p class="text-sm text-ink"><%= t("verification.page.guardian_needed") %></p>
+        <p class="text-sm text-ink">
+          <%= t("verification.page.guardian_needed") %>
+          <% if current_user.guardian_consent_missing? %>
+            <%= link_to t("verification.page.guardian_consent_link"), guardian_consent_request_path, class: "link" %>
+          <% end %>
+        </p>
       <% end %>
 
       <% if @blocker && (@latest.nil? || !@latest.verified?) %>

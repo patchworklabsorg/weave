@@ -41,11 +41,11 @@ RSpec.describe "Admin guardian consent", type: :request do
   describe "recording consent given offline" do
     let(:params) { { guardian_name: "Grace Hopper", guardian_email: "grace@example.org", note: "Paper form in the drive" } }
 
-    it "lets a superadmin record it, which starts the Slack invite" do
+    it "lets a superadmin record it" do
       sign_in_via_magic_link(superadmin)
 
       expect { post admin_user_guardian_consents_path(member), params: }
-        .to have_enqueued_job(InviteToSlackJob).with(member.id)
+        .to have_enqueued_mail(GuardianConsentMailer, :granted)
 
       consent = member.guardian_consents.sole
       expect(consent).to have_attributes(status: "granted", recorded_by: superadmin, note: "Paper form in the drive")
