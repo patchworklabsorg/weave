@@ -21,7 +21,6 @@ sequenceDiagram
   participant G as Guardian
   M->>W: Opens an app that requires consent, or the callout on /profile
   W->>M: /guardian-consent
-  W->>M: Step "Get consent from a parent or guardian"
   M->>W: Guardian name and email
   W->>G: Email with a link (7 days)
   G->>W: Opens /guardian/:token, reads the page, types their name, consents
@@ -29,6 +28,7 @@ sequenceDiagram
   W->>M: Email: the apps that require consent now work
 ```
 
+- Before 2026-10-30 the Slack invite waited for consent. `bin/rails one_time:invite_minors_held_for_consent` lists the members it held back, and `DRY_RUN=0` sends their invites.
 - `/profile` shows a callout that links to `/guardian-consent` while consent is missing. The callout does not block anything.
 - `GuardianConsent` keeps one row per request. A new request supersedes the pending one. Weave keeps only a SHA-256 digest of the link token.
 - The guardian's name and email, and the typed signature, are encrypted with Lockbox.

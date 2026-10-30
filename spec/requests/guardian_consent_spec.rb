@@ -57,6 +57,13 @@ RSpec.describe "Guardian consent", type: :request do
       expect(response.body).to include("We sent a request to grace@example.org")
     end
 
+    it "limits how many requests one IP can send" do
+      5.times { |i| post guardian_consent_request_path, params: { guardian_name: "Grace Hopper", guardian_email: "grace#{i}@example.org" } }
+      post guardian_consent_request_path, params: { guardian_name: "Grace Hopper", guardian_email: "grace9@example.org" }
+
+      expect(response).to have_http_status(:too_many_requests)
+    end
+
     it "shows the errors next to the fields" do
       post guardian_consent_request_path, params: { guardian_name: "", guardian_email: user.email }
 

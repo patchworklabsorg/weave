@@ -18,7 +18,8 @@
       </div>
       <%= link_to "Continue", slack_onboarding_path, class: "btn btn-secondary btn-sm shrink-0" %>
     </div>
-  <% elsif @user.email_verified? && @user.guardian_consent_missing? %>
+  <% end %>
+  <% if @user.email_verified? && @user.guardian_consent_missing? %>
     <div class="callout callout-grape mb-6 items-center">
       <%= icon(:sparkles, size: 18) %>
       <div class="callout-body">
