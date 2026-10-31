@@ -59,6 +59,19 @@ class User
     geocoded_by :ip
     after_validation :geocode, if: ->(session){ session.ip.present? and session.ip_changed? }
 
+    # Webhook events for services (docs/WEBHOOKS.md). A session ends when the
+    # user signs out or the session is revoked (both set expiration_at to
+    # now), or when it runs out of time. The first two send session.expired
+    # at once. NotifyExpiredSessionsJob sends it for the third. Each session
+    # sends it once: expiry_notified_at records that it was sent.
+    after_create -> { WebhookDispatcher.emit("session.created", WebhookPayloads.session(self)) }
+    before_update :note_expiry, if: :ended_by_this_save?
+    after_update :emit_session_expired, if: :saved_change_to_expiry_notified_at?
+
+    # The sessions that ran out of time and did not send session.expired.
+    # Only the last day: older sessions ended before Weave sent the event.
+    scope :expiry_not_notified, -> { where(expiry_notified_at: nil, expiration_at: 1.day.ago..Time.zone.now) }
+
     # Location display helper
     def location_name
       if latitude.present? && longitude.present?
@@ -97,6 +110,18 @@ class User
     LAST_SEEN_AT_COOLDOWN = 5.minutes
 
     private
+
+    def ended_by_this_save?
+      expiry_notified_at.nil? && will_save_change_to_expiration_at? && expiration_at <= Time.zone.now
+    end
+
+    def note_expiry
+      self.expiry_notified_at = Time.zone.now
+    end
+
+    def emit_session_expired
+      WebhookDispatcher.emit("session.expired", WebhookPayloads.session(self))
+    end
 
     def map_tooltip
       parts = []

@@ -12,6 +12,7 @@
 #  confirmation_sent_at     :datetime
 #  confirmation_token       :string
 #  directory_linked_at      :datetime
+#  directory_object_guid    :string
 #  email                    :string           not null
 #  email_confirmed_at       :datetime
 #  first_name               :string           not null
@@ -268,6 +269,11 @@ class User < ApplicationRecord
   after_update_commit :push_pronouns_to_slack, if: :pronouns_need_push?
   before_save :note_system_group_attribute_changes
   after_commit :sync_system_groups, on: [:create, :update], if: -> { @system_group_attributes_changed }
+
+  # Webhook events for services (docs/WEBHOOKS.md).
+  after_create -> { WebhookDispatcher.emit("user.created", WebhookPayloads.user(self)) }
+  after_update :emit_user_updated, if: -> { WebhookPayloads.changed_user_fields(saved_changes).any? }
+  after_destroy :emit_user_deleted
 
   # Pronouns are one field, kept in sync with the Slack profile:
   # - An edit in Weave is pushed to Slack (blank clears Slack too) by
@@ -960,6 +966,28 @@ class User < ApplicationRecord
 
   def push_pronouns_to_slack
     PushPronounsToSlackJob.perform_later(id)
+  end
+
+  # A new p_id (regen_pid) goes out as `previous_id`, so a service can move
+  # its record to the new ID. The queued deliveries follow the new ID too.
+  def emit_user_updated
+    data = WebhookPayloads.user(self).merge(changed: WebhookPayloads.changed_user_fields(saved_changes))
+    if saved_change_to_p_id?
+      previous_id = p_id_before_last_save
+      data[:user][:previous_id] = previous_id
+      WebhookDelivery.where(subject_id: previous_id).update_all(subject_id: p_id) # rubocop:disable Rails/SkipsModelValidations
+    end
+    WebhookDispatcher.emit("user.updated", data)
+  end
+
+  # The queued user.created and user.updated deliveries hold the name and
+  # email of the account. Cancel them: only the ID goes out from now on. Then
+  # unlink the delivery log from the ID, so it no longer ties the deleted
+  # account to its activity.
+  def emit_user_deleted
+    WebhookDispatcher.cancel_pending_for(p_id, events: %w[user.created user.updated])
+    WebhookDispatcher.emit("user.deleted", WebhookPayloads.deleted_user(self))
+    WebhookDelivery.where(subject_id: p_id).update_all(subject_id: nil) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def generate_confirmation_token

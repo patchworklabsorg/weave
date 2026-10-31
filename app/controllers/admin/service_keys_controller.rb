@@ -1,11 +1,18 @@
 # frozen_string_literal: true
 
+# The API keys of a service. Weave stores only a digest of a key, so the key
+# exists in plain text only in the response that creates it: `create` renders
+# it and never redirects.
 class Admin::ServiceKeysController < Admin::BaseController
+  include RequiresServiceSuperadmin
+
   before_action :set_service
   before_action :set_key, only: [:show, :edit, :update, :destroy, :revoke, :deprecate, :activate]
+  before_action :require_service_superadmin, except: [:index, :show]
 
+  # The keys are listed on the service page.
   def index
-    @keys = @service.keys.order(created_at: :desc)
+    redirect_to admin_service_path(@service, anchor: "keys")
   end
 
   def show
@@ -19,16 +26,13 @@ class Admin::ServiceKeysController < Admin::BaseController
   def create
     @key = @service.keys.build(key_params)
     @key.created_by = current_user
-
-    # Generate API key
-    api_key = Service::Key.generate_api_key
-    @key.api_key = api_key
+    @key.api_key = Service::Key.generate_api_key
 
     if @key.save
-      # Show the API key once (only time it's available)
-      flash[:api_key] = api_key
-      flash[:notice] = "The API key was created. Copy it now. You cannot see it again."
-      redirect_to [:admin, @service, @key]
+      @plaintext_key = @key.api_key
+      @recent_usages = []
+      flash.now[:notice] = "The API key was created. Copy it now. Weave shows it only once."
+      render :show
     else
       render :new, status: :unprocessable_content
     end
@@ -39,7 +43,7 @@ class Admin::ServiceKeysController < Admin::BaseController
 
   def update
     if @key.update(key_params)
-      redirect_to [:admin, @service, @key], notice: "The API key was updated."
+      redirect_to admin_service_key_path(@service, @key), notice: "The API key was updated."
     else
       render :edit, status: :unprocessable_content
     end
@@ -47,22 +51,22 @@ class Admin::ServiceKeysController < Admin::BaseController
 
   def destroy
     @key.destroy
-    redirect_to admin_service_keys_path(@service), notice: "The API key was deleted."
+    redirect_to admin_service_path(@service, anchor: "keys"), notice: "The API key was deleted."
   end
 
   def revoke
     @key.revoke!
-    redirect_to [:admin, @service, @key], notice: "API key revoked."
+    redirect_to admin_service_key_path(@service, @key), notice: "The API key was revoked. It stops working at once."
   end
 
   def deprecate
     @key.deprecate!
-    redirect_to [:admin, @service, @key], notice: "API key deprecated."
+    redirect_to admin_service_key_path(@service, @key), notice: "The API key was deprecated. It still works, and Weave logs each use."
   end
 
   def activate
     @key.activate!
-    redirect_to [:admin, @service, @key], notice: "API key activated."
+    redirect_to admin_service_key_path(@service, @key), notice: "The API key was activated."
   end
 
   private

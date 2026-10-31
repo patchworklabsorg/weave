@@ -1,14 +1,24 @@
 # frozen_string_literal: true
 
+# The webhooks of a service (see docs/WEBHOOKS.md). The page shows the
+# delivery log. Only a superadmin sees the signing secret.
 class Admin::ServiceWebhooksController < Admin::BaseController
-  before_action :set_service
-  before_action :set_webhook, only: [:show, :edit, :update, :destroy, :activate, :deactivate, :test]
+  include RequiresServiceSuperadmin
 
+  DELIVERIES_SHOWN = 50
+
+  before_action :set_service
+  before_action :set_webhook, only: [:show, :edit, :update, :destroy, :activate, :deactivate, :test, :rotate_secret]
+  before_action :require_service_superadmin, except: [:index, :show]
+
+  # The webhooks are listed on the service page.
   def index
-    @webhooks = @service.webhooks.order(created_at: :desc)
+    redirect_to admin_service_path(@service, anchor: "webhooks")
   end
 
   def show
+    @deliveries = @webhook.deliveries.order(created_at: :desc).limit(DELIVERIES_SHOWN)
+    @delivery_counts = @webhook.deliveries.group(:status).count
   end
 
   def new
@@ -20,7 +30,7 @@ class Admin::ServiceWebhooksController < Admin::BaseController
     @webhook.created_by = current_user
 
     if @webhook.save
-      redirect_to [:admin, @service, @webhook], notice: "The webhook was created."
+      redirect_to admin_service_webhook_path(@service, @webhook), notice: "The webhook was created. Give the signing secret to the service, then send a test."
     else
       render :new, status: :unprocessable_content
     end
@@ -31,7 +41,7 @@ class Admin::ServiceWebhooksController < Admin::BaseController
 
   def update
     if @webhook.update(webhook_params)
-      redirect_to [:admin, @service, @webhook], notice: "The webhook was updated."
+      redirect_to admin_service_webhook_path(@service, @webhook), notice: "The webhook was updated."
     else
       render :edit, status: :unprocessable_content
     end
@@ -39,24 +49,34 @@ class Admin::ServiceWebhooksController < Admin::BaseController
 
   def destroy
     @webhook.destroy
-    redirect_to admin_service_webhooks_path(@service), notice: "The webhook was deleted."
+    redirect_to admin_service_path(@service, anchor: "webhooks"), notice: "The webhook was deleted with its delivery log."
   end
 
   def activate
     @webhook.activate!
-    redirect_to [:admin, @service, @webhook], notice: "Webhook activated."
+    redirect_to admin_service_webhook_path(@service, @webhook), notice: "The webhook was activated. Its failure count is back to 0."
   end
 
   def deactivate
     @webhook.deactivate!
-    redirect_to [:admin, @service, @webhook], notice: "Webhook deactivated."
+    redirect_to admin_service_webhook_path(@service, @webhook), notice: "The webhook was deactivated. Its queued deliveries are cancelled."
   end
 
+  # Sends a signed `ping` event, so the receiver can check its URL and secret.
   def test
-    # Send a test webhook payload
-    # In a real implementation, this would trigger the webhook with test data
-    flash[:notice] = "Test webhook sent (implementation pending)"
-    redirect_to [:admin, @service, @webhook]
+    unless @webhook.active? && @service.active?
+      return redirect_to admin_service_webhook_path(@service, @webhook), alert: "Activate the webhook and its service before you send a test."
+    end
+
+    WebhookDispatcher.ping(@webhook)
+    redirect_to admin_service_webhook_path(@service, @webhook), notice: "The test webhook was queued. Reload the page to see the result in the delivery log."
+  end
+
+  # A new secret signs every attempt from now on, retries too. The receiver
+  # must have the new secret before the next delivery.
+  def rotate_secret
+    @webhook.rotate_secret!
+    redirect_to admin_service_webhook_path(@service, @webhook), notice: "The signing secret was rotated. Give the new secret to the service now."
   end
 
   private
@@ -70,7 +90,7 @@ class Admin::ServiceWebhooksController < Admin::BaseController
   end
 
   def webhook_params
-    params.require(:service_webhook).permit(:url, :event_type, :status)
+    params.require(:service_webhook).permit(:url, :event_type)
   end
 
 end

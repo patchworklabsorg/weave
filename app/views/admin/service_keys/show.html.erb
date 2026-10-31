@@ -1,0 +1,114 @@
+<% if @plaintext_key.present? %>
+  <% content_for :head do %>
+    <meta name="turbo-cache-control" content="no-cache">
+  <% end %>
+<% end %>
+<% content_for :title, @key.name %>
+<% can_change = current_user.superadmin? %>
+
+<header class="page-header">
+  <div>
+    <p class="text-sm"><%= link_to @service.name, admin_service_path(@service, anchor: "keys"), class: "link-quiet text-ink-soft" %></p>
+    <h1 class="page-title"><%= @key.name %></h1>
+    <div class="page-lede flex flex-wrap items-center gap-1.5">
+      <span>API key</span>
+      <%= service_key_status_badge(@key) %>
+    </div>
+  </div>
+  <% if can_change %>
+    <div class="page-actions">
+      <%= link_to edit_admin_service_key_path(@service, @key), class: "btn btn-secondary" do %><%= icon(:pencil) %>Edit<% end %>
+      <% if @key.active? %>
+        <%= button_to deprecate_admin_service_key_path(@service, @key), method: :patch, class: "btn btn-secondary",
+            data: { turbo_confirm: "Deprecate #{@key.name}? It still works, and Weave logs each use as deprecated." } do %>
+          <%= icon(:circle_pause) %>Deprecate
+        <% end %>
+      <% elsif @key.deprecated? || @key.revoked? %>
+        <%= button_to activate_admin_service_key_path(@service, @key), method: :patch, class: "btn btn-secondary",
+            data: { turbo_confirm: "Activate #{@key.name}? The service can use it again." } do %>
+          <%= icon(:power) %>Activate
+        <% end %>
+      <% end %>
+      <% unless @key.revoked? %>
+        <%= button_to revoke_admin_service_key_path(@service, @key), method: :patch, class: "btn btn-danger",
+            data: { turbo_confirm: "Revoke #{@key.name}? The service can't use it from now on." } do %>
+          <%= icon(:ban) %>Revoke
+        <% end %>
+      <% end %>
+      <%= button_to admin_service_key_path(@service, @key), method: :delete, class: "btn btn-danger",
+          data: { turbo_confirm: "Delete #{@key.name} and its usage log? The key stops working. To keep the log, revoke the key instead." } do %>
+        <%= icon(:trash_2) %>Delete
+      <% end %>
+    </div>
+  <% end %>
+</header>
+
+<% if @plaintext_key.present? %>
+  <div class="card mb-6">
+    <div class="card-header">
+      <h2 class="card-title">Your new API key</h2>
+    </div>
+    <div class="card-body space-y-2">
+      <%= copy_button(@plaintext_key, label: "Copy API key") %>
+      <p class="text-sm text-ink-soft">
+        Copy it now. Weave stores only a hash, so this page cannot show it again. Do not reload this page: that sends the form again.
+        The service sends the key in the <code class="mono">X-Api-Key</code> header.
+      </p>
+    </div>
+  </div>
+<% end %>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Details</h2>
+    </div>
+    <div class="card-body">
+      <dl class="dl dl-stack">
+        <%= dl_row("Status") { service_key_status_badge(@key) } %>
+        <%= dl_row("Key ID") { tag.span(@key.public_id, class: "mono") } %>
+        <%= dl_row "Last used", time_label(@key.last_used_at, :relative) || "Never" %>
+        <%= dl_row "Expires", time_label(@key.expires_at, :datetime) || "Never" %>
+        <%= dl_row("Created") do %>
+          <%= time_label(@key.created_at) %>
+          <% if @key.created_by %>by <%= @key.created_by.full_name %><% end %>
+        <% end %>
+      </dl>
+    </div>
+  </div>
+
+  <div class="card card-flush lg:col-span-2">
+    <div class="card-header">
+      <h2 class="card-title">Recent requests</h2>
+    </div>
+    <% if @recent_usages.any? %>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Request</th>
+              <th scope="col" class="num">Status</th>
+              <th scope="col">When</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @recent_usages.each do |usage| %>
+              <tr>
+                <td>
+                  <span class="mono break-all"><%= usage.request_method %> <%= usage.request_path %></span>
+                  <span class="table-sub"><%= usage.ip_address %></span>
+                </td>
+                <td class="num">
+                  <%= badge(usage.response_code.to_s, tone: usage.error? ? :danger : :success) if usage.response_code %>
+                </td>
+                <td class="whitespace-nowrap text-ink-soft"><%= time_label(usage.requested_at || usage.created_at, :relative) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <%= empty_state("No requests yet", body: "Each request with this key shows here.", icon: :activity) %>
+    <% end %>
+  </div>
+</div>

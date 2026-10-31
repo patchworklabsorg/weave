@@ -1,0 +1,7 @@
+<% content_for :title, "New service" %>
+
+<div class="page-narrow mx-auto">
+  <%= page_header("New service", lede: "An app that calls the Weave API or gets events by webhook.") %>
+
+  <%= render "form", service: @service %>
+</div>

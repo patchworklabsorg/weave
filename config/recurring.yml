@@ -38,6 +38,12 @@ expire_group_memberships:
   class: ExpireGroupMembershipsJob
   schedule: every 15 minutes
 
+# Send session.expired webhooks for sessions that ran out of time. A sign-out
+# sends the event at once (see User::Session).
+notify_expired_sessions:
+  class: NotifyExpiredSessionsJob
+  schedule: every 10 minutes
+
 # Delete guardian consents past their retention period (see
 # GuardianConsent::KEEP_AFTER_ACCOUNT_DELETION and KEEP_UNANSWERED).
 purge_guardian_consents:
@@ -79,8 +85,8 @@ break_glass_board_report:
   schedule: "0 9 1 * *"
 
 # Apply the data retention windows: verification audit records, financial
-# anonymization, funder-required records, guardian contact of adults and
-# expired takeout files (see DataRetention::Sweeps and
+# anonymization, funder-required records, guardian contact of adults,
+# expired takeout files and old webhook delivery logs (see DataRetention::Sweeps and
 # config/kyc/data_retention.yml).
 data_retention:
   class: DataRetentionJob

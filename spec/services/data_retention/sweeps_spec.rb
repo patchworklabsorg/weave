@@ -112,6 +112,18 @@ RSpec.describe DataRetention::Sweeps do
     end
   end
 
+  describe ".purge_webhook_deliveries!" do
+    it "removes delivery logs older than the window" do
+      webhook = create(:service_webhook, event_type: "user.deleted")
+      old = travel_to(31.days.ago) { WebhookDispatcher.ping(webhook) }
+      recent = WebhookDispatcher.ping(webhook)
+
+      expect(described_class.purge_webhook_deliveries!).to eq(1)
+      expect(WebhookDelivery.all).to contain_exactly(recent)
+      expect(WebhookDelivery.exists?(old.id)).to be(false)
+    end
+  end
+
   it "runs every sweep from the daily job" do
     expect(described_class).to receive(:run_all).and_call_original
 

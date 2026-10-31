@@ -239,6 +239,7 @@
 #               activate_admin_service_webhook PATCH  /admin/services/:service_id/webhooks/:id/activate(.:format)                                       admin/service_webhooks#activate
 #             deactivate_admin_service_webhook PATCH  /admin/services/:service_id/webhooks/:id/deactivate(.:format)                                     admin/service_webhooks#deactivate
 #                   test_admin_service_webhook POST   /admin/services/:service_id/webhooks/:id/test(.:format)                                           admin/service_webhooks#test
+#          rotate_secret_admin_service_webhook PATCH  /admin/services/:service_id/webhooks/:id/rotate_secret(.:format)                                  admin/service_webhooks#rotate_secret
 #                       admin_service_webhooks GET    /admin/services/:service_id/webhooks(.:format)                                                    admin/service_webhooks#index
 #                                              POST   /admin/services/:service_id/webhooks(.:format)                                                    admin/service_webhooks#create
 #                    new_admin_service_webhook GET    /admin/services/:service_id/webhooks/new(.:format)                                                admin/service_webhooks#new
@@ -859,6 +860,7 @@ Rails.application.routes.draw do
             patch :activate
             patch :deactivate
             post :test
+            patch :rotate_secret
           end
         end
       end

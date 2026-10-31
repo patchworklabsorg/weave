@@ -39,4 +39,12 @@ FactoryBot.define do
     created_by { service.created_by }
     api_key { Service::Key.generate_api_key }
   end
+
+  factory :service_webhook, class: "Service::Webhook" do
+    service
+    url { "https://hooks.example.com/weave" }
+    event_type { "group.member_added" }
+    status { "active" }
+    created_by { service.created_by }
+  end
 end

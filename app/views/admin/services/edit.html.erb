@@ -1,0 +1,12 @@
+<% content_for :title, "Edit #{@service.name}" %>
+
+<div class="page-narrow mx-auto">
+  <header class="page-header">
+    <div>
+      <p class="text-sm"><%= link_to @service.name, admin_service_path(@service), class: "link-quiet text-ink-soft" %></p>
+      <h1 class="page-title">Edit <%= @service.name %></h1>
+    </div>
+  </header>
+
+  <%= render "form", service: @service %>
+</div>

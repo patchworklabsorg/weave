@@ -1,0 +1,21 @@
+<%= form_with model: [:admin, service], local: true, class: "card" do |form| %>
+  <div class="card-body space-y-5">
+    <%= form_errors(service) %>
+
+    <div class="field-group">
+      <%= form.label :name, class: "field-label" %>
+      <%= form.text_field :name, class: "field", placeholder: "Krater" %>
+    </div>
+
+    <div class="field-group">
+      <%= form.label :description, class: "field-label" do %>Description <span class="optional">(optional)</span><% end %>
+      <%= form.text_area :description, rows: 3, class: "field" %>
+      <p class="field-hint">What the service does and who runs it.</p>
+    </div>
+
+    <div class="form-actions">
+      <%= link_to "Cancel", service.persisted? ? admin_service_path(service) : admin_services_path, class: "btn btn-secondary" %>
+      <%= form.submit service.persisted? ? "Save Service" : "Create Service", class: "btn btn-primary" %>
+    </div>
+  </div>
+<% end %>

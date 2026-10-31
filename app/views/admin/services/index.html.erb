@@ -1,0 +1,62 @@
+<% content_for :title, "Services" %>
+
+<%= page_header("Services", lede: "Apps that call the Weave API with a key and get events by webhook.") do %>
+  <% if current_user.superadmin? %>
+    <%= link_to new_admin_service_path, class: "btn btn-primary" do %><%= icon(:plus) %>New service<% end %>
+  <% end %>
+<% end %>
+
+<div class="card card-flush">
+  <div class="card-header">
+    <h2 class="card-title">All services</h2>
+    <%= render "shared/search_form", url: admin_services_path, frame: "services_table", placeholder: "Search services" %>
+  </div>
+
+  <%= turbo_frame_tag "services_table", target: "_top" do %>
+    <% if params[:search].present? %>
+      <p class="px-5 py-3 text-sm text-ink-soft border-b border-hairline">
+        <%= pluralize(@services.size, "service") %> <%= @services.size == 1 ? "matches" : "match" %> “<%= params[:search] %>”
+      </p>
+    <% end %>
+
+    <% if @services.any? %>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="num">Keys</th>
+              <th scope="col" class="num">Webhooks</th>
+              <th scope="col">Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @services.each do |service| %>
+              <tr>
+                <td>
+                  <%= link_to service.name, admin_service_path(service), class: "link-quiet font-medium" %>
+                  <% if service.description.present? %>
+                    <span class="table-sub"><%= service.description %></span>
+                  <% end %>
+                </td>
+                <td><%= service_status_badge(service) %></td>
+                <td class="num"><%= @key_counts.fetch(service.id, 0) %></td>
+                <td class="num"><%= @webhook_counts.fetch(service.id, 0) %></td>
+                <td class="whitespace-nowrap text-ink-soft"><%= time_label(service.created_at, :relative) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% elsif params[:search].present? %>
+      <%= empty_state("No services match “#{params[:search]}”", body: "Search by name or description.", icon: :search) %>
+    <% else %>
+      <%= empty_state("No services yet", body: "Create a service to give an app an API key or webhooks.", icon: :plug) do %>
+        <% if current_user.superadmin? %>
+          <%= link_to new_admin_service_path, class: "btn btn-secondary" do %><%= icon(:plus) %>New service<% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

@@ -4,7 +4,7 @@
 # config/kyc/data_retention.yml): verification audit records after their
 # window (not under the fraud-evidence hold), financial anonymization,
 # funder-required records that fold into the aggregates, guardian contact of
-# adults, and expired takeout files.
+# adults, expired takeout files, and old webhook delivery logs.
 class DataRetentionJob < ApplicationJob
   queue_as :low
 

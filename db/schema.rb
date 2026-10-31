@@ -1284,6 +1284,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_31_170000) do
     t.jsonb "slack_coc_messages", default: [], null: false
     t.string "webauthn_id"
     t.datetime "directory_linked_at"
+    t.string "directory_object_guid"
     t.string "referral_source"
     t.string "referral_source_detail"
     t.boolean "identity_team", default: false, null: false

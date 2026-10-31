@@ -32,7 +32,7 @@ RSpec.describe "Admin sidebar", type: :request do
     expect(sidebar).to eq(
       "People" => ["Users", "Staff and contractors", "Groups", "Consents"],
       "Data"   => ["Demographics", "Funder reports"],
-      "System" => ["Dashboard", "OAuth apps", "Jobs", "Feature flags", "Blazer", "Console audits", "Console sign-in"]
+      "System" => ["Dashboard", "OAuth apps", "Services", "Jobs", "Feature flags", "Blazer", "Console audits", "Console sign-in"]
     )
     expect(current_link).to eq("Dashboard")
   end
@@ -46,7 +46,7 @@ RSpec.describe "Admin sidebar", type: :request do
       "Identity" => ["Verification", "US residency", "Key custody", "Knot"],
       "People"   => ["Users", "Staff and contractors", "Groups", "Consents"],
       "Data"     => ["Deletion", "Demographics", "Funder reports"],
-      "System"   => ["Dashboard", "OAuth apps", "Jobs", "Feature flags", "Blazer", "Console audits", "Console sign-in"]
+      "System"   => ["Dashboard", "OAuth apps", "Services", "Jobs", "Feature flags", "Blazer", "Console audits", "Console sign-in"]
     )
     expect(current_link).to eq("Users")
   end
