@@ -1,7 +1,11 @@
 <%# Replaced in place by EmailConfirmationsController#resend's turbo_stream
     branch, so the id has to live on the outermost element here. %>
 <div id="resend_section" class="space-y-3">
-  <% if user.confirmation_period_valid? %>
+  <% if impersonating? %>
+    <p class="text-sm text-ink-faint text-center">
+      You can't send a confirmation email while impersonating a user.
+    </p>
+  <% elsif user.confirmation_period_valid? %>
     <p class="text-sm text-ink-faint text-center">
       We sent one just now. You can ask for another in a few minutes.
     </p>

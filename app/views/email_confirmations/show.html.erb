@@ -31,7 +31,8 @@
       <%= render "resend_section", user: @user %>
 
       <div class="text-center text-sm">
-        <%= button_to "Sign out",
+        <%# While impersonating, logout returns to the admin account. %>
+        <%= button_to impersonating? ? "Stop impersonating" : "Sign out",
               logout_path,
               method: :delete,
               class: "link cursor-pointer" %>
