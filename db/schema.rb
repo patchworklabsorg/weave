@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_25_120200) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_25_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -1092,6 +1092,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_120200) do
     t.index ["updated_at"], name: "index_sessions_on_updated_at"
   end
 
+  create_table "social_profiles", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "provider", null: false
+    t.string "uid", null: false
+    t.string "username", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider", "uid"], name: "index_social_profiles_on_provider_and_uid", unique: true
+    t.index ["user_id", "provider"], name: "index_social_profiles_on_user_id_and_provider", unique: true
+  end
+
   create_table "takeout_requests", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "status", default: "pending", null: false
@@ -1136,6 +1147,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_120200) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "delivered_to"
+    t.string "return_to"
     t.index ["expires_at"], name: "index_user_magic_links_on_expires_at"
     t.index ["token_digest"], name: "index_user_magic_links_on_token_digest", unique: true
     t.index ["user_id"], name: "index_user_magic_links_on_user_id"
@@ -1441,6 +1453,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_120200) do
   add_foreign_key "service_webhooks", "services"
   add_foreign_key "service_webhooks", "users", column: "created_by_id"
   add_foreign_key "services", "users", column: "created_by_id"
+  add_foreign_key "social_profiles", "users"
   add_foreign_key "takeout_requests", "users", on_delete: :cascade
   add_foreign_key "thread_count_entries", "services", on_delete: :nullify
   add_foreign_key "thread_count_entries", "thread_count_entries", column: "reverses_id", on_delete: :cascade

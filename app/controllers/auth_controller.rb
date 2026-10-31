@@ -100,9 +100,9 @@ class AuthController < ApplicationController
     end
 
     # Send magic link to existing user
-    if user.send_magic_link(requested_ip: request.remote_ip)
+    if user.send_magic_link(requested_ip: request.remote_ip, return_to: session[:oauth_return_to])
       respond_to do |format|
-        format.html { redirect_to login_path, notice: "Magic link sent! Check your email to continue." }
+        format.html { redirect_to login_path, notice: "Check your email for the sign-in link." }
         format.json { render json: { message: "Magic link sent to your email" }, status: :ok }
       end
     else
@@ -130,9 +130,9 @@ class AuthController < ApplicationController
       return
     end
 
-    if user.send_magic_link(requested_ip: request.remote_ip)
+    if user.send_magic_link(requested_ip: request.remote_ip, return_to: session[:oauth_return_to])
       respond_to do |format|
-        format.html { redirect_to login_path, notice: "Magic link sent! Check your email to continue." }
+        format.html { redirect_to login_path, notice: "Check your email for the sign-in link." }
         format.json { render json: { message: "Magic link sent to your email" }, status: :ok }
       end
     else
@@ -152,9 +152,11 @@ class AuthController < ApplicationController
 
     # Re-opening a link you already used in this browser (back button, second
     # click) shouldn't read as an error — you're signed in, which is what you
-    # wanted.
+    # wanted. A link that is still live and was asked for during an authorize
+    # request goes on to that request, so a phone that is already signed in
+    # still resumes it.
     if current_user == link.user
-      redirect_to root_path
+      redirect_to((link.live? && link.return_to) || root_path)
       return
     end
 
@@ -164,6 +166,10 @@ class AuthController < ApplicationController
     end
 
     @magic_link_user = link.user
+    # Someone else can ask for a link to this address while an authorize
+    # request is pending in their browser. Name the app, so the owner of the
+    # address sees where the link goes before they sign in.
+    @continues_to = link.pending_application&.name
   end
 
   def confirm_magic_link
@@ -183,6 +189,10 @@ class AuthController < ApplicationController
     end
 
     link.user.confirm_email_from_magic_link!
+    # A link opened in another browser finds no authorize request in this
+    # session, or an old one that was never finished. Resume the one the link
+    # was asked for in (see User::MagicLink): it is the newest intent.
+    session[:oauth_return_to] = link.return_to if link.return_to.present?
     complete_login(link.user)
   end
 
@@ -235,7 +245,7 @@ class AuthController < ApplicationController
       if original_admin.nil?
         reset_session
         respond_to do |format|
-          format.html { redirect_to login_path, notice: "Logged out successfully" }
+          format.html { redirect_to login_path, notice: "Signed out." }
           format.json { render json: { message: "Logged out successfully" } }
         end
         return
@@ -253,7 +263,7 @@ class AuthController < ApplicationController
       # signed in until the row expired.
       sign_out
       respond_to do |format|
-        format.html { redirect_to login_path, notice: "Logged out successfully" }
+        format.html { redirect_to login_path, notice: "Signed out." }
         format.json { render json: { message: "Logged out successfully" } }
       end
     end
@@ -268,10 +278,20 @@ class AuthController < ApplicationController
 
   private
 
+  # The magic link confirmation page asks about the link itself, because a
+  # link opened in another browser brings its authorize request with it (see
+  # #confirm_magic_link), and that request wins over the session's. The
+  # page's form must allow that client.
   def pending_oauth_client_origins
-    return [] if session[:oauth_return_to].blank? || session[:oauth_client_id].blank?
+    link_application = User::MagicLink.for_token(params[:token])&.pending_application if action_name == "magic_link_login"
 
-    redirect_origins_for(Doorkeeper::Application.find_by(uid: session[:oauth_client_id]))
+    if link_application
+      redirect_origins_for(link_application)
+    elsif session[:oauth_return_to].present? && session[:oauth_client_id].present?
+      redirect_origins_for(Doorkeeper::Application.find_by(uid: session[:oauth_client_id]))
+    else
+      []
+    end
   end
 
   # Returns the link, or nil after having already redirected. Callers bail on nil.
@@ -373,7 +393,7 @@ class AuthController < ApplicationController
     destination = post_login_destination
 
     respond_to do |format|
-      format.html { redirect_to destination, notice: "Logged in successfully" }
+      format.html { redirect_to destination, notice: "Signed in." }
       format.json { render json: { user: UserSerializer.render(user) }, status: :ok }
     end
   end

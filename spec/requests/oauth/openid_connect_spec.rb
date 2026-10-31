@@ -16,7 +16,7 @@ RSpec.describe "OpenID Connect", type: :request do
     Doorkeeper::Application.create!(
       name: "Test Client",
       redirect_uri: redirect_uri,
-      scopes: "openid profile email phone admin slack groups roles verification residency",
+      scopes: "openid profile email phone admin slack groups roles verification residency age social",
       confidential: false
     )
   end
@@ -160,6 +160,7 @@ RSpec.describe "OpenID Connect", type: :request do
         "email_verified"     => true
       )
       expect(claims).not_to include("phone_number", "phone_number_verified", "admin", "slack_member", "slack_id", "groups", "roles")
+      expect(claims).not_to include("age_band")
     end
 
     it "carries the Slack membership claims when the slack scope is granted" do
@@ -173,6 +174,15 @@ RSpec.describe "OpenID Connect", type: :request do
       user.update!(pronouns: "they/them")
 
       expect(claims).to include("pronouns" => "they/them")
+    end
+
+    it "carries the age band, never the birthday, when the age scope is granted" do
+      user.update!(birthday: 15.years.ago.to_date)
+      create(:guardian_consent, :granted, user:)
+      age_claims = verify_id_token(obtain_tokens(scope: "openid age")["id_token"]).first
+
+      expect(age_claims).to include("age_band" => "13_17")
+      expect(age_claims).not_to include("birthday", "slack_birthday", "acknowledged_over_13_at")
     end
 
     it "omits pronouns when they are not set" do
@@ -294,6 +304,48 @@ RSpec.describe "OpenID Connect", type: :request do
       expect(claims).to include("us_resident" => true, "us_residency_checked_on" => Date.current.iso8601)
       expect(claims.to_json).not_to include("WA")
       expect(userinfo(scope: "openid profile")).not_to include("us_resident")
+    end
+
+    describe "the age_band claim" do
+      # A minor signs in only with guardian consent (see GuardianConsent), and
+      # a user under 13 can't sign in at all. User#age_band covers under_13.
+      before { create(:guardian_consent, :granted, user:) }
+
+      it "gives the age group through the age scope" do
+        { 13 => "13_17", 17 => "13_17", 18 => "18_plus" }.each do |age, band|
+          user.update!(birthday: age.years.ago.to_date)
+
+          expect(userinfo(scope: "openid age")).to include("age_band" => band)
+        end
+      end
+
+      it "changes on the day the user turns 18" do
+        user.update!(birthday: 18.years.ago.to_date + 1.day)
+        expect(userinfo(scope: "openid age")).to include("age_band" => "13_17")
+
+        travel 1.day
+        expect(userinfo(scope: "openid age")).to include("age_band" => "18_plus")
+      end
+
+      it "is omitted when Weave has no birthday" do
+        user.update!(birthday: nil)
+
+        expect(userinfo(scope: "openid age")).not_to have_key("age_band")
+      end
+
+      it "is not sent without the age scope, and the birthday is never sent" do
+        body = userinfo(scope: "openid profile")
+
+        expect(body).not_to include("age_band", "birthday", "slack_birthday", "acknowledged_over_13_at")
+      end
+    end
+
+    it "gives the linked social profiles through the social scope" do
+      user.social_profiles.create!(provider: "github", uid: "583231", username: "octocat")
+
+      expect(userinfo(scope: "openid social"))
+        .to include("social_profiles" => [{ "provider" => "github", "id" => "583231", "username" => "octocat" }])
+      expect(userinfo(scope: "openid profile")).not_to include("social_profiles")
     end
 
     describe "the groups claim" do

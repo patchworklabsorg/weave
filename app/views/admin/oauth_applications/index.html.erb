@@ -65,7 +65,7 @@
                   <% end %>
                 </td>
                 <td class="whitespace-nowrap text-ink-soft">
-                  <%= time_ago_in_words(application.created_at) %> ago
+                  <%= time_label(application.created_at, :relative) %>
                 </td>
                 <td class="actions">
                   <%= link_to "View", admin_oauth_application_path(application), class: "btn btn-quiet btn-sm" %>

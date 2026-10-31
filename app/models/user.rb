@@ -112,6 +112,7 @@ class User < ApplicationRecord
   has_many :user_sessions, class_name: "User::Session", dependent: :destroy
   has_many :magic_links, class_name: "User::MagicLink", dependent: :destroy
   has_many :passkeys, class_name: "User::Passkey", dependent: :destroy
+  has_many :social_profiles, dependent: :destroy
 
   # All email addresses belonging to this user. users.email stays the canonical
   # primary address and is mirrored into this table (is_primary flag).
@@ -555,8 +556,8 @@ class User < ApplicationRecord
 
   # Issues a fresh link and mails it. Existing unused links stay valid — see
   # User::MagicLink for why.
-  def send_magic_link(requested_ip: nil)
-    link = User::MagicLink.issue!(self, requested_ip: requested_ip)
+  def send_magic_link(requested_ip: nil, return_to: nil)
+    link = User::MagicLink.issue!(self, requested_ip: requested_ip, return_to: return_to)
     MagicLinkJob.perform_later(self, link.token)
     true
   rescue ActiveRecord::RecordInvalid => e
@@ -712,6 +713,16 @@ class User < ApplicationRecord
 
   def minor? = birthday.present? && birthday.after?(ADULT_AGE.years.ago.to_date)
 
+  # The age group an app with the age scope gets instead of the birthday:
+  # under_13, 13_17 or 18_plus, or nil without a birthday. Derived each time,
+  # never stored, so it changes on the day the member turns 13 or 18.
+  def age_band
+    return if birthday.blank?
+    return "under_13" if under_minimum_age?
+
+    minor? ? "13_17" : "18_plus"
+  end
+
   def guardian_consent_granted? = guardian_consents.granted.exists?
 
   def guardian_consent_missing? = minor? && !guardian_consent_granted?
@@ -778,13 +789,12 @@ class User < ApplicationRecord
   #
   # Full members who joined before the code-of-conduct flow still have to
   # accept it. They are not demoted for that, so they skip :awaiting_promotion.
-  # Everyone starts with a birthday, and a member under 18 with their
-  # guardian's consent: Weave sends no Slack invite before them (see
-  # InviteToSlackJob).
+  # Everyone starts with a birthday: Weave sends no Slack invite before it (see
+  # InviteToSlackJob). A member under 18 needs no guardian consent for the
+  # Slack, only for the apps that require it (see AppAccess).
   def slack_onboarding_step
     return :add_birthday if birthday.nil?
     return :under_minimum_age if under_minimum_age?
-    return :guardian_consent if guardian_consent_missing?
     return slack_coc_accepted_at.present? ? :member : :accept_code_of_conduct if slack_member?
     return :awaiting_promotion if in_slack_workspace? && slack_coc_accepted_at.present?
     return :accept_code_of_conduct if in_slack_workspace?
@@ -808,10 +818,10 @@ class User < ApplicationRecord
   def slack_required? = !groups.exists?(waives_slack: true)
 
   # True while the profile and the home page should send the person to the
-  # onboarding page. Birthday and guardian consent apply to everyone. The
-  # Slack steps apply only when the person's project requires Slack.
+  # onboarding page. The birthday applies to everyone. The Slack steps apply
+  # only when the person's project requires Slack.
   def onboarding_pending?
-    return true if birthday.nil? || under_minimum_age? || guardian_consent_missing?
+    return true if birthday.nil? || under_minimum_age?
 
     slack_required? && !slack_onboarding_complete?
   end

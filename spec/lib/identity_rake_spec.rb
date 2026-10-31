@@ -48,4 +48,19 @@ RSpec.describe "identity rake tasks", type: :task do
       .to raise_error(SystemExit).and output(/ran before/).to_stderr
     expect(members.last.reload.identity_team).to be(false)
   end
+
+  it "seeds the identity team on staging" do
+    allow(Weave).to receive(:staging?).and_return(true)
+
+    expect { run("identity:staging_seed", "BY" => owner.email, "MEMBERS" => members.map(&:email).join(","), "LEAD" => members.first.email) }
+      .to output(/#{members.first.full_name} \(#{members.first.email}\): verified, verifier #{members.last.full_name}.*identity lead/m).to_stdout
+    expect(members.map { |user| user.reload.identity_verified? }).to all(be(true))
+  end
+
+  it "refuses the staging seed outside staging" do
+    expect { run("identity:staging_seed", "BY" => owner.email, "MEMBERS" => members.map(&:email).join(",")) }
+      .to raise_error(SystemExit).and output(/staging only/).to_stderr
+    expect(members.first.reload.identity_team).to be(false)
+    expect(Verification.count).to eq(0)
+  end
 end

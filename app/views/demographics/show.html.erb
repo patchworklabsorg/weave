@@ -16,7 +16,8 @@
         <%= link_to t("demographics.data_page_link"), Weave.data_page_url, class: "link", target: "_blank", rel: "noopener noreferrer" %>
       </p>
       <p class="font-medium text-ink">
-        <%= @answered_at ? t("demographics.form.answered", date: l(@answered_at.to_date, format: :long)) : t("demographics.form.not_answered") %>
+        <%= @answered_at ? t("demographics.form.answered", date: @answered_at.to_date.strftime(TimeHelper::FORMATS[:date])) : t("demographics.form.not_answered") %>
+
       </p>
     </div>
   </section>

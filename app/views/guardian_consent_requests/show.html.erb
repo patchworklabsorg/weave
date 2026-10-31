@@ -1,0 +1,56 @@
+<%# A member under 18 asks a parent or guardian for consent (see
+    GuardianConsentFlow). Only apps that require it need the consent (see
+    AppAccess), so this page is not a step of joining the Slack. %>
+<% content_for :title, t("guardian_consent.form.title") %>
+<% consent = current_user.current_guardian_consent %>
+
+<div class="min-h-full flex items-center justify-center p-6">
+  <div class="patch patch-bound patch-tilt-r w-full max-w-lg">
+    <div class="quilt-binding"></div>
+    <div class="p-8 sm:p-9 space-y-6">
+      <div class="text-center space-y-2">
+        <%= render "shared/wordmark", size: :lg, href: nil %>
+        <h1 class="font-display text-2xl font-bold text-ink"><%= t("guardian_consent.form.title") %></h1>
+      </div>
+
+      <div class="well space-y-4 text-center">
+        <% if consent&.pending? && params[:change].blank? && @form_errors.blank? %>
+          <p class="text-sm text-ink">
+            <%= t("guardian_consent.form.pending", email: consent.guardian_email) %>
+          </p>
+          <p class="text-sm text-ink-faint"><%= t("guardian_consent.form.pending_hint") %></p>
+          <%= button_to t("guardian_consent.form.resend"), resend_guardian_consent_request_path,
+                class: "btn btn-secondary btn-block" %>
+          <p class="text-sm">
+            <%= link_to t("guardian_consent.form.change"), guardian_consent_request_path(change: 1), class: "link" %>
+          </p>
+        <% else %>
+          <p class="text-sm text-ink"><%= t("guardian_consent.form.intro") %></p>
+          <p class="text-sm text-ink-soft"><%= t("guardian_consent.form.honesty") %></p>
+          <p class="text-sm"><%= link_to t("data_handling.data_page_link"), Weave.data_page_url, target: "_blank", rel: "noopener noreferrer", class: "link" %></p>
+          <%= form_with url: guardian_consent_request_path, method: :post, class: "space-y-4 text-left" do |form| %>
+            <% [[:guardian_name, :text_field], [:guardian_email, :email_field]].each do |field, input| %>
+              <div class="field-group">
+                <%= form.label field, t("guardian_consent.form.#{field}"), class: "field-label" %>
+                <%= form.public_send input, field, value: params[field], required: true, maxlength: 100, autocomplete: "off",
+                      aria: { describedby: ("guardian_email_hint" if field == :guardian_email), invalid: (true if @form_errors&.key?(field)) },
+                      class: "field" %>
+                <% if field == :guardian_email %>
+                  <p id="guardian_email_hint" class="field-hint"><%= t("guardian_consent.form.guardian_email_hint") %></p>
+                <% end %>
+                <% if @form_errors&.key?(field) %>
+                  <p class="field-error"><%= @form_errors[field] %></p>
+                <% end %>
+              </div>
+            <% end %>
+            <%= form.submit t("guardian_consent.form.submit"), class: "btn btn-primary btn-block" %>
+          <% end %>
+        <% end %>
+      </div>
+
+      <p class="text-center text-sm">
+        <%= link_to "Go to your account", profile_path, class: "link" %>
+      </p>
+    </div>
+  </div>
+</div>

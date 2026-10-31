@@ -25,7 +25,7 @@
   <% else %>
     <% sections = [["Current members", @report.active]] + @report.departed.map { |cohort, data| ["Members who left (#{cohort})", data] } %>
     <p class="text-sm text-ink-soft">
-      Report from <%= @report.generated_at.strftime("%b %-d, %Y %H:%M") %>.
+      Report from <%= time_label(@report.generated_at, :datetime) %>.
     </p>
     <% if @report.unreadable_count.positive? %>
       <div class="callout callout-warning">
@@ -78,7 +78,8 @@
         <p class="card-lede">
           The web app cannot make a report, because it does not have the private key. A key holder runs
           <code class="code-chip">bin/rails demographics:report</code> with the key in <code class="code-chip">WEAVE_DEMOGRAPHICS_PRIVATE_KEY_FILE</code>.
-          See docs/KYC.md.
+          The <%= link_to "KYC guide", "https://github.com/patchworklabsorg/weave/blob/main/docs/KYC.md", class: "link", target: "_blank", rel: "noopener noreferrer" %> has the steps.
+
         </p>
       </div>
     </div>
@@ -87,7 +88,7 @@
         <div class="record-list">
           <% @runs.each do |generated_at, run_by| %>
             <div class="record">
-              <div class="record-main text-sm text-ink-soft"><%= generated_at.strftime("%b %-d, %Y %H:%M") %><%= " by #{run_by}" if run_by.present? %></div>
+              <div class="record-main text-sm text-ink-soft"><%= time_label(generated_at, :datetime) %><%= " by #{run_by}" if run_by.present? %></div>
             </div>
           <% end %>
         </div>

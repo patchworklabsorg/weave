@@ -32,17 +32,17 @@
         <% end %>
         <%= dl_row "Source", @deletion_request.source %>
         <%= dl_row "Status", @deletion_request.status.humanize %>
-        <%= dl_row "Requested", @deletion_request.requested_at.to_fs(:long) %>
+        <%= dl_row "Requested" do %><%= time_label(@deletion_request.requested_at, :datetime) %><% end %>
         <%= dl_row("Review due") do %>
-          <span class="<%= 'text-danger' if @deletion_request.review_overdue? %>"><%= @deletion_request.review_due_at.to_date.to_fs(:long) %></span>
+          <span class="<%= 'text-danger' if @deletion_request.review_overdue? %>"><%= time_label(@deletion_request.review_due_at) %></span>
         <% end %>
-        <%= dl_row "Deletion complete by", @deletion_request.complete_by.to_date.to_fs(:long) %>
+        <%= dl_row "Deletion complete by" do %><%= time_label(@deletion_request.complete_by) %><% end %>
         <% if @deletion_request.reviewed_at %>
-          <%= dl_row "Reviewed", "#{@deletion_request.reviewed_by&.full_name || 'a deleted user'}, #{@deletion_request.reviewed_at.to_fs(:long)}" %>
+          <%= dl_row "Reviewed" do %><%= @deletion_request.reviewed_by&.full_name || "a deleted user" %>, <%= time_label(@deletion_request.reviewed_at, :datetime) %><% end %>
           <%= dl_row "Review note", @deletion_request.review_note %>
         <% end %>
         <% if @user && @deletion_request.dormancy? %>
-          <%= dl_row "Last active", @user.last_active_at.to_fs(:long) %>
+          <%= dl_row "Last active" do %><%= time_label(@user.last_active_at, :datetime) %><% end %>
         <% end %>
       </dl>
     </div>
@@ -96,7 +96,7 @@
           <% @runs.each do |run| %>
             <div class="record">
               <div class="record-main space-y-1">
-                <p class="record-title"><strong><%= run.outcome.humanize %></strong>, started <%= run.started_at.to_fs(:long) %></p>
+                <p class="record-title"><strong><%= run.outcome.humanize %></strong>, started <%= time_label(run.started_at, :datetime) %></p>
                 <ol class="list-decimal list-inside text-sm text-ink-soft">
                   <% run.steps.each do |step| %>
                     <li><span class="mono"><%= step["step"] %></span>: <%= step["status"] %></li>

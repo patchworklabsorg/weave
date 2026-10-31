@@ -26,7 +26,10 @@ en:
       roles: 'See your roles in this app'
       verification: 'See if you passed identity verification (not your ID details)'
       residency: 'See if you live in the US, and when Weave checked it (not your address)'
+      age: 'See your age group: under 13, 13 to 17, or 18 and older (not your birthday)'
+      social: 'See the accounts you linked on other sites, for example GitHub'
       directory: 'Look up users of this app (app tokens only)'
+      fulfillment: 'Read the shipping address of a user of this app (app tokens only)'
       quilt: 'Call the Quilt patch API (app tokens only)'
       introspect: 'Check the app tokens of other apps (app tokens only)'
 

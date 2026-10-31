@@ -1,10 +1,12 @@
-<%# A search box that reloads a turbo frame as you type.
+<%# A search box that reloads a turbo frame as you type. The URL follows the
+    query (turbo_action: replace), without a history entry per keystroke.
     render "shared/search_form", url: admin_groups_path, frame: "groups_table", placeholder: "Search groups"
     Optional: param (default :search), value (default params[param]), autofocus. %>
 <% param = local_assigns.fetch(:param, :search) %>
 <% value = local_assigns.fetch(:value, params[param]) %>
 <%= form_with url: url, method: :get, local: true, class: "flex flex-wrap items-center gap-2",
-      data: { controller: "search", turbo_frame: frame, turbo_action: "advance" } do |form| %>
+      data: { controller: "search", turbo_frame: frame, turbo_action: "replace" } do |form| %>
+
   <label class="search flex-1 min-w-56">
     <span class="sr-only"><%= placeholder %></span>
     <%= icon(:search) %>

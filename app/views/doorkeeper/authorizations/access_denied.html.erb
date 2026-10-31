@@ -22,10 +22,10 @@
         </p>
       <% elsif @decision&.reason == :guardian_consent %>
         <p class="text-sm text-ink-soft text-center">
-          Members under 18 need consent from a parent or guardian before they can use Patchwork Labs apps.
+          Members under 18 need consent from a parent or guardian before they can use this app.
         </p>
 
-        <%= link_to "Ask a parent or guardian", slack_onboarding_path, class: "btn btn-primary btn-block" %>
+        <%= link_to "Ask a parent or guardian", guardian_consent_request_path, class: "btn btn-primary btn-block" %>
       <% elsif @decision&.reason == :code_of_conduct %>
         <p class="text-sm text-ink-soft text-center">
           Patchwork Labs apps are for members who have accepted the Code of Conduct.

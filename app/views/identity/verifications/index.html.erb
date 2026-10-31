@@ -11,12 +11,12 @@
 
 <%
   sections = [
-    ["Escalations for the lead", @escalations, ->(v) { "Escalated #{time_ago_in_words(v.escalated_at)} ago" }],
-    ["Waiting for pre-review", @awaiting_pre_review, ->(v) { "Submitted #{time_ago_in_words(v.created_at)} ago" }],
+    ["Escalations for the lead", @escalations, ->(v) { safe_join(["Escalated ", time_label(v.escalated_at, :relative)]) }],
+    ["Waiting for pre-review", @awaiting_pre_review, ->(v) { safe_join(["Submitted ", time_label(v.created_at, :relative)]) }],
     ["In pre-review", @in_pre_review, ->(v) { "Pre-reviewer: #{v.pre_reviewer&.full_name || 'a deleted user'}" }],
-    ["Document OK: agree a call time", @awaiting_call, ->(v) { "Document OK #{time_ago_in_words(v.pre_reviewed_at)} ago" }],
-    ["Calls", @calls, ->(v) { "Call on #{v.call_scheduled_for.utc.strftime('%b %-d, %Y %H:%M UTC')}" }],
-    ["Recently closed", @recent, ->(v) { "#{v.status.humanize}, #{time_ago_in_words(v.updated_at)} ago" }]
+    ["Document OK: agree a call time", @awaiting_call, ->(v) { safe_join(["Document OK ", time_label(v.pre_reviewed_at, :relative)]) }],
+    ["Calls", @calls, ->(v) { safe_join(["Call on ", time_label(v.call_scheduled_for, :datetime)]) }],
+    ["Recently closed", @recent, ->(v) { safe_join([v.status.humanize, ", ", time_label(v.updated_at, :relative)]) }]
   ]
 %>
 

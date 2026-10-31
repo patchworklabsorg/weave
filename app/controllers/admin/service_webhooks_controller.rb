@@ -20,7 +20,7 @@ class Admin::ServiceWebhooksController < Admin::BaseController
     @webhook.created_by = current_user
 
     if @webhook.save
-      redirect_to [:admin, @service, @webhook], notice: "Webhook was successfully created."
+      redirect_to [:admin, @service, @webhook], notice: "The webhook was created."
     else
       render :new, status: :unprocessable_content
     end
@@ -31,7 +31,7 @@ class Admin::ServiceWebhooksController < Admin::BaseController
 
   def update
     if @webhook.update(webhook_params)
-      redirect_to [:admin, @service, @webhook], notice: "Webhook was successfully updated."
+      redirect_to [:admin, @service, @webhook], notice: "The webhook was updated."
     else
       render :edit, status: :unprocessable_content
     end
@@ -39,7 +39,7 @@ class Admin::ServiceWebhooksController < Admin::BaseController
 
   def destroy
     @webhook.destroy
-    redirect_to admin_service_webhooks_path(@service), notice: "Webhook was successfully deleted."
+    redirect_to admin_service_webhooks_path(@service), notice: "The webhook was deleted."
   end
 
   def activate

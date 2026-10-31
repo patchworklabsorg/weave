@@ -11,6 +11,8 @@ RSpec.describe "US residency check", type: :request do
   before { active_key_set_without_holders }
 
   describe "the member" do
+    let(:id_form) { { document_type: "passport", id_document: document, data_notice_read: "1" } }
+
     before { sign_in_via_magic_link(member) }
 
     it "sees that the check comes with identity verification, and never a question about citizenship" do
@@ -19,6 +21,41 @@ RSpec.describe "US residency check", type: :request do
       expect(response.body).to include(I18n.t("residency.page.title"), I18n.t("residency.page.identity_first"),
                                        I18n.t("residency.page.submission_title"))
       expect(response.body).not_to match(/name="[^"]*citizen/i)
+    end
+
+    it "can choose no residency document on the identity form" do
+      get verification_path
+
+      select = Nokogiri::HTML(response.body).at_css("select[name='residency_evidence_type']")
+      expect(select.css("option").map(&:text)).to eq(
+        [I18n.t("residency.page.evidence_none")] +
+          ResidencyCheck::UPLOAD_EVIDENCE.map { |type| I18n.t("residency.page.evidence.#{type}") }
+      )
+      expect(select.at_css("option").attr("value")).to eq("")
+    end
+
+    it "submits the identity form without a residency document" do
+      post verification_path, params: id_form.merge(residency_evidence_type: "")
+
+      expect(member.latest_verification).to be_present
+      expect(member.residency_checks).to be_empty
+    end
+
+    it "refuses a residency document with no type on the identity form" do
+      expect do
+        post verification_path, params: id_form.merge(residency_evidence_type: "", residency_document: document)
+      end.not_to change(Verification, :count)
+
+      expect(response.body).to include(CGI.escapeHTML(I18n.t("residency.errors.evidence_type_or_remove")))
+    end
+
+    it "refuses a residency type with no document on the identity form" do
+      expect do
+        post verification_path, params: id_form.merge(residency_evidence_type: "school_enrollment")
+      end.not_to change(Verification, :count)
+
+      expect(response.body).to include(I18n.t("residency.errors.document_missing"))
+      expect(member.residency_checks).to be_empty
     end
 
     it "uploads a document after identity verification" do

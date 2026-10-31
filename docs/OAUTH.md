@@ -75,13 +75,16 @@ The OAuth provider supports the following scopes:
 - `slack`: Patchwork Labs Slack membership (`slack_member`, `slack_id`)
 - `groups`: the user's groups that are linked to this app (`groups`)
 - `roles`: the user's roles in this app (`roles`)
+- `age`: the user's age group, not the birthday (`age_band`, see "Age band claim")
+- `social`: the accounts the user linked on other sites (`social_profiles`, see "Social profile claims")
 - `directory`: the directory API, for `client_credentials` tokens only (see "Directory API")
+- `fulfillment`: read a user's shipping address, for `client_credentials` tokens only (see "Shipping address API")
 - `quilt`: the Quilt patch API, for `client_credentials` tokens only (see "Resource servers")
 - `introspect`: introspect the `client_credentials` tokens of other apps (see "Resource servers")
 
-`directory`, `quilt` and `introspect` are app scopes. A user can't grant them:
-the authorization endpoint answers `invalid_scope` for each one. Any admin can
-allow `directory` and `quilt` on an app. Only a superadmin can add or remove
+`directory`, `fulfillment`, `quilt` and `introspect` are app scopes. A user
+can't grant them: the authorization endpoint answers `invalid_scope` for each
+one. Any admin can allow `directory`, `fulfillment` and `quilt` on an app. Only a superadmin can add or remove
 `introspect`.
 
 The `profile` scope also includes `pronouns`, a non-standard claim (a free-text
@@ -113,6 +116,72 @@ stateDiagram-v2
     member --> pending: made a guest or deactivated in Slack
     [*] --> member: imported from Slack as a full member
 ```
+
+### Age band claim
+
+Each patch sets its own age rules. For example, a patch can have a minimum age
+of 13 and give priority to high school students. Request the `age` scope to
+check these rules. Weave sends the age group, never the birthday.
+
+| `age_band` | Meaning |
+|------------|---------|
+| `under_13` | The user is younger than 13. |
+| `13_17` | The user is 13 to 17. |
+| `18_plus` | The user is 18 or older. |
+
+Rules:
+
+- The claim is in the ID token and the userinfo response. The directory API sends it as a field only when the app's scopes list `age`.
+- Weave calculates the value from the birthday on each request and does not store it. The value changes on the day the user turns 13 or 18. Do not keep an old value for a long time.
+- Weave omits the claim when it does not know the birthday. Weave asks for a missing birthday at the next sign-in.
+- Weave never sends `birthday`, `slack_birthday` or `acknowledged_over_13_at` to an app.
+- Guardian consent for users under 18 is a different check. Weave does it for all apps (see `docs/GUARDIAN_CONSENT.md`).
+
+```mermaid
+flowchart LR
+  B[(users.birthday)] --> W[Weave]
+  W -- "age_band: 13_17" --> P[Patch app]
+  P -. "never gets" .-> B
+```
+
+### Social profile claims
+
+Members link accounts on other sites (GitHub for now) on
+`/profile/social`. To link an account, the member signs in to the site, so a
+linked account belongs to the member. Request the `social` scope to get them:
+
+```json
+"social_profiles": [
+  { "provider": "github", "id": "583231", "username": "octocat" }
+]
+```
+
+`id` is the site's account id. It does not change when the member changes
+their username, so match on `id`. `username` is the username when the member
+last linked or refreshed the account. A rename on the site does not reach
+Weave until the member clicks "Refresh", so the old username can belong to
+someone else by then. Do not use `username` to find the account. The list is empty when
+the member linked no accounts. Each member can link one account of each site,
+and each account can be linked to one member only.
+
+```mermaid
+sequenceDiagram
+    participant M as Member
+    participant W as Weave
+    participant G as GitHub
+    M->>W: POST /auth/github (Link GitHub)
+    W->>G: Redirect to the GitHub sign-in
+    G->>W: GET /auth/github/callback (code)
+    W->>G: Exchange the code, read the public profile
+    W->>W: Save the account id and username (not the token)
+    W->>M: Email "A GitHub account was linked"
+```
+
+Weave reads the GitHub OAuth app from `GITHUB_CLIENT_ID` and
+`GITHUB_CLIENT_SECRET`, or from `github.client_id` and `github.client_secret`
+in the credentials file. Set the callback URL of the GitHub OAuth app to
+`https://<host>/auth/github/callback`. Without both values, the profile page
+does not offer GitHub.
 
 ## Using the OAuth Provider
 
@@ -348,7 +417,8 @@ Each user has the same fields as the claims:
   "minor": false,
   "guardian_verified": false,
   "verification_status": "verified",
-  "demographics_answered": true
+  "demographics_answered": true,
+  "age_band": "18_plus"
 }
 ```
 
@@ -360,10 +430,72 @@ Rules:
 - `active` is `false` when the user can no longer sign in.
 - `minor` is `true` when the user is under 18, from their birthday. It is `false` when Weave does not know the birthday yet. Weave asks for a missing birthday at the next sign-in. Only the directory sends this field. It is not a claim.
 - `guardian_verified` is `true` for a minor whose guardian a Weave admin verified with a signed form and a call or video check. The email consent alone does not set it. Ask for it before your app gives a minor money or other risk. It is `false` for adults.
+- `age_band` is in the response only when the app's scopes list `age` and Weave knows the birthday (see "Age band claim").
 - `demographics_answered` is `true` when the user saved answers to the demographics form. Weave never sends the answers. Ask for it before a user's first grant application. To send the user to the form, link to `/profile/demographics?return_to=<url>`. After a save, Weave sends the user back to `return_to` when its origin matches a redirect URI of a registered app. Weave ignores any other `return_to`.
 - `?group=` works only for a group linked to the app. `?role=` works only for a role of the app. Other values give `404`.
 - Pass exactly one of `role` and `group`, or the API answers `400`.
 - A token with a user, a token without the `directory` scope, or a token of an app whose scopes do not list `directory` gives `403`.
+
+### Shipping address API
+
+A patch app that ships hardware or other things to members reads the shipping
+address from Weave when it ships. Weave keeps the only copy.
+
+**Do not store the address.** Read it, print the label, and discard it. Read
+it again for the next shipment. Do not write it to your database, your logs,
+a cache, or a spreadsheet. A carrier or a fulfillment service can keep it only
+as long as the shipment needs it. When a member changes or deletes the address
+in Weave, the next read gets the change.
+
+To turn it on for an app, add `fulfillment` to the app's scopes in
+`/admin/oauth_applications`. Then request a token:
+
+```bash
+curl -u "$CLIENT_ID:$CLIENT_SECRET" -d grant_type=client_credentials -d scope=fulfillment \
+  https://weave.patchworklabs.org/oauth/token
+```
+
+```mermaid
+sequenceDiagram
+  participant P as Patch app
+  participant W as Weave
+  P->>W: POST /oauth/token (client_credentials, scope=fulfillment)
+  W-->>P: access_token
+  P->>W: GET /api/v1/directory/users/:sub/shipping_address
+  W->>W: AppAccess.permitted? and write audit row
+  W-->>P: address (Cache-Control: no-store)
+  P->>P: print the label, do not save the address
+```
+
+`GET /api/v1/directory/users/:sub/shipping_address` gives the fields that a
+label needs:
+
+```json
+{
+  "sub": "PWL1A2B3C4D5E",
+  "name": "Ada Lovelace",
+  "phone": "+15555550123",
+  "id": "addr_...",
+  "line1": "1 Main St",
+  "line2": "Apt 2",
+  "line3": null,
+  "city": "Boston",
+  "state": "MA",
+  "postal_code": "02115",
+  "country": "US"
+}
+```
+
+Rules:
+
+- `name` is the contact name on the address. When the address has no contact name, it is the user's first and last name. It is `null` when Weave has neither.
+- `phone` is the contact phone number in E.164 format, or `null`. Carriers ask for it on most international labels.
+- `country` is the ISO 3166-1 alpha-2 code.
+- An unknown `sub`, a user that the app may not serve, and a user with no complete shipping address all give `404`.
+- A token with a user, a token without the `fulfillment` scope, or a token of an app whose scopes do not list `fulfillment` gives `403`. The `directory` scope is not enough.
+- Each read that gives an address writes an audit row with the app, the `sub`, the IP and the time. Admins see the reads on the user's page in `/admin/users`.
+- The response has `Cache-Control: no-store`.
+- The endpoint allows 30 requests per minute for each IP, and 30 for each token.
 
 ### Resource servers
 

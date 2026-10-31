@@ -6,7 +6,6 @@
     [:sign_up, "Create your Weave account"],
     ([:add_birthday, t("birthday.step_label")] if @step == :add_birthday),
     ([:under_minimum_age, t("birthday.under_minimum_age_title")] if @step == :under_minimum_age),
-    ([:guardian_consent, "Get consent from a parent or guardian"] if current_user&.minor?),
     [:request_invite, "Get your Slack invite"],
     [:accept_invite, "Accept the invite from Slack"],
     [:accept_code_of_conduct, "Accept the Code of Conduct"],
@@ -14,13 +13,12 @@
   ].compact
   # awaiting_promotion is the Code of Conduct step, finishing up.
   current_index = steps.index { |key, _| key == (@step == :awaiting_promotion ? :accept_code_of_conduct : @step) }
-  consent = current_user.current_guardian_consent if @step == :guardian_consent
 %>
 
 <%# While the next step can happen in Slack, check now and then and reload
     when it does. %>
 <%= tag.div class: "min-h-full flex items-center justify-center p-6",
-      data: (if current_user && %i[guardian_consent accept_invite accept_code_of_conduct awaiting_promotion].include?(@step)
+      data: (if current_user && %i[accept_invite accept_code_of_conduct awaiting_promotion].include?(@step)
                { controller: "onboarding-status", onboarding_status_url_value: status_slack_onboarding_path, onboarding_status_step_value: @step }
              end) do %>
   <div class="patch patch-bound patch-tilt-r w-full max-w-lg">
@@ -76,40 +74,6 @@
 
         <% when :under_minimum_age %>
           <p class="text-sm text-ink"><%= t("birthday.under_minimum_age", email: Weave.mail_address) %></p>
-
-        <% when :guardian_consent %>
-          <% if consent&.pending? && params[:change].blank? && @form_errors.blank? %>
-            <p class="text-sm text-ink">
-              <%= t("guardian_consent.form.pending", email: consent.guardian_email) %>
-            </p>
-            <p class="text-sm text-ink-faint"><%= t("guardian_consent.form.pending_hint") %></p>
-            <%= button_to t("guardian_consent.form.resend"), resend_guardian_consent_request_path,
-                  class: "btn btn-secondary btn-block" %>
-            <p class="text-sm">
-              <%= link_to t("guardian_consent.form.change"), slack_onboarding_path(change: 1), class: "link" %>
-            </p>
-          <% else %>
-            <p class="text-sm text-ink"><%= t("guardian_consent.form.intro") %></p>
-            <p class="text-sm text-ink-soft"><%= t("guardian_consent.form.honesty") %></p>
-            <p class="text-sm"><%= link_to t("data_handling.data_page_link"), Weave.data_page_url, target: "_blank", rel: "noopener noreferrer", class: "link" %></p>
-            <%= form_with url: guardian_consent_request_path, method: :post, class: "space-y-4 text-left" do |form| %>
-              <% [[:guardian_name, :text_field], [:guardian_email, :email_field]].each do |field, input| %>
-                <div class="field-group">
-                  <%= form.label field, t("guardian_consent.form.#{field}"), class: "field-label" %>
-                  <%= form.public_send input, field, value: params[field], required: true, maxlength: 100, autocomplete: "off",
-                        aria: { describedby: ("guardian_email_hint" if field == :guardian_email), invalid: (true if @form_errors&.key?(field)) },
-                        class: "field" %>
-                  <% if field == :guardian_email %>
-                    <p id="guardian_email_hint" class="field-hint"><%= t("guardian_consent.form.guardian_email_hint") %></p>
-                  <% end %>
-                  <% if @form_errors&.key?(field) %>
-                    <p class="field-error"><%= @form_errors[field] %></p>
-                  <% end %>
-                </div>
-              <% end %>
-              <%= form.submit t("guardian_consent.form.submit"), class: "btn btn-primary btn-block" %>
-            <% end %>
-          <% end %>
 
         <% when :request_invite %>
           <p class="text-sm text-ink">

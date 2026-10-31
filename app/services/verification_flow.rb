@@ -57,7 +57,10 @@ module VerificationFlow
                residency_evidence_type: nil)
       verification = Verification.new(user:, verification_method:, document_type: document_type.presence)
       if residency_document.present? && ResidencyCheck::UPLOAD_EVIDENCE.exclude?(residency_evidence_type.to_s)
-        return failure(verification, residency_evidence_type: I18n.t("residency.errors.evidence_type"))
+        return failure(verification, residency_evidence_type: I18n.t("residency.errors.evidence_type_or_remove"))
+      end
+      if residency_document.blank? && ResidencyCheck::UPLOAD_EVIDENCE.include?(residency_evidence_type.to_s)
+        return failure(verification, residency_document: I18n.t("residency.errors.document_missing"))
       end
       if verification.digital_id_call? && !DigitalIdProvider.available?
         return failure(verification, verification_method: I18n.t("verification.errors.digital_id_unavailable"))

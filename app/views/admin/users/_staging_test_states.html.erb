@@ -1,0 +1,26 @@
+<%# Staging only: an owner sets a test state (see StagingTestStates). The
+    show page renders this partial only when StagingTestStates.allowed?. %>
+<div class="space-y-2">
+  <h3 class="section-title">Staging test states</h3>
+  <p class="record-meta">
+    Staging only. Each change removes this member's records of that kind and writes one record in the new state, with no ID images.
+  </p>
+  <div class="record-list">
+    <% StagingTestStates::STATES.each do |area, states| %>
+      <% next if area == "guardian_consent" && !user.minor? %>
+      <%= form_with url: admin_user_staging_test_state_path(user), method: :patch, class: "record flex-col items-stretch gap-2" do |form| %>
+        <%= form.hidden_field :area, value: area %>
+        <%= form.label :state, StagingTestStates::AREAS.fetch(area), for: "staging_#{area}", class: "field-label" %>
+        <div class="flex flex-wrap gap-2">
+          <%= form.select :state, states.invert, {}, id: "staging_#{area}", class: "field field-sm flex-1" %>
+          <% if area == "residency" %>
+            <%= form.select :us_state, ResidencyCheck::US_STATES.invert.sort, { selected: "MA" },
+                  aria: { label: "US state, for a US resident" }, class: "field field-sm flex-1" %>
+          <% end %>
+          <%= form.submit "Set", class: "btn btn-secondary btn-sm",
+                data: { turbo_confirm: "Replace the #{StagingTestStates::AREAS.fetch(area)} records of #{user.full_name} with the new test state?" } %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</div>

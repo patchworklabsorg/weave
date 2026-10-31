@@ -4,28 +4,47 @@ import { Controller } from "@hotwired/stimulus"
 // sidebar and the member nav sheet. The panel and the optional scrim carry
 // data-open; the CSS does the rest. The panel may be absent (a signed-out
 // top bar has no menu), so every method checks for it.
+//
+// Keyboard: opening moves focus to the first link in the panel, closing
+// returns it to the button that opened it. An optional content target
+// (the admin main column) goes inert while the panel is open, so Tab stays
+// inside the drawer.
 export default class extends Controller {
-  static targets = ["panel", "scrim", "button"]
+  static targets = ["panel", "scrim", "button", "content"]
 
   connect() {
     this.closeOnVisit = () => this.close()
     document.addEventListener("turbo:before-visit", this.closeOnVisit)
+    // Past 64rem the CSS shows the panel in place, so an open drawer must
+    // let go of the page (inert, scrim) when the viewport grows past it.
+    this.wide = window.matchMedia("(min-width: 64rem)")
+    this.closeOnWide = (event) => { if (event.matches) this.close() }
+    this.wide.addEventListener("change", this.closeOnWide)
   }
 
   disconnect() {
     document.removeEventListener("turbo:before-visit", this.closeOnVisit)
+    this.wide.removeEventListener("change", this.closeOnWide)
+    this.contentTargets.forEach((content) => content.removeAttribute("inert"))
   }
 
-  toggle() {
-    this.isOpen ? this.close() : this.open()
+
+  toggle(event) {
+    this.isOpen ? this.close() : this.open(event)
   }
 
-  open() {
+  open(event) {
+    if (!this.hasPanelTarget || this.isOpen) return
+    this.opener = event?.currentTarget || document.activeElement
     this.set(true)
+    this.panelTarget.querySelector("a, button, [tabindex='0']")?.focus()
   }
 
   close() {
+    if (!this.isOpen) return
     this.set(false)
+    this.opener?.focus()
+    this.opener = null
   }
 
   keydown(event) {
@@ -41,5 +60,6 @@ export default class extends Controller {
     this.panelTarget.dataset.open = String(open)
     if (this.hasScrimTarget) this.scrimTarget.dataset.open = String(open)
     this.buttonTargets.forEach((button) => button.setAttribute("aria-expanded", String(open)))
+    this.contentTargets.forEach((content) => content.toggleAttribute("inert", open))
   }
 }

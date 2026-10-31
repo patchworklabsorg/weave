@@ -41,7 +41,7 @@
                     <span class="mono text-ink-faint font-normal">(<%= user.p_id %>)</span>
                   </p>
                   <p class="record-meta">
-                    Since <%= assignment.granted_at.utc.strftime("%Y-%m-%d") %>.
+                    Since <%= time_label(assignment.granted_at) %>.
                     Granted by <%= assignment.granted_by&.full_name || "Weave" %>.
                     <%= "Reason: #{assignment.reason}" if assignment.reason.present? %>
                   </p>

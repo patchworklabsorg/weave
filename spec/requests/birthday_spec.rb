@@ -68,10 +68,11 @@ RSpec.describe "Birthday", type: :request do
       expect(user.reload.birthday).to be_nil
     end
 
-    it "moves a member under 18 on to guardian consent" do
-      post birthday_path, params: { birthday: 15.years.ago.to_date.iso8601 }
+    it "sends a member under 18 the Slack invite without guardian consent" do
+      expect { post birthday_path, params: { birthday: 15.years.ago.to_date.iso8601 } }
+        .to have_enqueued_job(InviteToSlackJob).with(user.id)
 
-      expect(user.reload.slack_onboarding_step).to eq(:guardian_consent)
+      expect(user.reload.slack_onboarding_step).to eq(:request_invite)
     end
 
     it "stops a member under 13 and tells the admins" do

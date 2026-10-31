@@ -104,6 +104,11 @@ module Takeout
             "last_used_at" => passkey.last_used_at&.iso8601
 }
         end,
+        "social_profiles" => user.social_profiles.order(:provider).map do |profile|
+          { "provider" => profile.provider, "id" => profile.uid, "username" => profile.username,
+            "linked_at" => profile.created_at.iso8601
+}
+        end,
         "groups"          => user.groups.map(&:name),
         # The member's own requests. Not who decided: that is the approver's.
         "access_requests" => user.access_requests.includes(:application).order(:created_at).map do |request|

@@ -21,7 +21,7 @@ class Admin::ServicesController < Admin::BaseController
     @service.created_by = current_user
 
     if @service.save
-      redirect_to [:admin, @service], notice: "Service was successfully created."
+      redirect_to [:admin, @service], notice: "The service was created."
     else
       render :new, status: :unprocessable_content
     end
@@ -32,7 +32,7 @@ class Admin::ServicesController < Admin::BaseController
 
   def update
     if @service.update(service_params)
-      redirect_to [:admin, @service], notice: "Service was successfully updated."
+      redirect_to [:admin, @service], notice: "The service was updated."
     else
       render :edit, status: :unprocessable_content
     end
@@ -40,7 +40,7 @@ class Admin::ServicesController < Admin::BaseController
 
   def destroy
     @service.destroy
-    redirect_to admin_services_path, notice: "Service was successfully deleted."
+    redirect_to admin_services_path, notice: "The service was deleted."
   end
 
   def activate

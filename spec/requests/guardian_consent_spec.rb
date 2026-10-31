@@ -2,8 +2,9 @@
 
 require "rails_helper"
 
-# A member under 18 asks a parent or guardian for consent from /slack, and the
-# guardian answers from the link in the email.
+# A member under 18 asks a parent or guardian for consent from
+# /guardian-consent, and the guardian answers from the link in the email. The
+# Slack does not need the consent.
 RSpec.describe "Guardian consent", type: :request do
   include ActiveJob::TestHelper
 
@@ -12,20 +13,38 @@ RSpec.describe "Guardian consent", type: :request do
   describe "the member's side" do
     before { sign_in_via_magic_link(user) }
 
-    it "shows the consent step before the Slack invite" do
+    it "does not ask for consent to join the Slack" do
       get slack_onboarding_path
 
-      expect(response.body).to include("Get consent from a parent or guardian", "Their email address")
-      expect(user.slack_onboarding_step).to eq(:guardian_consent)
+      expect(response.body).not_to include("Their email address")
+      expect(user.slack_onboarding_step).to eq(:request_invite)
+      expect(user.onboarding_pending?).to be(true)
     end
 
-    it "does not show the step to an adult" do
+    it "shows the request form" do
+      get guardian_consent_request_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Ask a parent or guardian", "Their email address")
+    end
+
+    it "points to the form from the profile without blocking it" do
+      user.update_columns(slack_id: "U1", slack_membership: "member", slack_coc_accepted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+
+      get root_path
+      expect(response).to redirect_to(profile_path)
+
+      get profile_path
+      expect(response.body).to include(guardian_consent_request_path)
+    end
+
+    it "sends an adult back to the profile" do
       adult = create(:user, :verified)
       sign_in_via_magic_link(adult)
 
-      get slack_onboarding_path
+      get guardian_consent_request_path
 
-      expect(response.body).not_to include("Get consent from a parent or guardian")
+      expect(response).to redirect_to(profile_path)
     end
 
     it "sends the request to the guardian" do
@@ -33,9 +52,16 @@ RSpec.describe "Guardian consent", type: :request do
         post guardian_consent_request_path, params: { guardian_name: "Grace Hopper", guardian_email: "grace@example.org" }
       end.to have_enqueued_mail(GuardianConsentMailer, :request_consent)
 
-      expect(response).to redirect_to(slack_onboarding_path)
+      expect(response).to redirect_to(guardian_consent_request_path)
       follow_redirect!
       expect(response.body).to include("We sent a request to grace@example.org")
+    end
+
+    it "limits how many requests one IP can send" do
+      5.times { |i| post guardian_consent_request_path, params: { guardian_name: "Grace Hopper", guardian_email: "grace#{i}@example.org" } }
+      post guardian_consent_request_path, params: { guardian_name: "Grace Hopper", guardian_email: "grace9@example.org" }
+
+      expect(response).to have_http_status(:too_many_requests)
     end
 
     it "shows the errors next to the fields" do
@@ -56,12 +82,12 @@ RSpec.describe "Guardian consent", type: :request do
       expect(consent.reload.sent_at).to be > 1.minute.ago
     end
 
-    it "sends a member who does not need consent back to /slack" do
+    it "sends a member who does not need consent back to the profile" do
       create(:guardian_consent, :granted, user:)
 
       post guardian_consent_request_path, params: { guardian_name: "Grace Hopper", guardian_email: "grace@example.org" }
 
-      expect(response).to redirect_to(slack_onboarding_path)
+      expect(response).to redirect_to(profile_path)
       expect(user.guardian_consents.count).to eq(1)
     end
   end
@@ -92,12 +118,12 @@ RSpec.describe "Guardian consent", type: :request do
       expect(response.body).to include("This link does not work")
     end
 
-    it "records the consent and starts the Slack invite" do
+    it "records the consent and tells the member" do
       expect do
         post guardian_consent_path(token:), params: { confirm: "1", signed_name: "Grace Hopper" }
-      end.to have_enqueued_job(InviteToSlackJob).with(user.id)
-                                                .and have_enqueued_mail(GuardianConsentMailer, :receipt)
+      end.to have_enqueued_mail(GuardianConsentMailer, :receipt)
         .and have_enqueued_mail(GuardianConsentMailer, :granted)
+      expect(InviteToSlackJob).not_to have_been_enqueued
 
       expect(consent.reload).to be_granted
       expect(user.reload.guardian_consent_missing?).to be(false)

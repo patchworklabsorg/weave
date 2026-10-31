@@ -38,7 +38,7 @@ class Admin::GroupsController < Admin::BaseController
     @group = Group.new(group_params.merge(kind: "manual", created_by: current_user))
 
     if @group.save
-      redirect_to admin_group_path(@group), notice: "Group was successfully created."
+      redirect_to admin_group_path(@group), notice: "The group was created."
     else
       render :new, status: :unprocessable_content
     end
@@ -49,7 +49,7 @@ class Admin::GroupsController < Admin::BaseController
 
   def update
     if @group.update(group_params.except(:slug))
-      redirect_to admin_group_path(@group), notice: "Group was successfully updated."
+      redirect_to admin_group_path(@group), notice: "The group was updated."
     else
       render :edit, status: :unprocessable_content
     end

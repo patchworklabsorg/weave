@@ -9,10 +9,17 @@ module ConsoleAccess
   # nil (Console1984 then writes "unknown") so a server never waits for a
   # sign-in.
   class UsernameResolver
+    # The person who signed the console in, once current has run. PaperTrail
+    # records their changes under them (see config/initializers/console.rb).
+    attr_reader :user
+
     def current
       return unless defined?(Rails::Console)
 
-      @current ||= ConsoleAccess.username_for(SignIn.new(kind: "console").await!)
+      @current ||= begin
+        @user = SignIn.new(kind: "console").await!
+        ConsoleAccess.username_for(@user)
+      end
     rescue Error, Interrupt => e
       # A console without a sign-in must not open.
       warn(e.message.presence || "Cancelled.")

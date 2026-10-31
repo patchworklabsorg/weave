@@ -100,7 +100,16 @@
         </ul>
       </div>
     <% else %>
-      <%= empty_state("No key set yet. Run the ceremony.", icon: :key_round) %>
+      <% blocker = KeyCustody::Ceremony.blocker %>
+      <%= empty_state("No key set yet",
+            body: (if KeyCustody::Ceremony.can_run?(current_user)
+                     blocker || "You hold a key, so you can run the ceremony."
+                   else
+                     "A key holder with an active hardware key runs the ceremony. #{blocker}".strip
+                   end),
+            icon: :key_round) %>
+
+
     <% end %>
   </section>
 
@@ -146,11 +155,11 @@
                     <% unless key.active? %><%= badge("Revoked", tone: :danger) %><% end %>
                   </p>
                   <p class="record-meta">
-                    Enrolled <%= key.created_at.to_date.to_fs(:long) %>.
+                    Enrolled <%= time_label(key.created_at) %>.
                     <% if key.active? %>
                       <%= @my_share && KeyCustody::Recovery.keys_for(@my_share).include?(key) ? "Opens your share." : "Holds no share of the current key set." %>
                     <% else %>
-                      Revoked <%= key.revoked_at.to_date.to_fs(:long) %>: <%= key.revoked_reason %>.
+                      Revoked <%= time_label(key.revoked_at) %>: <%= key.revoked_reason %>.
                     <% end %>
                   </p>
                 </div>
@@ -220,7 +229,7 @@
             <li class="record">
               <div class="record-main">
                 <p class="record-title"><%= event.summary %></p>
-                <p class="record-meta"><%= event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %></p>
+                <p class="record-meta"><%= time_label(event.created_at, :datetime) %></p>
               </div>
             </li>
           <% end %>

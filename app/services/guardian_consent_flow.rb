@@ -4,11 +4,11 @@
 # each one sets off (see GuardianConsent).
 #
 #   member asks (request) -> guardian gets a link -> guardian consents (grant)
-#   -> member can join the Slack and use apps
+#   -> member can use the apps that require it (see AppAccess)
 #
 # The guardian can take the consent back from the same link (revoke). The
-# member then loses app access, and the admins are told, because the Slack
-# account stays as it is until an admin acts.
+# member then loses app access, and the admins are told. Consent does not
+# gate the Slack, so the Slack account stays as it is.
 module GuardianConsentFlow
   Result = Data.define(:consent, :errors) do
     def success? = errors.empty?
@@ -44,7 +44,6 @@ module GuardianConsentFlow
 
       GuardianConsentMailer.receipt(consent, token).deliver_later
       GuardianConsentMailer.granted(consent).deliver_later
-      after_consent(consent.user)
       true
     end
 
@@ -54,7 +53,6 @@ module GuardianConsentFlow
       return Result.new(consent:, errors: consent.errors.to_hash.transform_values(&:first)) unless consent.persisted?
 
       GuardianConsentMailer.granted(consent).deliver_later
-      after_consent(user)
       Result.new(consent:, errors: {})
     end
 
@@ -94,12 +92,6 @@ module GuardianConsentFlow
 
       consent.update_columns(flags:) # rubocop:disable Rails/SkipsModelValidations
       AdminMailer.guardian_consent_flagged(consent).deliver_later if consent.suspicious?
-    end
-
-    # Consent was the only thing that held back the Slack invite (see
-    # InviteToSlackJob). Members already in the workspace need none.
-    def after_consent(user)
-      InviteToSlackJob.perform_later(user.id) if user.email_verified? && !user.in_slack_workspace?
     end
 
   end

@@ -37,8 +37,9 @@
 #                             slack_onboarding GET    /slack(.:format)                                                                                  slack_onboarding#show
 #                                              POST   /slack(.:format)                                                                                  slack_onboarding#create
 #                                     birthday POST   /slack/birthday(.:format)                                                                         birthdays#create
-#                     guardian_consent_request POST   /slack/guardian-consent(.:format)                                                                 guardian_consent_requests#create
-#              resend_guardian_consent_request POST   /slack/guardian-consent/resend(.:format)                                                          guardian_consent_requests#resend
+#              resend_guardian_consent_request POST   /guardian-consent/resend(.:format)                                                                guardian_consent_requests#resend
+#                     guardian_consent_request GET    /guardian-consent(.:format)                                                                       guardian_consent_requests#show
+#                                              POST   /guardian-consent(.:format)                                                                       guardian_consent_requests#create
 #                             guardian_consent GET    /guardian/:token(.:format)                                                                        guardian_consents#show
 #                                              POST   /guardian/:token(.:format)                                                                        guardian_consents#create
 #                                              DELETE /guardian/:token(.:format)                                                                        guardian_consents#destroy
@@ -104,6 +105,10 @@
 #                                     passkeys GET    /profile/passkeys(.:format)                                                                       passkeys#index
 #                                              POST   /profile/passkeys(.:format)                                                                       passkeys#create
 #                                      passkey DELETE /profile/passkeys/:id(.:format)                                                                   passkeys#destroy
+#                              social_profiles GET    /profile/social(.:format)                                                                         social_profiles#index
+#                               social_profile DELETE /profile/social/:id(.:format)                                                                     social_profiles#destroy
+#                      social_profile_callback GET    /auth/:provider/callback(.:format)                                                                social_profiles#create {provider: /github/}
+#                       social_profile_failure GET    /auth/failure(.:format)                                                                           social_profiles#failure
 #                           user_profile_photo GET    /user/:p_id/pfp(.:format)                                                                         profile_photos#show
 #                                  user_avatar GET    /user/:p_id/avatar/:variant(.:format)                                                             profile_photos#avatar
 #                           user_avatar_square GET    /user/:p_id/avatar/:variant/square(.:format)                                                      profile_photos#avatar_square
@@ -280,6 +285,7 @@
 #                                              GET    /admin/*path(.:format)                                                                            redirect(301, /login)
 #                            letter_opener_web        /letter_opener                                                                                    LetterOpenerWeb::Engine
 #                                api_v1_health GET    /api/v1/health(.:format)                                                                          api/v1/health#index
+#       api_v1_directory_user_shipping_address GET    /api/v1/directory/users/:user_sub/shipping_address(.:format)                                      api/v1/directory/shipping_addresses#show
 #                       api_v1_directory_users GET    /api/v1/directory/users(.:format)                                                                 api/v1/directory/users#index
 #                        api_v1_directory_user GET    /api/v1/directory/users/:sub(.:format)                                                            api/v1/directory/users#show
 #           api_v1_thread_count_project_events POST   /api/v1/thread_count/project_events(.:format)                                                     api/v1/project_events#create
@@ -496,10 +502,11 @@ Rails.application.routes.draw do
   # the Slack (see BirthdaysController).
   post "slack/birthday", to: "birthdays#create", as: :birthday
 
-  # A member under 18 asks a parent or guardian for consent, as a step of
-  # joining the Slack (see GuardianConsentFlow).
-  post "slack/guardian-consent", to: "guardian_consent_requests#create", as: :guardian_consent_request
-  post "slack/guardian-consent/resend", to: "guardian_consent_requests#resend", as: :resend_guardian_consent_request
+  # A member under 18 asks a parent or guardian for consent, for the apps
+  # that require it (see GuardianConsentFlow and AppAccess).
+  resource :guardian_consent_request, path: "guardian-consent", only: [:show, :create] do
+    post :resend
+  end
 
   # The page the parent or guardian opens from the email. The token is the
   # proof, so no account is needed.
@@ -605,6 +612,15 @@ Rails.application.routes.draw do
       post :options, on: :collection
     end
   end
+
+  # Social profiles (see SocialProfilesController). OmniAuth answers
+  # POST /auth/:provider itself and sends the member back to the callback.
+  # Keep the provider list in step with SocialProfile::PROVIDERS.
+  scope "/profile" do
+    resources :social_profiles, path: "social", only: [:index, :destroy]
+  end
+  get "/auth/:provider/callback", to: "social_profiles#create", as: :social_profile_callback, constraints: { provider: /github/ }
+  get "/auth/failure", to: "social_profiles#failure", as: :social_profile_failure
 
   # Profile photo routes (public, no auth required)
   get "/user/:p_id/pfp", to: "profile_photos#show", as: :user_profile_photo
@@ -733,6 +749,9 @@ Rails.application.routes.draw do
           patch :code_of_conduct_exemption
         end
         resources :impersonations, controller: "user_impersonations", only: [:show]
+
+        # Staging only: set a test state (see StagingTestStates).
+        resource :staging_test_state, only: [:update]
 
         resources :guardian_consents, controller: "user_guardian_consents", only: [:create] do
           member do
@@ -885,7 +904,9 @@ Rails.application.routes.draw do
       get "health", to: "health#index"
 
       namespace :directory do
-        resources :users, only: [:index, :show], param: :sub
+        resources :users, only: [:index, :show], param: :sub do
+          resource :shipping_address, only: :show
+        end
       end
 
       # Project review outcomes for Thread Count, from services such as

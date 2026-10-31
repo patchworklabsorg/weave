@@ -30,9 +30,6 @@ class NudgeStuckSlackGuestsJob < ApplicationJob
 
     index = 0
     self.class.candidates(since:).find_each do |user|
-      # Weave can't send these people to the accept step yet (see
-      # User#slack_onboarding_step), so a reminder would not help.
-      next if user.guardian_consent_missing?
       # A deleted Slack account is also `pending` in Weave. Don't email
       # someone who left.
       next unless service.active_guest?(user.slack_id)

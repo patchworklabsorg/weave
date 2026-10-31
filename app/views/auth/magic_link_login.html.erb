@@ -1,3 +1,4 @@
+<% content_for :title, "Confirm your sign in" %>
 <div class="min-h-full flex items-center justify-center p-6">
   <div class="patch patch-bound patch-tilt-r w-full max-w-md">
     <div class="quilt-binding"></div>
@@ -10,6 +11,15 @@
           <strong class="text-ink break-all"><%= @magic_link_user.email %></strong>.
         </p>
       </div>
+
+      <% if @continues_to %>
+        <div class="callout callout-grape">
+          <%= icon(:info, size: 18) %>
+          <div class="callout-body">
+            <p>After you sign in, you continue to <strong><%= @continues_to %></strong>.</p>
+          </div>
+        </div>
+      <% end %>
 
       <%# turbo: false, matching the OAuth authorize forms (see their comment): confirming
           while an OAuth flow is in progress can redirect straight through to /oauth/authorize

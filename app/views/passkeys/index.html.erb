@@ -63,8 +63,8 @@
                   <%= badge("Turned off", tone: :danger) if passkey.compromised? %>
                 </div>
                 <div class="record-meta">
-                  Added <%= passkey.created_at.to_date.to_fs(:long) %> ·
-                  <%= passkey.last_used_at ? "last used #{time_ago_in_words(passkey.last_used_at)} ago" : "not used yet" %>
+                  Added <%= time_label(passkey.created_at) %> ·
+                  <% if passkey.last_used_at %>last used <%= time_label(passkey.last_used_at, :relative) %><% else %>not used yet<% end %>
                 </div>
                 <% if passkey.compromised? %>
                   <div class="callout callout-warning mt-2">
@@ -87,7 +87,8 @@
         </div>
       </div>
     <% else %>
-      <%= empty_state("No passkeys yet", body: "You don't have any passkeys yet.", icon: :fingerprint) %>
+      <%= empty_state("No passkeys yet", body: "Add one above to sign in without an email link.", icon: :fingerprint) %>
+
     <% end %>
   </section>
 </div>

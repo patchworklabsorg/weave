@@ -9,6 +9,7 @@
 #  delivered_to :string
 #  expires_at   :datetime         not null
 #  requested_ip :string
+#  return_to    :string
 #  token_digest :string           not null
 #  used_at      :datetime
 #  created_at   :datetime         not null

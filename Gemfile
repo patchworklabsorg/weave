@@ -35,6 +35,9 @@ gem "webauthn", "~> 3.4" # Passkey sign-in and break-glass hardware keys (KeyCus
 gem "doorkeeper"                         # OAuth 2.0 provider
 gem "doorkeeper-openid_connect"          # OIDC id_tokens on top of Doorkeeper
 gem "pundit", "~> 2.5"                   # Authorization policies (fail-closed, see ApplicationPolicy)
+gem "omniauth"                           # Link social profiles (SocialProfile)
+gem "omniauth-github"                    # GitHub social profiles
+gem "omniauth-rails_csrf_protection"     # POST-only OmniAuth request phase
 gem "rack-attack"                        # Rate limiting
 gem "validates_email_format_of"          # Email validation
 gem "disposable_mail"                    # Block disposable email domains

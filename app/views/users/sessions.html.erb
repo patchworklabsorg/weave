@@ -90,10 +90,10 @@
                     <span class="table-sub"><%= session.timezone %></span>
                   <% end %>
                 </td>
-                <td class="whitespace-nowrap text-ink-soft"><%= session.created_at.strftime("%m/%d/%Y %I:%M %p") %></td>
+                <td class="whitespace-nowrap text-ink-soft"><%= time_label(session.created_at, :datetime) %></td>
                 <td class="whitespace-nowrap text-ink-soft">
                   <% if session.last_seen_at %>
-                    <%= time_ago_in_words(session.last_seen_at) %> ago
+                    <%= time_label(session.last_seen_at, :relative) %>
                   <% else %>
                     Never
                   <% end %>

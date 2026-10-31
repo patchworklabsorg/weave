@@ -34,7 +34,7 @@
                 [("Code of Conduct" if @group.waives_code_of_conduct), ("Slack" if @group.waives_slack)].compact.to_sentence %>
         <% end %>
         <%= dl_row("Created") do %>
-          <%= @group.created_at.strftime("%B %d, %Y") %>
+          <%= time_label(@group.created_at) %>
           <% if @group.created_by %>by <%= @group.created_by.full_name %><% end %>
         <% end %>
       </dl>
@@ -73,7 +73,8 @@
             <%= form.label :expires_at, class: "field-label" do %>Expires <span class="optional">(optional)</span><% end %>
             <%= form.datetime_local_field :expires_at, class: "field" %>
           </div>
-          <%= form.submit "Add Member", class: "btn btn-primary" %>
+          <%= form.submit "Add member", class: "btn btn-primary" %>
+
         <% end %>
       </div>
     <% end %>
@@ -105,14 +106,14 @@
                     <span class="table-sub"><%= membership.user.email %></span>
                   </td>
                   <td class="text-ink-soft">
-                    <%= time_ago_in_words(membership.created_at) %> ago
+                    <%= time_label(membership.created_at, :relative) %>
                     <% if membership.added_by %><span class="table-sub">by <%= membership.added_by.full_name %></span><% end %>
                   </td>
                   <td class="whitespace-nowrap">
                     <% if membership.expired? %>
                       <%= badge "Expired", tone: :danger %>
                     <% elsif membership.expires_at %>
-                      <%= membership.expires_at.strftime("%b %d, %Y %I:%M %p") %>
+                      <%= time_label(membership.expires_at, :datetime) %>
                     <% else %>
                       <span class="text-ink-faint">Never</span>
                     <% end %>

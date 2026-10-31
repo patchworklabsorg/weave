@@ -57,7 +57,7 @@ RSpec.feature "User birthday management", type: :feature do
   scenario "User sees birthday value when set" do
     user.update!(birthday: Date.parse("1990-01-15"))
     visit edit_profile_path
-    expect(page).to have_text("January 15, 1990")
+    expect(page).to have_text("Jan 15, 1990")
   end
 
   scenario "User sees birthday cannot be changed message" do

@@ -15,6 +15,16 @@ RSpec.describe ConsoleAccess::UsernameResolver do
     expect(described_class.new.current).to eq("Grace Hopper (#{admin.p_id})")
   end
 
+  it "keeps the signed-in person for PaperTrail" do
+    sign_in = instance_double(ConsoleAccess::SignIn, await!: admin)
+    allow(ConsoleAccess::SignIn).to receive(:new).and_return(sign_in)
+    resolver = described_class.new
+
+    resolver.current
+
+    expect(resolver.user).to eq(admin)
+  end
+
   it "asks for one sign-in per console" do
     sign_in = instance_double(ConsoleAccess::SignIn, await!: admin)
     resolver = described_class.new

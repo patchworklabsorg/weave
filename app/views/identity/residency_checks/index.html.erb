@@ -21,7 +21,7 @@
                 <div class="record-main">
                   <p class="record-title">
                     <%= link_to check.public_id, identity_residency_check_path(check), class: "link mono" %>:
-                    <%= check.user&.full_name || "a deleted user" %>, <%= check.evidence_label.downcase %>, <%= check.created_at.to_fs(:long) %>
+                    <%= check.user&.full_name || "a deleted user" %>, <%= check.evidence_label.downcase %>, <%= time_label(check.created_at, :datetime) %>
                   </p>
                   <% if check.pre_review? %>
                     <p class="record-meta">(pre-reviewer: <%= check.pre_reviewer&.full_name || "a deleted user" %>)</p>
@@ -51,7 +51,7 @@
                   <%= link_to check.public_id, identity_residency_check_path(check), class: "link mono" %>:
                   <%= check.status.humanize %><%= check.us_resident.nil? ? "" : (check.us_resident ? ", yes (#{check.us_state_name})" : ", no") %>
                 </p>
-                <p class="record-meta"><%= check.decided_by&.full_name %> <%= check.updated_at.to_fs(:long) %></p>
+                <p class="record-meta"><%= check.decided_by&.full_name %> <%= time_label(check.updated_at, :datetime) %></p>
               </div>
             </li>
           <% end %>
