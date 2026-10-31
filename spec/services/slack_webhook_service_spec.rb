@@ -157,7 +157,21 @@ RSpec.describe SlackWebhookService do
   end
 
   describe ".process_team_join" do
-    before { allow(SlackService).to receive(:new).and_return(instance_double(SlackService, post_code_of_conduct: true)) }
+    let(:slack_service) { instance_double(SlackService, post_code_of_conduct: true, other_account_linked?: false) }
+
+    before { allow(SlackService).to receive(:new).and_return(slack_service) }
+
+    it "leaves a second account alone for someone who is already linked" do
+      user = create(:user, :verified, email: "adam@example.com", slack_id: "U1")
+      allow(slack_service).to receive(:other_account_linked?).with(user, "U2", strict: true).and_return(true)
+      expect(slack_service).not_to receive(:post_code_of_conduct)
+
+      expect do
+        described_class.process_team_join("id" => "U2", "profile" => { "email" => "adam@example.com" })
+      end.not_to have_enqueued_job(PushSlackProfileFieldsJob)
+
+      expect(user.reload.slack_id).to eq("U1")
+    end
 
     it "links an invited signup who joins as a guest, and keeps them pending" do
       user = create(:user, :verified, email: "new@example.com", slack_invited_at: 1.hour.ago)
@@ -215,7 +229,7 @@ RSpec.describe SlackWebhookService do
 
     # Slack leaves profile.email out of team_join events.
     context "when the event has no email" do
-      let(:slack) { instance_double(SlackService, post_code_of_conduct: true) }
+      let(:slack) { instance_double(SlackService, post_code_of_conduct: true, other_account_linked?: false) }
 
       before { allow(SlackService).to receive(:new).and_return(slack) }
 

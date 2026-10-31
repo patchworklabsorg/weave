@@ -26,6 +26,12 @@ class SlackWebhookService
       # Check if user already exists in IDP
       user = User.find_for_any_email(email)
 
+      # A second account for someone who is already in the workspace (for
+      # example, one made under a secondary address). Weave keeps the linked
+      # account and leaves this one alone: no link, no Weave ID, no code of
+      # conduct DM.
+      return if user && SlackService.new.other_account_linked?(user, slack_id, strict: true)
+
       if user
         just_linked = user.slack_id.blank?
         # Update existing user with Slack info

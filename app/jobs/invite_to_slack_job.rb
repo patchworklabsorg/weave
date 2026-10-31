@@ -23,6 +23,15 @@ class InviteToSlackJob < ApplicationJob
       return
     end
 
+    # Already linked to a Slack account that is still in the workspace (a
+    # guest): an invite to their current email would make a second account if
+    # the email changed.
+    if user.in_slack_workspace? && service.linked_account_kept?(user.slack_id)
+      Rails.logger.info "User #{user_id} is already linked to Slack account #{user.slack_id}; syncing instead of inviting"
+      SyncUserToSlackJob.perform_later(user.id)
+      return
+    end
+
     # Already in the workspace? Don't re-invite (unless explicitly resending) —
     # just make sure their PWL ID is synced.
     unless resend

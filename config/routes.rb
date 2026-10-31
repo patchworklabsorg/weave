@@ -172,6 +172,8 @@
 #                   invite_to_slack_admin_user POST   /admin/users/:id/invite_to_slack(.:format)                                                        admin/users#invite_to_slack
 #         code_of_conduct_exemption_admin_user PATCH  /admin/users/:id/code_of_conduct_exemption(.:format)                                              admin/users#code_of_conduct_exemption
 #                     admin_user_impersonation GET    /admin/users/:user_id/impersonations/:id(.:format)                                                admin/user_impersonations#show
+#                admin_user_staging_test_state PATCH  /admin/users/:user_id/staging_test_state(.:format)                                                admin/staging_test_states#update
+#                                              PUT    /admin/users/:user_id/staging_test_state(.:format)                                                admin/staging_test_states#update
 #           resend_admin_user_guardian_consent POST   /admin/users/:user_id/guardian_consents/:id/resend(.:format)                                      admin/user_guardian_consents#resend
 #           revoke_admin_user_guardian_consent PATCH  /admin/users/:user_id/guardian_consents/:id/revoke(.:format)                                      admin/user_guardian_consents#revoke
 #           verify_admin_user_guardian_consent PATCH  /admin/users/:user_id/guardian_consents/:id/verify(.:format)                                      admin/user_guardian_consents#verify
@@ -277,6 +279,9 @@
 #                  lookup_admin_console_access POST   /admin/console_access/lookup(.:format)                                                            admin/console_access#lookup
 #                 confirm_admin_console_access POST   /admin/console_access/confirm(.:format)                                                           admin/console_access#confirm
 #                         admin_console_access GET    /admin/console_access(.:format)                                                                   admin/console_access#show
+#         admin_staging_mail_allowlist_entries GET    /admin/staging/mail-allowlist(.:format)                                                           admin/staging_mail_allowlist_entries#index
+#                                              POST   /admin/staging/mail-allowlist(.:format)                                                           admin/staging_mail_allowlist_entries#create
+#           admin_staging_mail_allowlist_entry DELETE /admin/staging/mail-allowlist/:id(.:format)                                                       admin/staging_mail_allowlist_entries#destroy
 #                   admin_mission_control_jobs        /admin/jobs                                                                                       MissionControl::Jobs::Engine
 #                             admin_audits1984        /admin/console                                                                                    Audits1984::Engine
 #                                                     /admin/flipper                                                                                    Flipper::UI

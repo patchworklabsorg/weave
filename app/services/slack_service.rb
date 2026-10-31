@@ -234,6 +234,53 @@ class SlackService
     false
   end
 
+  # True when the Slack account is still in the workspace (member or guest).
+  def active_account?(slack_user_id)
+    raise ConfigurationError, "Slack client not configured" unless @client
+
+    user = @client.users_info(user: slack_user_id)["user"]
+    user.present? && !user["deleted"]
+  rescue Slack::Web::Api::Errors::UserNotFound
+    false
+  end
+
+  # Like #active_account?, but a Slack error counts as active: when Weave can't
+  # tell, it keeps the account it already links.
+  def linked_account_kept?(slack_user_id)
+    active_account?(slack_user_id)
+  rescue Slack::Web::Api::Errors::SlackError, ConfigurationError => e
+    Rails.logger.warn "[SlackService] Could not check Slack account #{slack_user_id}: #{e.message}"
+    true
+  end
+
+  # A Weave user has one Slack account. True when slack_user_id is a second
+  # account for a user who is already linked to an account that is still in
+  # the workspace (for example, an account made under a secondary address).
+  # Weave must not link that account, or copy the Weave ID and profile to it.
+  # When the linked account is gone, the new account can take its place.
+  #
+  # When Slack can't say if the linked account is still there, the link stays.
+  # With strict: true the Slack error is raised as ApiError instead, so a job
+  # that runs once (a team_join event) can retry.
+  def other_account_linked?(user, slack_user_id, strict: false)
+    return false if user.slack_id.blank? || slack_user_id.blank? || user.slack_id == slack_user_id
+
+    kept = if strict
+             begin
+               active_account?(user.slack_id)
+             rescue Slack::Web::Api::Errors::SlackError => e
+               raise ApiError, "Could not check Slack account #{user.slack_id}: #{e.message}"
+             end
+           else
+             linked_account_kept?(user.slack_id)
+           end
+    return false unless kept
+
+    Rails.logger.warn "[SlackService] Slack account #{slack_user_id} matches user #{user.id}, " \
+                      "who is linked to #{user.slack_id}. Not linking the second account."
+    true
+  end
+
   # DM someone the code of conduct with a button to accept it. Uses the bot
   # token (needs chat:write + im:write). Returns the Slack API response. The
   # blocks come from CodeOfConductSlackViews.request.
@@ -447,7 +494,9 @@ class SlackService
       # secondary address rather than their Weave primary)
       user = User.find_for_any_email(email)
 
-      if user
+      if user && other_account_linked?(user, member["id"])
+        skipped_count += 1
+      elsif user
         # Slack is the source of truth for profile fields, so a field cleared
         # in Slack is cleared here too. Every member is read on every run: a
         # skipped member would keep old values, and those used to be pushed
@@ -481,6 +530,59 @@ class SlackService
     { synced: synced_count, skipped: skipped_count }
   end
 
+  # Links the user to their Slack account and sends their Weave ID to it.
+  # Only the Weave ID is sent. Profile fields go to Slack when an admin edits
+  # them (PushSlackProfileFieldsJob): sending them on every run would write
+  # old Weave values over newer Slack edits.
+  #
+  # A user has one Slack account. The account found by email is used only when
+  # the user has no linked account, or when it is the linked account, or when
+  # the linked account is gone (see #other_account_linked?). Returns true when
+  # the Weave ID was sent.
+  def sync_weave_id(user)
+    raise ConfigurationError, "Slack client not configured" unless configured?
+
+    slack_user = find_user_by_email(user.email)
+    slack_user = nil if slack_user && other_account_linked?(user, slack_user["id"])
+
+    if slack_user
+      link_slack_account!(user, slack_user) if user.slack_id != slack_user["id"]
+      user.apply_slack_membership!(slack_user)
+    end
+
+    if user.slack_id.blank? || user.p_id.blank?
+      Rails.logger.debug "User #{user.id} has no Slack account or no Weave ID, skipping"
+      return false
+    end
+
+    # The email did not find the linked account (for example, after an email
+    # change). Send the Weave ID only while that account is still there.
+    if slack_user.nil? && !account_still_there?(user.slack_id)
+      Rails.logger.info "Slack account #{user.slack_id} for user #{user.id} is gone or could not be read, skipping"
+      return false
+    end
+
+    update_slack_profile_field(user.slack_id, user.p_id)
+    true
+  end
+
+  # Links the user to slack_user. A new account (one that takes the place of a
+  # deactivated one) gets its own join time. Columns only, as before: a legacy
+  # row that fails validation must still be linked.
+  def link_slack_account!(user, slack_user)
+    joined_at = Time.zone.at(slack_user["updated"].to_i)
+    joined_at = user.slack_joined_at if user.slack_id.blank? && user.slack_joined_at
+    user.update_columns(slack_id: slack_user["id"], slack_joined_at: joined_at, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # Like #active_account?, but a Slack error counts as not there.
+  def account_still_there?(slack_user_id)
+    active_account?(slack_user_id)
+  rescue Slack::Web::Api::Errors::SlackError => e
+    Rails.logger.warn "[SlackService] Could not check Slack account #{slack_user_id}: #{e.message}"
+    false
+  end
+
   # Sync IDP users to Slack (profile updates only, no invitations)
   def sync_idp_users_to_slack
     return unless configured?
@@ -489,36 +591,7 @@ class SlackService
     skipped_count = 0
 
     User.find_each do |user|
-      # Check if user exists in Slack
-      slack_user = find_user_by_email(user.email)
-
-      if slack_user
-        # User exists in Slack
-        slack_id = slack_user["id"]
-
-        # Update local slack_id if not set
-        if user.slack_id.blank?
-          user.update(
-            slack_id: slack_id,
-            slack_joined_at: Time.zone.at(slack_user["updated"].to_i)
-          )
-        end
-        user.apply_slack_membership!(slack_user)
-
-        # Only the PWL ID is pushed here. Profile fields go to Slack when an
-        # admin edits them (PushSlackProfileFieldsJob). Pushing them on every
-        # run would write old Weave values over newer Slack edits.
-        if user.p_id.present?
-          update_slack_profile_field(slack_id, user.p_id)
-          synced_count += 1
-        else
-          skipped_count += 1
-        end
-      else
-        # User not in Slack workspace yet - skip
-        Rails.logger.debug "User #{user.email} not in Slack workspace, skipping"
-        skipped_count += 1
-      end
+      sync_weave_id(user) ? synced_count += 1 : skipped_count += 1
     rescue => e
       Rails.logger.error "Error syncing IDP user #{user.email}: #{e.message}"
       next

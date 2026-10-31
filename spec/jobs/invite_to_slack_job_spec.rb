@@ -42,4 +42,20 @@ RSpec.describe InviteToSlackJob do
 
     described_class.perform_now(user.id)
   end
+
+  it "doesn't invite a guest who is already linked to a Slack account, even under a new email" do
+    user = create(:user, :verified, email: "new@example.com", slack_id: "U1", slack_membership: "pending")
+    allow(service).to receive(:linked_account_kept?).with("U1").and_return(true)
+    expect(service).not_to receive(:invite_to_workspace)
+
+    expect { described_class.perform_now(user.id, resend: true) }.to have_enqueued_job(SyncUserToSlackJob).with(user.id)
+  end
+
+  it "invites someone whose linked Slack account was deactivated" do
+    user = create(:user, :verified, slack_id: "U1", slack_membership: "pending")
+    allow(service).to receive(:linked_account_kept?).with("U1").and_return(false)
+    expect(service).to receive(:invite_to_workspace)
+
+    described_class.perform_now(user.id)
+  end
 end

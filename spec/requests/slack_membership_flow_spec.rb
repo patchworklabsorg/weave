@@ -14,6 +14,7 @@ RSpec.describe "Slack membership flow", type: :request do
       find_user_by_email: nil,
       invite_to_workspace: { ok: true, already_member: false },
       post_code_of_conduct: true,
+      other_account_linked?: false,
       promote_to_member: { ok: true }
     )
   end
