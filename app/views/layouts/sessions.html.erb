@@ -12,6 +12,9 @@
   <body class="h-full quilt-bg text-ink font-sans">
     <a href="#main" class="skip-link">Skip to content</a>
     <%= render "shared/staging_badge" %>
+    <%# Gate pages (email confirmation, birthday, consent) render here, so an
+        admin who impersonates a member stopped at a gate needs the way out too. %>
+    <%= render "shared/impersonation_banner" %>
     <div id="flash"><%= render "shared/flash" %></div>
 
     <main id="main" class="focus-main relative" tabindex="-1">

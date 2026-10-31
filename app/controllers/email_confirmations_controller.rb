@@ -3,6 +3,8 @@
 class EmailConfirmationsController < ApplicationController
   skip_before_action :authenticate_user!, only: [:show, :confirm, :resend]
   before_action :authenticate_user_without_email_verification!, only: [:show, :resend]
+  # An admin who impersonates a member must not send mail to the member.
+  before_action :refuse_while_impersonating, only: [:resend]
 
   layout "sessions", only: [:show]
 
@@ -77,6 +79,12 @@ class EmailConfirmationsController < ApplicationController
   end
 
   private
+
+  def refuse_while_impersonating
+    return unless impersonating?
+
+    redirect_to email_confirmation_path, alert: "You can't send a confirmation email while impersonating a user."
+  end
 
   # Still signed in as the person who confirmed (the usual case: they opened
   # the email link in the same browser): send them on to the page they were
