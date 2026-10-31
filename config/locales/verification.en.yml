@@ -35,6 +35,7 @@ en:
       verified: "You are verified. You can use the programs that need verification."
       reverification_required: "You must verify your identity again: %{reason} Upload an ID and join a new call. Your verification has no time limit. Only a change like this makes a new call necessary."
       guardian_needed: "You are under 18. A parent or guardian must join your verification call. You cannot pass without them."
+      guardian_consent_link: "First, ask them for consent."
       failed: "You did not pass the call. You can try again from %{retry_date}. A different person from our identity team will run your next call."
       failed_can_retry: "You did not pass the last call. You can try again now. A different person from our identity team will run your next call."
       escalated: "Our identity team lead is looking at your attempts. We will email you."

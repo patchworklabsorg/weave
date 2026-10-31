@@ -49,9 +49,9 @@ RSpec.describe "What we do with your data links", type: :request do
       expect_link
     end
 
-    it "is on the guardian consent step of the Slack onboarding" do
+    it "is on the guardian consent request page" do
       member.update_columns(birthday: 15.years.ago.to_date) # rubocop:disable Rails/SkipsModelValidations
-      get slack_onboarding_path
+      get guardian_consent_request_path
       expect_link
     end
   end

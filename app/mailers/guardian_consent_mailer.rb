@@ -24,7 +24,7 @@ class GuardianConsentMailer < ApplicationMailer
 
   def granted(consent)
     @user = consent.user
-    @onboarding_url = slack_onboarding_url
+    @account_url = profile_url
 
     mail(to: @user.email, subject: env_subject(t("guardian_consent.mailer.granted_subject")))
   end

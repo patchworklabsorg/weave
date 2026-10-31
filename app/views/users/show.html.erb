@@ -8,9 +8,6 @@
         <% if @user.birthday.nil? %>
           <p class="callout-title"><%= t("birthday.banner_title") %></p>
           <p><%= t("birthday.banner_body") %></p>
-        <% elsif @user.guardian_consent_missing? %>
-          <p class="callout-title"><%= t("guardian_consent.form.title") %></p>
-          <p><%= t("guardian_consent.form.intro") %></p>
         <% elsif @user.slack_member? %>
           <p class="callout-title">Accept the Code of Conduct</p>
           <p>Everyone in the Patchwork Labs Slack now accepts the Code of Conduct. It takes a few seconds.</p>
@@ -20,6 +17,16 @@
         <% end %>
       </div>
       <%= link_to "Continue", slack_onboarding_path, class: "btn btn-secondary btn-sm shrink-0" %>
+    </div>
+  <% end %>
+  <% if @user.email_verified? && @user.guardian_consent_missing? %>
+    <div class="callout callout-grape mb-6 items-center">
+      <%= icon(:sparkles, size: 18) %>
+      <div class="callout-body">
+        <p class="callout-title"><%= t("guardian_consent.form.title") %></p>
+        <p><%= t("guardian_consent.form.banner") %></p>
+      </div>
+      <%= link_to "Continue", guardian_consent_request_path, class: "btn btn-secondary btn-sm shrink-0" %>
     </div>
   <% end %>
 

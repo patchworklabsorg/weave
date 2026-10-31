@@ -64,9 +64,9 @@ module Oauth
       return if decision.permitted?
 
       # Consent comes from the guardian later, so there is no way back here to
-      # remember: the onboarding page shows where the request stands.
+      # remember: the consent page shows where the request stands.
       if decision.reason == :guardian_consent && request.get?
-        redirect_to slack_onboarding_path, alert: "A parent or guardian must give consent before you can use #{application.name}."
+        redirect_to guardian_consent_request_path, alert: "A parent or guardian must give consent before you can use #{application.name}."
         return
       end
 

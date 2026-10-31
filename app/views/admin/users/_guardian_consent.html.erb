@@ -15,9 +15,9 @@
       <% elsif current&.pending? %>
         Requested from <%= current.guardian_name %> (<%= current.guardian_email %>) on <%= time_label(current.sent_at) %>.
         <%= current.link_expired? ? "The link has expired." : "Waiting for the guardian." %>
-        This member can't join the Slack or use apps that require guardian consent.
+        This member can't use apps that require guardian consent.
       <% else %>
-        Not requested yet. This member can't join the Slack or use apps that require guardian consent.
+        Not requested yet. This member can't use apps that require guardian consent.
       <% end %>
     </p>
 

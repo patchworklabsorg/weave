@@ -30,7 +30,7 @@ RSpec.describe GuardianConsentMailer, type: :mailer do
       mail = described_class.granted(consent)
 
       expect(mail.to).to eq(["ada@example.com"])
-      expect(mail.body.encoded).to include("/slack")
+      expect(mail.body.encoded).to include("/profile")
     end
   end
 
