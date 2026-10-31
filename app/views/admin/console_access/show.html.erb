@@ -6,7 +6,10 @@
 <div class="space-y-6">
   <div class="card">
     <div class="card-body">
-      <%= form_with url: lookup_admin_console_access_path, method: :post, class: "flex flex-col sm:flex-row gap-2" do |form| %>
+      <%# Turbo drops a form POST that renders a page instead of redirecting,
+          so the lookup page loads without Turbo. %>
+      <%= form_with url: lookup_admin_console_access_path, method: :post, data: { turbo: false },
+            class: "flex flex-col sm:flex-row gap-2" do |form| %>
         <div class="field-group flex-1">
           <%= form.label :code, "Console code", class: "sr-only" %>
           <%= form.text_field :code, required: true, autocomplete: "off", autocapitalize: "characters", spellcheck: false,

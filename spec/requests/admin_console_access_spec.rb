@@ -8,6 +8,15 @@ RSpec.describe "Admin console sign-in", type: :request do
   let(:admin) { create(:user, :admin, :verified) }
   let!(:console_request) { ConsoleAccessRequest.open!(kind: "sql", host: "weave-web") }
 
+  it "submits the code without Turbo, because the lookup renders a page" do
+    sign_in_via_magic_link(admin)
+
+    get admin_console_access_path
+
+    form = Nokogiri::HTML(response.body).at_css("form[action='#{lookup_admin_console_access_path}']")
+    expect(form["data-turbo"]).to eq("false")
+  end
+
   it "shows the console for a code, then records it under the signed-in admin" do
     sign_in_via_magic_link(admin)
 
