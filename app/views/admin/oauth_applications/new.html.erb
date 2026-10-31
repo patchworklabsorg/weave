@@ -55,6 +55,8 @@
         </span>
       </label>
 
+      <%= render "launcher_fields", form: form %>
+
       <div class="form-actions">
         <%= link_to "Cancel", admin_oauth_applications_path, class: "btn btn-secondary" %>
         <%= form.submit "Create app", class: "btn btn-primary" %>

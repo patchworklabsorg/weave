@@ -7,6 +7,7 @@
 #
 #  id          :bigint           not null, primary key
 #  expires_at  :datetime
+#  role        :string           default("member"), not null
 #  source      :string           default("manual"), not null
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null

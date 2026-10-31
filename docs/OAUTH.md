@@ -317,6 +317,36 @@ flowchart TD
 - The admin user page shows, for each restricted app, whether the user has access and why.
 - When a user loses access (a membership is removed or expires, a grant, role or role assignment is removed, or an app becomes restricted), `RevokeLostAppAccessJob` revokes their tokens and unredeemed codes for that app. The endpoints above refuse those tokens before the job runs, so the job is cleanup.
 
+### Access requests
+
+A member can ask for access to a restricted app. A superadmin turns this on for each app: on the app page, choose an access request group. The group must be a manual group that has access to the app through a grant or a role.
+
+A superadmin makes members of the group managers in `/admin/groups`. Managers decide requests on `/groups/<slug>`, and add and remove plain members there. Approval adds the member to the group, so `AppAccess` stays the only place that decides access.
+
+```mermaid
+sequenceDiagram
+  participant M as Member
+  participant W as Weave
+  participant G as Group manager
+  M->>W: GET /oauth/authorize (no grant)
+  W-->>M: 403 page with a "Request access" form
+  M->>W: POST /access_requests (reason)
+  W-->>G: Email: a request is waiting
+  G->>W: PATCH /access_requests/:id/approve
+  W->>W: Add the member to the group
+  W-->>M: Email: you now have access
+```
+
+- A member asks only when the refusal is "no grant". A missing code of conduct, guardian consent or verification has its own step.
+- A member has one pending request per app.
+- A group with no managers sends the email to the superadmins. A superadmin can also decide any request.
+- Nobody decides their own request. An admin who impersonates a manager can't decide or change members.
+- Pundit policies decide who may do what: `AccessRequestPolicy`, `GroupPolicy` and `Group::MembershipPolicy`. A manager can't remove another manager.
+
+### App launcher
+
+The account page (`/profile`) lists the apps that have **Show in the app launcher** on and a launch URL. A member sees the apps they can use, with an Open button. They also see the apps they can ask for, with a Request access button, and their pending requests. Set the launcher fields on the app's edit page: launch URL, icon URL (https) and a short description.
+
 ### Group claims
 
 Request the `groups` scope to get a `groups` claim in the ID token and the

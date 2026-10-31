@@ -1,4 +1,5 @@
 <%# The member-pages top bar (layouts/application). %>
+<% manages_groups = current_user&.managed_groups&.exists? %>
 <header class="topbar" data-controller="drawer" data-action="keydown@window->drawer#keydown">
   <div class="topbar-inner">
     <%= render "shared/wordmark" %>
@@ -9,6 +10,9 @@
         <%= nav_link "Sessions", profile_sessions_path, icon: :monitor %>
         <%= nav_link "Passkeys", passkeys_path, icon: :fingerprint %>
         <%= nav_link "Password", password_path, icon: :lock %>
+        <% if manages_groups %>
+          <%= nav_link "Groups", groups_path, icon: :users, active: request.path.start_with?(groups_path) %>
+        <% end %>
       </nav>
     <% end %>
 
@@ -57,6 +61,9 @@
       <%= nav_link "Sessions", profile_sessions_path, icon: :monitor %>
       <%= nav_link "Passkeys", passkeys_path, icon: :fingerprint %>
       <%= nav_link "Password", password_path, icon: :lock %>
+      <% if manages_groups %>
+        <%= nav_link "Groups", groups_path, icon: :users, active: request.path.start_with?(groups_path) %>
+      <% end %>
       <% if current_user.admin? %>
         <%= nav_link "Admin", admin_root_path, icon: :layout_dashboard, active: false %>
       <% end %>

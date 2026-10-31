@@ -1,0 +1,32 @@
+<% content_for :title, "Your groups" %>
+
+<div class="page">
+  <%= page_header("Your groups", lede: "Groups you manage. Managers decide access requests and add or remove members.") %>
+
+  <section class="card">
+    <% if @groups.any? %>
+      <div class="card-body">
+        <div class="record-list">
+          <% @groups.each do |group| %>
+            <div class="record">
+              <div class="record-main min-w-0">
+                <%= link_to group.name, group_path(group), class: "record-title link-quiet" %>
+                <% if group.description.present? %>
+                  <p class="record-meta"><%= group.description %></p>
+                <% end %>
+              </div>
+              <div class="record-actions">
+                <% if (count = @pending_counts[group.id].to_i).positive? %>
+                  <%= badge(pluralize(count, "pending request"), tone: :warning) %>
+                <% end %>
+                <%= link_to "Open", group_path(group), class: "btn btn-secondary btn-sm" %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <%= empty_state("You don't manage any groups.", body: "A Weave superadmin makes members managers of a group.", icon: :users) %>
+    <% end %>
+  </section>
+</div>

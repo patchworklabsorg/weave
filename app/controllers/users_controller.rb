@@ -55,6 +55,8 @@ class UsersController < ApplicationController
 
   def show
     @user = current_user
+    @launcher = AppLauncher.for(@user)
+    @managed_groups = @user.managed_groups.order(:name).to_a
   end
 
   def sessions

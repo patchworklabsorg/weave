@@ -1,0 +1,29 @@
+<%# The app launcher on the member dashboard (see OauthApplicationLauncher). %>
+<fieldset class="space-y-4 border-t border-hairline pt-5">
+  <legend class="section-title">Launcher</legend>
+
+  <label class="choice">
+    <%= form.check_box :show_in_launcher, class: "checkbox" %>
+    <span>
+      Show in the app launcher
+      <span class="choice-hint">Members who can use the app see it on their account page. Members who can ask for access see a Request access button.</span>
+    </span>
+  </label>
+
+  <div class="field-group">
+    <%= form.label :launch_url, class: "field-label" do %>Launch URL <span class="optional">(needed for the launcher)</span><% end %>
+    <%= form.url_field :launch_url, class: "field", placeholder: "https://app.patchworklabs.org" %>
+    <p class="field-hint">Where the Open button goes, usually the app's sign-in page.</p>
+  </div>
+
+  <div class="field-group">
+    <%= form.label :launcher_icon_url, class: "field-label" do %>Icon URL <span class="optional">(optional)</span><% end %>
+    <%= form.url_field :launcher_icon_url, class: "field", placeholder: "https://app.patchworklabs.org/icon.png" %>
+    <p class="field-hint">A square https image. Without one, the launcher shows the first letter of the name.</p>
+  </div>
+
+  <div class="field-group">
+    <%= form.label :launcher_description, class: "field-label" do %>Description <span class="optional">(optional)</span><% end %>
+    <%= form.text_field :launcher_description, maxlength: 280, class: "field", placeholder: "Review project proposals" %>
+  </div>
+</fieldset>

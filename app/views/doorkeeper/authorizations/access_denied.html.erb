@@ -38,6 +38,18 @@
         </p>
 
         <%= link_to "Go to your Weave account", root_path, class: "btn btn-secondary btn-block" %>
+      <% elsif @pending_request %>
+        <p class="text-sm text-ink-soft text-center">
+          You asked for access <%= time_ago_in_words(@pending_request.created_at) %> ago. You get an email when the managers of <%= @pending_request.group.name %> decide.
+        </p>
+
+        <%= link_to "Go to your Weave account", root_path, class: "btn btn-secondary btn-block" %>
+      <% elsif @access_request %>
+        <p class="text-sm text-ink-soft text-center">
+          Access to this app is limited to some people and groups. You can ask for access.
+        </p>
+
+        <%= render "access_requests/form", access_request: @access_request, application: @application %>
       <% else %>
         <p class="text-sm text-ink-soft text-center">
           Access to this app is limited to some people and groups. If you need it, ask a Weave admin to give you access.

@@ -47,8 +47,8 @@ module DataCategories
     Category.new(key: "raw_id_images", outcome: "deleted", exportable: false,
                  source_models: %w[Verification#id_document]),
     Category.new(key: "account_profile", outcome: "deleted", exportable: true,
-                 source_models: %w[User EmailAddress UserAddress User::Session User::MagicLink User::Passkey SocialProfile
-                                   Ahoy::Visit Ahoy::Message Group::Membership ApplicationAccessGrant ApplicationRoleAssignment
+                 source_models: %w[User EmailAddress UserAddress User::Session User::MagicLink User::Passkey Ahoy::Visit
+                                   Ahoy::Message Group::Membership ApplicationAccessGrant ApplicationRoleAssignment AccessRequest
                                    Doorkeeper::AccessGrant Doorkeeper::AccessToken TakeoutRequest DormancyWarning
                                    ThreadCount::Entry FunderConsent PaperTrail::Version]),
     Category.new(key: "guardian_contact", outcome: "deleted", exportable: true,

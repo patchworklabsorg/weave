@@ -52,6 +52,14 @@
             <span class="text-ink-faint">Using default scopes: profile</span>
           <% end %>
         <% end %>
+        <%= dl_row("Launcher") do %>
+          <% if @application.show_in_launcher && @application.launch_url.present? %>
+            <%= badge "Shown", tone: :success %>
+            <span class="text-sm text-ink-soft break-all"><%= @application.launch_url %></span>
+          <% else %>
+            <span class="text-ink-faint">Not shown</span>
+          <% end %>
+        <% end %>
         <%= dl_row("Created") do %>
           <%= time_label(@application.created_at, :datetime) %>
           (<%= time_label(@application.created_at, :relative) %>)
@@ -230,6 +238,30 @@
                 <%= button_to "Require identity verification", verification_admin_oauth_application_path(@application),
                     method: :patch, params: { required: true }, class: "btn btn-secondary btn-sm",
                     data: { turbo_confirm: "Members who are not verified will lose access to #{@application.name}. Continue?" } %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="record flex-wrap items-end">
+          <div class="record-main text-sm text-ink-soft min-w-64">
+            <% if (request_group = AccessRequests.request_group_for(@application)) %>
+              Members can ask for access. Managers of <%= link_to request_group.name, admin_group_path(request_group), class: "link" %> decide, and approval adds the member to that group.
+              <% if @pending_request_count.positive? %><%= pluralize(@pending_request_count, "request") %> waiting.<% end %>
+            <% else %>
+              Members can't ask for access. Choose a manual group that has access to the app to let members ask its managers.
+            <% end %>
+          </div>
+          <% if current_user.superadmin? %>
+            <div class="record-actions">
+              <%= form_with url: access_request_group_admin_oauth_application_path(@application), method: :patch, local: true, class: "flex flex-wrap items-end gap-2" do |form| %>
+                <div class="field-group">
+                  <%= form.label :group_id, "Access request group", class: "field-label" %>
+                  <%= form.select :group_id, @request_groups.map { |group| [group.name, group.public_id] },
+                      { include_blank: "No requests", selected: @application.access_request_group&.public_id },
+                      class: "field field-sm w-72 max-w-full" %>
+                </div>
+                <%= form.submit "Save", class: "btn btn-secondary btn-sm" %>
               <% end %>
             </div>
           <% end %>
