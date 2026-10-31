@@ -31,7 +31,7 @@ class Admin::ServiceKeysController < Admin::BaseController
     if @key.save
       @plaintext_key = @key.api_key
       @recent_usages = []
-      flash.now[:notice] = "API key was created. Copy it now: Weave shows it only once."
+      flash.now[:notice] = "The API key was created. Copy it now. Weave shows it only once."
       render :show
     else
       render :new, status: :unprocessable_content
@@ -43,7 +43,7 @@ class Admin::ServiceKeysController < Admin::BaseController
 
   def update
     if @key.update(key_params)
-      redirect_to admin_service_key_path(@service, @key), notice: "API key was updated."
+      redirect_to admin_service_key_path(@service, @key), notice: "The API key was updated."
     else
       render :edit, status: :unprocessable_content
     end
@@ -51,22 +51,22 @@ class Admin::ServiceKeysController < Admin::BaseController
 
   def destroy
     @key.destroy
-    redirect_to admin_service_path(@service, anchor: "keys"), notice: "API key was deleted."
+    redirect_to admin_service_path(@service, anchor: "keys"), notice: "The API key was deleted."
   end
 
   def revoke
     @key.revoke!
-    redirect_to admin_service_key_path(@service, @key), notice: "API key revoked. It stops working at once."
+    redirect_to admin_service_key_path(@service, @key), notice: "The API key was revoked. It stops working at once."
   end
 
   def deprecate
     @key.deprecate!
-    redirect_to admin_service_key_path(@service, @key), notice: "API key deprecated. It still works, and each use is logged."
+    redirect_to admin_service_key_path(@service, @key), notice: "The API key was deprecated. It still works, and Weave logs each use."
   end
 
   def activate
     @key.activate!
-    redirect_to admin_service_key_path(@service, @key), notice: "API key activated."
+    redirect_to admin_service_key_path(@service, @key), notice: "The API key was activated."
   end
 
   private

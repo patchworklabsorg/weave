@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 # == Schema Information
-# Schema version: 20261023120000
 #
 # Table name: users
 # Database name: primary
@@ -112,6 +111,7 @@ class User < ApplicationRecord
   has_many :user_sessions, class_name: "User::Session", dependent: :destroy
   has_many :magic_links, class_name: "User::MagicLink", dependent: :destroy
   has_many :passkeys, class_name: "User::Passkey", dependent: :destroy
+  has_many :social_profiles, dependent: :destroy
 
   # All email addresses belonging to this user. users.email stays the canonical
   # primary address and is mirrored into this table (is_primary flag).
@@ -143,6 +143,13 @@ class User < ApplicationRecord
                                      foreign_key: :added_by_id, dependent: :nullify, inverse_of: :added_by
   has_many :created_groups, class_name: "Group",
                             foreign_key: :created_by_id, dependent: :nullify, inverse_of: :created_by
+  # Manual groups this user manages (see GroupPolicy).
+  has_many :managed_group_memberships, -> { active.role_manager.manual }, class_name: "Group::Membership", inverse_of: :user, dependent: nil
+  has_many :managed_groups, through: :managed_group_memberships, source: :group
+
+  # Requests for access to restricted apps (see AccessRequest). The database
+  # empties decided_by_id when the person who decided is deleted.
+  has_many :access_requests, dependent: :destroy
 
   # Parent or guardian consent requests for a member under 18 (see
   # GuardianConsent). They stay after the account is deleted: the database
@@ -786,13 +793,12 @@ class User < ApplicationRecord
   #
   # Full members who joined before the code-of-conduct flow still have to
   # accept it. They are not demoted for that, so they skip :awaiting_promotion.
-  # Everyone starts with a birthday, and a member under 18 with their
-  # guardian's consent: Weave sends no Slack invite before them (see
-  # InviteToSlackJob).
+  # Everyone starts with a birthday: Weave sends no Slack invite before it (see
+  # InviteToSlackJob). A member under 18 needs no guardian consent for the
+  # Slack, only for the apps that require it (see AppAccess).
   def slack_onboarding_step
     return :add_birthday if birthday.nil?
     return :under_minimum_age if under_minimum_age?
-    return :guardian_consent if guardian_consent_missing?
     return slack_coc_accepted_at.present? ? :member : :accept_code_of_conduct if slack_member?
     return :awaiting_promotion if in_slack_workspace? && slack_coc_accepted_at.present?
     return :accept_code_of_conduct if in_slack_workspace?
@@ -816,10 +822,10 @@ class User < ApplicationRecord
   def slack_required? = !groups.exists?(waives_slack: true)
 
   # True while the profile and the home page should send the person to the
-  # onboarding page. Birthday and guardian consent apply to everyone. The
-  # Slack steps apply only when the person's project requires Slack.
+  # onboarding page. The birthday applies to everyone. The Slack steps apply
+  # only when the person's project requires Slack.
   def onboarding_pending?
-    return true if birthday.nil? || under_minimum_age? || guardian_consent_missing?
+    return true if birthday.nil? || under_minimum_age?
 
     slack_required? && !slack_onboarding_complete?
   end

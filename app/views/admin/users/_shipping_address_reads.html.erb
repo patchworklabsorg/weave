@@ -26,9 +26,10 @@
                   <span class="text-ink-faint">Deleted app</span>
                 <% end %>
               </td>
-              <td class="whitespace-nowrap text-ink-soft" title="<%= read.created_at.iso8601 %>">
-                <%= time_ago_in_words(read.created_at) %> ago
+              <td class="whitespace-nowrap text-ink-soft">
+                <%= time_label(read.created_at, :relative) %>
               </td>
+
               <td class="whitespace-nowrap mono text-ink-soft"><%= read.ip || "Unknown" %></td>
             </tr>
           <% end %>

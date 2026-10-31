@@ -20,13 +20,13 @@ RSpec.describe InviteToSlackJob do
     expect(user.reload.slack_invited_at).to be_present
   end
 
-  it "doesn't invite a member under 18 until a guardian consents" do
+  it "invites a member under 18 without guardian consent" do
     user = create(:user, :verified, :minor)
-    expect(service).not_to receive(:invite_to_workspace)
+    expect(service).to receive(:invite_to_workspace)
 
     described_class.perform_now(user.id)
 
-    expect(user.reload.slack_invited_at).to be_nil
+    expect(user.reload.slack_invited_at).to be_present
   end
 
   it "doesn't invite a member whose age Weave doesn't know" do
@@ -36,17 +36,25 @@ RSpec.describe InviteToSlackJob do
     described_class.perform_now(user.id)
   end
 
-  it "invites a member under 18 once a guardian has consented" do
-    user = create(:user, :verified, :minor)
-    create(:guardian_consent, :granted, user:)
-    expect(service).to receive(:invite_to_workspace)
+  it "doesn't invite someone who is already a full member" do
+    user = create(:user, :verified, slack_id: "U1", slack_membership: "member")
+    expect(service).not_to receive(:invite_to_workspace)
 
     described_class.perform_now(user.id)
   end
 
-  it "doesn't invite someone who is already a full member" do
-    user = create(:user, :verified, slack_id: "U1", slack_membership: "member")
+  it "doesn't invite a guest who is already linked to a Slack account, even under a new email" do
+    user = create(:user, :verified, email: "new@example.com", slack_id: "U1", slack_membership: "pending")
+    allow(service).to receive(:linked_account_kept?).with("U1").and_return(true)
     expect(service).not_to receive(:invite_to_workspace)
+
+    expect { described_class.perform_now(user.id, resend: true) }.to have_enqueued_job(SyncUserToSlackJob).with(user.id)
+  end
+
+  it "invites someone whose linked Slack account was deactivated" do
+    user = create(:user, :verified, slack_id: "U1", slack_membership: "pending")
+    allow(service).to receive(:linked_account_kept?).with("U1").and_return(false)
+    expect(service).to receive(:invite_to_workspace)
 
     described_class.perform_now(user.id)
   end

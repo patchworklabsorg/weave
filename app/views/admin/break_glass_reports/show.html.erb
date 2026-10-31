@@ -1,6 +1,6 @@
 <% content_for :title, "Break-glass report" %>
 
-<%= page_header("Break-glass report: #{@report.month.strftime('%B %Y')}",
+<%= page_header("Break-glass report: #{@report.month.strftime(TimeHelper::FORMATS[:month])}",
       lede: "Every request and decryption of a stored ID image in the month, with the state of each notice.") do %>
   <%= link_to admin_break_glass_report_path(month: @report.month.prev_month.iso8601), class: "btn btn-secondary btn-sm" do %>
     <%= icon(:chevron_left) %>Previous month
@@ -32,7 +32,7 @@
             <% record = decryption.break_glass_record %>
             <div class="record">
               <div class="record-main space-y-1">
-                <p class="record-title"><%= decryption.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>: <%= decryption.viewer&.full_name || "A deleted user" %> decrypted the image for <span class="mono"><%= record.public_id %></span>.</p>
+                <p class="record-title"><%= time_label(decryption.created_at, :datetime) %>: <%= decryption.viewer&.full_name || "A deleted user" %> decrypted the image for <span class="mono"><%= record.public_id %></span>.</p>
                 <p class="text-sm text-ink-soft">Reason: <%= record.reason %></p>
                 <p class="record-meta">
                   Notices: <%= decryption.notices.map { |notice| "#{notice.recipient_kind} (#{notice.recipient&.full_name || 'a deleted user'}): #{notice.sent? ? 'sent' : (notice.delayed? ? 'delayed' : 'waiting')}" }.join("; ") %>
@@ -57,7 +57,7 @@
           <% @report.requests.each do |record| %>
             <div class="record">
               <div class="record-main text-sm text-ink">
-                <%= record.created_at.utc.strftime("%Y-%m-%d") %>: <span class="mono"><%= record.public_id %></span>, <%= record.status %>,
+                <%= time_label(record.created_at) %>: <span class="mono"><%= record.public_id %></span>, <%= record.status %>,
                 asked by <%= record.requested_by&.full_name || "a deleted user" %>, approved by <%= record.approvers.map(&:full_name).to_sentence.presence || "nobody" %>.
                 <span class="text-ink-soft">Reason: <%= record.reason %></span>
               </div>
@@ -80,10 +80,10 @@
           <% @report.delayed_notices.each do |notice| %>
             <div class="record">
               <div class="record-main text-sm text-ink">
-                <span class="mono"><%= notice.break_glass_record.public_id %></span>: delayed since <%= notice.delayed_at.utc.strftime("%Y-%m-%d") %> by
+                <span class="mono"><%= notice.break_glass_record.public_id %></span>: delayed since <%= time_label(notice.delayed_at) %> by
                 <%= notice.delayed_by&.full_name || "a deleted user" %>. Reason: <%= notice.delay_reason %>.
                 <% if notice.delay_signed_off? %>
-                  Signed off by <%= notice.delay_signed_off_by&.full_name || "a deleted user" %>, holds until <%= notice.delay_ends_at.utc.strftime("%Y-%m-%d") %> at the latest.
+                  Signed off by <%= notice.delay_signed_off_by&.full_name || "a deleted user" %>, holds until <%= time_label(notice.delay_ends_at) %> at the latest.
                 <% else %>
                   <span class="text-warning">Not signed off: it does not hold the notice.</span>
                 <% end %>
@@ -109,7 +109,7 @@
               <div class="record-main">
                 <p class="record-title"><%= event.summary %></p>
                 <p class="record-meta">
-                  <%= event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>
+                  <%= time_label(event.created_at, :datetime) %>
                   <% if event.data["reason"].present? %>· Reason: <%= event.data["reason"] %><% end %>
                 </p>
               </div>
@@ -136,7 +136,7 @@
             <div class="record">
               <div class="record-main">
                 <p class="record-title"><%= change.summary %></p>
-                <p class="record-meta"><%= change.changed_at.utc.strftime("%Y-%m-%d %H:%M UTC") %> · By <%= change.actor_name %>.</p>
+                <p class="record-meta"><%= time_label(change.changed_at, :datetime) %> · By <%= change.actor_name %>.</p>
               </div>
             </div>
           <% end %>

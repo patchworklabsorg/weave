@@ -1,6 +1,6 @@
 # Guardian consent
 
-A member under 18 needs consent from a parent or legal guardian before they join the Slack or use Patchwork Labs apps. Weave calculates the age from `users.birthday`.
+A member under 18 needs consent from a parent or legal guardian before they use a Patchwork Labs app that requires it, for example Krater budgets. The Slack does not need it: a member under 18 joins the Slack like everyone else. Weave calculates the age from `users.birthday`.
 
 ## Birthday and minimum age
 
@@ -19,15 +19,17 @@ sequenceDiagram
   participant M as Member (under 18)
   participant W as Weave
   participant G as Guardian
-  M->>W: Confirms email, opens /slack
-  W->>M: Step "Get consent from a parent or guardian"
+  M->>W: Opens an app that requires consent, or the callout on /profile
+  W->>M: /guardian-consent
   M->>W: Guardian name and email
   W->>G: Email with a link (7 days)
   G->>W: Opens /guardian/:token, reads the page, types their name, consents
   W->>G: Receipt with the same link, to revoke later
-  W->>M: Email, then the Slack invite (InviteToSlackJob)
+  W->>M: Email: the apps that require consent now work
 ```
 
+- Before 2026-10-30 the Slack invite waited for consent. `bin/rails one_time:invite_minors_held_for_consent` lists the members it held back, and `DRY_RUN=0` sends their invites.
+- `/profile` shows a callout that links to `/guardian-consent` while consent is missing. The callout does not block anything.
 - `GuardianConsent` keeps one row per request. A new request supersedes the pending one. Weave keeps only a SHA-256 digest of the link token.
 - The guardian's name and email, and the typed signature, are encrypted with Lockbox.
 - The guardian email cannot belong to a Weave account. A member who is signed in cannot consent from their own session.
@@ -64,11 +66,11 @@ The guardian can take the consent back from the link in the receipt. A superadmi
 
 1. Removes app access (`RevokeLostAppAccessJob`).
 2. Emails the member.
-3. Emails the admins when the guardian revoked it (`AdminMailer#guardian_consent_revoked`). The Slack account does not change, so an admin decides what to do there.
+3. Emails the admins when the guardian revoked it (`AdminMailer#guardian_consent_revoked`). The Slack does not need consent, so the Slack account does not change.
 
 ## App access
 
-Every OAuth app requires guardian consent for members under 18 (see `AppAccess`). The check comes before the code of conduct check. The authorize endpoint sends the member to `/slack` to ask for consent. Their existing tokens stop working while consent is missing.
+Every OAuth app requires guardian consent for members under 18 (see `AppAccess`). The check comes before the code of conduct check. The authorize endpoint sends the member to `/guardian-consent` to ask for consent. Their existing tokens stop working while consent is missing.
 
 A superadmin can opt out one app on the app's admin page (`oauth_applications.requires_guardian_consent`).
 

@@ -8,6 +8,7 @@
     ["Your account", profile_path, :user, "profile me"],
     ["Sessions", profile_sessions_path, :monitor, "devices sign-ins"],
     ["Passkeys", passkeys_path, :fingerprint, "webauthn security key"],
+    ["Social profiles", social_profiles_path, :link, "github link accounts"],
     ["Password", password_path, :lock, "change password"],
     ["Join the Slack", slack_onboarding_path, :message_circle, "onboarding invite"]
   ]
@@ -28,10 +29,12 @@
       <%= icon(:search, size: 18) %>
       <input type="text" class="cmdk-input" placeholder="Search or jump to…" autocomplete="off" spellcheck="false"
              id="command_bar_input" aria-label="Search or jump to"
+             role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="command_bar_list"
              data-command-bar-target="input" data-action="input->command-bar#input keydown->command-bar#navigate">
       <span class="kbd">esc</span>
     </div>
-    <div class="cmdk-list" data-command-bar-target="list" role="listbox">
+    <div class="cmdk-list" id="command_bar_list" data-command-bar-target="list" role="listbox" aria-label="Results">
+
       <div data-command-bar-target="static">
         <div class="cmdk-section" data-recent hidden></div>
         <% [["Pages", pages + admin_pages], ["Actions", admin_actions]].each do |title, items| %>

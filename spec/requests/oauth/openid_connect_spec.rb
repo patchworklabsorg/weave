@@ -16,7 +16,7 @@ RSpec.describe "OpenID Connect", type: :request do
     Doorkeeper::Application.create!(
       name: "Test Client",
       redirect_uri: redirect_uri,
-      scopes: "openid profile email phone admin slack groups roles verification residency age",
+      scopes: "openid profile email phone admin slack groups roles verification residency age social",
       confidential: false
     )
   end
@@ -338,6 +338,14 @@ RSpec.describe "OpenID Connect", type: :request do
 
         expect(body).not_to include("age_band", "birthday", "slack_birthday", "acknowledged_over_13_at")
       end
+    end
+
+    it "gives the linked social profiles through the social scope" do
+      user.social_profiles.create!(provider: "github", uid: "583231", username: "octocat")
+
+      expect(userinfo(scope: "openid social"))
+        .to include("social_profiles" => [{ "provider" => "github", "id" => "583231", "username" => "octocat" }])
+      expect(userinfo(scope: "openid profile")).not_to include("social_profiles")
     end
 
     describe "the groups claim" do

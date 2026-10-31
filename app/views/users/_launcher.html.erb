@@ -1,0 +1,80 @@
+<%# The app launcher (see AppLauncher). Hidden when there is nothing to show. %>
+<% unless launcher.empty? %>
+  <section id="apps" class="card mb-6">
+    <div class="card-header">
+      <div class="min-w-0 flex-1">
+        <h2 class="card-title">Your apps</h2>
+        <p class="card-lede">Patchwork Labs apps you can sign in to with this account.</p>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <div class="record-list">
+        <% launcher.usable.each do |application| %>
+          <div class="record">
+            <div class="record-main flex items-center gap-3">
+              <%= app_icon(application, size: nil) %>
+              <div class="min-w-0">
+                <p class="record-title"><%= application.name %></p>
+                <% if application.launcher_description.present? %>
+                  <p class="record-meta"><%= application.launcher_description %></p>
+                <% end %>
+              </div>
+            </div>
+            <div class="record-actions">
+              <%= link_to application.launch_url, class: "btn btn-secondary btn-sm", rel: "noopener" do %>
+                <%= icon(:external_link) %>Open
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+  
+        <% launcher.pending.each do |access_request| %>
+          <div class="record">
+            <div class="record-main flex items-center gap-3">
+              <%= app_icon(access_request.application, size: nil) %>
+              <div class="min-w-0">
+                <p class="record-title"><%= access_request.application.name %></p>
+                <p class="record-meta">You asked for access <%= time_ago_in_words(access_request.created_at) %> ago.</p>
+              </div>
+            </div>
+            <div class="record-actions">
+              <%= badge("Request pending", tone: :warning, icon: :clock) %>
+            </div>
+          </div>
+        <% end %>
+  
+        <% launcher.requestable.each do |application| %>
+          <div class="record">
+            <div class="record-main flex items-center gap-3">
+              <%= app_icon(application, size: nil) %>
+              <div class="min-w-0">
+                <p class="record-title"><%= application.name %></p>
+                <p class="record-meta"><%= application.launcher_description.presence || "You don't have access to this app yet." %></p>
+              </div>
+            </div>
+            <div class="record-actions">
+              <%= link_to new_access_request_path(application: application.to_param), class: "btn btn-secondary btn-sm" do %>
+                <%= icon(:key_round) %>Request access
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </section>
+<% end %>
+
+<% if managed_groups.any? %>
+  <section class="card mb-6">
+    <div class="card-header">
+      <div class="min-w-0 flex-1">
+        <h2 class="card-title">Groups you manage</h2>
+        <p class="card-lede"><%= managed_groups.map(&:name).to_sentence %>. Decide access requests and manage the members.</p>
+      </div>
+      <%= link_to groups_path, class: "btn btn-secondary shrink-0" do %>
+        <%= icon(:users) %>Your groups
+      <% end %>
+    </div>
+  </section>
+<% end %>

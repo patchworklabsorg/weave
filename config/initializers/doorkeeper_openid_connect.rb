@@ -231,5 +231,13 @@ Doorkeeper::OpenidConnect.configure do
     normal_claim :age_band, scope: :age, response: [:id_token, :user_info] do |user|
       user.age_band
     end
+
+    # The accounts the user linked on other sites (see SocialProfile): the
+    # provider, the site's stable account id and the username at the last link
+    # or refresh. Match on the id, because the username can change on the site
+    # without Weave knowing. An empty list when none.
+    normal_claim :social_profiles, scope: :social, response: [:id_token, :user_info] do |user|
+      user.social_profiles.order(:provider).map { |profile| { provider: profile.provider, id: profile.uid, username: profile.username } }
+    end
   end
 end

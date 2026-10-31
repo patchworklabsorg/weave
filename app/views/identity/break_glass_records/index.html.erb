@@ -63,7 +63,7 @@
               <div class="record-main space-y-1">
                 <p class="record-title">
                   <span class="mono"><%= record.public_id %></span> for <%= link_to record.verification.public_id, identity_verification_path(record.verification), class: "link mono" %>,
-                  asked by <%= record.requested_by&.full_name || "a deleted user" %> <%= time_ago_in_words(record.created_at) %> ago.
+                  asked by <%= record.requested_by&.full_name || "a deleted user" %> <%= time_label(record.created_at, :relative) %>.
                 </p>
                 <p class="text-sm text-ink-soft">Reason: <%= record.reason %></p>
                 <% in_memory = BreakGlass.pending_share_holder_ids(record) %>
@@ -93,7 +93,8 @@
         </ul>
       </div>
     <% else %>
-      <p class="card-body text-sm text-ink-faint">Nothing waits.</p>
+      <p class="card-body text-sm text-ink-faint">Nothing is pending.</p>
+
     <% end %>
   </section>
 
@@ -108,12 +109,12 @@
             <li class="record flex-col items-stretch gap-3">
               <p class="text-sm text-ink">
                 <span class="mono"><%= notice.break_glass_record.public_id %></span>: notice to <%= notice.recipient&.full_name || "a deleted user" %>,
-                due <%= notice.due_at.utc.strftime("%b %-d %H:%M UTC") %>.
+                due <%= time_label(notice.due_at, :datetime) %>.
                 <% if notice.delayed? %>
                   <strong>Delay asked</strong> by <%= notice.delayed_by&.full_name || "a deleted user" %>: <%= notice.delay_reason %>.
                   <% if notice.delay_signed_off? %>
                     Signed off by <%= notice.delay_signed_off_by&.full_name || "a deleted user" %>. The notice goes out on
-                    <%= notice.delay_ends_at.utc.strftime("%b %-d %H:%M UTC") %> at the latest.
+                    <%= time_label(notice.delay_ends_at, :datetime) %> at the latest.
                   <% else %>
                     Not signed off yet: the notice goes out when it is due.
                   <% end %>
@@ -155,7 +156,7 @@
             <li class="record">
               <div class="record-main">
                 <p class="record-title"><span class="mono"><%= record.public_id %></span>: <%= record.status %>, asked by <%= record.requested_by&.full_name || "a deleted user" %></p>
-                <p class="record-meta"><%= time_ago_in_words(record.created_at) %> ago. <%= "Denied: #{record.denial_reason}" if record.denied? %></p>
+                <p class="record-meta"><%= time_label(record.created_at, :relative) %>. <%= "Denied: #{record.denial_reason}" if record.denied? %></p>
               </div>
             </li>
           <% end %>

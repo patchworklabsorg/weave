@@ -1,0 +1,74 @@
+<% content_for :title, "Social profiles" %>
+
+<div class="page page-narrow space-y-6">
+  <%= page_header("Social profiles", lede: "Link your accounts on other sites. You sign in to each site, so the link shows that the account is yours.") %>
+
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">Link an account</h2>
+        <p class="card-lede">
+          Weave keeps only your account ID and username on the site. Apps see your linked accounts only if you allow
+          them to see your social profiles.
+        </p>
+      </div>
+    </div>
+    <div class="card-body">
+      <% if impersonating? %>
+        <p class="text-sm text-ink-faint">You can't link accounts while impersonating a user.</p>
+      <% elsif @linkable_providers.any? %>
+        <div class="btn-row">
+          <% @linkable_providers.each do |provider| %>
+            <%= button_to "/auth/#{provider}", method: :post, class: "btn btn-secondary", data: { turbo: false } do %>
+              <%= icon(SocialProfile.icon(provider)) %>Link <%= SocialProfile.provider_name(provider) %>
+            <% end %>
+          <% end %>
+        </div>
+      <% elsif SocialProfile.configured_providers.any? %>
+        <p class="text-sm text-ink-soft">You linked every site that Weave supports.</p>
+      <% else %>
+        <p class="text-sm text-ink-soft">Linking accounts isn't available right now.</p>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <h2 class="card-title">Your social profiles</h2>
+    </div>
+    <% if @social_profiles.any? %>
+      <div class="card-body">
+        <div class="record-list">
+          <% @social_profiles.each do |profile| %>
+            <div class="record">
+              <div class="record-main">
+                <div class="record-title flex flex-wrap items-center gap-2">
+                  <%= icon(profile.icon) %>
+                  <span class="min-w-0 break-words"><%= external_link profile.username, profile.profile_url %></span>
+                </div>
+                <div class="record-meta">
+                  <%= profile.provider_name %> · linked <%= profile.created_at.to_date.to_fs(:long) %>
+                </div>
+              </div>
+              <% unless impersonating? %>
+                <div class="record-actions">
+                  <% if profile.provider.in?(SocialProfile.configured_providers) %>
+                    <%= button_to "/auth/#{profile.provider}", method: :post, class: "btn btn-secondary btn-sm", data: { turbo: false },
+                          title: "Sign in to #{profile.provider_name} again to update your username" do %>
+                      <%= icon(:refresh_cw) %>Refresh
+                    <% end %>
+                  <% end %>
+                  <%= button_to "Unlink", social_profile_path(profile), method: :delete,
+                        class: "btn btn-danger btn-sm",
+                        data: { turbo_confirm: "Unlink this #{profile.provider_name} account? Apps will no longer see it." } %>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <%= empty_state("No social profiles yet", body: "You haven't linked any accounts yet.", icon: :link) %>
+    <% end %>
+  </section>
+</div>

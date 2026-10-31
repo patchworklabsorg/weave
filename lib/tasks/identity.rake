@@ -35,4 +35,26 @@ namespace :identity do
     end
     puts(IdentityGovernance.bootstrap_open? ? "The bootstrap is open." : "The bootstrap is closed. It runs one time only.")
   end
+
+  desc "Staging only: copy the production state of the identity team. BY=<owner email> MEMBERS=<email>,<email> (circle order) [LEAD=<email>]"
+  task staging_seed: :environment do
+    abort "Refused: this task runs on staging only (WEAVE_ENV=staging)." unless Weave.staging?
+
+    owner = User.find_by(email: ENV.fetch("BY", "").strip.downcase)
+    abort "Set BY to the email of an owner." if owner.nil?
+
+    emails = ENV.fetch("MEMBERS", "").split(",").map { |email| email.strip.downcase }.compact_blank
+    users = emails.map { |email| User.find_by(email:) || abort("No user with the email #{email}.") }
+    lead_email = ENV.fetch("LEAD", "").strip.downcase.presence
+    lead = lead_email && (User.find_by(email: lead_email) || abort("No user with the email #{lead_email}."))
+
+    result = IdentityGovernance.staging_seed!(users, by: owner, lead:)
+    abort "Refused: #{result.message}" unless result.success?
+
+    result.record.each do |user, verifier|
+      puts "#{user.full_name} (#{user.email}): verified, verifier #{verifier.full_name}"
+    end
+    puts "#{lead.full_name} is the identity lead." if lead
+    puts "No ID images or document data were written. Run the staging key ceremony on its own."
+  end
 end

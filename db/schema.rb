@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_25_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_31_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -19,6 +19,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_150000) do
   # Note that some types may not work with other database engines. Be careful if changing database.
   create_enum "address_type", ["Venue", "Shipping", "Loading Dock", "Billing"]
   create_enum "status", ["active", "suspended", "deactivated"]
+
+  create_table "access_requests", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "application_id", null: false
+    t.bigint "group_id", null: false
+    t.text "reason", null: false
+    t.string "status", default: "pending", null: false
+    t.bigint "decided_by_id"
+    t.datetime "decided_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["application_id"], name: "index_access_requests_on_application_id"
+    t.index ["decided_by_id"], name: "index_access_requests_on_decided_by_id"
+    t.index ["group_id", "status"], name: "index_access_requests_on_group_id_and_status"
+    t.index ["user_id", "application_id"], name: "index_access_requests_one_pending", unique: true, where: "((status)::text = 'pending'::text)"
+    t.index ["user_id", "created_at"], name: "index_access_requests_on_user_id_and_created_at"
+  end
 
   create_table "active_storage_attachments", force: :cascade do |t|
     t.string "name", null: false
@@ -540,6 +557,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_150000) do
     t.datetime "expires_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "role", default: "member", null: false
     t.index ["added_by_id"], name: "index_group_memberships_on_added_by_id"
     t.index ["expires_at"], name: "index_group_memberships_on_expires_at", where: "(expires_at IS NOT NULL)"
     t.index ["group_id", "user_id"], name: "index_group_memberships_on_group_id_and_user_id", unique: true
@@ -853,6 +871,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_150000) do
     t.boolean "requires_guardian_consent", default: true, null: false
     t.string "email_domains", default: [], null: false, array: true
     t.boolean "requires_verification", default: false, null: false
+    t.boolean "show_in_launcher", default: false, null: false
+    t.string "launch_url"
+    t.string "launcher_icon_url"
+    t.text "launcher_description"
+    t.bigint "access_request_group_id"
+    t.index ["access_request_group_id"], name: "index_oauth_applications_on_access_request_group_id"
     t.index ["uid"], name: "index_oauth_applications_on_uid", unique: true
   end
 
@@ -1066,6 +1090,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_150000) do
     t.datetime "updated_at", null: false
     t.index ["session_id"], name: "index_sessions_on_session_id", unique: true
     t.index ["updated_at"], name: "index_sessions_on_updated_at"
+  end
+
+  create_table "social_profiles", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "provider", null: false
+    t.string "uid", null: false
+    t.string "username", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider", "uid"], name: "index_social_profiles_on_provider_and_uid", unique: true
+    t.index ["user_id", "provider"], name: "index_social_profiles_on_user_id_and_provider", unique: true
+  end
+
+  create_table "staging_mail_allowlist_entries", force: :cascade do |t|
+    t.string "entry", null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_staging_mail_allowlist_entries_on_created_by_id"
+    t.index ["entry"], name: "index_staging_mail_allowlist_entries_on_entry", unique: true
   end
 
   create_table "takeout_requests", force: :cascade do |t|
@@ -1344,6 +1388,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_150000) do
     t.index ["subject_id"], name: "index_webhook_deliveries_on_subject_id"
   end
 
+  add_foreign_key "access_requests", "groups", on_delete: :cascade
+  add_foreign_key "access_requests", "oauth_applications", column: "application_id", on_delete: :cascade
+  add_foreign_key "access_requests", "users", column: "decided_by_id", on_delete: :nullify
+  add_foreign_key "access_requests", "users", on_delete: :cascade
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "application_access_grants", "oauth_applications", column: "application_id", on_delete: :cascade
@@ -1418,6 +1466,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_150000) do
   add_foreign_key "oauth_access_grants", "users", column: "resource_owner_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "users", column: "resource_owner_id"
+  add_foreign_key "oauth_applications", "groups", column: "access_request_group_id", on_delete: :nullify
   add_foreign_key "oauth_openid_requests", "oauth_access_grants", column: "access_grant_id", on_delete: :cascade
   add_foreign_key "program_grants", "knots"
   add_foreign_key "program_participations", "users", on_delete: :nullify
@@ -1435,6 +1484,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_150000) do
   add_foreign_key "service_webhooks", "services"
   add_foreign_key "service_webhooks", "users", column: "created_by_id"
   add_foreign_key "services", "users", column: "created_by_id"
+  add_foreign_key "social_profiles", "users"
+  add_foreign_key "staging_mail_allowlist_entries", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "takeout_requests", "users", on_delete: :cascade
   add_foreign_key "thread_count_entries", "services", on_delete: :nullify
   add_foreign_key "thread_count_entries", "thread_count_entries", column: "reverses_id", on_delete: :cascade
@@ -1464,6 +1515,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_150000) do
   add_foreign_key "verifications", "users", on_delete: :nullify
   add_foreign_key "verifications", "verifications", column: "previous_attempt_id", on_delete: :nullify
   add_foreign_key "webhook_deliveries", "service_webhooks", on_delete: :cascade
+
+  create_function :pg_search_dmetaphone, sql_definition: <<-'SQL'
+      CREATE OR REPLACE FUNCTION public.pg_search_dmetaphone(text)
+       RETURNS text
+       LANGUAGE sql
+       IMMUTABLE STRICT
+      AS $function$ SELECT array_to_string(ARRAY(SELECT dmetaphone(unnest(regexp_split_to_array($1, E'\\s+')))), ' ') $function$
+  SQL
 
   create_function :log_privileged_attribute_changes, sql_definition: <<-'SQL'
       CREATE OR REPLACE FUNCTION public.log_privileged_attribute_changes()
@@ -1593,12 +1652,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_150000) do
       $function$
   SQL
 
-  create_trigger :privileged_attribute_changes_no_truncate, sql_definition: <<-SQL
-      CREATE TRIGGER privileged_attribute_changes_no_truncate BEFORE TRUNCATE ON public.privileged_attribute_changes FOR EACH STATEMENT EXECUTE FUNCTION refuse_privileged_attribute_change_edits()
+  create_trigger :log_privileged_attribute_changes, sql_definition: <<-SQL
+      CREATE TRIGGER log_privileged_attribute_changes AFTER INSERT OR UPDATE OF role ON public.users FOR EACH ROW EXECUTE FUNCTION log_privileged_attribute_changes()
   SQL
 
   create_trigger :privileged_attribute_changes_append_only, sql_definition: <<-SQL
       CREATE TRIGGER privileged_attribute_changes_append_only BEFORE DELETE OR UPDATE ON public.privileged_attribute_changes FOR EACH ROW EXECUTE FUNCTION refuse_privileged_attribute_change_edits()
+  SQL
+
+  create_trigger :privileged_attribute_changes_no_truncate, sql_definition: <<-SQL
+      CREATE TRIGGER privileged_attribute_changes_no_truncate BEFORE TRUNCATE ON public.privileged_attribute_changes FOR EACH STATEMENT EXECUTE FUNCTION refuse_privileged_attribute_change_edits()
   SQL
 
   create_trigger :log_user_role_changes, sql_definition: <<-SQL
@@ -1611,9 +1674,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_150000) do
 
   create_trigger :user_roles_no_truncate, sql_definition: <<-SQL
       CREATE TRIGGER user_roles_no_truncate BEFORE TRUNCATE ON public.user_roles FOR EACH STATEMENT EXECUTE FUNCTION refuse_user_role_edits()
-  SQL
-
-  create_trigger :log_privileged_attribute_changes, sql_definition: <<-SQL
-      CREATE TRIGGER log_privileged_attribute_changes AFTER INSERT OR UPDATE OF role ON public.users FOR EACH ROW EXECUTE FUNCTION log_privileged_attribute_changes()
   SQL
 end

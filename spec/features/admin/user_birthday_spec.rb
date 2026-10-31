@@ -49,7 +49,7 @@ RSpec.feature "Admin birthday management", type: :feature do
   scenario "Admin sees formatted birthday date" do
     user_with_birthday.update!(birthday: Date.parse("1990-01-15"))
     visit admin_user_path(user_with_birthday)
-    expect(page).to have_text("January 15, 1990")
+    expect(page).to have_text("Jan 15, 1990")
   end
 
   scenario "Admin sees birthday banner message" do
@@ -71,10 +71,10 @@ RSpec.feature "Admin birthday management", type: :feature do
   scenario "Admin can edit user information including birthday" do
     visit admin_user_path(user_without_birthday)
 
-    expect(page).to have_link("Edit User")
+    expect(page).to have_link("Edit user")
 
     # Note: In a real test environment, we would click the link and test the edit form
-    # click_link "Edit User"
+    # click_link "Edit user"
     # expect(page).to have_field("Birthday")
   end
 end

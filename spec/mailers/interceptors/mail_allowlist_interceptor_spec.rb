@@ -109,4 +109,39 @@ RSpec.describe Interceptors::MailAllowlistInterceptor do
   it "does not prefix the subject outside staging" do
     expect(intercept(message(to: ["a@example.com"])).subject).to eq("Your login link")
   end
+
+  context "with entries added in the app" do
+    before { StagingMailAllowlistEntry.create!(entry: "tester@example.com") }
+
+    context "when on staging" do
+      let(:allowlist) { ["@patchworklabs.org"] }
+      let(:staging) { true }
+
+      it "allows them together with the credential" do
+        mail = intercept(message(to: ["tester@example.com", "a@patchworklabs.org", "other@example.com"]))
+
+        expect(mail.to).to eq(["tester@example.com", "a@patchworklabs.org"])
+      end
+    end
+
+    context "when on staging without the credential" do
+      let(:staging) { true }
+
+      it "allows them" do
+        mail = intercept(message(to: ["tester@example.com"]))
+
+        expect(mail.perform_deliveries).to be(true)
+      end
+    end
+
+    context "when not on staging" do
+      let(:allowlist) { ["@patchworklabs.org"] }
+
+      it "ignores them" do
+        mail = intercept(message(to: ["tester@example.com"]))
+
+        expect(mail.perform_deliveries).to be(false)
+      end
+    end
+  end
 end

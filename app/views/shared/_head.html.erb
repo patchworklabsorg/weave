@@ -17,7 +17,12 @@
 <%= csrf_meta_tags %>
 <%= csp_meta_tag %>
 
+<%# The two weights every page uses, so the first paint is in Geist. %>
+<link rel="preload" href="/fonts/geist-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/geist-600-latin.woff2" as="font" type="font/woff2" crossorigin>
+
 <%# Sets data-theme before first paint; the stylesheet keys everything off it. %>
+
 <%= render "shared/theme" %>
 <%# Brand fonts are self-hosted and declared with @font-face in the compiled stylesheet. %>
 <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>

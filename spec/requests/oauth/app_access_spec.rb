@@ -112,7 +112,7 @@ RSpec.describe "OAuth access to restricted apps", type: :request do
 
       get oauth_authorization_path, params: authorization_params
 
-      expect(response).to redirect_to(slack_onboarding_path)
+      expect(response).to redirect_to(guardian_consent_request_path)
       expect(flash[:alert]).to include("parent or guardian")
     end
 

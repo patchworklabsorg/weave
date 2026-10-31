@@ -83,7 +83,7 @@
           <% end %>
 
         <% when :granted %>
-          <p><%= t("guardian_consent.granted.body", first_name:, date: @consent.granted_at.strftime("%B %-d, %Y")) %></p>
+          <p><%= t("guardian_consent.granted.body", first_name:, date: @consent.granted_at.strftime(TimeHelper::FORMATS[:date])) %></p>
           <p><%= t("guardian_consent.granted.revoke_info", first_name:) %></p>
           <%= button_to t("guardian_consent.granted.revoke"), guardian_consent_path(token: params[:token]), method: :delete,
                 class: "btn btn-danger btn-block",

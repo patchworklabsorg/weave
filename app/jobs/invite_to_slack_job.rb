@@ -3,7 +3,7 @@
 # Invites a member to the Patchwork Labs Slack workspace.
 #
 # Fires automatically once a member confirms their email, and again once a
-# guardian consents for a member under 18. Can be re-run from the admin UI
+# member adds a missing birthday. Can be re-run from the admin UI
 # (with resend: true). Idempotent: if the person is already in the workspace it
 # syncs their PWL ID instead of inviting again.
 class InviteToSlackJob < ApplicationJob
@@ -13,14 +13,22 @@ class InviteToSlackJob < ApplicationJob
     user = User.find_by(id: user_id)
     return unless user
     return if user.slack_member?
-    # Weave must know the member's age first. A member under 18 joins the
-    # Slack only after a parent or guardian consents: GuardianConsentFlow and
-    # BirthdaysController run this job again then.
-    return if user.birthday.nil? || user.under_minimum_age? || user.guardian_consent_missing?
+    # Weave must know the member's age first: BirthdaysController runs this
+    # job again once it does. Guardian consent does not gate the Slack.
+    return if user.birthday.nil? || user.under_minimum_age?
 
     service = SlackService.new
     unless service.configured?
       Rails.logger.info "Slack not configured for invites; skipping invite for user #{user_id}"
+      return
+    end
+
+    # Already linked to a Slack account that is still in the workspace (a
+    # guest): an invite to their current email would make a second account if
+    # the email changed.
+    if user.in_slack_workspace? && service.linked_account_kept?(user.slack_id)
+      Rails.logger.info "User #{user_id} is already linked to Slack account #{user.slack_id}; syncing instead of inviting"
+      SyncUserToSlackJob.perform_later(user.id)
       return
     end
 

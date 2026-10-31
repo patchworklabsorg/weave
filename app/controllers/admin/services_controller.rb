@@ -36,7 +36,7 @@ class Admin::ServicesController < Admin::BaseController
     @service.created_by = current_user
 
     if @service.save
-      redirect_to admin_service_path(@service), notice: "Service was created. Add an API key or a webhook next."
+      redirect_to admin_service_path(@service), notice: "The service was created. Add an API key or a webhook next."
     else
       render :new, status: :unprocessable_content
     end
@@ -47,7 +47,7 @@ class Admin::ServicesController < Admin::BaseController
 
   def update
     if @service.update(service_params)
-      redirect_to admin_service_path(@service), notice: "Service was updated."
+      redirect_to admin_service_path(@service), notice: "The service was updated."
     else
       render :edit, status: :unprocessable_content
     end
@@ -60,17 +60,17 @@ class Admin::ServicesController < Admin::BaseController
 
   def activate
     @service.activate!
-    redirect_to admin_service_path(@service), notice: "Service activated."
+    redirect_to admin_service_path(@service), notice: "The service was activated."
   end
 
   def deactivate
     @service.deactivate!
-    redirect_to admin_service_path(@service), notice: "Service deactivated. Its keys and webhooks stop working until you activate it."
+    redirect_to admin_service_path(@service), notice: "The service was deactivated. Its keys and webhooks stop working until you activate it."
   end
 
   def suspend
     @service.suspend!
-    redirect_to admin_service_path(@service), notice: "Service suspended. Its keys and webhooks stop working until you activate it."
+    redirect_to admin_service_path(@service), notice: "The service was suspended. Its keys and webhooks stop working until you activate it."
   end
 
   private

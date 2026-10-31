@@ -45,7 +45,7 @@ class BirthdaysController < ApplicationController
     end
 
     # The Slack invite waits for a birthday (see InviteToSlackJob).
-    InviteToSlackJob.perform_later(current_user.id) unless current_user.guardian_consent_missing? || current_user.in_slack_workspace?
+    InviteToSlackJob.perform_later(current_user.id) unless current_user.in_slack_workspace?
 
     # Sent here from an app's sign-in (see Oauth::AuthorizationsController).
     return_to = session.delete(:birthday_return_to).to_s

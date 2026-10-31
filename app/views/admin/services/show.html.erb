@@ -47,7 +47,7 @@
           <%= dl_row "Description", @service.description %>
         <% end %>
         <%= dl_row("Created") do %>
-          <%= @service.created_at.strftime("%B %d, %Y") %>
+          <%= time_label(@service.created_at) %>
           <% if @service.created_by %>by <%= @service.created_by.full_name %><% end %>
         <% end %>
       </dl>
@@ -79,9 +79,9 @@
                     <%= service_key_status_badge(key) %>
                   </p>
                   <p class="record-meta">
-                    Created <%= time_ago_in_words(key.created_at) %> ago
-                    · <%= key.last_used_at ? "used #{time_ago_in_words(key.last_used_at)} ago" : "never used" %>
-                    <% if key.expires_at %>· expires <%= key.expires_at.strftime("%b %d, %Y") %><% end %>
+                    Created <%= time_label(key.created_at, :relative) %>
+                    · <% if key.last_used_at %>used <%= time_label(key.last_used_at, :relative) %><% else %>never used<% end %>
+                    <% if key.expires_at %>· expires <%= time_label(key.expires_at) %><% end %>
                   </p>
                 </div>
               </li>
@@ -119,7 +119,7 @@
                   <p class="record-meta break-all"><%= webhook.url %></p>
                 </div>
                 <span class="record-meta">
-                  <%= webhook.last_triggered_at ? "Last delivered #{time_ago_in_words(webhook.last_triggered_at)} ago" : "Nothing delivered yet" %>
+                  <% if webhook.last_triggered_at %>Last delivered <%= time_label(webhook.last_triggered_at, :relative) %><% else %>Nothing delivered yet<% end %>
                 </span>
               </li>
             <% end %>

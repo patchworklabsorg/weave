@@ -449,6 +449,64 @@ RSpec.describe IdentityGovernance do
     end
   end
 
+  describe ".staging_seed!" do
+    let!(:circle) { %w[Jasper Kieran Adam].map { |name| create(:user, :verified, first_name: name) } }
+
+    before { allow(Weave).to receive(:staging?).and_return(true) }
+
+    it "verifies each member by the person before them and sets the lead, with no ID image" do
+      described_class.bootstrap!(circle, by: owner)
+
+      result = described_class.staging_seed!(circle, by: owner, lead: circle[0])
+
+      expect(result).to be_success
+      expect(circle.map { |user| user.reload.identity_verified? }).to all(be(true))
+      expect(circle.map { |user| user.latest_verification.verifier }).to eq([circle[2], circle[0], circle[1]])
+      expect(circle.map { |user| user.latest_verification.id_document.attached? }).to all(be(false))
+      expect(circle[0].reload_roles!.identity_lead).to be(true)
+    end
+
+    it "closes the bootstrap, logs each decision as a seed and leaves every account open" do
+      described_class.bootstrap!(circle, by: owner)
+      described_class.staging_seed!(circle, by: owner)
+
+      expect(described_class.bootstrap_open?).to be(false)
+      expect(VerificationEvent.where(kind: "decided").map { |event| event.data["staging_seed"] }).to eq([true] * 3)
+      expect(circle.map { |user| user.reload.can_authenticate? }).to all(be(true))
+    end
+
+    it "adds members who are not on the team yet and skips a member who is already verified" do
+      create(:verification, :verified, user: circle[1])
+
+      expect { described_class.staging_seed!(circle, by: owner) }.to change(Verification, :count).by(2)
+      expect(circle.map { |user| user.reload_roles!.identity_team }).to all(be(true))
+    end
+
+    it "refuses outside staging" do
+      allow(Weave).to receive(:staging?).and_return(false)
+
+      result = described_class.staging_seed!(circle, by: owner)
+
+      expect(result.message).to include("staging only")
+      expect(Verification.count).to eq(0)
+    end
+
+    it "refuses a member with an open verification or an account that can't sign in" do
+      create(:verification, :call_scheduled, user: circle[1])
+      circle[2].update_column(:locked_at, Time.current) # rubocop:disable Rails/SkipsModelValidations
+
+      result = described_class.staging_seed!(circle, by: owner)
+
+      expect(result.message).to include("Kieran", "A verification is open", "Adam", "can't sign in")
+      expect(Verification.where(status: "verified").count).to eq(0)
+    end
+
+    it "refuses a non-owner and a lead who is not a member" do
+      expect(described_class.staging_seed!(circle, by: board_member).message).to include("Only an owner")
+      expect(described_class.staging_seed!(circle, by: owner, lead: board_member).message).to include("one of the members")
+    end
+  end
+
   describe "bootstrap" do
     let!(:circle) { %w[Jasper Kieran Adam].map { |name| create(:user, :verified, first_name: name) } }
 

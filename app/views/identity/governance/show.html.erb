@@ -10,7 +10,7 @@
     <div class="callout callout-warning">
       <%= icon(:triangle_alert, size: 18) %>
       <div class="callout-body">
-        <p>Bootstrap open: no member of the identity team is verified yet. Follow the bootstrap steps in docs/KYC_ROLLOUT.md.</p>
+        <p>Bootstrap open: no member of the identity team is verified yet. Follow the <%= link_to "bootstrap steps", "https://github.com/patchworklabsorg/weave/blob/main/docs/KYC_ROLLOUT.md", class: "link", target: "_blank", rel: "noopener noreferrer" %>.</p>
       </div>
     </div>
   <% end %>
@@ -88,7 +88,7 @@
   <section class="card">
     <div class="card-header">
       <div class="flex items-center gap-2">
-        <h2 class="card-title">Proposals that wait</h2>
+        <h2 class="card-title">Pending proposals</h2>
         <%= badge(@pending.size.to_s, tone: @pending.any? ? :warning : :neutral) %>
       </div>
     </div>
@@ -105,14 +105,15 @@
               </div>
               <span class="record-meta">
                 Proposed by <%= proposal.proposed_by&.full_name || "a deleted user" %>.
-                <%= proposal.expired_now? ? "Expired." : "Expires #{proposal.expires_at.utc.strftime('%Y-%m-%d')}." %>
+                <% if proposal.expired_now? %>Expired.<% else %>Expires <%= time_label(proposal.expires_at) %>.<% end %>
               </span>
             </li>
           <% end %>
         </ul>
       </div>
     <% else %>
-      <p class="card-body text-sm text-ink-faint">Nothing waits.</p>
+      <p class="card-body text-sm text-ink-faint">No proposal is pending.</p>
+
     <% end %>
   </section>
 
@@ -181,7 +182,7 @@
               <div class="record-main">
                 <p class="record-title"><%= event.summary %></p>
                 <p class="record-meta">
-                  <%= event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>
+                  <%= time_label(event.created_at, :datetime) %>
                   <% if event.data["reason"].present? %><span class="text-ink-soft">Reason: <%= event.data["reason"] %></span><% end %>
                 </p>
               </div>
@@ -208,7 +209,7 @@
             <li class="record">
               <div class="record-main">
                 <p class="record-title"><%= change.summary %></p>
-                <p class="record-meta"><%= change.changed_at.utc.strftime("%Y-%m-%d %H:%M UTC") %> <span class="text-ink-soft">By <%= change.actor_name %>.</span></p>
+                <p class="record-meta"><%= time_label(change.changed_at, :datetime) %> <span class="text-ink-soft">By <%= change.actor_name %>.</span></p>
               </div>
             </li>
           <% end %>

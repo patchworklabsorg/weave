@@ -33,7 +33,8 @@
           <code class="code-chip">admin</code> (administrative access),
           <code class="code-chip">slack</code> (Slack membership and Slack ID),
           <code class="code-chip">groups</code> (the user's groups that are linked to this app),
-          <code class="code-chip">roles</code> (the user's roles in this app).
+          <code class="code-chip">roles</code> (the user's roles in this app),
+          <code class="code-chip">social</code> (the accounts the user linked, for example GitHub).
           App tokens only (<code class="code-chip">client_credentials</code>):
           <code class="code-chip">directory</code> (the directory API),
           <code class="code-chip">fulfillment</code> (read a shipping address to print a label),
@@ -53,6 +54,8 @@
           </span>
         </span>
       </label>
+
+      <%= render "launcher_fields", form: form %>
 
       <div class="form-actions">
         <%= link_to "Cancel", admin_oauth_applications_path, class: "btn btn-secondary" %>

@@ -63,10 +63,10 @@ RSpec.describe NudgeStuckSlackGuestsJob do
     expect(nudged).to be_empty
   end
 
-  it "skips a minor whose guardian has not consented" do
+  it "reminds a minor whose guardian has not consented" do
     stuck.update_columns(birthday: 15.years.ago.to_date) # rubocop:disable Rails/SkipsModelValidations
 
-    expect { described_class.perform_now }.not_to have_enqueued_job(CodeOfConductRequestJob)
+    expect { described_class.perform_now }.to have_enqueued_job(CodeOfConductRequestJob)
   end
 
   it "spaces out the reminders" do

@@ -54,7 +54,7 @@
           <% else %>
             <div class="field-group">
               <span class="field-label">Birthday</span>
-              <span class="field-static"><%= @user.birthday.strftime("%B %d, %Y") %></span>
+              <span class="field-static"><%= time_label(@user.birthday) %></span>
               <p class="field-hint">Birthday cannot be changed. Contact an administrator if you need to update it.</p>
             </div>
           <% end %>
@@ -62,21 +62,31 @@
       </div>
     </section>
 
-    <section class="card">
-      <div class="card-header">
-        <h2 class="card-title">Shipping address</h2>
-      </div>
+    <%# Addresses are optional and most members have none, so each one stays
+        folded until it holds a value or the member opens it. %>
+    <details class="card" <%= "open" if @user.shipping_address.present? %>>
+      <summary class="card-header">
+        <div>
+          <h2 class="card-title">Shipping address <span class="optional font-normal text-ink-faint">(optional)</span></h2>
+          <p class="card-lede">Only needed when a program ships something to you.</p>
+        </div>
+        <%= icon(:chevron_down, class: "text-ink-faint") %>
+      </summary>
       <div class="card-body">
         <%= form.fields_for :shipping_address, (@user.shipping_address || @user.build_shipping_address) do |address_form| %>
           <%= render "address_form", form: address_form, address_type: "shipping" %>
         <% end %>
       </div>
-    </section>
+    </details>
 
-    <section class="card">
-      <div class="card-header">
-        <h2 class="card-title">Billing address</h2>
-      </div>
+    <details class="card" <%= "open" if @user.billing_address.present? %>>
+      <summary class="card-header">
+        <div>
+          <h2 class="card-title">Billing address <span class="optional font-normal text-ink-faint">(optional)</span></h2>
+          <p class="card-lede">Only needed when a program bills or reimburses you.</p>
+        </div>
+        <%= icon(:chevron_down, class: "text-ink-faint") %>
+      </summary>
       <div class="card-body space-y-4">
         <%# No name attribute: the toggle is not posted; the hidden flag above is. %>
         <label class="choice">
@@ -87,7 +97,8 @@
           <%= render "address_form", form: address_form, address_type: "billing" %>
         <% end %>
       </div>
-    </section>
+    </details>
+
 
     <div class="form-actions">
       <%= link_to "Cancel", profile_path, class: "btn btn-secondary" %>

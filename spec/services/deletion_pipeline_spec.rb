@@ -151,6 +151,18 @@ RSpec.describe DeletionPipeline do
     expect(PaperTrail::Version.where(item_type: "User::Passkey", item_id: [kept.id, removed.id])).not_to exist
   end
 
+  it "deletes the member's social profiles and their PaperTrail rows" do
+    removed = user.social_profiles.create!(provider: "github", uid: "1", username: "old-account")
+    removed.destroy!
+    expect(PaperTrail::Version.where(item_type: "SocialProfile", item_id: removed.id, event: "destroy")).to exist
+    kept = user.social_profiles.create!(provider: "github", uid: "583231", username: "octocat")
+
+    described_class.run!(request)
+
+    expect(SocialProfile.where(id: [kept.id, removed.id])).not_to exist
+    expect(PaperTrail::Version.where(item_type: "SocialProfile", item_id: [kept.id, removed.id])).not_to exist
+  end
+
   it "deletes Ahoy events of the member on a visit that is not theirs" do
     visit = Ahoy::Visit.create!(visit_token: SecureRandom.uuid, visitor_token: SecureRandom.uuid, started_at: Time.current)
     event = Ahoy::Event.create!(visit:, user:, name: "signed_in", time: Time.current)

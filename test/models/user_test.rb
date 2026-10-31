@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 # == Schema Information
-# Schema version: 20261023120000
 #
 # Table name: users
 # Database name: primary

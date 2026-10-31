@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 class Admin::OauthApplicationsController < Admin::BaseController
-  before_action :set_application, only: [:show, :edit, :update, :destroy, :regenerate_secret, :access_policy, :code_of_conduct, :guardian_consent, :email_domains, :verification]
-  before_action :require_superadmin, only: [:access_policy, :code_of_conduct, :guardian_consent, :email_domains, :verification]
+  before_action :set_application, only: [:show, :edit, :update, :destroy, :regenerate_secret, :access_policy, :code_of_conduct, :guardian_consent, :email_domains, :verification, :access_request_group]
+  before_action :require_superadmin, only: [:access_policy, :code_of_conduct, :guardian_consent, :email_domains, :verification, :access_request_group]
   # The response holds a working client secret, which lets its holder act as
   # the app (an `introspect` app included). Only a superadmin may get one.
   before_action :require_superadmin_for_secret, only: [:regenerate_secret]
@@ -27,7 +27,7 @@ class Admin::OauthApplicationsController < Admin::BaseController
     @application = Doorkeeper::Application.new(application_params)
 
     if introspect_change_allowed? && @application.save
-      show_secret_once("OAuth application was successfully created. Copy the client secret now: Weave shows it only once.")
+      show_secret_once("The OAuth application was created. Copy the client secret now. Weave shows it only once.")
     else
       render :new, status: :unprocessable_content
     end
@@ -40,7 +40,7 @@ class Admin::OauthApplicationsController < Admin::BaseController
     @application.assign_attributes(application_params)
 
     if introspect_change_allowed? && @application.save
-      redirect_to admin_oauth_application_path(@application), notice: "OAuth application was successfully updated."
+      redirect_to admin_oauth_application_path(@application), notice: "The OAuth application was updated."
     else
       render :edit, status: :unprocessable_content
     end
@@ -48,7 +48,7 @@ class Admin::OauthApplicationsController < Admin::BaseController
 
   def destroy
     @application.destroy
-    redirect_to admin_oauth_applications_path, notice: "OAuth application was successfully deleted."
+    redirect_to admin_oauth_applications_path, notice: "The OAuth application was deleted."
   end
 
   # Weave stores client secrets hashed (hash_application_secrets), so the
@@ -134,6 +134,24 @@ class Admin::OauthApplicationsController < Admin::BaseController
                 notice: required ? "Only verified members can use this app now." : "This app no longer requires identity verification."
   end
 
+  # Names the group that an approved access request adds members to, or stops
+  # taking requests (see AccessRequests). Superadmin only: approving a request
+  # gives access to the app.
+  def access_request_group
+    group_id = params[:group_id].presence
+    group = group_id && Group.find_by_public_param(group_id)
+    if group_id && group.nil?
+      return redirect_to(admin_oauth_application_path(@application, anchor: "access"), alert: "Unknown group.")
+    end
+
+    if @application.update(access_request_group: group)
+      redirect_to admin_oauth_application_path(@application, anchor: "access"),
+                  notice: group ? "Members can now ask for access. Managers of #{group.name} decide." : "This app no longer takes access requests."
+    else
+      redirect_to admin_oauth_application_path(@application, anchor: "access"), alert: @application.errors.full_messages.to_sentence
+    end
+  end
+
   private
 
   # Renders the show page with the new plaintext secret. no-store keeps it
@@ -151,6 +169,8 @@ class Admin::OauthApplicationsController < Admin::BaseController
     @grantable_groups = Group.where.not(id: @access_grants.select { |grant| grant.grantee_type == "Group" }.map(&:grantee_id)).order(:name)
     @roles = ApplicationRole.for_application(@application).includes(assignments: :assignee).order(:key)
     @groups = Group.order(:name)
+    @request_groups = AppAccess.linked_groups(@application).manual.where(waives_code_of_conduct: false, waives_slack: false).order(:name)
+    @pending_request_count = @application.access_requests.pending.count
   end
 
   def require_superadmin
@@ -183,7 +203,8 @@ class Admin::OauthApplicationsController < Admin::BaseController
   end
 
   def application_params
-    params.require(:doorkeeper_application).permit(:name, :redirect_uri, :scopes, :confidential)
+    params.require(:doorkeeper_application).permit(:name, :redirect_uri, :scopes, :confidential,
+                                                   :show_in_launcher, :launch_url, :launcher_icon_url, :launcher_description)
   end
 
 end

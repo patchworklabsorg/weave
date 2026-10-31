@@ -4,6 +4,10 @@ class ApplicationController < ActionController::Base
   # First, so it wraps every other callback. See the concern.
   include RecordsImpersonationActions
   include ReturnAfterSignIn
+  # Authorization policies (app/policies). The policy user is current_user.
+  include Pundit::Authorization
+
+  rescue_from Pundit::NotAuthorizedError, with: :user_not_authorized
 
   before_action :authenticate_user!
   before_action :track_user_session
@@ -33,6 +37,10 @@ class ApplicationController < ActionController::Base
   end
 
   private
+
+  def user_not_authorized
+    redirect_to profile_path, alert: "You are not allowed to do that."
+  end
 
   # The person behind the request: during impersonation, the admin.
   def attribute_privileged_changes

@@ -1,0 +1,141 @@
+<% content_for :title, @group.name %>
+
+<div class="page">
+  <header class="page-header">
+    <div class="min-w-0">
+      <p class="text-sm"><%= link_to "Your groups", groups_path, class: "link-quiet text-ink-soft" %></p>
+      <h1 class="page-title"><%= @group.name %></h1>
+      <% if @group.description.present? %>
+        <p class="page-lede"><%= @group.description %></p>
+      <% end %>
+    </div>
+  </header>
+
+  <section id="requests" class="card mb-6">
+    <div class="card-header">
+      <div class="min-w-0 flex-1">
+        <h2 class="card-title flex flex-wrap items-center gap-2">
+          Access requests
+          <%= badge(@pending_requests.size.to_s, tone: @pending_requests.any? ? :warning : :neutral) %>
+        </h2>
+        <p class="card-lede">Approving adds the member to <%= @group.name %>, which gives them access to the app.</p>
+      </div>
+    </div>
+
+    <% if @pending_requests.any? %>
+      <div class="card-body">
+        <div class="record-list">
+          <% @pending_requests.each do |access_request| %>
+            <div class="record flex-wrap">
+              <div class="record-main min-w-0 max-sm:basis-full">
+                <p class="flex flex-wrap items-center gap-2">
+                  <span class="record-title"><%= access_request.user.full_name %></span>
+                  <span class="record-meta"><%= access_request.user.email %></span>
+                </p>
+                <p class="record-meta">
+                  Asks for <strong class="text-ink"><%= access_request.application.name %></strong>
+                  <%= time_ago_in_words(access_request.created_at) %> ago
+                </p>
+                <p class="mt-2 text-sm text-ink whitespace-pre-line break-words"><%= access_request.reason %></p>
+              </div>
+              <div class="record-actions">
+                <% if policy(access_request).approve? %>
+                  <%= button_to approve_access_request_path(access_request), method: :patch, class: "btn btn-secondary btn-sm",
+                      data: { turbo_confirm: "Add #{access_request.user.full_name} to #{@group.name}? They can then use #{access_request.application.name}." } do %>
+                    <%= icon(:check) %>Approve
+                  <% end %>
+                  <%= button_to deny_access_request_path(access_request), method: :patch, class: "btn btn-danger btn-sm",
+                      data: { turbo_confirm: "Deny the request from #{access_request.user.full_name}?" } do %>
+                    <%= icon(:x) %>Deny
+                  <% end %>
+                <% else %>
+                  <span class="text-sm text-ink-faint">Another approver decides this one.</span>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <%= empty_state("No requests are waiting.", icon: :inbox) %>
+    <% end %>
+  </section>
+
+  <section id="members" class="card mb-6">
+    <div class="card-header">
+      <div class="flex items-center gap-2">
+        <h2 class="card-title">Members</h2>
+        <%= badge(@memberships.size.to_s) %>
+      </div>
+    </div>
+
+    <% if policy(@group).add_member? %>
+    <div class="px-5 pt-4">
+      <%= form_with model: @membership, scope: :group_membership, url: group_members_path(@group), local: true,
+          class: "well grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] items-end gap-3" do |form| %>
+        <div class="field-group">
+          <%= form.label :email, "Add a member by email", class: "field-label" %>
+          <%= form.email_field :email, required: true, class: "field", placeholder: "person@example.com" %>
+        </div>
+        <%= form.submit "Add member", class: "btn btn-primary" %>
+      <% end %>
+    </div>
+    <% else %>
+      <p class="px-5 pt-4 text-sm text-ink-soft">This group is a sponsored project that waives onboarding steps, so only a superadmin adds members.</p>
+    <% end %>
+
+    <% if @memberships.any? %>
+      <div class="card-body">
+        <div class="record-list">
+          <% @memberships.each do |membership| %>
+            <div class="record">
+              <div class="record-main flex flex-wrap items-center gap-2 min-w-0">
+                <span class="record-title"><%= membership.user.full_name %></span>
+                <span class="record-meta"><%= membership.user.email %></span>
+                <%= badge("Manager", tone: :grape) if membership.role_manager? %>
+                <% if membership.expires_at %>
+                  <span class="record-meta">Until <%= membership.expires_at.strftime("%b %-d, %Y") %></span>
+                <% end %>
+              </div>
+              <% if policy(membership).destroy? %>
+                <div class="record-actions">
+                  <%= button_to "Remove", group_member_path(@group, membership), method: :delete, class: "btn btn-danger btn-sm",
+                      data: { turbo_confirm: "Remove #{membership.user.full_name} from #{@group.name}? They may lose access to apps." } %>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <%= empty_state("This group has no members.", icon: :users) %>
+    <% end %>
+  </section>
+
+  <% if @recent_decisions.any? %>
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Recent decisions</h2>
+      </div>
+      <div class="card-body">
+        <div class="record-list">
+          <% @recent_decisions.each do |access_request| %>
+            <div class="record">
+              <div class="record-main min-w-0">
+                <p class="record-title"><%= access_request.user.full_name %>: <%= access_request.application.name %></p>
+                <p class="record-meta">
+                  <%= access_request.status.humanize %>
+                  <% if access_request.decided_by %>by <%= access_request.decided_by.full_name %><% end %>
+                  <%= time_ago_in_words(access_request.decided_at) %> ago
+                </p>
+              </div>
+              <div class="record-actions">
+                <%= badge(access_request.status.humanize, tone: { "approved" => :success, "denied" => :danger }.fetch(access_request.status, :neutral)) %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </section>
+  <% end %>
+</div>

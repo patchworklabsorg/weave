@@ -117,6 +117,14 @@ class Rack::Attack
     end
   end
 
+  # Throttle guardian consent requests by IP. Each one emails the address the
+  # member typed.
+  throttle("guardian_consent_request/ip", limit: 5, period: 10.minutes) do |req|
+    if req.path.start_with?("/guardian-consent") && req.post?
+      req.ip
+    end
+  end
+
   # Throttle the guardian consent page by IP. A wrong token answers 404, so
   # this also limits guessing.
   throttle("guardian_consent/ip", limit: 20, period: 10.minutes) do |req|

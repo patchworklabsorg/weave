@@ -30,7 +30,7 @@ class Admin::ServiceWebhooksController < Admin::BaseController
     @webhook.created_by = current_user
 
     if @webhook.save
-      redirect_to admin_service_webhook_path(@service, @webhook), notice: "Webhook was created. Give the signing secret to the service, then send a test."
+      redirect_to admin_service_webhook_path(@service, @webhook), notice: "The webhook was created. Give the signing secret to the service, then send a test."
     else
       render :new, status: :unprocessable_content
     end
@@ -41,7 +41,7 @@ class Admin::ServiceWebhooksController < Admin::BaseController
 
   def update
     if @webhook.update(webhook_params)
-      redirect_to admin_service_webhook_path(@service, @webhook), notice: "Webhook was updated."
+      redirect_to admin_service_webhook_path(@service, @webhook), notice: "The webhook was updated."
     else
       render :edit, status: :unprocessable_content
     end
@@ -49,17 +49,17 @@ class Admin::ServiceWebhooksController < Admin::BaseController
 
   def destroy
     @webhook.destroy
-    redirect_to admin_service_path(@service, anchor: "webhooks"), notice: "Webhook was deleted with its delivery log."
+    redirect_to admin_service_path(@service, anchor: "webhooks"), notice: "The webhook was deleted with its delivery log."
   end
 
   def activate
     @webhook.activate!
-    redirect_to admin_service_webhook_path(@service, @webhook), notice: "Webhook activated. Its failure count is back to 0."
+    redirect_to admin_service_webhook_path(@service, @webhook), notice: "The webhook was activated. Its failure count is back to 0."
   end
 
   def deactivate
     @webhook.deactivate!
-    redirect_to admin_service_webhook_path(@service, @webhook), notice: "Webhook deactivated. Queued deliveries are cancelled."
+    redirect_to admin_service_webhook_path(@service, @webhook), notice: "The webhook was deactivated. Its queued deliveries are cancelled."
   end
 
   # Sends a signed `ping` event, so the receiver can check its URL and secret.
@@ -69,14 +69,14 @@ class Admin::ServiceWebhooksController < Admin::BaseController
     end
 
     WebhookDispatcher.ping(@webhook)
-    redirect_to admin_service_webhook_path(@service, @webhook), notice: "Test webhook queued. Reload the page to see the result in the delivery log."
+    redirect_to admin_service_webhook_path(@service, @webhook), notice: "The test webhook was queued. Reload the page to see the result in the delivery log."
   end
 
   # A new secret signs every attempt from now on, retries too. The receiver
   # must have the new secret before the next delivery.
   def rotate_secret
     @webhook.rotate_secret!
-    redirect_to admin_service_webhook_path(@service, @webhook), notice: "Signing secret rotated. Give the new secret to the service now."
+    redirect_to admin_service_webhook_path(@service, @webhook), notice: "The signing secret was rotated. Give the new secret to the service now."
   end
 
   private

@@ -7,4 +7,6 @@ Rails.application.config.to_prepare do
   Doorkeeper::Application.include EncodedIds::HashidIdentifiable
   Doorkeeper::Application.include PublicParamLookup
   Doorkeeper::Application.set_public_id_prefix :app
+  # The app launcher and access requests (see OauthApplicationLauncher).
+  Doorkeeper::Application.include OauthApplicationLauncher
 end

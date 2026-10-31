@@ -75,7 +75,7 @@ module AdminNavHelper
                                         %w[funder_reports], :admin)
                       end)
                    ]),
-      NavGroup.new("System", admin ? system_links : [])
+      NavGroup.new("System", admin ? system_links(user) : [])
     ]
     groups.map { |group| group.with(links: group.links.compact) }.reject { |group| group.links.empty? }
   end
@@ -104,7 +104,7 @@ module AdminNavHelper
 
   private
 
-  def system_links
+  def system_links(user)
     [
       NavLink.new("Dashboard", admin_root_path, :layout_dashboard, "admin home", %w[admin/dashboard], false),
       admin_nav_entry("OAuth apps", admin_oauth_applications_path, :app_window, "admin applications clients",
@@ -117,7 +117,11 @@ module AdminNavHelper
       NavLink.new("Blazer", "/admin/blazer", :database, "admin sql queries reports", [], true),
       NavLink.new("Console audits", "/admin/console", :terminal, "admin audits1984", [], true),
       admin_nav_entry("Console sign-in", admin_console_access_path, :key_round, "admin production console dbconsole code",
-                      %w[console_access], :admin)
+                      %w[console_access], :admin),
+      (if StagingTools.allowed?(user)
+         admin_nav_entry("Staging mail allowlist", admin_staging_mail_allowlist_entries_path, :mail_check,
+                         "staging email allowlist whitelist testers", %w[staging_mail_allowlist_entries], :admin)
+       end)
     ]
   end
 

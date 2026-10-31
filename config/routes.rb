@@ -37,8 +37,9 @@
 #                             slack_onboarding GET    /slack(.:format)                                                                                  slack_onboarding#show
 #                                              POST   /slack(.:format)                                                                                  slack_onboarding#create
 #                                     birthday POST   /slack/birthday(.:format)                                                                         birthdays#create
-#                     guardian_consent_request POST   /slack/guardian-consent(.:format)                                                                 guardian_consent_requests#create
-#              resend_guardian_consent_request POST   /slack/guardian-consent/resend(.:format)                                                          guardian_consent_requests#resend
+#              resend_guardian_consent_request POST   /guardian-consent/resend(.:format)                                                                guardian_consent_requests#resend
+#                     guardian_consent_request GET    /guardian-consent(.:format)                                                                       guardian_consent_requests#show
+#                                              POST   /guardian-consent(.:format)                                                                       guardian_consent_requests#create
 #                             guardian_consent GET    /guardian/:token(.:format)                                                                        guardian_consents#show
 #                                              POST   /guardian/:token(.:format)                                                                        guardian_consents#create
 #                                              DELETE /guardian/:token(.:format)                                                                        guardian_consents#destroy
@@ -84,6 +85,14 @@
 #                             deletion_request GET    /profile/delete(.:format)                                                                         deletion_requests#show
 #                                              DELETE /profile/delete(.:format)                                                                         deletion_requests#destroy
 #                                              POST   /profile/delete(.:format)                                                                         deletion_requests#create
+#                       approve_access_request PATCH  /access_requests/:id/approve(.:format)                                                            access_requests#approve
+#                          deny_access_request PATCH  /access_requests/:id/deny(.:format)                                                               access_requests#deny
+#                              access_requests POST   /access_requests(.:format)                                                                        access_requests#create
+#                           new_access_request GET    /access_requests/new(.:format)                                                                    access_requests#new
+#                                group_members POST   /groups/:group_id/members(.:format)                                                               group_members#create
+#                                 group_member DELETE /groups/:group_id/members/:id(.:format)                                                           group_members#destroy
+#                                       groups GET    /groups(.:format)                                                                                 groups#index
+#                                        group GET    /groups/:id(.:format)                                                                             groups#show
 #                           email_confirmation GET    /email_confirmation(.:format)                                                                     email_confirmations#show
 #                                confirm_email GET    /confirm_email/:token(.:format)                                                                   email_confirmations#confirm
 #                    resend_email_confirmation POST   /email_confirmation/resend(.:format)                                                              email_confirmations#resend
@@ -96,6 +105,10 @@
 #                                     passkeys GET    /profile/passkeys(.:format)                                                                       passkeys#index
 #                                              POST   /profile/passkeys(.:format)                                                                       passkeys#create
 #                                      passkey DELETE /profile/passkeys/:id(.:format)                                                                   passkeys#destroy
+#                              social_profiles GET    /profile/social(.:format)                                                                         social_profiles#index
+#                               social_profile DELETE /profile/social/:id(.:format)                                                                     social_profiles#destroy
+#                      social_profile_callback GET    /auth/:provider/callback(.:format)                                                                social_profiles#create {provider: /github/}
+#                       social_profile_failure GET    /auth/failure(.:format)                                                                           social_profiles#failure
 #                           user_profile_photo GET    /user/:p_id/pfp(.:format)                                                                         profile_photos#show
 #                                  user_avatar GET    /user/:p_id/avatar/:variant(.:format)                                                             profile_photos#avatar
 #                           user_avatar_square GET    /user/:p_id/avatar/:variant/square(.:format)                                                      profile_photos#avatar_square
@@ -159,6 +172,8 @@
 #                   invite_to_slack_admin_user POST   /admin/users/:id/invite_to_slack(.:format)                                                        admin/users#invite_to_slack
 #         code_of_conduct_exemption_admin_user PATCH  /admin/users/:id/code_of_conduct_exemption(.:format)                                              admin/users#code_of_conduct_exemption
 #                     admin_user_impersonation GET    /admin/users/:user_id/impersonations/:id(.:format)                                                admin/user_impersonations#show
+#                admin_user_staging_test_state PATCH  /admin/users/:user_id/staging_test_state(.:format)                                                admin/staging_test_states#update
+#                                              PUT    /admin/users/:user_id/staging_test_state(.:format)                                                admin/staging_test_states#update
 #           resend_admin_user_guardian_consent POST   /admin/users/:user_id/guardian_consents/:id/resend(.:format)                                      admin/user_guardian_consents#resend
 #           revoke_admin_user_guardian_consent PATCH  /admin/users/:user_id/guardian_consents/:id/revoke(.:format)                                      admin/user_guardian_consents#revoke
 #           verify_admin_user_guardian_consent PATCH  /admin/users/:user_id/guardian_consents/:id/verify(.:format)                                      admin/user_guardian_consents#verify
@@ -187,6 +202,7 @@
 #                     admin_break_glass_report GET    /admin/break_glass_report(.:format)                                                               admin/break_glass_reports#show
 #                review_admin_guardian_consent PATCH  /admin/guardian_consents/:id/review(.:format)                                                     admin/guardian_consents#review
 #                      admin_guardian_consents GET    /admin/guardian_consents(.:format)                                                                admin/guardian_consents#index
+#                  role_admin_group_membership PATCH  /admin/groups/:group_id/memberships/:id/role(.:format)                                            admin/group_memberships#role
 #                      admin_group_memberships POST   /admin/groups/:group_id/memberships(.:format)                                                     admin/group_memberships#create
 #                       admin_group_membership DELETE /admin/groups/:group_id/memberships/:id(.:format)                                                 admin/group_memberships#destroy
 #                                 admin_groups GET    /admin/groups(.:format)                                                                           admin/groups#index
@@ -246,6 +262,7 @@
 #     guardian_consent_admin_oauth_application PATCH  /admin/oauth_applications/:id/guardian_consent(.:format)                                          admin/oauth_applications#guardian_consent
 #        email_domains_admin_oauth_application PATCH  /admin/oauth_applications/:id/email_domains(.:format)                                             admin/oauth_applications#email_domains
 #         verification_admin_oauth_application PATCH  /admin/oauth_applications/:id/verification(.:format)                                              admin/oauth_applications#verification
+# access_request_group_admin_oauth_application PATCH  /admin/oauth_applications/:id/access_request_group(.:format)                                      admin/oauth_applications#access_request_group
 #        admin_oauth_application_access_grants POST   /admin/oauth_applications/:oauth_application_id/access_grants(.:format)                           admin/oauth_application_access_grants#create
 #         admin_oauth_application_access_grant DELETE /admin/oauth_applications/:oauth_application_id/access_grants/:id(.:format)                       admin/oauth_application_access_grants#destroy
 #     admin_oauth_application_role_assignments POST   /admin/oauth_applications/:oauth_application_id/roles/:role_id/assignments(.:format)              admin/oauth_application_role_assignments#create
@@ -263,6 +280,9 @@
 #                  lookup_admin_console_access POST   /admin/console_access/lookup(.:format)                                                            admin/console_access#lookup
 #                 confirm_admin_console_access POST   /admin/console_access/confirm(.:format)                                                           admin/console_access#confirm
 #                         admin_console_access GET    /admin/console_access(.:format)                                                                   admin/console_access#show
+#         admin_staging_mail_allowlist_entries GET    /admin/staging/mail-allowlist(.:format)                                                           admin/staging_mail_allowlist_entries#index
+#                                              POST   /admin/staging/mail-allowlist(.:format)                                                           admin/staging_mail_allowlist_entries#create
+#           admin_staging_mail_allowlist_entry DELETE /admin/staging/mail-allowlist/:id(.:format)                                                       admin/staging_mail_allowlist_entries#destroy
 #                   admin_mission_control_jobs        /admin/jobs                                                                                       MissionControl::Jobs::Engine
 #                             admin_audits1984        /admin/console                                                                                    Audits1984::Engine
 #                                                     /admin/flipper                                                                                    Flipper::UI
@@ -488,10 +508,11 @@ Rails.application.routes.draw do
   # the Slack (see BirthdaysController).
   post "slack/birthday", to: "birthdays#create", as: :birthday
 
-  # A member under 18 asks a parent or guardian for consent, as a step of
-  # joining the Slack (see GuardianConsentFlow).
-  post "slack/guardian-consent", to: "guardian_consent_requests#create", as: :guardian_consent_request
-  post "slack/guardian-consent/resend", to: "guardian_consent_requests#resend", as: :resend_guardian_consent_request
+  # A member under 18 asks a parent or guardian for consent, for the apps
+  # that require it (see GuardianConsentFlow and AppAccess).
+  resource :guardian_consent_request, path: "guardian-consent", only: [:show, :create] do
+    post :resend
+  end
 
   # The page the parent or guardian opens from the email. The token is the
   # proof, so no account is needed.
@@ -560,6 +581,21 @@ Rails.application.routes.draw do
   get "profile/export/:id/download", to: "takeouts#download", as: :download_takeout
   resource :deletion_request, path: "profile/delete", only: [:show, :create, :destroy]
 
+  # Self-service access to restricted apps (see AccessRequests). A member asks;
+  # a manager of the app's access request group decides.
+  resources :access_requests, only: [:new, :create] do
+    member do
+      patch :approve
+      patch :deny
+    end
+  end
+
+  # Groups a member manages (see GroupPolicy). Superadmins also use the admin
+  # panel.
+  resources :groups, only: [:index, :show] do
+    resources :members, controller: "group_members", only: [:create, :destroy]
+  end
+
   # Email confirmation routes
   get "/email_confirmation", to: "email_confirmations#show", as: :email_confirmation
   get "/confirm_email/:token", to: "email_confirmations#confirm", as: :confirm_email
@@ -582,6 +618,15 @@ Rails.application.routes.draw do
       post :options, on: :collection
     end
   end
+
+  # Social profiles (see SocialProfilesController). OmniAuth answers
+  # POST /auth/:provider itself and sends the member back to the callback.
+  # Keep the provider list in step with SocialProfile::PROVIDERS.
+  scope "/profile" do
+    resources :social_profiles, path: "social", only: [:index, :destroy]
+  end
+  get "/auth/:provider/callback", to: "social_profiles#create", as: :social_profile_callback, constraints: { provider: /github/ }
+  get "/auth/failure", to: "social_profiles#failure", as: :social_profile_failure
 
   # Profile photo routes (public, no auth required)
   get "/user/:p_id/pfp", to: "profile_photos#show", as: :user_profile_photo
@@ -711,6 +756,9 @@ Rails.application.routes.draw do
         end
         resources :impersonations, controller: "user_impersonations", only: [:show]
 
+        # Staging only: set a test state (see StagingTestStates).
+        resource :staging_test_state, only: [:update]
+
         resources :guardian_consents, controller: "user_guardian_consents", only: [:create] do
           member do
             post :resend
@@ -769,7 +817,9 @@ Rails.application.routes.draw do
       end
 
       resources :groups do
-        resources :memberships, controller: "group_memberships", only: [:create, :destroy]
+        resources :memberships, controller: "group_memberships", only: [:create, :destroy] do
+          patch :role, on: :member
+        end
       end
 
       # Demographics aggregates for funder reports. Counts only, never a
@@ -823,6 +873,7 @@ Rails.application.routes.draw do
           patch :guardian_consent
           patch :email_domains
           patch :verification
+          patch :access_request_group
         end
 
         resources :access_grants, controller: "oauth_application_access_grants", only: [:create, :destroy]
@@ -836,6 +887,9 @@ Rails.application.routes.draw do
         post :lookup
         post :confirm
       end
+
+      # Staging only: mail allowlist entries an owner adds in the app.
+      resources :staging_mail_allowlist_entries, path: "staging/mail-allowlist", only: [:index, :create, :destroy]
 
       # Mount engines under /admin path
       mount MissionControl::Jobs::Engine, at: "/jobs"

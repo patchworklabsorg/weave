@@ -43,7 +43,7 @@
                 <td><%= service_status_badge(service) %></td>
                 <td class="num"><%= @key_counts.fetch(service.id, 0) %></td>
                 <td class="num"><%= @webhook_counts.fetch(service.id, 0) %></td>
-                <td class="whitespace-nowrap text-ink-soft"><%= time_ago_in_words(service.created_at) %> ago</td>
+                <td class="whitespace-nowrap text-ink-soft"><%= time_label(service.created_at, :relative) %></td>
               </tr>
             <% end %>
           </tbody>

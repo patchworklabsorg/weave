@@ -56,9 +56,9 @@
         <%= dl_row "Event", webhook_event_description(@webhook.event_type) %>
         <%= dl_row("Status") { webhook_status_badge(@webhook) } %>
         <%= dl_row "Failures in a row", "#{@webhook.failure_count.to_i} of 10" %>
-        <%= dl_row "Last delivered", @webhook.last_triggered_at ? "#{time_ago_in_words(@webhook.last_triggered_at)} ago" : "Never" %>
+        <%= dl_row "Last delivered", time_label(@webhook.last_triggered_at, :relative) || "Never" %>
         <%= dl_row("Created") do %>
-          <%= @webhook.created_at.strftime("%B %d, %Y") %>
+          <%= time_label(@webhook.created_at) %>
           <% if @webhook.created_by %>by <%= @webhook.created_by.full_name %><% end %>
         <% end %>
       </dl>
@@ -149,9 +149,9 @@
                   <% end %>
                 </td>
                 <td class="whitespace-nowrap text-ink-soft">
-                  <%= time_ago_in_words(delivery.created_at) %> ago
+                  <%= time_label(delivery.created_at, :relative) %>
                   <% if delivery.last_attempt_at %>
-                    <span class="table-sub">tried <%= time_ago_in_words(delivery.last_attempt_at) %> ago</span>
+                    <span class="table-sub">tried <%= time_label(delivery.last_attempt_at, :relative) %></span>
                   <% end %>
                 </td>
               </tr>

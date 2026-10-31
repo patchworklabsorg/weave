@@ -126,7 +126,7 @@
           <li class="record">
             <div class="record-main text-sm text-ink">
               <%= link_to verification.public_id, identity_verification_path(verification), class: "link mono" %>:
-              <%= verification.status.humanize %>, <%= verification.created_at.to_date.to_fs(:long) %>
+              <%= verification.status.humanize %>, <%= time_label(verification.created_at) %>
               <%= "(account deleted)" if verification.user_id.nil? %>
             </div>
           </li>

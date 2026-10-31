@@ -27,8 +27,8 @@
           <% @takeouts.each do |takeout| %>
             <div class="record flex-wrap">
               <div class="record-main">
-                <div class="record-title"><%= takeout.created_at.to_date.to_fs(:long) %></div>
-                <div class="record-meta"><%= t("data_handling.takeout.statuses.#{takeout.status}", date: takeout.expires_at&.to_date&.to_fs(:long)) %></div>
+                <div class="record-title"><%= time_label(takeout.created_at) %></div>
+                <div class="record-meta"><%= t("data_handling.takeout.statuses.#{takeout.status}", date: takeout.expires_at&.to_date&.strftime(TimeHelper::FORMATS[:date])) %></div>
               </div>
               <% if takeout.downloadable? %>
                 <div class="record-actions">
