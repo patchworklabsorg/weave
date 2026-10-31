@@ -131,6 +131,7 @@
         <%= render "guardian_consent", user: @user %>
         <%= render "verification", user: @user %>
         <%= render "knot", user: @user %>
+        <%= render "staging_test_states", user: @user if StagingTestStates.allowed?(current_user) %>
 
         <div>
           <h3 class="section-title">App access</h3>

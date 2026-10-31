@@ -725,6 +725,9 @@ Rails.application.routes.draw do
         end
         resources :impersonations, controller: "user_impersonations", only: [:show]
 
+        # Staging only: set a test state (see StagingTestStates).
+        resource :staging_test_state, only: [:update]
+
         resources :guardian_consents, controller: "user_guardian_consents", only: [:create] do
           member do
             post :resend

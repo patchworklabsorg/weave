@@ -117,3 +117,18 @@ flowchart LR
   C --> D[lead set]
   C --> E[staging key ceremony, separate]
 ```
+
+## Test states
+
+On staging, an owner can put a member's identity verification, US residency or guardian consent straight into a state, to test what each state does. The tools are on the admin user page, under "Staging test states". They work for any member, also for another owner and for your own account. Production does not show them, and the route answers 404 there.
+
+| Area | States |
+|---|---|
+| Identity verification | Not submitted, Passed, Passed, needs a new call, Failed |
+| US residency | Not checked, US resident (with a state), Not a US resident |
+| Guardian consent (members under 18) | No consent, Granted, Granted and verified |
+
+- Each change removes the member's records of that kind, then writes one record in the new state. On staging these records are test data, so their history goes too.
+- A test pass has a Knot with no hashes, so program grants work. A test record has no ID image or document.
+- No email goes out. The code is `StagingTestStates` (`app/services/staging_test_states.rb`).
+- For the states in between (an ID upload, pre-review, a scheduled call), use the real flow.
