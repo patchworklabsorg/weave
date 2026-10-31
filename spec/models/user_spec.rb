@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 # == Schema Information
-# Schema version: 20261023120000
 #
 # Table name: users
 # Database name: primary
@@ -13,7 +12,6 @@
 #  confirmation_sent_at     :datetime
 #  confirmation_token       :string
 #  directory_linked_at      :datetime
-#  directory_object_guid    :string
 #  email                    :string           not null
 #  email_confirmed_at       :datetime
 #  first_name               :string           not null

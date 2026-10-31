@@ -8,6 +8,7 @@
 #  id                       :bigint           not null, primary key
 #  device_info              :string
 #  expiration_at            :datetime         not null
+#  expiry_notified_at       :datetime
 #  fingerprint              :string
 #  ip                       :string
 #  last_seen_at             :datetime
@@ -26,6 +27,7 @@
 #
 # Indexes
 #
+#  index_user_sessions_on_expiration_at       (expiration_at)
 #  index_user_sessions_on_impersonated_by_id  (impersonated_by_id)
 #  index_user_sessions_on_user_id             (user_id)
 #

@@ -1221,6 +1221,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_31_170000) do
     t.float "longitude"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "expiry_notified_at"
+    t.index ["expiration_at"], name: "index_user_sessions_on_expiration_at"
     t.index ["impersonated_by_id"], name: "index_user_sessions_on_impersonated_by_id"
     t.index ["user_id"], name: "index_user_sessions_on_user_id"
   end
@@ -1282,7 +1284,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_31_170000) do
     t.jsonb "slack_coc_messages", default: [], null: false
     t.string "webauthn_id"
     t.datetime "directory_linked_at"
-    t.string "directory_object_guid"
     t.string "referral_source"
     t.string "referral_source_detail"
     t.boolean "identity_team", default: false, null: false
@@ -1364,6 +1365,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_31_170000) do
     t.bigint "impersonation_id"
     t.index ["impersonation_id"], name: "index_versions_on_impersonation_id"
     t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
+  end
+
+  create_table "webhook_deliveries", force: :cascade do |t|
+    t.bigint "service_webhook_id", null: false
+    t.string "event", null: false
+    t.uuid "event_id", null: false
+    t.string "subject_id"
+    t.string "url", null: false
+    t.text "payload"
+    t.string "status", default: "pending", null: false
+    t.integer "attempts", default: 0, null: false
+    t.datetime "last_attempt_at"
+    t.datetime "delivered_at"
+    t.jsonb "response", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_webhook_deliveries_on_created_at"
+    t.index ["event_id"], name: "index_webhook_deliveries_on_event_id"
+    t.index ["service_webhook_id"], name: "index_webhook_deliveries_on_service_webhook_id"
+    t.index ["subject_id"], name: "index_webhook_deliveries_on_subject_id"
   end
 
   add_foreign_key "access_requests", "groups", on_delete: :cascade
@@ -1492,6 +1513,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_31_170000) do
   add_foreign_key "verifications", "users", column: "verifier_id", on_delete: :nullify
   add_foreign_key "verifications", "users", on_delete: :nullify
   add_foreign_key "verifications", "verifications", column: "previous_attempt_id", on_delete: :nullify
+  add_foreign_key "webhook_deliveries", "service_webhooks", on_delete: :cascade
+
+  create_function :pg_search_dmetaphone, sql_definition: <<-'SQL'
+      CREATE OR REPLACE FUNCTION public.pg_search_dmetaphone(text)
+       RETURNS text
+       LANGUAGE sql
+       IMMUTABLE STRICT
+      AS $function$ SELECT array_to_string(ARRAY(SELECT dmetaphone(unnest(regexp_split_to_array($1, E'\\s+')))), ' ') $function$
+  SQL
 
   create_function :log_privileged_attribute_changes, sql_definition: <<-'SQL'
       CREATE OR REPLACE FUNCTION public.log_privileged_attribute_changes()
@@ -1621,12 +1651,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_31_170000) do
       $function$
   SQL
 
-  create_trigger :privileged_attribute_changes_no_truncate, sql_definition: <<-SQL
-      CREATE TRIGGER privileged_attribute_changes_no_truncate BEFORE TRUNCATE ON public.privileged_attribute_changes FOR EACH STATEMENT EXECUTE FUNCTION refuse_privileged_attribute_change_edits()
+  create_trigger :log_privileged_attribute_changes, sql_definition: <<-SQL
+      CREATE TRIGGER log_privileged_attribute_changes AFTER INSERT OR UPDATE OF role ON public.users FOR EACH ROW EXECUTE FUNCTION log_privileged_attribute_changes()
   SQL
 
   create_trigger :privileged_attribute_changes_append_only, sql_definition: <<-SQL
       CREATE TRIGGER privileged_attribute_changes_append_only BEFORE DELETE OR UPDATE ON public.privileged_attribute_changes FOR EACH ROW EXECUTE FUNCTION refuse_privileged_attribute_change_edits()
+  SQL
+
+  create_trigger :privileged_attribute_changes_no_truncate, sql_definition: <<-SQL
+      CREATE TRIGGER privileged_attribute_changes_no_truncate BEFORE TRUNCATE ON public.privileged_attribute_changes FOR EACH STATEMENT EXECUTE FUNCTION refuse_privileged_attribute_change_edits()
   SQL
 
   create_trigger :log_user_role_changes, sql_definition: <<-SQL
@@ -1639,9 +1673,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_31_170000) do
 
   create_trigger :user_roles_no_truncate, sql_definition: <<-SQL
       CREATE TRIGGER user_roles_no_truncate BEFORE TRUNCATE ON public.user_roles FOR EACH STATEMENT EXECUTE FUNCTION refuse_user_role_edits()
-  SQL
-
-  create_trigger :log_privileged_attribute_changes, sql_definition: <<-SQL
-      CREATE TRIGGER log_privileged_attribute_changes AFTER INSERT OR UPDATE OF role ON public.users FOR EACH ROW EXECUTE FUNCTION log_privileged_attribute_changes()
   SQL
 end
