@@ -48,7 +48,7 @@ RSpec.describe InviteToSlackJob do
     allow(service).to receive(:linked_account_kept?).with("U1").and_return(true)
     expect(service).not_to receive(:invite_to_workspace)
 
-    described_class.perform_now(user.id, resend: true)
+    expect { described_class.perform_now(user.id, resend: true) }.to have_enqueued_job(SyncUserToSlackJob).with(user.id)
   end
 
   it "invites someone whose linked Slack account was deactivated" do

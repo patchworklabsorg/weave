@@ -55,6 +55,18 @@ RSpec.describe SlackService do
 
       expect(service.other_account_linked?(user, "U2")).to be(true)
     end
+
+    it "raises when Slack can't say and the caller asks for strict" do
+      allow(client).to receive(:users_info).and_raise(Slack::Web::Api::Errors::SlackError, "ratelimited")
+
+      expect { service.other_account_linked?(user, "U2", strict: true) }.to raise_error(described_class::ApiError)
+    end
+
+    it "is false when Slack no longer knows the linked account" do
+      allow(client).to receive(:users_info).and_raise(Slack::Web::Api::Errors::UserNotFound, "user_not_found")
+
+      expect(service.other_account_linked?(user, "U2")).to be(false)
+    end
   end
 
   describe "#sync_weave_id" do
@@ -80,14 +92,35 @@ RSpec.describe SlackService do
     end
 
     it "moves the link to the account found by email when the linked one was deactivated" do
-      user = create(:user, :verified, email: "moved@example.com", slack_id: "U1")
+      user = create(:user, :verified, email: "moved@example.com", slack_id: "U1", slack_joined_at: 2.years.ago)
       slack_account("U1", deleted: true)
-      allow(service).to receive(:find_user_by_email).with(user.email).and_return("id" => "U4", "updated" => 0)
+      joined = 1.day.ago.to_i
+      allow(service).to receive(:find_user_by_email).with(user.email).and_return("id" => "U4", "updated" => joined)
 
       service.sync_weave_id(user)
 
-      expect(user.reload.slack_id).to eq("U4")
+      user.reload
+      expect(user.slack_id).to eq("U4")
+      expect(user.slack_joined_at.to_i).to eq(joined)
       expect(pushed_to).to eq(["U4"])
+    end
+
+    it "sends the Weave ID to the linked account when the email no longer finds it" do
+      user = create(:user, :verified, email: "changed@example.com", slack_id: "U1")
+      slack_account("U1")
+      allow(service).to receive(:find_user_by_email).and_return(nil)
+
+      expect(service.sync_weave_id(user)).to be(true)
+      expect(pushed_to).to eq(["U1"])
+    end
+
+    it "sends nothing when the email finds no account and the linked one is gone" do
+      user = create(:user, :verified, email: "gone@example.com", slack_id: "U1")
+      slack_account("U1", deleted: true)
+      allow(service).to receive(:find_user_by_email).and_return(nil)
+
+      expect(service.sync_weave_id(user)).to be(false)
+      expect(pushed_to).to be_empty
     end
 
     it "keeps a guest found by email pending" do

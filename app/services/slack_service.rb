@@ -258,9 +258,23 @@ class SlackService
   # the workspace (for example, an account made under a secondary address).
   # Weave must not link that account, or copy the Weave ID and profile to it.
   # When the linked account is gone, the new account can take its place.
-  def other_account_linked?(user, slack_user_id)
+  #
+  # When Slack can't say if the linked account is still there, the link stays.
+  # With strict: true the Slack error is raised as ApiError instead, so a job
+  # that runs once (a team_join event) can retry.
+  def other_account_linked?(user, slack_user_id, strict: false)
     return false if user.slack_id.blank? || slack_user_id.blank? || user.slack_id == slack_user_id
-    return false unless linked_account_kept?(user.slack_id)
+
+    kept = if strict
+             begin
+               active_account?(user.slack_id)
+             rescue Slack::Web::Api::Errors::SlackError => e
+               raise ApiError, "Could not check Slack account #{user.slack_id}: #{e.message}"
+             end
+           else
+             linked_account_kept?(user.slack_id)
+           end
+    return false unless kept
 
     Rails.logger.warn "[SlackService] Slack account #{slack_user_id} matches user #{user.id}, " \
                       "who is linked to #{user.slack_id}. Not linking the second account."
@@ -532,9 +546,7 @@ class SlackService
     slack_user = nil if slack_user && other_account_linked?(user, slack_user["id"])
 
     if slack_user
-      if user.slack_id != slack_user["id"]
-        user.update!(slack_id: slack_user["id"], slack_joined_at: user.slack_joined_at || Time.zone.at(slack_user["updated"].to_i))
-      end
+      link_slack_account!(user, slack_user) if user.slack_id != slack_user["id"]
       user.apply_slack_membership!(slack_user)
     end
 
@@ -543,8 +555,32 @@ class SlackService
       return false
     end
 
+    # The email did not find the linked account (for example, after an email
+    # change). Send the Weave ID only while that account is still there.
+    if slack_user.nil? && !account_still_there?(user.slack_id)
+      Rails.logger.info "Slack account #{user.slack_id} for user #{user.id} is gone or could not be read, skipping"
+      return false
+    end
+
     update_slack_profile_field(user.slack_id, user.p_id)
     true
+  end
+
+  # Links the user to slack_user. A new account (one that takes the place of a
+  # deactivated one) gets its own join time. Columns only, as before: a legacy
+  # row that fails validation must still be linked.
+  def link_slack_account!(user, slack_user)
+    joined_at = Time.zone.at(slack_user["updated"].to_i)
+    joined_at = user.slack_joined_at if user.slack_id.blank? && user.slack_joined_at
+    user.update_columns(slack_id: slack_user["id"], slack_joined_at: joined_at, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # Like #active_account?, but a Slack error counts as not there.
+  def account_still_there?(slack_user_id)
+    active_account?(slack_user_id)
+  rescue Slack::Web::Api::Errors::SlackError => e
+    Rails.logger.warn "[SlackService] Could not check Slack account #{slack_user_id}: #{e.message}"
+    false
   end
 
   # Sync IDP users to Slack (profile updates only, no invitations)

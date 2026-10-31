@@ -2,6 +2,9 @@
 
 class SlackWebhookEventJob < ApplicationJob
   queue_as :default
+  # A Slack lookup that failed (a rate limit, for example). The event comes
+  # only once, so try again.
+  retry_on SlackService::ApiError, wait: :polynomially_longer, attempts: 5
 
   def perform(event_data)
     event_type = event_data.dig("event", "type")

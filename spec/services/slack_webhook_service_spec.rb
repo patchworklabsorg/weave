@@ -163,7 +163,7 @@ RSpec.describe SlackWebhookService do
 
     it "leaves a second account alone for someone who is already linked" do
       user = create(:user, :verified, email: "adam@example.com", slack_id: "U1")
-      allow(slack_service).to receive(:other_account_linked?).with(user, "U2").and_return(true)
+      allow(slack_service).to receive(:other_account_linked?).with(user, "U2", strict: true).and_return(true)
       expect(slack_service).not_to receive(:post_code_of_conduct)
 
       expect do
