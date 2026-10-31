@@ -9,14 +9,24 @@ module Interceptors
   # delivered. Without the credential it changes nothing, except on staging,
   # where it delivers nothing.
   #
+  # On staging an owner can also allow entries in the app
+  # (StagingMailAllowlistEntry). They count together with the credential.
+  #
   # On staging it also prefixes subjects with "[staging] " so an allowed
   # recipient can tell the two deployments apart.
   class MailAllowlistInterceptor
     SUBJECT_PREFIX = "[staging] "
 
     def self.delivering_email(message)
-      filter_recipients(message, Weave.mail_allowlist)
+      filter_recipients(message, allowlist)
       prefix_subject(message) if Weave.staging?
+    end
+
+    def self.allowlist
+      entries = Weave.mail_allowlist
+      return entries unless Weave.staging?
+
+      (entries || []) + StagingMailAllowlistEntry.entries
     end
 
     def self.filter_recipients(message, allowlist)
@@ -48,7 +58,7 @@ module Interceptors
       message.subject = "#{SUBJECT_PREFIX}#{message.subject}" unless message.subject.to_s.start_with?(SUBJECT_PREFIX)
     end
 
-    private_class_method :filter_recipients, :allowed?, :prefix_subject
+    private_class_method :allowlist, :filter_recipients, :allowed?, :prefix_subject
 
   end
 end

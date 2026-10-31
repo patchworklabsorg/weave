@@ -881,6 +881,9 @@ Rails.application.routes.draw do
         post :confirm
       end
 
+      # Staging only: mail allowlist entries an owner adds in the app.
+      resources :staging_mail_allowlist_entries, path: "staging/mail-allowlist", only: [:index, :create, :destroy]
+
       # Mount engines under /admin path
       mount MissionControl::Jobs::Engine, at: "/jobs"
       mount Audits1984::Engine => "/console"

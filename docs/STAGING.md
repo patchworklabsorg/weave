@@ -86,7 +86,9 @@ credential names who may receive mail from staging:
 - On staging, a missing `mail_allowlist` also means nobody gets mail.
 - In production, a missing `mail_allowlist` means everyone gets mail.
 
-To change the list, edit the staging credentials and redeploy:
+An owner can also add an address or a domain in the app, at `/admin/staging/mail-allowlist` (System, "Staging mail allowlist" in the admin sidebar). Staging mails it at once, with no deploy. These entries count together with the credential, and only on staging: production never reads them, and the page answers 404 there. The code is `StagingMailAllowlistEntry`.
+
+To change the credential list, edit the staging credentials and redeploy:
 
 ```bash
 WEAVE_ENV=staging bin/rails credentials:edit

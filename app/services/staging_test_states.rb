@@ -41,7 +41,7 @@ module StagingTestStates
 
   module_function
 
-  def allowed?(actor) = Weave.staging? && actor.present? && actor.owner?
+  def allowed?(actor) = StagingTools.allowed?(actor)
 
   # Sets one area (a key of STATES) of the member to a state. Raises Error
   # when the actor may not, or the area or state is not known.

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_25_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_31_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -1103,6 +1103,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_130000) do
     t.index ["user_id", "provider"], name: "index_social_profiles_on_user_id_and_provider", unique: true
   end
 
+  create_table "staging_mail_allowlist_entries", force: :cascade do |t|
+    t.string "entry", null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_staging_mail_allowlist_entries_on_created_by_id"
+    t.index ["entry"], name: "index_staging_mail_allowlist_entries_on_entry", unique: true
+  end
+
   create_table "takeout_requests", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "status", default: "pending", null: false
@@ -1454,6 +1463,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_130000) do
   add_foreign_key "service_webhooks", "users", column: "created_by_id"
   add_foreign_key "services", "users", column: "created_by_id"
   add_foreign_key "social_profiles", "users"
+  add_foreign_key "staging_mail_allowlist_entries", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "takeout_requests", "users", on_delete: :cascade
   add_foreign_key "thread_count_entries", "services", on_delete: :nullify
   add_foreign_key "thread_count_entries", "thread_count_entries", column: "reverses_id", on_delete: :cascade

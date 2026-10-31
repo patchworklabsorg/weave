@@ -1,0 +1,60 @@
+<% content_for :title, "Staging mail allowlist" %>
+
+<%= page_header "Staging mail allowlist",
+      lede: "Staging mails only the addresses and domains on its allowlist. Add a tester here, and staging mails them at once, with no deploy." %>
+
+<div class="space-y-6">
+  <div class="card">
+    <div class="card-body space-y-3">
+      <%= form_errors @entry %>
+      <%= form_with model: @entry, url: admin_staging_mail_allowlist_entries_path, class: "flex flex-col sm:flex-row gap-2" do |form| %>
+        <div class="field-group flex-1">
+          <%= form.label :entry, "Email address or domain", class: "sr-only" %>
+          <%= form.text_field :entry, required: true, autocomplete: "off", spellcheck: false,
+                placeholder: "tester@example.com or @example.com", class: "field",
+                aria: { describedby: "entry_hint" } %>
+        </div>
+        <%= form.submit "Allow", class: "btn btn-primary" %>
+      <% end %>
+      <p id="entry_hint" class="field-hint">
+        A domain starts with @ and allows every address on it.
+        The staging credentials allow <%= pluralize(@credential_count, "more entry", plural: "more entries") %>, which you change only with a deploy.
+      </p>
+    </div>
+  </div>
+
+  <% if @entries.any? %>
+    <div class="card card-flush">
+      <div class="card-header">
+        <h2 class="card-title">Added in the app</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Entry</th>
+              <th scope="col">Added by</th>
+              <th scope="col">Added</th>
+              <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @entries.each do |entry| %>
+              <tr>
+                <td class="mono"><%= entry.entry %></td>
+                <td><%= entry.created_by&.full_name || "A deleted user" %></td>
+                <td class="text-ink-faint"><%= time_label(entry.created_at, :datetime) %></td>
+                <td class="text-right">
+                  <%= button_to "Remove", admin_staging_mail_allowlist_entry_path(entry), method: :delete,
+                        class: "btn btn-danger btn-sm", data: { turbo_confirm: "Stop mailing #{entry.entry} from staging?" } %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% else %>
+    <%= empty_state "No entries added in the app yet.", icon: :mail_check %>
+  <% end %>
+</div>
