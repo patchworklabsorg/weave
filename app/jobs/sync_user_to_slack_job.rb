@@ -1,37 +1,18 @@
 # frozen_string_literal: true
 
-# Syncs IDP user to Slack (profile updates only, no invitations)
-# Triggered when user confirms their email
+# Links a Weave user to their Slack account and sends their Weave ID to it
+# (profile updates only, no invitations). See SlackService#sync_weave_id.
 class SyncUserToSlackJob < ApplicationJob
   queue_as :default
   retry_on SlackService::ApiError, wait: :exponentially_longer, attempts: 3
 
   def perform(user_id)
     user = User.find(user_id)
-    slack_service = SlackService.new
 
-    # Check if user exists in Slack
-    slack_user = slack_service.find_user_by_email(user.email)
-
-    if slack_user
-      # User exists in Slack, update their slack_id
-      if user.slack_id.blank?
-        user.update!(
-          slack_id: slack_user["id"],
-          slack_joined_at: Time.zone.at(slack_user["updated"].to_i)
-        )
-        Rails.logger.info "User #{user.email} found in Slack, updated slack_id"
-      end
-      user.apply_slack_membership!(slack_user)
-
-      # Sync PWL ID to Slack profile if user has p_id
-      if user.p_id.present?
-        slack_service.send(:update_slack_profile_field, slack_user["id"], user.p_id)
-        Rails.logger.info "Synced PWL ID for #{user.email} to Slack profile"
-      end
+    if SlackService.new.sync_weave_id(user)
+      Rails.logger.info "Synced the Weave ID for user #{user.id} to Slack account #{user.slack_id}"
     else
-      # User not in Slack workspace yet
-      Rails.logger.info "User #{user.email} not in Slack workspace, skipping sync"
+      Rails.logger.info "User #{user.id} not in the Slack workspace, skipping sync"
     end
   rescue SlackService::ConfigurationError => e
     Rails.logger.error "Slack not configured: #{e.message}"
