@@ -7,18 +7,11 @@ Rails.application.configure do
     username = (Console1984.supervisor.current_username if Console1984.running_protected_environment?)
     PrivilegedChangeActor.set!(label: "console #{username.presence || ENV.fetch('USER', 'unknown')}")
 
-    PaperTrail.request.whodunnit = lambda {
-      @paper_trail_whodunnit ||= begin
-        user = nil
-        until user.present?
-          Rails.logger.debug "What is your email (used by PaperTrail to record who changed records)? "
-          email = gets.chomp
-          user = User.find_by(email:)
-        end
-        Rails.logger.debug { "Thank you, #{user.name}! Have a wonderful time!" }
-        user.id
-      end
-    }
+    # In production and staging the person signed the console in (see
+    # ConsoleAccess::UsernameResolver), so PaperTrail records them. Never ask
+    # on stdin: a save would wait inside its transaction for an answer.
+    signed_in = Rails.application.config.console1984.username_resolver.try(:user)
+    PaperTrail.request.whodunnit = signed_in&.id || "console #{ENV.fetch('USER', 'unknown')}"
   end
 end
 
