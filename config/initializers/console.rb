@@ -2,6 +2,16 @@
 
 Rails.application.configure do
   console do
+    # Staging runs with RAILS_ENV=production, so the Rails prompt would read
+    # weave(prod). Name the deployment instead (see Weave.staging?). Rails
+    # loads IRBConsole only after this block, so load it here.
+    if Weave.staging?
+      require "rails/commands/console/irb_console"
+      Rails::Console::IRBConsole.prepend(Module.new do
+        def colorized_env = IRB::Color.colorize("staging", [:YELLOW])
+      end)
+    end
+
     # The permanent log of privileged attributes names the console user (see
     # PrivilegedChangeActor). Console1984 asks for the name in production.
     username = (Console1984.supervisor.current_username if Console1984.running_protected_environment?)
