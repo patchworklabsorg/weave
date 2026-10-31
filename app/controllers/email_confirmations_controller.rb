@@ -3,7 +3,8 @@
 class EmailConfirmationsController < ApplicationController
   skip_before_action :authenticate_user!, only: [:show, :confirm, :resend]
   before_action :authenticate_user_without_email_verification!, only: [:show, :resend]
-  # An admin who impersonates a member must not send mail to the member.
+  # An admin who impersonates a member must not reset the member's
+  # confirmation token.
   before_action :refuse_while_impersonating, only: [:resend]
 
   layout "sessions", only: [:show]
