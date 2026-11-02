@@ -104,7 +104,7 @@ GEM
       device_detector (>= 1)
       safely_block (>= 0.4)
     android_key_attestation (0.3.0)
-    annotaterb (4.25.0)
+    annotaterb (4.26.0)
       activerecord (>= 6.0.0)
       activesupport (>= 6.0.0)
     anonymous_loader (0.1.5)
