@@ -3,8 +3,8 @@
 # the program leads can still change them here: no code change is necessary.
 shared: &shared
   # How long Weave keeps a Knot. Null means for ever: a Knot has no expiry,
-  # and no job deletes it. The one-grant-for-life cap and the blacklist flag
-  # (which never fades) both depend on it. LOCKED (2026-10-13).
+  # and no job deletes it. A program's lifetime grant cap and the blacklist
+  # flag (which never fades) both depend on it. LOCKED (2026-10-13).
   keep_years: ~ # LOCKED: kept for ever
 
   # Programs that give grants. Each key is the program key that a
@@ -14,7 +14,9 @@ shared: &shared
       name: Project Ganymede
       # The most grants one person (one Knot) can receive from this program,
       # for life. Leave it empty (null) for no cap.
-      grant_cap: 1 # LOCKED: one grant per person per program, for life
+      # No cap (2026-11-03, Adam): a member can hold several approved Ganymede
+      # projects, so Ganymede records each grant without a lifetime limit.
+      grant_cap: ~
       # The patch lead of a program is a patch_lead role scoped to the
       # program key (see config/roles.yml). The patch lead records grants and
       # asks for a grant over the cap. A board member signs off the override.

@@ -107,6 +107,7 @@ RSpec.describe KnotLinker do
 
   describe "a strong match" do
     it "gives a returning member their old Knot: same person, grants and caps carry over" do
+      allow(KnotSettings).to receive(:config).and_return({ programs: { ganymede: { name: "Project Ganymede", grant_cap: 1 } } })
       old_knot = deleted_member_knot
       create(:program_grant, knot: old_knot, program: "ganymede")
       newcomer = create(:user, :verified)

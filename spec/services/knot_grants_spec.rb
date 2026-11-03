@@ -17,11 +17,11 @@ RSpec.describe KnotGrants do
     lead
   end
 
-  it "reads the locked Ganymede cap of 1 from config" do
+  it "reads Ganymede's cap from config: none" do
     allow(KnotSettings).to receive(:config).and_call_original
     KnotSettings.reset!
 
-    expect(KnotSettings.program("ganymede").grant_cap).to eq(1)
+    expect(KnotSettings.program("ganymede").grant_cap).to be_nil
   end
 
   describe ".record" do
