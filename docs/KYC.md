@@ -940,7 +940,7 @@ The values are in `config/kyc/knot.yml`.
 
 | Key | Value | State |
 | --- | --- | --- |
-| `programs.ganymede.grant_cap` | 1 | Locked: one grant per person per program, for life |
+| `programs.ganymede.grant_cap` | null (no cap) | Decided 2026-11-03: a member can receive several Ganymede grants. It was 1 (one per person, for life) from 2026-10-12 |
 | `keep_years` | null (kept for ever) | Locked: a Knot has no expiry |
 | The Ganymede patch lead | Adam (`PWL8724F96B89`) in production: a `patch_lead` role scoped to `ganymede`. The old `patch_lead_p_ids` key is gone, and `KnotSettings` refuses it | Locked |
 | `knot.pepper` (credentials) | not set | Must be set in production before the first pass |

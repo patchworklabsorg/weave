@@ -4,7 +4,7 @@
 en:
   knot:
     member:
-      notice: "When you pass, we keep a one-way fingerprint of your ID, called the Knot. It is a set of keyed hashes. Nobody can read your name or your document number from it. It stays after you delete your account, with only two facts: the program grants you received, and a yes or no flag for fraud. It lets us give each person one grant per program."
+      notice: "When you pass, we keep a one-way fingerprint of your ID, called the Knot. It is a set of keyed hashes. Nobody can read your name or your document number from it. It stays after you delete your account, with only two facts: the program grants you received, and a yes or no flag for fraud. It lets us keep to each program's limit on grants per person."
       name_change: "Did your legal name change? Contact our identity team. Show your new document or your change-of-name record. Your verification and your grants stay the same."
     errors:
       duplicate_account: "This ID matches the Knot of another live account. One person can have one account. Do not record a pass. Tell the identity team lead."

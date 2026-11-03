@@ -13,9 +13,10 @@ RSpec.describe KnotSettings do
     %w[development test production].each { |environment| expect(values_for(environment)[:keep_years]).to be_nil }
   end
 
-  it "keeps the locked Ganymede cap, and no patch lead list: a patch lead is a role" do
+  it "gives Ganymede no grant cap, and no patch lead list: a patch lead is a role" do
     %w[development test production].each do |environment|
-      expect(values_for(environment).dig(:programs, :ganymede, :grant_cap)).to eq(1)
+      expect(values_for(environment).dig(:programs, :ganymede)).to have_key(:grant_cap)
+      expect(values_for(environment).dig(:programs, :ganymede, :grant_cap)).to be_nil
       expect(values_for(environment).dig(:programs, :ganymede)).not_to have_key(:patch_lead_p_ids)
     end
   end
