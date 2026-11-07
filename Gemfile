@@ -22,7 +22,7 @@ gem "benchmark" # Removed from Ruby 4.0 default gems; okcomputer requires it in 
 gem "propshaft"                          # Modern asset pipeline
 gem "turbo-rails"                        # Hotwire's SPA-like page accelerator
 gem "stimulus-rails"                     # Hotwire's modest JavaScript framework
-gem "tailwindcss-rails", "~> 4.2"        # CSS framework
+gem "tailwindcss-rails", "~> 4.7"        # CSS framework
 gem "tailwindcss-ruby", "~> 4.1", platforms: :ruby
 gem "jbuilder"                           # Build JSON APIs
 gem "jsbundling-rails", "~> 1.0"
