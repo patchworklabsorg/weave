@@ -411,6 +411,8 @@ Each user has the same fields as the claims:
   "email_verified": true,
   "slack_id": "U0123ABCD",
   "slack_member": true,
+  "slack_required": true,
+  "code_of_conduct_required": true,
   "groups": ["krater-reviewers"],
   "roles": ["reviewer"],
   "active": true,
@@ -428,6 +430,8 @@ Rules:
 - A user that the app may not serve (see "Restricting an app to some users") gives `404`, the same as an unknown `sub`.
 - `groups` and `roles` hold only the groups and roles linked to the calling app.
 - `active` is `false` when the user can no longer sign in.
+- `slack_required` is `false` when the user is in a sponsored project's group that waives the Patchwork Slack. If your app asks for `slack_member`, skip that check when `slack_required` is `false`.
+- `code_of_conduct_required` is `false` when such a group waives the code of conduct, or an admin exempted the user. An exempt user can still be a Slack guest: Weave promotes guests only when they accept the code of conduct, so a Slack admin promotes them by hand.
 - `minor` is `true` when the user is under 18, from their birthday. It is `false` when Weave does not know the birthday yet. Weave asks for a missing birthday at the next sign-in. Only the directory sends this field. It is not a claim.
 - `guardian_verified` is `true` for a minor whose guardian a Weave admin verified with a signed form and a call or video check. The email consent alone does not set it. Ask for it before your app gives a minor money or other risk. It is `false` for adults.
 - `age_band` is in the response only when the app's scopes list `age` and Weave knows the birthday (see "Age band claim").
