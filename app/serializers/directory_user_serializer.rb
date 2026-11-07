@@ -17,6 +17,13 @@ class DirectoryUserSerializer
       email_verified: @user.email_verified?,
       slack_id: @user.slack_id,
       slack_member: @user.slack_member?,
+      # Whether Patchwork onboarding applies to the user. A sponsored project's
+      # group can waive the Patchwork Slack, and with it the code of conduct; an
+      # admin can exempt one person from the code of conduct (see
+      # User#code_of_conduct_required?). An app that asks for Slack membership
+      # skips that check when slack_required is false.
+      slack_required: @user.slack_required?,
+      code_of_conduct_required: @user.code_of_conduct_required?,
       groups: AppAccess.group_slugs(@user, @application),
       roles: AppAccess.role_keys(@user, @application),
       active: @user.can_authenticate?,

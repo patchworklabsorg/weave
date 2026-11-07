@@ -35,10 +35,28 @@ RSpec.describe "Directory API", type: :request do
       expect(body).to eq(
         "sub" => reviewer.p_id, "name" => reviewer.full_name, "email" => reviewer.email,
         "email_verified" => true, "slack_id" => "U0REVIEW", "slack_member" => reviewer.slack_member?,
+        "slack_required" => true, "code_of_conduct_required" => true,
         "groups" => ["krater-reviewers"], "roles" => ["reviewer"], "active" => true, "minor" => false, "guardian_verified" => false,
         "verification_status" => "needs_submission", "us_resident" => nil, "us_residency_checked_on" => nil,
         "demographics_answered" => false
       )
+    end
+
+    it "says when a sponsored project's group waives Slack and the code of conduct" do
+      sponsored = create(:group, waives_code_of_conduct: true, waives_slack: true)
+      create(:group_membership, group: sponsored, user: reviewer)
+
+      body = directory_get(api_v1_directory_user_path(reviewer.p_id))
+
+      expect(body).to include("slack_required" => false, "code_of_conduct_required" => false)
+    end
+
+    it "says when an admin exempted the user from the code of conduct, while Slack is still required" do
+      reviewer.update!(code_of_conduct_exempt: true)
+
+      body = directory_get(api_v1_directory_user_path(reviewer.p_id))
+
+      expect(body).to include("slack_required" => true, "code_of_conduct_required" => false)
     end
 
     it "says when the user answered the demographics form, and never the answers" do
