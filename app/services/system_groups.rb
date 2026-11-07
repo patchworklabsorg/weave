@@ -2,8 +2,8 @@
 
 # Built-in groups that follow user attributes.
 #
-# Most access rules follow facts Weave already holds ("all staff", "all board
-# members"). Each such fact gets a system group, and Weave keeps its members in
+# Most access rules follow facts Weave already holds ("everyone", "all staff",
+# "all board members"). Each such fact gets a system group, and Weave keeps its members in
 # sync. Every access check can then be the same question: is the user in group
 # X? There is no rule engine to evaluate.
 #
@@ -18,6 +18,12 @@ module SystemGroups
   Definition = Data.define(:slug, :name, :description, :attributes, :rule)
 
   DEFINITIONS = [
+    # Every Weave account. For apps that give a role to all users, such as
+    # Krater's `member`. It gives nothing by itself.
+    Definition.new(
+      slug: "everyone", name: "Everyone", description: "Every Weave account.",
+      attributes: [], rule: ->(_user) { true }
+    ),
     Definition.new(
       slug: "staff", name: "Staff", description: "Users with the staff role.",
       attributes: [], rule: ->(user) { user.is_staff }

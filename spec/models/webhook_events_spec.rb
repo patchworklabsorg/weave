@@ -88,7 +88,11 @@ RSpec.describe "Webhook events" do # rubocop:disable RSpec/DescribeClass
 
       user.destroy!
 
-      expect(sent("group.member_removed")).to contain_exactly(include("user" => { "id" => p_id }, "reason" => "account_deleted"))
+      # The everyone system group loses the account too.
+      expect(sent("group.member_removed")).to contain_exactly(
+        include("user" => { "id" => p_id }, "reason" => "account_deleted", "group" => include("slug" => "eng")),
+        include("user" => { "id" => p_id }, "reason" => "account_deleted", "group" => include("slug" => "everyone"))
+      )
     end
   end
 

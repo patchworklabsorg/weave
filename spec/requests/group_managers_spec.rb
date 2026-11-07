@@ -79,7 +79,7 @@ RSpec.describe "Group managers", type: :request do
   end
 
   it "stops being a manager when the membership expires" do
-    Group::Membership.find_by(user: manager).update_column(:expires_at, 1.minute.ago) # rubocop:disable Rails/SkipsModelValidations
+    Group::Membership.find_by(group:, user: manager).update_column(:expires_at, 1.minute.ago) # rubocop:disable Rails/SkipsModelValidations
     sign_in_via_magic_link(manager)
 
     get group_path(group)

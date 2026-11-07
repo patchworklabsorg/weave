@@ -114,11 +114,11 @@ RSpec.describe User, "roles" do # rubocop:disable RSpec/DescribeMethod
 
     it "keeps the system groups, which feed the directory API and the userinfo claims" do
       user = create(:user, :verified, is_staff: true, is_board: true)
-      expect(user.groups.pluck(:slug)).to contain_exactly("staff", "board")
+      expect(user.groups.pluck(:slug)).to contain_exactly("everyone", "staff", "board")
 
       RoleGrants.grant!(user, "verifier")
       user.update!(is_staff: false)
-      expect(user.reload.groups.pluck(:slug)).to contain_exactly("board", "identity-team")
+      expect(user.reload.groups.pluck(:slug)).to contain_exactly("everyone", "board", "identity-team")
     end
 
     it "keeps the patch lead check of the Knot grants" do
