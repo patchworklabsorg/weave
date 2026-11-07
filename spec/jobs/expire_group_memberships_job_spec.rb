@@ -11,7 +11,8 @@ RSpec.describe ExpireGroupMembershipsJob do
     travel 2.days do
       described_class.perform_now
 
-      expect(Group::Membership.all).to contain_exactly(forever, later)
+      # Every user is also in the everyone system group.
+      expect(Group::Membership.where(source: "manual")).to contain_exactly(forever, later)
       expect(Group::Membership.exists?(lapsed.id)).to be(false)
     end
   end

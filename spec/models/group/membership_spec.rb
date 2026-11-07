@@ -57,8 +57,10 @@ RSpec.describe Group::Membership do
       lapsed = create(:group_membership, expires_at: 1.day.from_now)
 
       travel 2.days do
-        expect(described_class.active).to contain_exactly(forever, later)
-        expect(described_class.expired).to contain_exactly(lapsed)
+        # Every user is also in the everyone system group.
+        manual = described_class.where(source: "manual")
+        expect(manual.active).to contain_exactly(forever, later)
+        expect(manual.expired).to contain_exactly(lapsed)
         expect(lapsed.reload).to be_expired
       end
     end
@@ -69,7 +71,7 @@ RSpec.describe Group::Membership do
     create(:group_membership, user: user, expires_at: 1.hour.from_now)
 
     travel 2.hours do
-      expect(user.reload.groups).to contain_exactly(kept)
+      expect(user.reload.groups.manual).to contain_exactly(kept)
     end
   end
 

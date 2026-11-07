@@ -10,8 +10,7 @@ RSpec.describe SyncSystemGroupsJob do
 
     described_class.perform_now
 
-    membership = user.reload.group_memberships.sole
-    expect(membership.group.slug).to eq("board")
+    membership = user.reload.group_memberships.joins(:group).find_by!(groups: { slug: "board" })
     expect(membership.versions.last.whodunnit).to eq("SyncSystemGroupsJob")
   end
 end

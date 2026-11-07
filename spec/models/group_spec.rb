@@ -94,7 +94,7 @@ RSpec.describe Group do
       group.destroy
 
       expect(described_class.with_deleted.find(group.id).deleted_at).to be_present
-      expect(user.reload.groups).to be_empty
+      expect(user.reload.groups.manual).to be_empty
       expect(Group::Membership.where(group_id: group.id)).to be_empty
     end
   end

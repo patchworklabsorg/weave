@@ -64,7 +64,7 @@ RSpec.describe RevokeLostAppAccessJob do
     include ActiveJob::TestHelper
 
     it "runs when a membership is removed" do
-      membership = Group::Membership.find_by!(user: user)
+      membership = Group::Membership.find_by!(user: user, source: "manual")
 
       expect { membership.destroy! }.to have_enqueued_job(described_class).with(user_id: user.id)
     end
@@ -80,7 +80,7 @@ RSpec.describe RevokeLostAppAccessJob do
     end
 
     it "revokes end to end when an expired membership is removed" do
-      membership = Group::Membership.find_by!(user: user)
+      membership = Group::Membership.find_by!(user: user, source: "manual")
       membership.update!(expires_at: 1.hour.from_now)
       token = token_for(application)
 

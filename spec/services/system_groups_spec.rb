@@ -18,12 +18,19 @@ RSpec.describe SystemGroups do
     it "puts a new user in the groups that match their attributes" do
       user = create(:user, :admin, is_staff: true, is_board: true)
 
-      expect(slugs_for(user)).to contain_exactly("staff", "board", "admins")
+      expect(slugs_for(user)).to contain_exactly("everyone", "staff", "board", "admins")
       expect(user.group_memberships).to all(be_system)
     end
 
-    it "puts a plain member in no system group" do
-      expect(slugs_for(create(:user))).to be_empty
+    it "puts a plain member in the everyone group only" do
+      expect(slugs_for(create(:user))).to contain_exactly("everyone")
+    end
+
+    it "keeps every user in the everyone group" do
+      user = create(:user, is_staff: true)
+      user.update!(is_staff: false)
+
+      expect(slugs_for(user)).to include("everyone")
     end
 
     {
@@ -69,11 +76,11 @@ RSpec.describe SystemGroups do
       user = create(:user)
       # A role row written without RoleGrants (as raw SQL would), so no sync ran.
       UserRole.create!(user:, role: Role.fetch!("contractor"), granted_at: Time.current)
-      expect(slugs_for(user)).to be_empty
+      expect(slugs_for(user)).to contain_exactly("everyone")
 
       described_class.sync_all
 
-      expect(slugs_for(user)).to contain_exactly("contractors")
+      expect(slugs_for(user)).to contain_exactly("everyone", "contractors")
     end
   end
 
