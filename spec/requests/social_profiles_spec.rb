@@ -132,6 +132,18 @@ RSpec.describe "Linking social profiles", type: :request do
       expect(response).to redirect_to(social_profiles_path)
     end
 
+    # The page asks Turbo for a full load, so a Turbo form would lose the
+    # notice on the way back. The Unlink form submits natively.
+    it "submits Unlink without Turbo, so the notice shows after the redirect" do
+      profile = user.social_profiles.create!(provider: "github", uid: "583231", username: "octocat")
+
+      get social_profiles_path
+
+      unlink_form = Nokogiri::HTML(response.body).at_css("form[action='#{social_profile_path(profile)}']")
+      expect(unlink_form["data-turbo"]).to eq("false")
+      expect(unlink_form["data-controller"]).to eq("confirm-submit")
+    end
+
     it "does not unlink another user's account" do
       other_profile = create(:user, :verified).social_profiles.create!(provider: "github", uid: "1", username: "other")
 

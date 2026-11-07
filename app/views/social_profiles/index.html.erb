@@ -62,9 +62,12 @@
                       <%= icon(:refresh_cw) %>Refresh
                     <% end %>
                   <% end %>
+                  <%# A native form: through Turbo, the redirect's fetch would use up the
+                      flash, and the full reload this page asks for would show no notice. %>
                   <%= button_to "Unlink", social_profile_path(profile), method: :delete,
                         class: "btn btn-danger btn-sm",
-                        data: { turbo_confirm: "Unlink this #{profile.provider_name} account? Apps will no longer see it." } %>
+                        form: { data: { turbo: false, controller: "confirm-submit", action: "submit->confirm-submit#submit",
+                                        confirm_submit_message_value: "Unlink this #{profile.provider_name} account? Apps will no longer see it." } } %>
                 </div>
               <% end %>
             </div>
