@@ -40,6 +40,14 @@ RSpec.describe "Linking social profiles", type: :request do
       expect(response.headers["Content-Security-Policy"]).to include("form-action 'self' https://github.com")
     end
 
+    # Turbo Drive swaps the body but keeps the CSP of the page it came from,
+    # whose form-action is only 'self'. The page must load in full.
+    it "makes Turbo Drive load the page in full, so its CSP applies" do
+      get social_profiles_path
+
+      expect(response.body).to include('<meta name="turbo-visit-control" content="reload">')
+    end
+
     it "links a GitHub account and emails the user" do
       expect { link_github }
         .to change { user.social_profiles.count }.by(1)
@@ -122,6 +130,18 @@ RSpec.describe "Linking social profiles", type: :request do
       expect { delete social_profile_path(profile) }.to change { user.social_profiles.count }.by(-1)
 
       expect(response).to redirect_to(social_profiles_path)
+    end
+
+    # The page asks Turbo for a full load, so a Turbo form would lose the
+    # notice on the way back. The Unlink form submits natively.
+    it "submits Unlink without Turbo, so the notice shows after the redirect" do
+      profile = user.social_profiles.create!(provider: "github", uid: "583231", username: "octocat")
+
+      get social_profiles_path
+
+      unlink_form = Nokogiri::HTML(response.body).at_css("form[action='#{social_profile_path(profile)}']")
+      expect(unlink_form["data-turbo"]).to eq("false")
+      expect(unlink_form["data-controller"]).to eq("confirm-submit")
     end
 
     it "does not unlink another user's account" do
