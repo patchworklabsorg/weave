@@ -86,7 +86,9 @@ The OAuth provider supports the following scopes:
 `directory`, `fulfillment`, `quilt`, `stash` and `introspect` are app scopes. A
 user can't grant them: the authorization endpoint answers `invalid_scope` for
 each one. Any admin can allow `directory`, `fulfillment`, `quilt` and `stash` on
-an app. Only a superadmin can add or remove `introspect`.
+an app. Only a superadmin can add or remove `introspect`. An app gets an app
+scope only when its scopes field lists it: an empty scopes field allows the
+user scopes, not the app scopes.
 
 The `profile` scope also includes `pronouns`, a non-standard claim (a free-text
 string such as `they/them`). It is in the ID token and the userinfo response.
