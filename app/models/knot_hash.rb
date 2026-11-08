@@ -17,7 +17,7 @@
 #
 #  index_knot_hashes_on_kind_and_digest              (kind,digest)
 #  index_knot_hashes_on_knot_id_and_kind_and_digest  (knot_id,kind,digest) UNIQUE
-#  index_knot_hashes_on_strong_digest_kinds          (kind,digest) UNIQUE WHERE ((kind)::text = ANY ((ARRAY['document'::character varying, 'national_id'::character varying])::text[]))
+#  index_knot_hashes_on_strong_digest_kinds          (kind,digest) UNIQUE WHERE ((kind)::text = ANY (ARRAY[('document'::character varying)::text, ('national_id'::character varying)::text]))
 #
 # Foreign Keys
 #
