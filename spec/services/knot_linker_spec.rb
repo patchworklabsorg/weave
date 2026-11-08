@@ -14,6 +14,7 @@ RSpec.describe KnotLinker do
       issuing_country: "DE",
       document_number: "C01X00T47",
       national_id: nil,
+      country_of_birth: "DE",
       legal_name: "Erika Mustermann",
       date_of_birth: Date.new(1990, 8, 12)
     }
@@ -51,7 +52,7 @@ RSpec.describe KnotLinker do
       verification = pass(member)
       knot = member.reload.knot
 
-      expect(knot.knot_hashes.pluck(:kind)).to contain_exactly("document", "soft")
+      expect(knot.knot_hashes.pluck(:kind)).to contain_exactly("document", "birth", "soft")
       expect(verification.knot).to eq(knot)
       expect(verification.events.pluck(:kind)).to include("knot_linked")
     end
@@ -204,9 +205,130 @@ RSpec.describe KnotLinker do
     end
   end
 
+  describe "a birth match (name, birth date and country of birth)" do
+    let(:newcomer) { create(:user, :verified) }
+    let(:polish_passport) do
+      identifiers(issuing_country: "PL", document_number: "EA1234567", national_id: "90081212345",
+                  legal_name: "Adam Józef Sidwa", country_of_birth: "PL")
+    end
+    # A dual national's second passport: another country, another number, no
+    # PESEL, and no middle name.
+    let(:us_passport) do
+      identifiers(issuing_country: "US", document_number: "A12345678", legal_name: "Adam Sidwa", country_of_birth: "PL")
+    end
+
+    it "needs a second verifier, then joins the earlier Knot so its grants count" do
+      old_knot = deleted_member_knot(ids: polish_passport)
+      old_knot.program_grants.create!(program: "ganymede", granted_at: Time.current)
+      verification = create(:verification, :call_scheduled, user: newcomer)
+
+      expect(decide(verification, ids: us_passport).errors.keys).to eq([:second_verifier])
+      expect(verification.reload.knot_review_reason).to eq("birth_match")
+
+      expect(decide(verification, ids: us_passport, second_verifier: second)).to be_success
+      expect(newcomer.reload.knot).to eq(old_knot)
+      expect(old_knot.reload.grants_received("ganymede")).to eq(1)
+      expect(verification.events.find_by(kind: "knot_linked").data["returning"]).to be(true)
+    end
+
+    it "carries the fraud flag over" do
+      deleted_member_knot(ids: polish_passport).update!(blacklisted: true)
+      verification = create(:verification, :call_scheduled, user: newcomer)
+
+      decide(verification, ids: us_passport, second_verifier: second)
+
+      expect(verification.reload.knot_review_reason).to eq("flagged_match")
+      expect(newcomer.reload.knot).to be_blacklisted
+    end
+
+    it "links nothing when the verifiers write that it is a different person" do
+      old_knot = deleted_member_knot(ids: polish_passport)
+      old_knot.program_grants.create!(program: "ganymede", granted_at: Time.current)
+      verification = create(:verification, :call_scheduled, user: newcomer)
+
+      result = decide(verification, ids: us_passport, second_verifier: second,
+                                    different_person_reason: "Different face and a different school on the call.")
+
+      expect(result).to be_success
+      knot = newcomer.reload.knot
+      expect(knot).not_to eq(old_knot)
+      expect(knot.grants_received("ganymede")).to eq(0)
+      expect(knot.knot_hashes.birth).to be_present
+      event = verification.events.find_by(kind: "knot_birth_match_overridden")
+      expect(event.data).to include("reason" => "Different face and a different school on the call.", "second_verifier_id" => second.id)
+    end
+
+    it "stops a pass on a second live account unless the verifiers write that it is a different person" do
+      live = create(:user, :verified)
+      pass(live, ids: polish_passport)
+      verification = create(:verification, :call_scheduled, user: newcomer)
+
+      result = decide(verification, ids: us_passport, second_verifier: second)
+
+      expect(result.errors.keys).to eq([:identifiers])
+      expect(verification.reload).to be_call_scheduled
+
+      result = decide(verification, ids: us_passport, second_verifier: second, different_person_reason: "Twin sibling, both on the call.")
+      expect(result).to be_success
+      expect(newcomer.reload.knot).not_to eq(live.reload.knot)
+    end
+
+    it "is only soft when the countries of birth differ" do
+      deleted_member_knot(ids: polish_passport)
+      verification = create(:verification, :call_scheduled, user: newcomer)
+
+      decide(verification, ids: identifiers(issuing_country: "US", document_number: "A12345678", legal_name: "Adam Sidwa",
+                                            country_of_birth: "US"))
+
+      expect(verification.reload.knot_review_reason).to eq("soft_match")
+    end
+  end
+
+  describe "a US driving licence" do
+    let(:newcomer) { create(:user, :verified) }
+
+    def licence(state, number: "S1234567", **)
+      identifiers(document_type: "driving_licence", issuing_country: "US", issuing_region: state, document_number: number, **)
+    end
+
+    it "is not a strong match to the same number from another state" do
+      live = create(:user, :verified)
+      pass(live, ids: licence("CA", legal_name: "Maria Lopez", country_of_birth: "US"))
+      verification = create(:verification, :call_scheduled, user: newcomer)
+
+      result = decide(verification, ids: licence("NY", legal_name: "John Smith", country_of_birth: "US"))
+
+      expect(result).to be_success
+      expect(newcomer.reload.knot).not_to eq(live.reload.knot)
+    end
+
+    it "is a strong match to the same number from the same state" do
+      live = create(:user, :verified)
+      pass(live, ids: licence("CA"))
+      verification = create(:verification, :call_scheduled, user: newcomer)
+
+      result = decide(verification, ids: licence("CA", legal_name: "John Smith", country_of_birth: "US"))
+
+      expect(result.errors.keys).to eq([:identifiers])
+    end
+
+    it "counts a match to an older digest without the state as soft only" do
+      old = deleted_member_knot
+      legacy = KnotHasher.legacy_digests(licence("CA")).first
+      old.knot_hashes.create!(kind: legacy.kind, digest: legacy.digest)
+      verification = create(:verification, :call_scheduled, user: newcomer)
+
+      result = decide(verification, ids: licence("CA", legal_name: "John Smith", country_of_birth: "US"))
+
+      expect(result.errors.keys).to eq([:second_verifier])
+      expect(verification.reload.knot_review_reason).to eq("soft_match")
+    end
+  end
+
   describe "a soft-only match" do
     let(:newcomer) { create(:user, :verified) }
-    let(:other_document) { identifiers(document_number: "X99NEWDOC") }
+    # Born in another country, so only the name and birth date match.
+    let(:other_document) { identifiers(document_number: "X99NEWDOC", country_of_birth: "AT") }
 
     before { deleted_member_knot }
 
@@ -257,10 +379,11 @@ RSpec.describe KnotLinker do
 
     it "sees through a middle name that is on one ID and not on the other" do
       deleted_member_knot(ids: identifiers(issuing_country: "PL", document_number: "EA1234567", national_id: "90081212345",
-                                           legal_name: "Adam Józef Sidwa"))
+                                           legal_name: "Adam Józef Sidwa", country_of_birth: "PL"))
       verification = create(:verification, :call_scheduled, user: newcomer)
 
-      result = decide(verification, ids: identifiers(issuing_country: "US", document_number: "A12345678", legal_name: "Adam Sidwa"))
+      result = decide(verification, ids: identifiers(issuing_country: "US", document_number: "A12345678", legal_name: "Adam Sidwa",
+                                                     country_of_birth: "US"))
 
       expect(result.errors.keys).to eq([:second_verifier])
       expect(verification.reload.knot_review_reason).to eq("soft_match")
@@ -311,7 +434,7 @@ RSpec.describe KnotLinker do
       knot.reload
       expect(knot).to be_detached
       expect(knot).to be_blacklisted
-      expect(knot.knot_hashes.count).to eq(2)
+      expect(knot.knot_hashes.count).to eq(3)
       expect(knot.program_grants.count).to eq(1)
     end
 

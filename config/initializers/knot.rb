@@ -6,6 +6,6 @@
 # back the decision.
 Rails.application.config.after_initialize do
   ActiveSupport::Notifications.subscribe(VerificationIdentifiers::EVENT) do |event|
-    KnotLinker.decision_made(**event.payload.slice(:verification, :outcome, :identifiers))
+    KnotLinker.decision_made(**event.payload.slice(:verification, :outcome, :identifiers, :different_person_reason))
   end
 end

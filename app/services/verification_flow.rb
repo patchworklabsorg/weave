@@ -232,7 +232,8 @@ module VerificationFlow
     # :evidence_type: the US residency result (see ResidencyFlow). A pass
     # needs it, because every verified member gets a result.
     def decide(verification, by:, outcome:, reason:, age_consistent:, region_consistent:,
-               second_verifier: nil, guardian_attended: false, identifiers: nil, details_mismatch: false, residency: {})
+               second_verifier: nil, guardian_attended: false, identifiers: nil, details_mismatch: false, residency: {},
+               different_person_reason: nil)
       user = verification.user
       if details_mismatch
         return failure(verification, outcome: "must be failed for details that don't match the account") if outcome != "failed"
@@ -241,7 +242,8 @@ module VerificationFlow
         identifiers = nil unless identifiers&.valid?
       end
       errors = decision_errors(verification, user, by:, outcome:, reason:, age_consistent:, region_consistent:,
-                                                   second_verifier:, guardian_attended:, identifiers:, details_mismatch:)
+                                                   second_verifier:, guardian_attended:, identifiers:, details_mismatch:,
+                                                   different_person_reason:)
       if outcome == "verified" && !errors.key?(:base)
         errors.merge!(ResidencyFlow.call_errors(verification, us_resident: residency[:us_resident],
                                                               us_state: residency[:us_state], evidence_type: residency[:evidence_type]))
@@ -278,7 +280,8 @@ module VerificationFlow
                                                                        evidence_type: residency_check.evidence_type)
         end
         if identifiers
-          ActiveSupport::Notifications.instrument(VerificationIdentifiers::EVENT, verification:, outcome:, identifiers:)
+          ActiveSupport::Notifications.instrument(VerificationIdentifiers::EVENT, verification:, outcome:, identifiers:,
+                                                                                  different_person_reason: different_person_reason.presence)
         end
         escalated = escalate_if_due(verification)
       end
@@ -355,7 +358,7 @@ module VerificationFlow
     def identity_member?(by, verification) = by&.identity_team && by.id != verification.user_id
 
     def decision_errors(verification, user, by:, outcome:, reason:, age_consistent:, region_consistent:,
-                        second_verifier:, guardian_attended:, identifiers:, details_mismatch: false)
+                        second_verifier:, guardian_attended:, identifiers:, details_mismatch: false, different_person_reason: nil)
       errors = {}
       return { base: "The member's account no longer exists." } if user.nil?
       return { base: "Only an identity team member who is not the member can record the outcome." } unless identity_member?(by, verification)
@@ -389,7 +392,7 @@ module VerificationFlow
       # The Knot checks a pass only when nothing else stops it. A soft match
       # can only ask for a second verifier: it never fails or blocks.
       if outcome == "verified" && errors.empty?
-        errors.merge!(KnotLinker.pass_errors(verification, identifiers:, second_verifier:))
+        errors.merge!(KnotLinker.pass_errors(verification, identifiers:, second_verifier:, different_person_reason:))
       end
       if identifiers && outcome != "verified"
         identifiers.errors.each { |key, message| errors[:"identifiers_#{key}"] = message }

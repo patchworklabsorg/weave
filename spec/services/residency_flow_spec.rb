@@ -153,7 +153,7 @@ RSpec.describe ResidencyFlow do
 
   describe "on the identity call" do
     let(:identifiers) do
-      VerificationIdentifiers.new(document_type: "driving_licence", issuing_country: "US", document_number: "S1234567", national_id: nil,
+      VerificationIdentifiers.new(document_type: "driving_licence", issuing_country: "US", document_number: "S1234567", national_id: nil, issuing_region: "MA", country_of_birth: "US",
                                   legal_name: "Erika Mustermann", date_of_birth: member.birthday)
     end
 

@@ -148,7 +148,7 @@ module KnotChanges
 
       errors = identifiers.errors.slice(:legal_name, :date_of_birth, :issuing_country, :document_type)
       if evidence == "new_document"
-        errors.merge!(identifiers.errors.slice(:document_number, :national_id))
+        errors.merge!(identifiers.errors.slice(:document_number, :national_id, :issuing_region))
       else
         errors.delete(:issuing_country) if identifiers.issuing_country.nil?
         errors.delete(:document_type) if identifiers.document_type.nil?

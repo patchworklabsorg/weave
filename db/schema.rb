@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_31_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_08_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -802,7 +802,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_31_170000) do
     t.string "kind", null: false
     t.string "digest", null: false
     t.index ["kind", "digest"], name: "index_knot_hashes_on_kind_and_digest"
-    t.index ["kind", "digest"], name: "index_knot_hashes_on_strong_digest", unique: true, where: "((kind)::text <> 'soft'::text)"
+    t.index ["kind", "digest"], name: "index_knot_hashes_on_strong_digest_kinds", unique: true, where: "((kind)::text = ANY ((ARRAY['document'::character varying, 'national_id'::character varying])::text[]))"
     t.index ["knot_id", "kind", "digest"], name: "index_knot_hashes_on_knot_id_and_kind_and_digest", unique: true
   end
 

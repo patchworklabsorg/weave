@@ -2,7 +2,7 @@
 
 # One keyed hash of a Knot (see KnotHasher). digest is a hex HMAC-SHA256. No
 # identifier is stored in plain text. A strong digest (document, national_id)
-# belongs to one Knot only. The soft digest can be on many Knots.
+# belongs to one Knot only. Birth and soft digests can be on many Knots.
 # == Schema Information
 #
 # Table name: knot_hashes
@@ -17,7 +17,7 @@
 #
 #  index_knot_hashes_on_kind_and_digest              (kind,digest)
 #  index_knot_hashes_on_knot_id_and_kind_and_digest  (knot_id,kind,digest) UNIQUE
-#  index_knot_hashes_on_strong_digest                (kind,digest) UNIQUE WHERE ((kind)::text <> 'soft'::text)
+#  index_knot_hashes_on_strong_digest_kinds          (kind,digest) UNIQUE WHERE ((kind)::text = ANY ((ARRAY['document'::character varying, 'national_id'::character varying])::text[]))
 #
 # Foreign Keys
 #
@@ -31,6 +31,7 @@ class KnotHash < ApplicationRecord
 
   scope :strong, -> { where(kind: KnotHasher::STRONG_KINDS) }
   scope :soft, -> { where(kind: "soft") }
+  scope :birth, -> { where(kind: "birth") }
 
   # Rows that match any of the digests (KnotHasher::Digest).
   def self.matching(digests)
@@ -40,5 +41,7 @@ class KnotHash < ApplicationRecord
   end
 
   def strong? = KnotHasher::STRONG_KINDS.include?(kind)
+
+  def birth? = kind == "birth"
 
 end

@@ -826,13 +826,16 @@ The Knot carries exactly two pieces of state: the blacklist flag and the program
 
 | Kind | Strength | Input |
 | --- | --- | --- |
-| `document` | strong | document type + issuing country + document number |
+| `document` | strong | document type + issuing country + document number. A US driving licence uses `US-<state>` as the country |
 | `national_id` | strong | issuing country + national identity number (only where the country issues one for life) |
-| `soft` | soft | normalized legal name + date of birth, and each pair of name words + date of birth |
+| `birth` | medium | each name form (below) + date of birth + country of birth |
+| `soft` | soft | each name form + date of birth |
+
+The name forms are the normalized full name and each pair of its words.
 
 - Each digest is `HMAC-SHA256(pepper, kind + fields)`, never a plain hash. A plain hash of a passport number can be reversed by trying every number.
 - The pepper is `knot.pepper` in the credentials of the deployment. Production refuses to pass a verification without it (`KnotHasher::MissingPepper`). Development and test derive a pepper from `Rails.application.key_generator`. **Set the pepper once and never rotate it.** A new pepper orphans every stored digest, and there is no plain value to hash again. Staging has its own credentials, so staging Knots never match production Knots.
-- A strong digest belongs to one Knot only (a partial unique index). Many Knots can share a soft digest.
+- A strong digest belongs to one Knot only (a partial unique index on `document` and `national_id`). Many Knots can share a birth or soft digest.
 - A pass stores one soft digest for the full name and one for each pair of its words (from the first 8 words, so at most 28 pairs). "Adam Józef Sidwa" on a Polish passport and "Adam Sidwa" on a US passport share the "adam sidwa" digest, so the second pass gets a soft match. The pair of a two-word name is the full name, so the pair digests also match the soft digests that older Knots stored before pairs existed.
 
 ### Accepted documents and the national ID number
@@ -841,7 +844,9 @@ A person can hold several government IDs, for example a national ID card and a p
 
 - Weave accepts a passport, a national identity card, a driving licence or a residence permit (`Verification::DOCUMENT_TYPES`). "Other official photo ID" is no longer accepted for a new attempt (2026-11-08). Older attempts and the seeds keep `other` (`LEGACY_DOCUMENT_TYPES`).
 - Some countries print one national identity number for life on both the passport and the ID card (`lifetime_national_id_countries` in `config/kyc/knot.yml`, Poland's PESEL for example). For an ID from one of these countries, the verifier must type the number, or confirm that this document does not show it. The number gives a strong `national_id` hash, so the ID card and the passport of one person match.
-- Documents from two different countries share no strong hash. Only the soft digests (name and birth date) connect them.
+- Documents from two different countries share no strong hash. The birth digests connect them: name, birth date and country of birth together almost never belong to two people. The verifier types the country of the place of birth from the ID, or confirms that the ID does not show one (a US driving licence, for example). A Polish passport and a US passport of one person born in Poland give the same birth digests.
+- Each US state numbers its own driving licences, so the same number can belong to two people in two states. A US driving licence needs the state, and its document digest includes it. Before 2026-11-08 the digest had no state. Weave still looks up that older digest (`KnotHasher.legacy_digests`) but never stores it, and a match to it counts as soft only.
+- Knots from before 2026-11-08 have no birth digests, and Weave can't add them without the plain values. A match to such a Knot can only be soft.
 
 Normalization (tested in `spec/services/knot_hasher_spec.rb`):
 
@@ -861,14 +866,16 @@ flowchart TD
   A[Verifier records a pass with identifiers] --> B[KnotLinker.pass_errors]
   B --> C{Strong match to the Knot of another live account?}
   C -- yes --> D[Pass stops. Attempt stays call_scheduled. Event knot_duplicate_account]
-  C -- no --> E{Flagged strong match, own Knot flagged, or soft-only match?}
+  C -- no --> C2{Birth match to the Knot of another live account, and no 'not the same person' reason?}
+  C2 -- yes --> D
+  C2 -- no --> E{Flagged match, own Knot flagged, birth match or soft-only match?}
   E -- yes --> F[knot_review_reason set on the attempt. Event knot_review_required]
   F --> G{Second verifier selected?}
   G -- no --> H[Pass waits for a second verifier. Never a fail]
   G -- yes --> I[Decision saved]
   E -- no --> I
   I --> J[Subscriber: KnotLinker.decision_made]
-  J --> K[Adopt or join detached Knots with a strong match]
+  J --> K[Adopt or join detached Knots with a strong match, and with a birth match unless the verifiers wrote that it is a different person]
   K --> L[Add the new hashes. Old hashes stay]
   L --> M[Link the chain of attempts. Event knot_linked]
 ```
@@ -876,8 +883,9 @@ flowchart TD
 - The member's own live Knot never counts as a match.
 - **Strong match** to a detached Knot: the same person. The member gets that Knot back, or it joins the member's Knot. Hashes, grants and the flag carry over, and its attempts link to the same history (`verifications.knot_id`). The per-program caps then apply.
 - **Strong match** to the Knot of another live account: one person, one account. The pass stops. The verifier can still fail the call with a written reason. The Knot never fails anyone.
+- **Birth match** (name, birth date and country of birth, with no strong match to that Knot): the same person, unless the verifiers record that it is not. A second verifier must attend. With no reason, it acts like a strong match: it joins a detached Knot, so its grants and its flag carry over, and it stops a pass on a second live account. If the verifier and the second verifier are sure that it is a different person, the verifier writes why under "Not the same person". Then nothing links, the earlier grants do not count, and the event `knot_birth_match_overridden` keeps the reason and the second verifier.
 - **Soft-only match**: it routes the pass to manual review with a second verifier. That is all it can do. It never fails, blocks, flags or links. It also never carries a flag over, and the verifier does not learn whether the soft-matched Knot has the flag. A spec proves that a soft-only match can't produce a fail or a block.
-- **Flagged match** (a strong match to a blacklisted Knot, or the member's own Knot is blacklisted): the pass needs a second verifier (extra scrutiny).
+- **Flagged match** (a strong or birth match to a blacklisted Knot, or the member's own Knot is blacklisted): the pass needs a second verifier (extra scrutiny).
 - The review reason stays on the attempt. Typing other identifiers does not remove it.
 - A fail stores nothing. A digital ID pass with no identifiers stores nothing.
 - The subscriber runs inside the decision transaction (`config/initializers/knot.rb`). An error rolls back the pass, so a pass never lands without its hashes.

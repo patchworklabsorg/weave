@@ -192,6 +192,20 @@
                   <%= ids.text_field :issuing_country, value: typed[:issuing_country], maxlength: 2, placeholder: "Issuing country (two letters)", aria: { label: "Issuing country" }, class: "field" %>
                   <%= ids.text_field :document_number, value: typed[:document_number], placeholder: "Document number", aria: { label: "Document number" }, class: "field" %>
                   <div class="field-group">
+                    <%= ids.text_field :issuing_region, value: typed[:issuing_region], maxlength: 2, placeholder: "US state (two letters)",
+                          aria: { label: "US state", describedby: "issuing_region_hint" }, class: "field" %>
+                    <p id="issuing_region_hint" class="field-hint">Required for a US driving licence. Each state numbers its own licences.</p>
+                  </div>
+                  <div class="field-group">
+                    <%= ids.text_field :country_of_birth, value: typed[:country_of_birth], maxlength: 2, placeholder: "Country of birth (two letters)",
+                          aria: { label: "Country of birth", describedby: "country_of_birth_hint" }, class: "field" %>
+                    <p id="country_of_birth_hint" class="field-hint">From the place of birth on the ID. For a city, type its country.</p>
+                    <label class="flex items-center gap-2 text-sm">
+                      <%= ids.check_box :country_of_birth_absent, { checked: typed[:country_of_birth_absent] == "1", class: "checkbox" }, "1", nil %>
+                      This document does not show a place of birth
+                    </label>
+                  </div>
+                  <div class="field-group">
                     <%= ids.text_field :national_id, value: typed[:national_id], placeholder: "National identity number (if any)",
                           aria: { label: "National identity number", describedby: "national_id_hint" }, class: "field" %>
                     <p id="national_id_hint" class="field-hint">Required for an ID from <%= KnotSettings.lifetime_national_id_countries.to_sentence %>, unless the document does not show it.</p>
@@ -213,6 +227,14 @@
                 <% end %>
               </div>
             </fieldset>
+
+            <% if @verification.knot_review_reason == "birth_match" %>
+              <div class="field-group">
+                <%= label_tag :different_person_reason, class: "field-label" do %>Not the same person <span class="optional">(optional)</span><% end %>
+                <%= text_area_tag :different_person_reason, values[:different_person_reason], rows: 2, class: "field", aria: { describedby: "different_person_hint" } %>
+                <p id="different_person_hint" class="field-hint"><%= t("knot.different_person_hint") %></p>
+              </div>
+            <% end %>
 
             <fieldset class="space-y-3">
               <legend class="field-label">US residency (a pass needs a result). Check where the member lives. Never ask about citizenship.</legend>

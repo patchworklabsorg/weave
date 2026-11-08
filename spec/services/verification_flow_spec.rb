@@ -18,7 +18,7 @@ RSpec.describe VerificationFlow do
 
   def identifiers
     VerificationIdentifiers.new(document_type: "passport", issuing_country: "DE", document_number: "C01X00T47",
-                                national_id: nil, legal_name: "Erika Mustermann", date_of_birth: member.reload.birthday)
+                                national_id: nil, country_of_birth: "DE", legal_name: "Erika Mustermann", date_of_birth: member.reload.birthday)
   end
 
   def decide(verification, by: verifier, outcome: "verified", **overrides)

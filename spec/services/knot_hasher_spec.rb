@@ -122,7 +122,53 @@ RSpec.describe KnotHasher do
     end
 
     it "gives no soft digest for an empty name" do
+      expect(described_class.soft_digests(" -- ", Date.new(1990, 8, 12))).to eq([])
+    end
+
+    it "gives no soft digest for an empty name (full name only)" do
       expect(described_class.soft_digest(" -- ", Date.new(1990, 8, 12))).to be_nil
+    end
+  end
+
+  describe "birth digests" do
+    it "adds a birth digest for each name form when there is a country of birth" do
+      digests = described_class.digests(identifiers(legal_name: "Adam Józef Sidwa", country_of_birth: "PL"))
+
+      expect(digests.count { |found| found.kind == "birth" }).to eq(4)
+    end
+
+    it "gives none without a country of birth" do
+      expect(described_class.digests(identifiers).map(&:kind)).not_to include("birth")
+    end
+
+    it "depends on the country of birth" do
+      poland = described_class.birth_digests("Adam Sidwa", Date.new(1990, 8, 12), "PL")
+      us = described_class.birth_digests("Adam Sidwa", Date.new(1990, 8, 12), "US")
+
+      expect(poland & us).to be_empty
+      expect(described_class.birth_digests("Adam Sidwa", Date.new(1990, 8, 12), "pl")).to eq(poland)
+    end
+  end
+
+  describe "US driving licences" do
+    def licence(state) = identifiers(document_type: "driving_licence", issuing_country: "US", issuing_region: state, document_number: "S1234567")
+
+    def document(ids) = described_class.digests(ids).find { |found| found.kind == "document" }.digest
+
+    it "puts the state in the document digest" do
+      expect(document(licence("CA"))).not_to eq(document(licence("NY")))
+    end
+
+    it "looks up the older digest without the state, and never stores it" do
+      legacy = described_class.legacy_digests(licence("CA"))
+
+      expect(legacy.size).to eq(1)
+      expect(described_class.digests(licence("CA")).map(&:digest)).not_to include(legacy.first.digest)
+      expect(described_class.legacy_digests(licence("NY"))).to eq(legacy)
+    end
+
+    it "has no older digest for other documents" do
+      expect(described_class.legacy_digests(identifiers)).to eq([])
     end
   end
 
