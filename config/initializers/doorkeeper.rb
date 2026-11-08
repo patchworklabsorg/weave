@@ -295,11 +295,12 @@ Doorkeeper.configure do
   # - `fulfillment`: read a member's shipping address to print a label
   #   (Api::V1::Directory::ShippingAddressesController).
   # - `quilt`: call Quilt's patch API. Quilt checks the token at introspection.
+  # - `stash`: archive URLs in Stash. Stash checks the token at introspection.
   # - `introspect`: introspect the `client_credentials` tokens of other apps
   #   (see `allow_token_introspection` below). Only a superadmin may allow it
   #   on an app (see Admin::OauthApplicationsController).
   user_scopes = %i[profile openid email phone admin slack groups roles verification residency age social]
-  app_scopes = %i[directory fulfillment quilt introspect]
+  app_scopes = %i[directory fulfillment quilt stash introspect]
 
   default_scopes :profile
   optional_scopes(*(user_scopes - [:profile]), *app_scopes)
