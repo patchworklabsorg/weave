@@ -117,6 +117,7 @@ class Identity::VerificationsController < Identity::BaseController
       guardian_attended: params[:guardian_attended] == "1",
       identifiers: identifiers_from_params,
       details_mismatch: params[:details_mismatch] == "1",
+      different_person_reason: params[:different_person_reason].to_s.strip.presence,
       residency: { us_resident: yes_no(params[:us_resident]), us_state: params[:us_state].to_s,
                    evidence_type: params[:residency_evidence].to_s
 }
@@ -171,7 +172,7 @@ class Identity::VerificationsController < Identity::BaseController
       second_verifier: params[:second_verifier].to_s, guardian_attended: params[:guardian_attended] == "1",
       age_consistent: params[:age_consistent].to_s, region_consistent: params[:region_consistent].to_s,
       us_resident: params[:us_resident].to_s, us_state: params[:us_state].to_s, residency_evidence: params[:residency_evidence].to_s,
-      reason: params[:reason].to_s,
+      reason: params[:reason].to_s, different_person_reason: params[:different_person_reason].to_s,
       identifiers: params[:identifiers].respond_to?(:permit) ? params[:identifiers].permit(*VerificationIdentifiers.members).to_h.symbolize_keys : {}
     }
   end

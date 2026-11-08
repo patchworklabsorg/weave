@@ -101,8 +101,88 @@ RSpec.describe KnotHasher do
       expect(soft("Erika Mustermann", Date.new(1990, 8, 13))).not_to eq(soft("Erika Mustermann"))
     end
 
+    it "adds a soft digest for each pair of name words, so a middle name does not hide a match" do
+      with_middle = described_class.soft_digests("Adam Józef Sidwa", Date.new(1990, 8, 12)).map(&:digest)
+      without = described_class.soft_digests("Adam Sidwa", Date.new(1990, 8, 12)).map(&:digest)
+
+      expect(with_middle.size).to eq(4) # the full name and 3 pairs
+      expect(without).to eq([soft("Adam Sidwa")])
+      expect(with_middle).to include(soft("Adam Sidwa"), soft("Sidwa Jozef"))
+      expect(with_middle & without).to eq([soft("Adam Sidwa")])
+    end
+
+    it "gives only the full-name soft digest for a two-word name" do
+      expect(described_class.digests(identifiers).count { |found| found.kind == "soft" }).to eq(1)
+    end
+
+    it "takes the pairs from the first 8 words only" do
+      name = (1..12).map { |index| "Name#{index}" }.join(" ")
+
+      expect(described_class.soft_digests(name, Date.new(1990, 8, 12)).size).to eq(1 + 28)
+    end
+
     it "gives no soft digest for an empty name" do
+      expect(described_class.soft_digests(" -- ", Date.new(1990, 8, 12))).to eq([])
+    end
+
+    it "gives no soft digest for an empty name (full name only)" do
       expect(described_class.soft_digest(" -- ", Date.new(1990, 8, 12))).to be_nil
+    end
+  end
+
+  describe "birth digests" do
+    it "adds a birth digest for each name form when there is a country of birth" do
+      digests = described_class.digests(identifiers(legal_name: "Adam Józef Sidwa", country_of_birth: "PL"))
+
+      expect(digests.count { |found| found.kind == "birth" }).to eq(4)
+    end
+
+    it "never shares a birth digest between people who share only two names" do
+      first = described_class.birth_digests("María José García López", Date.new(2008, 3, 1), "ES")
+      second = described_class.birth_digests("María José Pérez Ruiz", Date.new(2008, 3, 1), "ES")
+
+      expect(first & second).to be_empty
+    end
+
+    it "still matches a name with one word left out" do
+      full = described_class.birth_digests("María José García López", Date.new(2008, 3, 1), "ES")
+      shorter = described_class.birth_digests("María García López", Date.new(2008, 3, 1), "ES")
+
+      expect(full & shorter).not_to be_empty
+    end
+
+    it "gives none without a country of birth" do
+      expect(described_class.digests(identifiers).map(&:kind)).not_to include("birth")
+    end
+
+    it "depends on the country of birth" do
+      poland = described_class.birth_digests("Adam Sidwa", Date.new(1990, 8, 12), "PL")
+      us = described_class.birth_digests("Adam Sidwa", Date.new(1990, 8, 12), "US")
+
+      expect(poland & us).to be_empty
+      expect(described_class.birth_digests("Adam Sidwa", Date.new(1990, 8, 12), "pl")).to eq(poland)
+    end
+  end
+
+  describe "US driving licences" do
+    def licence(state) = identifiers(document_type: "driving_licence", issuing_country: "US", issuing_region: state, document_number: "S1234567")
+
+    def document(ids) = described_class.digests(ids).find { |found| found.kind == "document" }.digest
+
+    it "puts the state in the document digest" do
+      expect(document(licence("CA"))).not_to eq(document(licence("NY")))
+    end
+
+    it "looks up the older digest without the state, and never stores it" do
+      legacy = described_class.legacy_digests(licence("CA"))
+
+      expect(legacy.size).to eq(1)
+      expect(described_class.digests(licence("CA")).map(&:digest)).not_to include(legacy.first.digest)
+      expect(described_class.legacy_digests(licence("NY"))).to eq(legacy)
+    end
+
+    it "has no older digest for other documents" do
+      expect(described_class.legacy_digests(identifiers)).to eq([])
     end
   end
 

@@ -183,15 +183,39 @@
             </fieldset>
 
             <fieldset class="space-y-3">
-              <legend class="field-label">Weave keeps document and national ID numbers only as one-way hashes for the fraud check. The name and birthday must match the member's account.</legend>
+              <legend class="field-label">Weave keeps the document and national ID numbers, the name, the birthday and the country of birth only as one-way hashes for the fraud check. The name and birthday must match the member's account.</legend>
               <p class="field-hint">Type the legal name and the birthday from the ID. Weave compares them with the account when you record a pass.</p>
               <div class="form-grid form-grid-2">
                 <%= fields_for :identifiers do |ids| %>
                   <%= ids.select :document_type, Verification::DOCUMENT_TYPES.map { |type| [type.humanize, type] },
                         { selected: typed[:document_type].presence || @verification.document_type }, aria: { label: "Document type" }, class: "field" %>
                   <%= ids.text_field :issuing_country, value: typed[:issuing_country], maxlength: 2, placeholder: "Issuing country (two letters)", aria: { label: "Issuing country" }, class: "field" %>
-                  <%= ids.text_field :document_number, value: typed[:document_number], placeholder: "Document number", aria: { label: "Document number" }, class: "field" %>
-                  <%= ids.text_field :national_id, value: typed[:national_id], placeholder: "National identity number (if any)", aria: { label: "National identity number" }, class: "field" %>
+                  <div class="field-group">
+                    <%= ids.text_field :document_number, value: typed[:document_number], placeholder: "Document number", aria: { label: "Document number" }, class: "field" %>
+                  </div>
+                  <div class="field-group">
+                    <%= ids.text_field :issuing_region, value: typed[:issuing_region], maxlength: 2, placeholder: "US state (two letters)",
+                          aria: { label: "US state", describedby: "issuing_region_hint" }, class: "field" %>
+                    <p id="issuing_region_hint" class="field-hint">Required for a US driving licence. Each state numbers its own licences.</p>
+                  </div>
+                  <div class="field-group">
+                    <%= ids.text_field :country_of_birth, value: typed[:country_of_birth], maxlength: 2, placeholder: "Country of birth (two letters)",
+                          aria: { label: "Country of birth", describedby: "country_of_birth_hint" }, class: "field" %>
+                    <p id="country_of_birth_hint" class="field-hint">From the place of birth on the ID. For a city, type its country.</p>
+                    <label class="flex items-center gap-2 text-sm">
+                      <%= ids.check_box :country_of_birth_absent, { checked: typed[:country_of_birth_absent] == "1", class: "checkbox" }, "1", nil %>
+                      This document does not show a place of birth
+                    </label>
+                  </div>
+                  <div class="field-group">
+                    <%= ids.text_field :national_id, value: typed[:national_id], placeholder: "National identity number (if any)",
+                          aria: { label: "National identity number", describedby: "national_id_hint" }, class: "field" %>
+                    <p id="national_id_hint" class="field-hint">Required for an ID from <%= KnotSettings.lifetime_national_id_countries.to_sentence %>, unless the document does not show it.</p>
+                    <label class="flex items-center gap-2 text-sm">
+                      <%= ids.check_box :national_id_absent, { checked: typed[:national_id_absent] == "1", class: "checkbox" }, "1", nil %>
+                      This document does not show a national identity number
+                    </label>
+                  </div>
                   <div class="field-group">
                     <%= ids.text_field :legal_name, value: typed[:legal_name], placeholder: "Legal name on the ID", aria: { label: "Legal name", invalid: mismatch.key?(:identifiers_legal_name) },
                           class: "field" %>
@@ -205,6 +229,14 @@
                 <% end %>
               </div>
             </fieldset>
+
+            <% if %w[birth_match flagged_match].include?(@verification.knot_review_reason) %>
+              <div class="field-group">
+                <%= label_tag :different_person_reason, class: "field-label" do %>Not the same person <span class="optional">(optional)</span><% end %>
+                <%= text_area_tag :different_person_reason, values[:different_person_reason], rows: 2, class: "field", aria: { describedby: "different_person_hint" } %>
+                <p id="different_person_hint" class="field-hint"><%= t("knot.different_person_hint") %></p>
+              </div>
+            <% end %>
 
             <fieldset class="space-y-3">
               <legend class="field-label">US residency (a pass needs a result). Check where the member lives. Never ask about citizenship.</legend>

@@ -213,7 +213,7 @@ RSpec.describe "Identity verification pages", type: :request do
         outcome: "verified", reason: "Face matched the ID held up on the call.", age_consistent: "yes", region_consistent: "yes",
         us_resident: "yes", us_state: "MA", residency_evidence: "id_document",
         identifiers: {
-          document_type: "passport", issuing_country: "DE", document_number: "C01X00T47",
+          document_type: "passport", issuing_country: "DE", document_number: "C01X00T47", country_of_birth: "DE",
           legal_name: "Erika Mustermann", date_of_birth: "1990-08-12"
         }
       }
@@ -231,7 +231,8 @@ RSpec.describe "Identity verification pages", type: :request do
       get identity_verification_path(verification)
 
       expect(response.body).to include("Consistency attestation", "Never check gender",
-                                       "Weave keeps document and national ID numbers only as one-way hashes for the fraud check. " \
+                                       "Weave keeps the document and national ID numbers, the name, the birthday and the country of birth " \
+                                       "only as one-way hashes for the fraud check. " \
                                        "The name and birthday must match the member's account.")
       expect(response.body).not_to include("Mustermann", "1990-08-12")
       expect(response.body).not_to match(/name="[^"]*(video|recording)/)

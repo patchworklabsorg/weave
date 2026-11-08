@@ -571,7 +571,7 @@ RSpec.describe IdentityGovernance do
       # Different identifiers for each person, so the Knot sees no duplicate.
       def identifiers(user)
         VerificationIdentifiers.new(document_type: "passport", issuing_country: "DE", document_number: "C01X#{user.id}T47",
-                                    national_id: nil, legal_name: "Person #{user.id}", date_of_birth: Date.new(1990, 8, 12))
+                                    national_id: nil, country_of_birth: "DE", legal_name: "Person #{user.id}", date_of_birth: Date.new(1990, 8, 12))
       end
 
       def call_for(user) = create(:verification, :call_scheduled, user:)

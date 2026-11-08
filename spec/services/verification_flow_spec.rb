@@ -18,7 +18,7 @@ RSpec.describe VerificationFlow do
 
   def identifiers
     VerificationIdentifiers.new(document_type: "passport", issuing_country: "DE", document_number: "C01X00T47",
-                                national_id: nil, legal_name: "Erika Mustermann", date_of_birth: member.reload.birthday)
+                                national_id: nil, country_of_birth: "DE", legal_name: "Erika Mustermann", date_of_birth: member.reload.birthday)
   end
 
   def decide(verification, by: verifier, outcome: "verified", **overrides)
@@ -256,6 +256,12 @@ RSpec.describe VerificationFlow do
       member.update_columns(legal_first_name: nil, legal_last_name: nil, first_name: "Erika", last_name: "Mustermann") # rubocop:disable Rails/SkipsModelValidations
 
       expect(decide(verification)).to be_success
+    end
+
+    it "does not ask for the Knot fields on a fail" do
+      typed = identifiers.with(country_of_birth: nil, issuing_country: "PL")
+
+      expect(decide(verification, outcome: "failed", identifiers: typed)).to be_success
     end
 
     it "always allows a fail, also with a mismatch" do

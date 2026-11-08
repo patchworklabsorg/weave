@@ -45,7 +45,7 @@ class VerificationEvent < ApplicationRecord
     document_decrypted break_glass_grant_wiped break_glass_handoff_expired
     member_notice_delayed member_notice_delay_signed_off member_notice_delay_lifted
     member_notice_delay_expired reverification_required
-    knot_review_required knot_duplicate_account knot_linked
+    knot_review_required knot_duplicate_account knot_linked knot_birth_match_overridden
     knot_change_requested knot_change_signed_off knot_change_declined program_grant_recorded
     residency_recorded
   ].freeze

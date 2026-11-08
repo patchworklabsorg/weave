@@ -32,6 +32,12 @@ module KnotSettings
 
     def kept_forever? = keep_years.nil?
 
+    # Two-letter codes of the countries that issue one national identity
+    # number for life (see VerificationIdentifiers#errors).
+    def lifetime_national_id_countries = Array(config[:lifetime_national_id_countries]).map { |code| code.to_s.upcase }
+
+    def lifetime_national_id_country?(code) = lifetime_national_id_countries.include?(code.to_s.upcase)
+
     # For specs that change a value.
     def reset! = @config = nil
 

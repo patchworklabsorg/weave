@@ -16,15 +16,36 @@
 #
 # #inspect and #to_s hide the values, so a log line or an error report can't
 # show them.
+#
+# Answers and extra fields, all optional in the constructor:
+# - national_id_absent: the verifier's answer "this document does not show a
+#   national identity number". It is needed only when the issuing country has
+#   a lifetime number (KnotSettings.lifetime_national_id_countries) and the
+#   national_id field is empty.
+# - issuing_region: the US state of a US driving licence (two letters). Each
+#   state numbers its own licences, so the number alone is not unique.
+# - country_of_birth: two letters, from the place of birth on the ID. A pass
+#   needs it, or country_of_birth_absent ("this document does not show a
+#   place of birth").
+# Weave stores none of them, only the hashes (see KnotHasher).
 VerificationIdentifiers = Data.define(:document_type, :issuing_country, :document_number, :national_id,
-                                      :legal_name, :date_of_birth) do
+                                      :legal_name, :date_of_birth, :national_id_absent, :issuing_region,
+                                      :country_of_birth, :country_of_birth_absent) do
   self::EVENT = "identifiers.verification"
   self::REQUIRED = %i[document_type issuing_country document_number legal_name date_of_birth].freeze
+  self::TWO_LETTERS = /\A[A-Z]{2}\z/
+
+  def initialize(national_id_absent: false, issuing_region: nil, country_of_birth: nil, country_of_birth_absent: false, **values)
+    super(national_id_absent: national_id_absent == true, issuing_region:, country_of_birth:,
+          country_of_birth_absent: country_of_birth_absent == true, **values)
+  end
 
   # From the decision form. Blank values become nil, and the date is parsed.
   def self.from_params(params)
     values = members.index_with { |key| params[key].to_s.strip.presence }
-    values[:issuing_country] = values[:issuing_country]&.upcase
+    values[:national_id_absent] = values[:national_id_absent] == "1"
+    values[:country_of_birth_absent] = values[:country_of_birth_absent] == "1"
+    %i[issuing_country issuing_region country_of_birth].each { |key| values[key] = values[key]&.upcase }
     values[:date_of_birth] = Date.iso8601(values[:date_of_birth]) if values[:date_of_birth]
     new(**values)
   rescue Date::Error
@@ -34,11 +55,31 @@ VerificationIdentifiers = Data.define(:document_type, :issuing_country, :documen
   # Error messages by field. Empty when the identifiers can be used.
   def errors
     found = self.class::REQUIRED.select { |key| public_send(key).nil? }.index_with("is required")
-    found[:issuing_country] = "must be a two-letter country code" if issuing_country && !issuing_country.match?(/\A[A-Z]{2}\z/)
+    found[:issuing_country] = "must be a two-letter country code" if issuing_country && !issuing_country.match?(self.class::TWO_LETTERS)
     found[:document_type] = "is not a known document type" if document_type && Verification::DOCUMENT_TYPES.exclude?(document_type)
     found[:date_of_birth] = "is not a date" if date_of_birth == :invalid
+    found[:national_id] = I18n.t("knot.errors.national_id_required") if national_id_missing?
+    if us_driving_licence? && issuing_region.nil?
+      found[:issuing_region] = I18n.t("knot.errors.issuing_region_required")
+    elsif issuing_region && !issuing_region.match?(self.class::TWO_LETTERS)
+      found[:issuing_region] = "must be a two-letter state code"
+    end
+    if country_of_birth.nil? && !country_of_birth_absent
+      found[:country_of_birth] = I18n.t("knot.errors.country_of_birth_required")
+    elsif country_of_birth && !country_of_birth.match?(self.class::TWO_LETTERS)
+      found[:country_of_birth] = "must be a two-letter country code"
+    end
     found
   end
+
+  # The issuing country has a lifetime national number, the field is empty,
+  # and the verifier did not confirm that the document does not show one.
+  def national_id_missing?
+    national_id.nil? && !national_id_absent && issuing_country.present? &&
+      KnotSettings.lifetime_national_id_country?(issuing_country)
+  end
+
+  def us_driving_licence? = document_type == "driving_licence" && issuing_country == "US"
 
   def valid? = errors.empty?
 

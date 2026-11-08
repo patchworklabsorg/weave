@@ -7,6 +7,24 @@ shared: &shared
   # flag (which never fades) both depend on it. LOCKED (2026-10-13).
   keep_years: ~ # LOCKED: kept for ever
 
+  # Countries whose passport and national identity card both show one
+  # national identity number for life (Poland's PESEL, for example). For an
+  # ID from one of these countries, the verifier must type the number, or
+  # confirm that this document does not show it. The number gives a strong
+  # hash that matches across the person's documents from that country.
+  # Add a country only when its number never changes.
+  lifetime_national_id_countries:
+    - BE # National register number
+    - EE # Personal identification code (isikukood)
+    - ES # DNI number
+    - FI # Personal identity code (henkilötunnus)
+    - LT # Personal code (asmens kodas)
+    - LV # Personal code (personas kods)
+    - NL # Citizen service number (BSN)
+    - "NO" # National identity number (fødselsnummer)
+    - PL # PESEL
+    - SE # Personal identity number (personnummer)
+
   # Programs that give grants. Each key is the program key that a
   # ProgramGrant stores.
   programs:

@@ -153,12 +153,12 @@ RSpec.describe ResidencyFlow do
 
   describe "on the identity call" do
     let(:identifiers) do
-      VerificationIdentifiers.new(document_type: "other", issuing_country: "US", document_number: "S1234567", national_id: nil,
+      VerificationIdentifiers.new(document_type: "driving_licence", issuing_country: "US", document_number: "S1234567", national_id: nil, issuing_region: "MA", country_of_birth: "US",
                                   legal_name: "Erika Mustermann", date_of_birth: member.birthday)
     end
 
     def submit_with_residency
-      VerificationFlow.submit(member, document: upload, document_type: "other", residency_document: upload,
+      VerificationFlow.submit(member, document: upload, document_type: "driving_licence", residency_document: upload,
                                       residency_evidence_type: "school_enrollment").verification
     end
 
@@ -191,7 +191,7 @@ RSpec.describe ResidencyFlow do
     end
 
     it "needs a residency result for a pass" do
-      verification = call_scheduled(VerificationFlow.submit(member, document: upload, document_type: "other").verification)
+      verification = call_scheduled(VerificationFlow.submit(member, document: upload, document_type: "driving_licence").verification)
 
       result = decide(verification, residency: {})
 
@@ -200,7 +200,7 @@ RSpec.describe ResidencyFlow do
     end
 
     it "needs the uploaded document for evidence other than the ID" do
-      verification = call_scheduled(VerificationFlow.submit(member, document: upload, document_type: "other").verification)
+      verification = call_scheduled(VerificationFlow.submit(member, document: upload, document_type: "driving_licence").verification)
 
       result = decide(verification)
 
@@ -208,14 +208,14 @@ RSpec.describe ResidencyFlow do
     end
 
     it "accepts the ID itself as evidence, with no upload" do
-      verification = call_scheduled(VerificationFlow.submit(member, document: upload, document_type: "other").verification)
+      verification = call_scheduled(VerificationFlow.submit(member, document: upload, document_type: "driving_licence").verification)
 
       expect(decide(verification, residency: { us_resident: true, us_state: "TX", evidence_type: "id_document" })).to be_success
       expect(described_class.current_check(member)).to have_attributes(source: "identity_call", us_state: "TX", evidence_type: "id_document")
     end
 
     it "records a no on a pass" do
-      verification = call_scheduled(VerificationFlow.submit(member, document: upload, document_type: "other").verification)
+      verification = call_scheduled(VerificationFlow.submit(member, document: upload, document_type: "driving_licence").verification)
 
       expect(decide(verification, residency: { us_resident: false })).to be_success
       expect(member.us_residency_status).to eq("not_us_resident")

@@ -10,8 +10,20 @@
 #   the same history. A strong match to the Knot of another LIVE account
 #   stops the pass: one person, one account. The verifier can still fail the
 #   call with a written reason.
+# - Birth match (name + birth date + country of birth on another Knot, with
+#   no strong match to that Knot): the same person, unless the verifiers
+#   record that it is not. A second verifier must attend. With no
+#   different_person_reason, it acts like a strong match: it stops a pass on
+#   a second live account, and it joins a detached Knot (grants and flag
+#   carry over). With a written different_person_reason, it only stays a
+#   review: nothing links, and the hashes are stored as usual.
+# - Legacy match (a US driving licence digest without the state, from before
+#   2026-11-08): two states can give the same number. With a soft match to
+#   the same Knot (the same number, name and birth date) it counts as
+#   strong, and the Knot gets the new digest with the state. Alone it
+#   counts as soft.
 # - Soft-only match (the name + birth date hash on another Knot, with no
-#   strong match to that Knot): routes the pass to manual review with a
+#   strong or birth match to that Knot): routes the pass to manual review with a
 #   second verifier. That is all it can do. It never fails, blocks or flags
 #   anyone, and it never links Knots or carries a flag over.
 # - A blacklisted Knot in a strong match, or a blacklisted own Knot, also
@@ -22,24 +34,33 @@
 # subscriber of VerificationIdentifiers::EVENT calls decision_made inside the
 # transaction of the decision. The plain identifiers are dropped after that.
 module KnotLinker
-  REVIEW_REASONS = %w[soft_match flagged_match].freeze
+  REVIEW_REASONS = %w[soft_match birth_match flagged_match].freeze
+  REVIEW_RANK = { "soft_match" => 1, "birth_match" => 2, "flagged_match" => 3 }.freeze
 
   # Raised inside the decision transaction, which rolls the pass back.
   class DuplicateAccount < StandardError; end
 
-  Match = Data.define(:own_knot, :strong_knots, :soft_only_knots) do
+  Match = Data.define(:own_knot, :strong_knots, :birth_knots, :soft_only_knots) do
     def strong? = strong_knots.any?
+
+    def birth? = birth_knots.any?
 
     def soft_only? = soft_only_knots.any?
 
     # Knots of other live accounts with a strong match.
     def live_conflicts = strong_knots.reject(&:detached?)
 
+    # Knots of other live accounts with a birth match.
+    def birth_live_conflicts = birth_knots.reject(&:detached?)
+
+    # A birth match can still be a different person, so its flag stays hidden
+    # like a soft match's. It carries over only if the Knots join.
     def flagged? = own_knot&.blacklisted || strong_knots.any?(&:blacklisted)
 
     # Why the pass needs a second verifier, or nil.
     def review_reason
       return "flagged_match" if flagged?
+      return "birth_match" if birth?
 
       "soft_match" if soft_only?
     end
@@ -49,26 +70,44 @@ module KnotLinker
   Record = Data.define(:knot, :blacklisted, :grants_received)
 
   class << self
-    def match(user, digests)
+    # legacy: digests that count as soft only (KnotHasher.legacy_digests).
+    def match(user, digests, legacy: [])
       # Read from the database: a cached user.knot can be stale here.
       own = (Knot.find_by(user_id: user.id) if user&.id)
       rows = KnotHash.matching(digests).where.not(knot_id: own&.id).to_a
-      strong_ids = rows.select(&:strong?).map(&:knot_id).uniq
-      soft_ids = rows.reject(&:strong?).map(&:knot_id).uniq - strong_ids
+      soft_ids = rows.reject { |row| row.strong? || row.birth? }.map(&:knot_id).uniq
+      legacy_ids = KnotHash.matching(legacy).where.not(knot_id: own&.id).pluck(:knot_id).uniq
+      # The same licence number with the same name and birth date: the same person.
+      strong_ids = rows.select(&:strong?).map(&:knot_id).uniq | (legacy_ids & soft_ids)
+      birth_ids = rows.select(&:birth?).map(&:knot_id).uniq - strong_ids
+      soft_ids = (soft_ids | legacy_ids) - strong_ids - birth_ids
       Match.new(own_knot: own, strong_knots: Knot.where(id: strong_ids).order(:id).to_a,
+                birth_knots: Knot.where(id: birth_ids).order(:id).to_a,
                 soft_only_knots: Knot.where(id: soft_ids).order(:id).to_a)
+    end
+
+    def match_identifiers(user, identifiers)
+      match(user, KnotHasher.digests(identifiers), legacy: KnotHasher.legacy_digests(identifiers))
     end
 
     # Errors that stop a pass now, before VerificationFlow records it. Opens
     # the manual review (Verification#knot_review_reason) when a match asks
     # for one. The review stays on the attempt, so typing other identifiers
     # does not remove it.
-    def pass_errors(verification, identifiers:, second_verifier:)
+    #
+    # different_person_reason: the verifiers' written reason that a birth
+    # match is a different person. A second verifier must attend.
+    def pass_errors(verification, identifiers:, second_verifier:, different_person_reason: nil)
       if identifiers&.valid?
-        found = match(verification.user, KnotHasher.digests(identifiers))
+        found = match_identifiers(verification.user, identifiers)
         if found.live_conflicts.any?
           VerificationEvent.record!(verification, :knot_duplicate_account)
           return { identifiers: I18n.t("knot.errors.duplicate_account") }
+        end
+        if found.birth_live_conflicts.any? && different_person_reason.blank?
+          VerificationEvent.record!(verification, :knot_duplicate_account, birth_match: true)
+          open_review(verification, found.review_reason)
+          return { identifiers: I18n.t("knot.errors.birth_duplicate_account") }
         end
         open_review(verification, found.review_reason)
       end
@@ -81,10 +120,18 @@ module KnotLinker
 
     # The subscriber of VerificationIdentifiers::EVENT. On a pass, the hashes
     # join the member's Knot. A fail stores nothing.
-    def decision_made(verification:, outcome:, identifiers:)
+    def decision_made(verification:, outcome:, identifiers:, different_person_reason: nil)
       return unless outcome == "verified" && identifiers&.valid? && verification.user
 
-      knot, merged = accrete!(verification.user, KnotHasher.digests(identifiers))
+      # The reason counts only when there is a birth match to override.
+      birth = match_identifiers(verification.user, identifiers).birth?
+      link_birth = !birth || different_person_reason.blank?
+      knot, merged = accrete!(verification.user, KnotHasher.digests(identifiers), link_birth:,
+                                                                                  legacy: KnotHasher.legacy_digests(identifiers))
+      unless link_birth
+        VerificationEvent.record!(verification, :knot_birth_match_overridden, reason: different_person_reason.to_s.strip,
+                                                                              second_verifier_id: verification.second_verifier_id)
+      end
       # The whole chain of attempts links to the Knot, failed calls too, so
       # the history of a returning member reads as one chain.
       chain = Verification.where(id: verification.chain.map(&:id))
@@ -97,18 +144,26 @@ module KnotLinker
     # Adds the digests to the member's Knot. Creates the Knot, or adopts a
     # detached Knot with a strong match, when the member has none. Joins every
     # other detached Knot with a strong match. Returns [knot, the number of earlier Knots it joined].
-    def accrete!(user, digests)
-      found = match(user, digests)
+    #
+    # link_birth: false when the verifiers recorded that a birth match is a
+    # different person. Then only strong matches link.
+    def accrete!(user, digests, link_birth: true, legacy: [])
+      lock_birth_digests!(digests)
+      found = match(user, digests, legacy:)
       raise DuplicateAccount, "A strong hash is on another live account's Knot" if found.live_conflicts.any?
+      if link_birth && found.birth_live_conflicts.any?
+        raise DuplicateAccount, "A birth hash is on another live account's Knot"
+      end
 
       detached = found.strong_knots.dup
+      detached.concat(found.birth_knots) if link_birth
       knot = found.own_knot
       if knot.nil?
         knot = detached.shift || Knot.new
         knot.update!(user:)
         user.association(:knot).target = knot
       end
-      merged = found.strong_knots.size
+      merged = found.strong_knots.size + (link_birth ? found.birth_knots.size : 0)
       detached.each { |other| merge!(knot, other) }
       digests.each { |found_digest| knot.knot_hashes.find_or_create_by!(kind: found_digest.kind, digest: found_digest.digest) }
       [knot, merged]
@@ -136,9 +191,20 @@ module KnotLinker
 
     private
 
+    # Birth digests are not unique, so the database can't stop two passes at
+    # the same time from both missing each other. A transaction lock on each
+    # birth digest (sorted, so two passes never wait on each other in a
+    # circle) makes the second pass wait and then see the first.
+    def lock_birth_digests!(digests)
+      digests.select { |found| found.kind == "birth" }.map(&:digest).sort.each do |value|
+        Knot.connection.execute(Knot.sanitize_sql_array(["SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", "knot-birth:#{value}"]))
+      end
+    end
+
     def open_review(verification, reason)
       return if reason.nil? || verification.knot_review_reason == reason
-      return if verification.knot_review_reason == "flagged_match" # The stronger reason stays.
+      # The stronger reason stays.
+      return if REVIEW_RANK.fetch(verification.knot_review_reason, 0) > REVIEW_RANK.fetch(reason)
 
       verification.update!(knot_review_reason: reason)
       VerificationEvent.record!(verification, :knot_review_required, reason:)
