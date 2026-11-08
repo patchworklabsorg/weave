@@ -231,14 +231,32 @@ RSpec.describe KnotLinker do
       expect(verification.events.find_by(kind: "knot_linked").data["returning"]).to be(true)
     end
 
-    it "carries the fraud flag over" do
+    it "carries the fraud flag over when the Knots join, without showing it before" do
       deleted_member_knot(ids: polish_passport).update!(blacklisted: true)
       verification = create(:verification, :call_scheduled, user: newcomer)
 
       decide(verification, ids: us_passport, second_verifier: second)
 
-      expect(verification.reload.knot_review_reason).to eq("flagged_match")
+      expect(verification.reload.knot_review_reason).to eq("birth_match")
       expect(newcomer.reload.knot).to be_blacklisted
+    end
+
+    it "does not carry the flag over when the verifiers write that it is a different person" do
+      deleted_member_knot(ids: polish_passport).update!(blacklisted: true)
+      verification = create(:verification, :call_scheduled, user: newcomer)
+
+      decide(verification, ids: us_passport, second_verifier: second, different_person_reason: "Different person on the call.")
+
+      expect(newcomer.reload.knot).not_to be_blacklisted
+    end
+
+    it "records no override when there is no birth match" do
+      verification = create(:verification, :call_scheduled, user: newcomer)
+
+      result = decide(verification, ids: us_passport, different_person_reason: "Left over from a typo.")
+
+      expect(result).to be_success
+      expect(verification.events.where(kind: "knot_birth_match_overridden")).to be_empty
     end
 
     it "links nothing when the verifiers write that it is a different person" do
@@ -310,6 +328,30 @@ RSpec.describe KnotLinker do
       result = decide(verification, ids: licence("CA", legal_name: "John Smith", country_of_birth: "US"))
 
       expect(result.errors.keys).to eq([:identifiers])
+    end
+
+    it "counts an older digest without the state as strong when the name and birth date also match" do
+      live = create(:user, :verified)
+      pass(live)
+      legacy = KnotHasher.legacy_digests(licence("CA")).first
+      live.reload.knot.knot_hashes.create!(kind: legacy.kind, digest: legacy.digest)
+      verification = create(:verification, :call_scheduled, user: newcomer)
+
+      result = decide(verification, ids: licence("CA", country_of_birth: "AT"))
+
+      expect(result.errors.keys).to eq([:identifiers])
+    end
+
+    it "gives a detached Knot with the older digest the new digest with the state" do
+      old = deleted_member_knot
+      legacy = KnotHasher.legacy_digests(licence("CA")).first
+      old.knot_hashes.create!(kind: legacy.kind, digest: legacy.digest)
+      verification = create(:verification, :call_scheduled, user: newcomer)
+
+      expect(decide(verification, ids: licence("CA", country_of_birth: "AT"))).to be_success
+      expect(newcomer.reload.knot).to eq(old)
+      state_digest = KnotHasher.digests(licence("CA")).find { |found| found.kind == "document" }.digest
+      expect(old.knot_hashes.where(kind: "document", digest: state_digest)).to exist
     end
 
     it "counts a match to an older digest without the state as soft only" do

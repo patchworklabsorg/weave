@@ -137,6 +137,20 @@ RSpec.describe KnotHasher do
       expect(digests.count { |found| found.kind == "birth" }).to eq(4)
     end
 
+    it "never shares a birth digest between people who share only two names" do
+      first = described_class.birth_digests("María José García López", Date.new(2008, 3, 1), "ES")
+      second = described_class.birth_digests("María José Pérez Ruiz", Date.new(2008, 3, 1), "ES")
+
+      expect(first & second).to be_empty
+    end
+
+    it "still matches a name with one word left out" do
+      full = described_class.birth_digests("María José García López", Date.new(2008, 3, 1), "ES")
+      shorter = described_class.birth_digests("María García López", Date.new(2008, 3, 1), "ES")
+
+      expect(full & shorter).not_to be_empty
+    end
+
     it "gives none without a country of birth" do
       expect(described_class.digests(identifiers).map(&:kind)).not_to include("birth")
     end

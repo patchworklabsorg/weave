@@ -258,6 +258,12 @@ RSpec.describe VerificationFlow do
       expect(decide(verification)).to be_success
     end
 
+    it "does not ask for the Knot fields on a fail" do
+      typed = identifiers.with(country_of_birth: nil, issuing_country: "PL")
+
+      expect(decide(verification, outcome: "failed", identifiers: typed)).to be_success
+    end
+
     it "always allows a fail, also with a mismatch" do
       typed = identifiers.with(legal_name: "Someone Else")
 

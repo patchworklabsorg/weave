@@ -20,10 +20,12 @@ require "openssl"
 #   route a pass to manual review. It can never deny anyone. A pass stores one
 #   soft digest for the full name and one for each pair of its words, so a
 #   middle name on one ID and not on another still gives a soft match.
-# - "birth" (medium): the same name digests with the country of birth added.
-#   Name, birth date and country of birth together almost never belong to two
-#   people, so a birth match counts as the same person unless the verifiers
-#   record that it is not (see KnotLinker). Many Knots can share one.
+# - "birth" (medium): the full name, and the full name with one word left
+#   out, each with the birth date and the country of birth. Not every pair:
+#   two people can share two names, but rarely all but one. These together
+#   almost never belong to two people, so a birth match counts as the same
+#   person unless the verifiers record that it is not (see KnotLinker). Many
+#   Knots can share one.
 #
 # Normalization (tested in spec/services/knot_hasher_spec.rb):
 # - Document and national ID numbers: Unicode NFKC (full-width digits become
@@ -91,12 +93,24 @@ module KnotHasher
       [digest("document", identifiers.document_type, "US", normalize_number(identifiers.document_number))].compact
     end
 
-    # The birth digests: each name form of soft_digests with the country of
-    # birth added.
+    # The birth digests: the full name, and each form with one word left out
+    # (only when at least two words stay), with the birth date and the
+    # country of birth. "Adam Józef Sidwa" gives "adam jozef sidwa", "adam
+    # sidwa", "jozef sidwa" and "adam jozef", so a passport without the
+    # middle name still matches.
     def birth_digests(legal_name, date_of_birth, country_of_birth)
       return [] if country_of_birth.blank? || !date_of_birth.is_a?(Date)
 
-      name_forms(legal_name).map { |name| digest("birth", name, date_of_birth.iso8601, country(country_of_birth)) }.compact.uniq
+      birth_name_forms(legal_name).map { |name| digest("birth", name, date_of_birth.iso8601, country(country_of_birth)) }.compact.uniq
+    end
+
+    def birth_name_forms(legal_name)
+      full = normalize_name(legal_name)
+      return [] if full.blank?
+
+      words = full.split.first(MAX_SOFT_NAME_WORDS)
+      shorter = words.size > 2 ? words.combination(words.size - 1).map { |form| form.sort.join(" ") } : []
+      [full, *shorter].uniq
     end
 
     # The soft digests: the full name, then each pair of its words (at most

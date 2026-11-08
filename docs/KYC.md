@@ -828,10 +828,10 @@ The Knot carries exactly two pieces of state: the blacklist flag and the program
 | --- | --- | --- |
 | `document` | strong | document type + issuing country + document number. A US driving licence uses `US-<state>` as the country |
 | `national_id` | strong | issuing country + national identity number (only where the country issues one for life) |
-| `birth` | medium | each name form (below) + date of birth + country of birth |
-| `soft` | soft | each name form + date of birth |
+| `birth` | medium | the full name, and the full name with one word left out + date of birth + country of birth |
+| `soft` | soft | the full name, and each pair of its words + date of birth |
 
-The name forms are the normalized full name and each pair of its words.
+All names are normalized first (below). The birth forms leave out one word at a time, never more: two people can share two names ("María José García López" and "María José Pérez Ruiz"), but rarely all but one.
 
 - Each digest is `HMAC-SHA256(pepper, kind + fields)`, never a plain hash. A plain hash of a passport number can be reversed by trying every number.
 - The pepper is `knot.pepper` in the credentials of the deployment. Production refuses to pass a verification without it (`KnotHasher::MissingPepper`). Development and test derive a pepper from `Rails.application.key_generator`. **Set the pepper once and never rotate it.** A new pepper orphans every stored digest, and there is no plain value to hash again. Staging has its own credentials, so staging Knots never match production Knots.
@@ -845,7 +845,7 @@ A person can hold several government IDs, for example a national ID card and a p
 - Weave accepts a passport, a national identity card, a driving licence or a residence permit (`Verification::DOCUMENT_TYPES`). "Other official photo ID" is no longer accepted for a new attempt (2026-11-08). Older attempts and the seeds keep `other` (`LEGACY_DOCUMENT_TYPES`).
 - Some countries print one national identity number for life on both the passport and the ID card (`lifetime_national_id_countries` in `config/kyc/knot.yml`, Poland's PESEL for example). For an ID from one of these countries, the verifier must type the number, or confirm that this document does not show it. The number gives a strong `national_id` hash, so the ID card and the passport of one person match.
 - Documents from two different countries share no strong hash. The birth digests connect them: name, birth date and country of birth together almost never belong to two people. The verifier types the country of the place of birth from the ID, or confirms that the ID does not show one (a US driving licence, for example). A Polish passport and a US passport of one person born in Poland give the same birth digests.
-- Each US state numbers its own driving licences, so the same number can belong to two people in two states. A US driving licence needs the state, and its document digest includes it. Before 2026-11-08 the digest had no state. Weave still looks up that older digest (`KnotHasher.legacy_digests`) but never stores it, and a match to it counts as soft only.
+- Each US state numbers its own driving licences, so the same number can belong to two people in two states. A US driving licence needs the state, and its document digest includes it. Before 2026-11-08 the digest had no state. Weave still looks up that older digest (`KnotHasher.legacy_digests`) but never stores it. A match to it together with a soft match to the same Knot (the same number, name and birth date) counts as strong, and the Knot gets the new digest with the state. A match to it alone counts as soft.
 - Knots from before 2026-11-08 have no birth digests, and Weave can't add them without the plain values. A match to such a Knot can only be soft.
 
 Normalization (tested in `spec/services/knot_hasher_spec.rb`):
@@ -883,9 +883,9 @@ flowchart TD
 - The member's own live Knot never counts as a match.
 - **Strong match** to a detached Knot: the same person. The member gets that Knot back, or it joins the member's Knot. Hashes, grants and the flag carry over, and its attempts link to the same history (`verifications.knot_id`). The per-program caps then apply.
 - **Strong match** to the Knot of another live account: one person, one account. The pass stops. The verifier can still fail the call with a written reason. The Knot never fails anyone.
-- **Birth match** (name, birth date and country of birth, with no strong match to that Knot): the same person, unless the verifiers record that it is not. A second verifier must attend. With no reason, it acts like a strong match: it joins a detached Knot, so its grants and its flag carry over, and it stops a pass on a second live account. If the verifier and the second verifier are sure that it is a different person, the verifier writes why under "Not the same person". Then nothing links, the earlier grants do not count, and the event `knot_birth_match_overridden` keeps the reason and the second verifier.
+- **Birth match** (name, birth date and country of birth, with no strong match to that Knot): the same person, unless the verifiers record that it is not. A second verifier must attend. With no reason, it acts like a strong match: it joins a detached Knot, so its grants and its flag carry over, and it stops a pass on a second live account. If the verifier and the second verifier are sure that it is a different person, the verifier writes why under "Not the same person". Then nothing links, the earlier grants and flag do not count, and the event `knot_birth_match_overridden` keeps the reason and the second verifier. Like a soft match, a birth match does not show the verifier whether the other Knot has the flag. The flag carries over only when the Knots join. Two passes at the same time with the same birth digests wait on a transaction lock, so the second one sees the first.
 - **Soft-only match**: it routes the pass to manual review with a second verifier. That is all it can do. It never fails, blocks, flags or links. It also never carries a flag over, and the verifier does not learn whether the soft-matched Knot has the flag. A spec proves that a soft-only match can't produce a fail or a block.
-- **Flagged match** (a strong or birth match to a blacklisted Knot, or the member's own Knot is blacklisted): the pass needs a second verifier (extra scrutiny).
+- **Flagged match** (a strong match to a blacklisted Knot, or the member's own Knot is blacklisted): the pass needs a second verifier (extra scrutiny).
 - The review reason stays on the attempt. Typing other identifiers does not remove it.
 - A fail stores nothing. A digital ID pass with no identifiers stores nothing.
 - The subscriber runs inside the decision transaction (`config/initializers/knot.rb`). An error rolls back the pass, so a pass never lands without its hashes.

@@ -183,14 +183,16 @@
             </fieldset>
 
             <fieldset class="space-y-3">
-              <legend class="field-label">Weave keeps document and national ID numbers only as one-way hashes for the fraud check. The name and birthday must match the member's account.</legend>
+              <legend class="field-label">Weave keeps the document and national ID numbers, the name, the birthday and the country of birth only as one-way hashes for the fraud check. The name and birthday must match the member's account.</legend>
               <p class="field-hint">Type the legal name and the birthday from the ID. Weave compares them with the account when you record a pass.</p>
               <div class="form-grid form-grid-2">
                 <%= fields_for :identifiers do |ids| %>
                   <%= ids.select :document_type, Verification::DOCUMENT_TYPES.map { |type| [type.humanize, type] },
                         { selected: typed[:document_type].presence || @verification.document_type }, aria: { label: "Document type" }, class: "field" %>
                   <%= ids.text_field :issuing_country, value: typed[:issuing_country], maxlength: 2, placeholder: "Issuing country (two letters)", aria: { label: "Issuing country" }, class: "field" %>
-                  <%= ids.text_field :document_number, value: typed[:document_number], placeholder: "Document number", aria: { label: "Document number" }, class: "field" %>
+                  <div class="field-group">
+                    <%= ids.text_field :document_number, value: typed[:document_number], placeholder: "Document number", aria: { label: "Document number" }, class: "field" %>
+                  </div>
                   <div class="field-group">
                     <%= ids.text_field :issuing_region, value: typed[:issuing_region], maxlength: 2, placeholder: "US state (two letters)",
                           aria: { label: "US state", describedby: "issuing_region_hint" }, class: "field" %>
@@ -228,7 +230,7 @@
               </div>
             </fieldset>
 
-            <% if @verification.knot_review_reason == "birth_match" %>
+            <% if %w[birth_match flagged_match].include?(@verification.knot_review_reason) %>
               <div class="field-group">
                 <%= label_tag :different_person_reason, class: "field-label" do %>Not the same person <span class="optional">(optional)</span><% end %>
                 <%= text_area_tag :different_person_reason, values[:different_person_reason], rows: 2, class: "field", aria: { describedby: "different_person_hint" } %>

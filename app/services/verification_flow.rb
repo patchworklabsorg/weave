@@ -394,8 +394,10 @@ module VerificationFlow
       if outcome == "verified" && errors.empty?
         errors.merge!(KnotLinker.pass_errors(verification, identifiers:, second_verifier:, different_person_reason:))
       end
+      # A fail stores no hashes, so it checks only the basic fields, not the
+      # ones the Knot needs (national ID, state, country of birth).
       if identifiers && outcome != "verified"
-        identifiers.errors.each { |key, message| errors[:"identifiers_#{key}"] = message }
+        identifiers.errors.slice(*VerificationIdentifiers::REQUIRED).each { |key, message| errors[:"identifiers_#{key}"] = message }
       end
       errors
     end
