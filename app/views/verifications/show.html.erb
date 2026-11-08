@@ -107,7 +107,8 @@
             <%= form.label :document_type, t("verification.page.document_type"), class: "field-label" %>
             <%= form.select :document_type,
                   Verification::DOCUMENT_TYPES.map { |type| [t("verification.page.document_types.#{type}"), type] },
-                  { selected: params[:document_type] }, required: true, class: "field" %>
+                  { selected: params[:document_type] }, required: true, class: "field", aria: { describedby: "document_type_hint" } %>
+            <p id="document_type_hint" class="field-hint"><%= t("verification.page.document_type_hint") %></p>
             <% if @form_errors&.key?(:document_type) %>
               <p class="field-error"><%= @form_errors[:document_type] %></p>
             <% end %>

@@ -15,7 +15,9 @@ require "openssl"
 # - "national_id" (strong): issuing country + national identity number, where
 #   the country issues one for life.
 # - "soft": normalized legal name + date of birth. It collides, so it can only
-#   route a pass to manual review. It can never deny anyone.
+#   route a pass to manual review. It can never deny anyone. A pass stores one
+#   soft digest for the full name and one for each pair of its words, so a
+#   middle name on one ID and not on another still gives a soft match.
 #
 # Normalization (tested in spec/services/knot_hasher_spec.rb):
 # - Document and national ID numbers: Unicode NFKC (full-width digits become
@@ -35,6 +37,9 @@ module KnotHasher
   KINDS = (STRONG_KINDS + %w[soft]).freeze
   SEPARATOR = "\u001F" # The ASCII unit separator. No field contains it.
   PEPPER_SALT = "weave/knot pepper v1"
+  # The soft pairs come from the first words of the normalized name only, so
+  # a long name gives at most 28 pairs.
+  MAX_SOFT_NAME_WORDS = 8
 
   # Letters that Unicode NFKD does not split into a base letter and a mark.
   FOLD = {
@@ -64,8 +69,20 @@ module KnotHasher
       if identifiers.national_id.present?
         found << digest("national_id", country(identifiers.issuing_country), normalize_number(identifiers.national_id))
       end
-      found << soft_digest(identifiers.legal_name, identifiers.date_of_birth)
+      found.concat(soft_digests(identifiers.legal_name, identifiers.date_of_birth))
       found.compact.uniq
+    end
+
+    # The soft digests: the full name, then each pair of its words (at most
+    # MAX_SOFT_NAME_WORDS words). The pair of a two-word name is the full
+    # name, so a pair digest also matches the soft digest of an older Knot.
+    def soft_digests(legal_name, date_of_birth)
+      full = soft_digest(legal_name, date_of_birth)
+      return [] if full.nil?
+
+      words = normalize_name(legal_name).split.uniq.first(MAX_SOFT_NAME_WORDS)
+      pairs = words.combination(2).map { |pair| digest("soft", pair.sort.join(" "), date_of_birth.iso8601) }
+      [full, *pairs].uniq
     end
 
     def soft_digest(legal_name, date_of_birth)

@@ -828,11 +828,20 @@ The Knot carries exactly two pieces of state: the blacklist flag and the program
 | --- | --- | --- |
 | `document` | strong | document type + issuing country + document number |
 | `national_id` | strong | issuing country + national identity number (only where the country issues one for life) |
-| `soft` | soft | normalized legal name + date of birth |
+| `soft` | soft | normalized legal name + date of birth, and each pair of name words + date of birth |
 
 - Each digest is `HMAC-SHA256(pepper, kind + fields)`, never a plain hash. A plain hash of a passport number can be reversed by trying every number.
 - The pepper is `knot.pepper` in the credentials of the deployment. Production refuses to pass a verification without it (`KnotHasher::MissingPepper`). Development and test derive a pepper from `Rails.application.key_generator`. **Set the pepper once and never rotate it.** A new pepper orphans every stored digest, and there is no plain value to hash again. Staging has its own credentials, so staging Knots never match production Knots.
 - A strong digest belongs to one Knot only (a partial unique index). Many Knots can share a soft digest.
+- A pass stores one soft digest for the full name and one for each pair of its words (from the first 8 words, so at most 28 pairs). "Adam Józef Sidwa" on a Polish passport and "Adam Sidwa" on a US passport share the "adam sidwa" digest, so the second pass gets a soft match. The pair of a two-word name is the full name, so the pair digests also match the soft digests that older Knots stored before pairs existed.
+
+### Accepted documents and the national ID number
+
+A person can hold several government IDs, for example a national ID card and a passport from one country, and a passport from a second country. The Knot links them like this:
+
+- Weave accepts a passport, a national identity card, a driving licence or a residence permit (`Verification::DOCUMENT_TYPES`). "Other official photo ID" is no longer accepted for a new attempt (2026-11-08). Older attempts and the seeds keep `other` (`LEGACY_DOCUMENT_TYPES`).
+- Some countries print one national identity number for life on both the passport and the ID card (`lifetime_national_id_countries` in `config/kyc/knot.yml`, Poland's PESEL for example). For an ID from one of these countries, the verifier must type the number, or confirm that this document does not show it. The number gives a strong `national_id` hash, so the ID card and the passport of one person match.
+- Documents from two different countries share no strong hash. Only the soft digests (name and birth date) connect them.
 
 Normalization (tested in `spec/services/knot_hasher_spec.rb`):
 

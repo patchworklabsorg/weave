@@ -101,6 +101,26 @@ RSpec.describe KnotHasher do
       expect(soft("Erika Mustermann", Date.new(1990, 8, 13))).not_to eq(soft("Erika Mustermann"))
     end
 
+    it "adds a soft digest for each pair of name words, so a middle name does not hide a match" do
+      with_middle = described_class.soft_digests("Adam Józef Sidwa", Date.new(1990, 8, 12)).map(&:digest)
+      without = described_class.soft_digests("Adam Sidwa", Date.new(1990, 8, 12)).map(&:digest)
+
+      expect(with_middle.size).to eq(4) # the full name and 3 pairs
+      expect(without).to eq([soft("Adam Sidwa")])
+      expect(with_middle).to include(soft("Adam Sidwa"), soft("Sidwa Jozef"))
+      expect(with_middle & without).to eq([soft("Adam Sidwa")])
+    end
+
+    it "gives only the full-name soft digest for a two-word name" do
+      expect(described_class.digests(identifiers).count { |found| found.kind == "soft" }).to eq(1)
+    end
+
+    it "takes the pairs from the first 8 words only" do
+      name = (1..12).map { |index| "Name#{index}" }.join(" ")
+
+      expect(described_class.soft_digests(name, Date.new(1990, 8, 12)).size).to eq(1 + 28)
+    end
+
     it "gives no soft digest for an empty name" do
       expect(described_class.soft_digest(" -- ", Date.new(1990, 8, 12))).to be_nil
     end

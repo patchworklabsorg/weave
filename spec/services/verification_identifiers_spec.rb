@@ -24,6 +24,37 @@ RSpec.describe VerificationIdentifiers do
     expect(identifiers.errors.keys).to contain_exactly(:document_number, :issuing_country, :date_of_birth)
   end
 
+  describe "a country with a lifetime national identity number" do
+    let(:polish) { params.merge(issuing_country: "pl") }
+
+    it "needs the national identity number" do
+      identifiers = described_class.from_params(polish)
+
+      expect(identifiers).not_to be_valid
+      expect(identifiers.errors.keys).to eq([:national_id])
+    end
+
+    it "accepts the number" do
+      expect(described_class.from_params(polish.merge(national_id: "90081212345"))).to be_valid
+    end
+
+    it "accepts the verifier's confirmation that the document does not show one" do
+      expect(described_class.from_params(polish.merge(national_id_absent: "1"))).to be_valid
+    end
+
+    it "does not need the number for other countries" do
+      expect(described_class.from_params(params.merge(issuing_country: "us"))).to be_valid
+    end
+
+    it "defaults the confirmation to no when it is not given" do
+      identifiers = described_class.new(document_type: "passport", issuing_country: "PL", document_number: "EA1234567",
+                                        national_id: nil, legal_name: "Adam Sidwa", date_of_birth: Date.new(1990, 8, 12))
+
+      expect(identifiers.national_id_absent).to be(false)
+      expect(identifiers).not_to be_valid
+    end
+  end
+
   it "hides the values when inspected or logged" do
     identifiers = described_class.from_params(params)
 

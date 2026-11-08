@@ -21,6 +21,7 @@ en:
       data: "We encrypt your ID image. We delete it %{days} days after you pass. We do not copy values from your ID into your account. Read what we do with your data before you upload."
       status_label: "Status"
       document_type: "Type of document"
+      document_type_hint: "A passport, a national identity card, a driving licence or a residence permit from a government. We do not accept other documents."
       document: "Photo or scan of your ID"
       document_hint: "JPEG, PNG, HEIC or PDF, up to %{megabytes} MB. From a PDF we use only the first page. The full document must be clear. We remove the location and camera data from the photo."
       data_notice_read: "I read what Patchwork Labs does with my data."

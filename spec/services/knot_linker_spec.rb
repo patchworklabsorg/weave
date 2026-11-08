@@ -255,6 +255,17 @@ RSpec.describe KnotLinker do
       expect(verification.reload.knot_review_reason).to eq("soft_match")
     end
 
+    it "sees through a middle name that is on one ID and not on the other" do
+      deleted_member_knot(ids: identifiers(issuing_country: "PL", document_number: "EA1234567", national_id: "90081212345",
+                                           legal_name: "Adam Józef Sidwa"))
+      verification = create(:verification, :call_scheduled, user: newcomer)
+
+      result = decide(verification, ids: identifiers(issuing_country: "US", document_number: "A12345678", legal_name: "Adam Sidwa"))
+
+      expect(result.errors.keys).to eq([:second_verifier])
+      expect(verification.reload.knot_review_reason).to eq("soft_match")
+    end
+
     it "never stops a pass as a duplicate account when the soft match is on a live account" do
       live = create(:user, :verified)
       pass(live, ids: identifiers(document_number: "LIVE0001"), second_verifier: second)

@@ -103,6 +103,17 @@ RSpec.describe Verification do
       expect(build(:verification, verification_method: "selfie")).not_to be_valid
     end
 
+    it "no longer accepts \"other\" for a new attempt" do
+      expect(build(:verification, document_type: "other")).not_to be_valid
+    end
+
+    it "keeps an older attempt with \"other\" valid" do
+      verification = create(:verification)
+      verification.update_column(:document_type, "other") # rubocop:disable Rails/SkipsModelValidations
+
+      expect(verification.reload).to be_valid
+    end
+
     it "needs no image for a digital ID call" do
       expect(build(:verification, verification_method: "digital_id_call", document_type: nil, id_document: nil)).to be_valid
     end

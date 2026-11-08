@@ -101,7 +101,11 @@ class Verification < ApplicationRecord
   set_public_id_prefix :verif
 
   METHODS = %w[document_call digital_id_call].freeze
-  DOCUMENT_TYPES = %w[passport national_id_card driving_licence residence_permit other].freeze
+  # The government photo IDs Weave accepts. "other" is gone (2026-11-08): it
+  # let a member show any document, so one person could pass with several
+  # unrelated IDs. Older attempts and the seeds keep it (LEGACY_DOCUMENT_TYPES).
+  DOCUMENT_TYPES = %w[passport national_id_card driving_licence residence_permit].freeze
+  LEGACY_DOCUMENT_TYPES = %w[other].freeze
   # What Weave stores: IdDocumentConverter turns every accepted upload (JPEG,
   # PNG, HEIC/HEIF, PDF) into one of these at upload.
   CONTENT_TYPES = IdDocumentConverter::STORED_TYPES
@@ -142,7 +146,8 @@ class Verification < ApplicationRecord
   has_one :sealed_document, class_name: "SealedIdDocument", dependent: :restrict_with_exception, inverse_of: :verification
 
   validates :verification_method, inclusion: { in: METHODS }
-  validates :document_type, inclusion: { in: DOCUMENT_TYPES }, if: :document_call?
+  validates :document_type, inclusion: { in: DOCUMENT_TYPES }, if: -> { document_call? && new_record? }
+  validates :document_type, inclusion: { in: DOCUMENT_TYPES + LEGACY_DOCUMENT_TYPES }, if: -> { document_call? && persisted? }
   validates :id_document, attached: true, if: -> { document_call? && new_record? }
   validates :id_document, content_type: CONTENT_TYPES,
                           size: { less_than_or_equal_to: VerificationSettings.max_image_size }

@@ -84,7 +84,13 @@
                       aria: { label: "Document type" }, class: "field" %>
                 <%= ids.text_field :issuing_country, maxlength: 2, placeholder: "Issuing country (two letters)", aria: { label: "Issuing country" }, class: "field" %>
                 <%= ids.text_field :document_number, placeholder: "Document number (new document only)", aria: { label: "Document number" }, class: "field" %>
-                <%= ids.text_field :national_id, placeholder: "National identity number (if any)", aria: { label: "National identity number" }, class: "field" %>
+                <div class="field-group">
+                  <%= ids.text_field :national_id, placeholder: "National identity number (if any)", aria: { label: "National identity number" }, class: "field" %>
+                  <label class="flex items-center gap-2 text-sm">
+                    <%= ids.check_box :national_id_absent, { class: "checkbox" }, "1", nil %>
+                    This document does not show a national identity number
+                  </label>
+                </div>
               <% end %>
             </div>
             <%= form.text_area :note, required: true, rows: 2, placeholder: "How you checked continuity", aria: { label: "How you checked continuity" }, class: "field" %>

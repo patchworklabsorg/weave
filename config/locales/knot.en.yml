@@ -7,6 +7,7 @@ en:
       notice: "When you pass, we keep a one-way fingerprint of your ID, called the Knot. It is a set of keyed hashes. Nobody can read your name or your document number from it. It stays after you delete your account, with only two facts: the program grants you received, and a yes or no flag for fraud. It lets us keep to each program's limit on grants per person."
       name_change: "Did your legal name change? Contact our identity team. Show your new document or your change-of-name record. Your verification and your grants stay the same."
     errors:
+      national_id_required: "is required for an ID from this country. Type the national identity number, or confirm that this document does not show one."
       duplicate_account: "This ID matches the Knot of another live account. One person can have one account. Do not record a pass. Tell the identity team lead."
       second_verifier_required:
         soft_match: "The legal name and birth date match an earlier Knot. This is not proof of anything. It only sends the pass to manual review: a second verifier must attend the call and be selected here."
