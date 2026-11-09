@@ -28,11 +28,12 @@ RSpec.describe "Guardian consent", type: :request do
       expect(response.body).to include("Ask a parent or guardian", "Their email address")
     end
 
-    it "points to the form from the profile without blocking it" do
+    it "points to the form from the home page and the profile without blocking them" do
       user.update_columns(slack_id: "U1", slack_membership: "member", slack_coc_accepted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
 
       get root_path
-      expect(response).to redirect_to(profile_path)
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(guardian_consent_request_path)
 
       get profile_path
       expect(response.body).to include(guardian_consent_request_path)

@@ -5,6 +5,7 @@
 <% return unless current_user %>
 <%
   pages = [
+    ["Home", root_path, :house, "apps dashboard launcher start"],
     ["Your account", profile_path, :user, "profile me"],
     ["Sessions", profile_sessions_path, :monitor, "devices sign-ins"],
     ["Passkeys", passkeys_path, :fingerprint, "webauthn security key"],

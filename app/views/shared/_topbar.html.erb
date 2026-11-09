@@ -6,6 +6,7 @@
 
     <% if current_user %>
       <nav class="topbar-nav" aria-label="Account">
+        <%= nav_link "Home", root_path, icon: :house %>
         <%= nav_link "Account", profile_path, icon: :user, active: request.path.in?([profile_path, edit_profile_path]) %>
         <%= nav_link "Sessions", profile_sessions_path, icon: :monitor %>
         <%= nav_link "Passkeys", passkeys_path, icon: :fingerprint %>
@@ -57,6 +58,7 @@
 
   <% if current_user %>
     <nav class="topbar-sheet" data-drawer-target="panel" aria-label="Account menu">
+      <%= nav_link "Home", root_path, icon: :house %>
       <%= nav_link "Account", profile_path, icon: :user, active: request.path.in?([profile_path, edit_profile_path]) %>
       <%= nav_link "Sessions", profile_sessions_path, icon: :monitor %>
       <%= nav_link "Passkeys", passkeys_path, icon: :fingerprint %>

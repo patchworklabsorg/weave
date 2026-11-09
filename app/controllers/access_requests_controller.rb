@@ -24,7 +24,7 @@ class AccessRequestsController < ApplicationController
     @access_request = AccessRequests.request!(user: current_user, application: @application,
                                               reason: params.dig(:access_request, :reason))
     if @access_request.persisted?
-      redirect_to profile_path, notice: "Your request for #{@application.name} was sent. You get an email when someone decides."
+      redirect_to root_path, notice: "Your request for #{@application.name} was sent. You get an email when someone decides."
     else
       render :new, status: :unprocessable_content
     end
@@ -64,11 +64,11 @@ class AccessRequestsController < ApplicationController
     return false if AccessRequests.requestable?(current_user, @application)
 
     if AppAccess.permitted?(current_user, @application)
-      redirect_to profile_path, notice: "You already have access to #{@application.name}."
+      redirect_to root_path, notice: "You already have access to #{@application.name}."
     elsif AccessRequests.pending_for(current_user, @application)
-      redirect_to profile_path, notice: "You already asked for access to #{@application.name}. You get an email when someone decides."
+      redirect_to root_path, notice: "You already asked for access to #{@application.name}. You get an email when someone decides."
     else
-      redirect_to profile_path, alert: "You can't ask for access to #{@application.name} here. Ask a Weave admin."
+      redirect_to root_path, alert: "You can't ask for access to #{@application.name} here. Ask a Weave admin."
     end
     true
   end
