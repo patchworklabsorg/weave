@@ -54,7 +54,7 @@ RSpec.describe "Member top bar", type: :request do
     post impersonate_admin_user_path(create(:user, :verified))
     get profile_path
 
-    expect(menu_items).to eq(["Account", "Stop impersonating"])
+    expect(menu_items).to eq(["Home", "Account", "Stop impersonating"])
     expect(page.at_css(%([role="menu"] form[action="#{stop_impersonating_admin_users_path}"]))).to be_present
   end
 end
