@@ -1,16 +1,18 @@
-<%# The member-pages top bar (layouts/application). %>
+<%# The member-pages top bar (layouts/application).
+    Left: the sections (Home, Account, and Groups for group managers). Right: the
+    command bar, the theme switch and the account menu, which holds the
+    rarer links (Admin, Verification) and Sign out. Below 64rem the section
+    links move into the account menu too. On an account page a second row
+    carries the account tabs (shared/_account_tabs). %>
 <% manages_groups = current_user&.managed_groups&.exists? %>
-<header class="topbar" data-controller="drawer" data-action="keydown@window->drawer#keydown">
+<header class="topbar">
   <div class="topbar-inner">
     <%= render "shared/wordmark" %>
 
     <% if current_user %>
-      <nav class="topbar-nav" aria-label="Account">
+      <nav class="topbar-nav" aria-label="Sections">
         <%= nav_link "Home", root_path, icon: :house %>
-        <%= nav_link "Account", profile_path, icon: :user, active: request.path.in?([profile_path, edit_profile_path]) %>
-        <%= nav_link "Sessions", profile_sessions_path, icon: :monitor %>
-        <%= nav_link "Passkeys", passkeys_path, icon: :fingerprint %>
-        <%= nav_link "Password", password_path, icon: :lock %>
+        <%= nav_link "Account", profile_path, icon: :user, active: account_section? %>
         <% if manages_groups %>
           <%= nav_link "Groups", groups_path, icon: :users, active: request.path.start_with?(groups_path) %>
         <% end %>
@@ -21,34 +23,68 @@
       <% if current_user %>
         <button type="button" class="cmdk-trigger" data-command-bar-trigger aria-label="Search or jump to a page">
           <%= icon(:search) %>
-          <span class="cmdk-trigger-label">Search or jump to…</span>
           <span class="kbd">⌘K</span>
         </button>
         <%= render "shared/theme_toggle" %>
-        <% if current_user.admin? %>
-          <%= link_to admin_root_path, class: "btn btn-secondary btn-sm hidden lg:inline-flex", "aria-label": "Admin", title: "Admin" do %>
-            <%= icon(:layout_dashboard) %><span class="topbar-btn-label">Admin</span>
-          <% end %>
-        <% end %>
-        <% if (identity_link = identity_home_link) %>
-          <% identity_label, identity_path, identity_icon = identity_link %>
-          <%= link_to identity_path, class: "btn btn-secondary btn-sm hidden lg:inline-flex", "aria-label": identity_label, title: identity_label do %>
-            <%= icon(identity_icon) %><span class="topbar-btn-label"><%= identity_label %></span>
-          <% end %>
-        <% end %>
-        <% if impersonating? %>
-          <%= button_to stop_impersonating_admin_users_path, method: :delete, class: "btn btn-quiet btn-sm hidden lg:inline-flex", form_class: "inline-block", "aria-label": "Stop impersonating", title: "Stop impersonating" do %>
-            <%= icon(:log_out) %><span class="topbar-btn-label">Stop impersonating</span>
-          <% end %>
-        <% else %>
-          <%= button_to logout_path, method: :delete, class: "btn btn-quiet btn-sm hidden lg:inline-flex", form_class: "inline-block", "aria-label": "Sign out", title: "Sign out" do %>
-            <%= icon(:log_out) %><span class="topbar-btn-label">Sign out</span>
-          <% end %>
-        <% end %>
-        <button type="button" class="btn btn-quiet btn-sm btn-icon topbar-menu-btn" aria-label="Open menu" aria-expanded="false"
-                data-drawer-target="button" data-action="drawer#toggle">
-          <%= icon(:menu, size: 18) %>
-        </button>
+
+        <div class="menu" data-controller="menu" data-action="keydown->menu#keydown">
+          <button type="button" class="account-trigger" aria-haspopup="menu" aria-expanded="false"
+                  aria-label="Account menu for <%= current_user.full_name %>"
+                  data-menu-target="button" data-action="menu#toggle">
+            <%= avatar current_user, size: :sm %>
+            <%= icon(:chevron_down, size: 14) %>
+          </button>
+
+          <div class="menu-panel" role="menu" aria-label="Account" data-menu-target="panel" hidden>
+            <div class="menu-head">
+              <div class="menu-head-name"><%= current_user.full_name %></div>
+              <div class="menu-head-meta"><%= current_user.email %></div>
+            </div>
+
+            <div class="menu-group lg:hidden">
+              <%= link_to root_path, class: "menu-item", role: "menuitem" do %>
+                <%= icon(:house) %><span>Home</span>
+              <% end %>
+              <%= link_to profile_path, class: "menu-item", role: "menuitem" do %>
+                <%= icon(:user) %><span>Account</span>
+              <% end %>
+              <% if manages_groups %>
+                <%= link_to groups_path, class: "menu-item", role: "menuitem" do %>
+                  <%= icon(:users) %><span>Groups</span>
+                <% end %>
+              <% end %>
+            </div>
+
+            <% identity_link = identity_home_link %>
+            <% if current_user.admin? || identity_link %>
+              <div class="menu-group">
+                <% if current_user.admin? %>
+                  <%= link_to admin_root_path, class: "menu-item", role: "menuitem" do %>
+                    <%= icon(:layout_dashboard) %><span>Admin</span>
+                  <% end %>
+                <% end %>
+                <% if identity_link %>
+                  <% identity_label, identity_path, identity_icon = identity_link %>
+                  <%= link_to identity_path, class: "menu-item", role: "menuitem" do %>
+                    <%= icon(identity_icon) %><span><%= identity_label %></span>
+                  <% end %>
+                <% end %>
+              </div>
+            <% end %>
+
+            <div class="menu-group">
+              <% if impersonating? %>
+                <%= button_to stop_impersonating_admin_users_path, method: :delete, class: "menu-item", form_class: "contents", role: "menuitem" do %>
+                  <%= icon(:log_out) %><span>Stop impersonating</span>
+                <% end %>
+              <% else %>
+                <%= button_to logout_path, method: :delete, class: "menu-item", form_class: "contents", role: "menuitem" do %>
+                  <%= icon(:log_out) %><span>Sign out</span>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        </div>
       <% else %>
         <%= render "shared/theme_toggle" %>
         <%= link_to "Sign in", login_path, class: "btn btn-primary btn-sm" %>
@@ -56,32 +92,7 @@
     </div>
   </div>
 
-  <% if current_user %>
-    <nav class="topbar-sheet" data-drawer-target="panel" aria-label="Account menu">
-      <%= nav_link "Home", root_path, icon: :house %>
-      <%= nav_link "Account", profile_path, icon: :user, active: request.path.in?([profile_path, edit_profile_path]) %>
-      <%= nav_link "Sessions", profile_sessions_path, icon: :monitor %>
-      <%= nav_link "Passkeys", passkeys_path, icon: :fingerprint %>
-      <%= nav_link "Password", password_path, icon: :lock %>
-      <% if manages_groups %>
-        <%= nav_link "Groups", groups_path, icon: :users, active: request.path.start_with?(groups_path) %>
-      <% end %>
-      <% if current_user.admin? %>
-        <%= nav_link "Admin", admin_root_path, icon: :layout_dashboard, active: false %>
-      <% end %>
-      <% if (identity_link = identity_home_link) %>
-        <% identity_label, identity_path, identity_icon = identity_link %>
-        <%= nav_link identity_label, identity_path, icon: identity_icon, active: false %>
-      <% end %>
-      <% if impersonating? %>
-        <%= button_to stop_impersonating_admin_users_path, method: :delete, class: "nav-link w-full", form_class: "contents" do %>
-          <%= icon(:log_out) %><span>Stop impersonating</span>
-        <% end %>
-      <% else %>
-        <%= button_to logout_path, method: :delete, class: "nav-link w-full", form_class: "contents" do %>
-          <%= icon(:log_out) %><span>Sign out</span>
-        <% end %>
-      <% end %>
-    </nav>
+  <% if current_user && account_section? %>
+    <%= render "shared/account_tabs" %>
   <% end %>
 </header>

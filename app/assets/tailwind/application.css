@@ -915,19 +915,56 @@
   .nav-link:hover { background-color: var(--color-grape-soft); color: var(--color-ink); }
   .nav-link[aria-current="page"] { background-color: var(--color-grape-soft); color: var(--color-grape); }
 
-  /* The mobile nav sheet under the top bar */
-  .topbar-sheet {
-    display: none;
-    padding: 0.5rem 1rem 0.75rem;
-    border-top: 1px solid var(--color-hairline);
+  /* The account tabs: a second row of the top bar on account pages */
+  .topbar-subnav { max-width: 72rem; margin-inline: auto; padding: 0 1rem; }
+  @media (min-width: 40rem) { .topbar-subnav { padding: 0 1.5rem; } }
+  .tabs.topbar-tabs { margin-bottom: 0; border-bottom: 0; scrollbar-width: none; }
+
+  /* The account menu: avatar button and its popup */
+  .menu { position: relative; }
+  .account-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    height: 2.25rem;
+    padding: 0 0.375rem 0 0.25rem;
+    border-radius: 9999px;
+    color: var(--color-ink-faint);
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
   }
-  .topbar-sheet[data-open="true"] { display: grid; gap: 0.125rem; }
-  @media (min-width: 64rem) { .topbar-sheet[data-open="true"] { display: none; } }
-  .topbar-menu-btn { display: inline-flex; }
-  @media (min-width: 64rem) { .topbar-menu-btn { display: none; } }
-  /* Admin, Identity and Sign out show only their icon until the bar has room for the words */
-  .topbar-btn-label { display: none; }
-  @media (min-width: 80rem) { .topbar-btn-label { display: inline; } }
+  .account-trigger:hover, .account-trigger[aria-expanded="true"] { background-color: var(--color-grape-soft); color: var(--color-ink); }
+  .menu-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.375rem);
+    z-index: 40;
+    width: 15rem;
+    padding: 0.25rem;
+    background-color: var(--color-paper);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-control);
+    box-shadow: var(--shadow-card);
+  }
+  .menu-head { padding: 0.5rem 0.625rem 0.625rem; }
+  .menu-head-name { font-size: 0.875rem; font-weight: 600; color: var(--color-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .menu-head-meta { font-size: 0.75rem; color: var(--color-ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .menu-group { display: grid; padding-block: 0.25rem; border-top: 1px solid var(--color-hairline); }
+  .menu-item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4375rem 0.625rem;
+    border-radius: calc(var(--radius-control) - 2px);
+    font-size: 0.875rem;
+    color: var(--color-ink-soft);
+    text-decoration: none;
+    text-align: left;
+    cursor: pointer;
+  }
+  .menu-item svg { width: 1rem; height: 1rem; flex: none; }
+  .menu-item:hover, .menu-item:focus-visible { background-color: var(--color-grape-soft); color: var(--color-ink); }
 
   /* ── App shell: sidebar (admin) ─────────────────────────── */
 
@@ -1044,7 +1081,7 @@
   .cmdk-trigger .kbd { display: none; }
   @media (min-width: 40rem) {
     .cmdk-trigger .kbd { display: inline-flex; }
-    /* The member top bar is full; only the admin top bar has room for the words */
+    /* Only the admin top bar shows the words; the member bar keeps an icon and ⌘K */
     .admin-topbar .cmdk-trigger { min-width: 15rem; }
     .admin-topbar .cmdk-trigger-label { display: inline; flex: 1; text-align: left; padding-right: 0.5rem; }
   }

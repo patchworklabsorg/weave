@@ -12,7 +12,7 @@ Weave is the reference implementation of the Patchwork design system. The guide 
 | Dates and times (`time_label(time, style)`, styles `:date`, `:datetime`, `:relative`, `:month`, `:day`) | `app/helpers/time_helper.rb` |
 | Icons (`icon(:name)`, Lucide through `lucide-rails`) | `app/helpers/icon_helper.rb` |
 | Layouts | `app/views/layouts/application.html.erb` (member), `admin.html.erb` (admin), `sessions.html.erb` and `doorkeeper/application.html.erb` (focus) |
-| Shared partials | `app/views/shared/`: `_head`, `_topbar`, `_sidebar`, `_wordmark`, `_theme`, `_theme_toggle`, `_flash`, `_form_errors`, `_search_form`, `_command_bar`, `_impersonation_banner`, `_staging_badge` |
+| Shared partials | `app/views/shared/`: `_head`, `_topbar`, `_account_tabs`, `_sidebar`, `_wordmark`, `_theme`, `_theme_toggle`, `_flash`, `_form_errors`, `_search_form`, `_command_bar`, `_impersonation_banner`, `_staging_badge` |
 | Stimulus controllers for the UI | `app/javascript/controllers/`: `flash`, `drawer`, `command_bar`, `clipboard`, `reveal`, `search`, `address_sync` |
 | Command bar search | `app/controllers/admin/search_controller.rb`, `GET /admin/search.json?q=` |
 
