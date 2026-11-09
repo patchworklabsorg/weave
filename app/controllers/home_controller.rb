@@ -24,4 +24,5 @@ class HomeController < ApplicationController
     @launcher = AppLauncher.for(@user)
     render :dashboard, layout: "application"
   end
+
 end
