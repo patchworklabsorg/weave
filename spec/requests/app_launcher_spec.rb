@@ -112,12 +112,13 @@ RSpec.describe "App launcher", type: :request do
     expect(response.body).not_to include("To do")
   end
 
-  it "asks a member to confirm their email address" do
+  it "shows no apps until the email address is confirmed" do
+    launcher_app("Open App")
     member.update!(email_confirmed_at: nil)
 
     get root_path
 
-    expect(response.body).to include("Confirm your email address", email_confirmation_path)
+    expect(response).to redirect_to(email_confirmation_path)
   end
 
   it "keeps the launcher off the account page" do
