@@ -918,7 +918,8 @@
   /* The account tabs: a second row of the top bar on account pages */
   .topbar-subnav { max-width: 72rem; margin-inline: auto; padding: 0 1rem; }
   @media (min-width: 40rem) { .topbar-subnav { padding: 0 1.5rem; } }
-  .tabs.topbar-tabs { margin-bottom: 0; border-bottom: 0; scrollbar-width: none; }
+  .tabs.topbar-tabs { margin-bottom: 0; border-bottom: 0; overflow-y: hidden; scrollbar-width: none; }
+  .tabs.topbar-tabs .tab { margin-bottom: 0; }
 
   /* The account menu: avatar button and its popup */
   .menu { position: relative; }

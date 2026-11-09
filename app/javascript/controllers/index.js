@@ -20,6 +20,9 @@ application.register("confirm-submit", ConfirmSubmitController)
 
 
 
+import CurrentTabController from "./current_tab_controller"
+application.register("current-tab", CurrentTabController)
+
 import DrawerController from "./drawer_controller"
 application.register("drawer", DrawerController)
 
