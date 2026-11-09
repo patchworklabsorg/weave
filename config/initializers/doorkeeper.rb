@@ -295,11 +295,12 @@ Doorkeeper.configure do
   # - `fulfillment`: read a member's shipping address to print a label
   #   (Api::V1::Directory::ShippingAddressesController).
   # - `quilt`: call Quilt's patch API. Quilt checks the token at introspection.
+  # - `stash`: archive URLs in Stash. Stash checks the token at introspection.
   # - `introspect`: introspect the `client_credentials` tokens of other apps
   #   (see `allow_token_introspection` below). Only a superadmin may allow it
   #   on an app (see Admin::OauthApplicationsController).
   user_scopes = %i[profile openid email phone admin slack groups roles verification residency age social]
-  app_scopes = %i[directory fulfillment quilt introspect]
+  app_scopes = %i[directory fulfillment quilt stash introspect]
 
   default_scopes :profile
   optional_scopes(*(user_scopes - [:profile]), *app_scopes)
@@ -504,6 +505,21 @@ Doorkeeper.configure do
   before_successful_strategy_response do |request|
     token = request.try(:access_token)
     next if token.nil?
+
+    # An app scope needs an explicit allowance on the app (see docs/OAUTH.md).
+    # Doorkeeper checks a requested scope against the app's scopes only when
+    # the app has some: an app with an empty scopes field is checked against
+    # the server scopes, which would let it mint a `quilt` or `stash` token
+    # that a resource server then trusts.
+    if token.resource_owner_id.nil?
+      asked = token.scopes.to_a & app_scopes.map(&:to_s)
+      allowed = token.application&.scopes
+      unless asked.all? { |scope| allowed&.exists?(scope) }
+        token.revoke
+        raise Doorkeeper::Errors::InvalidScope, Doorkeeper::OAuth::ErrorResponse.new(name: :invalid_scope)
+      end
+    end
+
     next if AppAccess.token_usable?(token)
 
     token.revoke

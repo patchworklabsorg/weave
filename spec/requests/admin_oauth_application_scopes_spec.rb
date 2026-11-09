@@ -24,11 +24,11 @@ RSpec.describe "Admin OAuth application scopes", type: :request do
   context "when signed in as a plain admin" do
     before { sign_in_via_magic_link(admin) }
 
-    it "can allow the quilt and directory scopes" do
-      update_scopes("profile quilt directory")
+    it "can allow the quilt, stash and directory scopes" do
+      update_scopes("profile quilt stash directory")
 
       expect(response).to redirect_to(admin_oauth_application_path(application))
-      expect(application.reload.scopes.to_a).to contain_exactly("profile", "quilt", "directory")
+      expect(application.reload.scopes.to_a).to contain_exactly("profile", "quilt", "stash", "directory")
     end
 
     it "can't allow the introspect scope" do

@@ -13,7 +13,7 @@ RSpec.describe "OAuth token introspection", type: :request do
   end
   let(:krater) do
     Doorkeeper::Application.create!(name: "Krater", redirect_uri: "https://krater.example.com/cb",
-                                    scopes: "openid profile quilt")
+                                    scopes: "openid profile quilt stash")
   end
   let(:user) { create(:user, :verified, :accepted_code_of_conduct) }
 
@@ -33,22 +33,24 @@ RSpec.describe "OAuth token introspection", type: :request do
   end
 
   describe "an app allowed the introspect scope" do
-    it "sees another app's client_credentials token as active, with its client and scope" do
-      token = client_credentials_token(krater, scope: "quilt")
+    %w[quilt stash].each do |scope|
+      it "sees another app's client_credentials token as active, with its client and scope (#{scope})" do
+        token = client_credentials_token(krater, scope: scope)
 
-      freeze_time do
-        record = Doorkeeper::AccessToken.by_token(token)
-        body = introspect(token, as: quilt)
+        freeze_time do
+          record = Doorkeeper::AccessToken.by_token(token)
+          body = introspect(token, as: quilt)
 
-        expect(response).to have_http_status(:ok)
-        expect(body).to include(
-          "active"     => true,
-          "client_id"  => krater.uid,
-          "scope"      => "quilt",
-          "token_type" => "Bearer",
-          "exp"        => record.expires_at.to_i,
-          "iat"        => record.created_at.to_i
-        )
+          expect(response).to have_http_status(:ok)
+          expect(body).to include(
+            "active"     => true,
+            "client_id"  => krater.uid,
+            "scope"      => scope,
+            "token_type" => "Bearer",
+            "exp"        => record.expires_at.to_i,
+            "iat"        => record.created_at.to_i
+          )
+        end
       end
     end
 
@@ -111,7 +113,30 @@ RSpec.describe "OAuth token introspection", type: :request do
       expect(response.parsed_body["error"]).to eq("invalid_scope")
     end
 
-    %w[quilt introspect directory fulfillment].each do |scope|
+    # Doorkeeper checks a requested scope against the server scopes when the
+    # app has none of its own, so an empty scopes field must not stand in for
+    # an admin's allowance.
+    it "are not issued to an app with an empty scopes field, and no token is left behind" do
+      app = Doorkeeper::Application.create!(name: "Blank", redirect_uri: "https://blank.example.com/cb", scopes: "")
+
+      expect do
+        post oauth_token_path, params: { grant_type: "client_credentials", scope: "stash" }, headers: basic_auth(app)
+      end.not_to(change { Doorkeeper::AccessToken.where(application: app, revoked_at: nil).count })
+
+      expect(response).to have_http_status(:bad_request)
+      expect(response.parsed_body["error"]).to eq("invalid_scope")
+    end
+
+    it "are issued to an app allowed them next to user scopes" do
+      app = Doorkeeper::Application.create!(name: "Blank", redirect_uri: "https://blank.example.com/cb", scopes: "")
+
+      post oauth_token_path, params: { grant_type: "client_credentials", scope: "profile" }, headers: basic_auth(app)
+      expect(response).to have_http_status(:ok)
+
+      expect(client_credentials_token(krater, scope: "openid stash")).to be_present
+    end
+
+    %w[quilt stash introspect directory fulfillment].each do |scope|
       it "can't be asked for at the authorization endpoint (#{scope})" do
         app = Doorkeeper::Application.create!(name: "Client", redirect_uri: "https://client.example.com/cb",
                                               scopes: "openid profile #{scope}")

@@ -31,6 +31,7 @@ en:
       directory: 'Look up users of this app (app tokens only)'
       fulfillment: 'Read the shipping address of a user of this app (app tokens only)'
       quilt: 'Call the Quilt patch API (app tokens only)'
+      stash: 'Archive URLs in Stash (app tokens only)'
       introspect: 'Check the app tokens of other apps (app tokens only)'
 
     applications:
