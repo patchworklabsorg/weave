@@ -126,4 +126,24 @@ module UiHelper
       safe_join([tag.dt(label), tag.dd(block ? capture(&block) : value)])
     end
   end
+
+  # The account pages: everything under /profile, and /password. The top
+  # bar lights "Account" on them and shows the account tabs.
+  def account_section?
+    path = request.path
+    path == password_path || path == profile_path || path.start_with?("#{profile_path}/")
+  end
+
+  # [label, path, current?] for each account tab. Profile is current on the
+  # /profile pages that have no tab of their own (edit, demographics, export).
+  def account_tabs
+    path = request.path
+    tabs = [
+      ["Sessions", profile_sessions_path],
+      ["Passkeys", passkeys_path],
+      ["Password", password_path],
+      ["Social profiles", social_profiles_path]
+    ].map { |label, tab_path| [label, tab_path, path == tab_path || path.start_with?("#{tab_path}/")] }
+    [["Profile", profile_path, tabs.none?(&:last)], *tabs]
+  end
 end

@@ -20,6 +20,9 @@ application.register("confirm-submit", ConfirmSubmitController)
 
 
 
+import CurrentTabController from "./current_tab_controller"
+application.register("current-tab", CurrentTabController)
+
 import DrawerController from "./drawer_controller"
 application.register("drawer", DrawerController)
 
@@ -36,6 +39,9 @@ application.register("login-form", LoginFormController)
 
 import OnboardingStatusController from "./onboarding_status_controller"
 application.register("onboarding-status", OnboardingStatusController)
+
+import MenuController from "./menu_controller"
+application.register("menu", MenuController)
 
 import PasskeyRegisterController from "./passkey_register_controller"
 application.register("passkey-register", PasskeyRegisterController)

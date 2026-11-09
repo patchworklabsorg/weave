@@ -1,0 +1,11 @@
+<%# The account tabs: the second row of the top bar on every account page
+    (account_section?). Profile stays current on its sub-pages (edit,
+    demographics, export, delete). On a phone the row scrolls, and
+    current-tab brings the current tab into view. %>
+<div class="topbar-subnav">
+  <nav class="tabs topbar-tabs" aria-label="Account" data-controller="current-tab">
+    <% account_tabs.each do |label, path, current| %>
+      <%= link_to label, path, class: "tab", "aria-current": (current ? "page" : nil) %>
+    <% end %>
+  </nav>
+</div>
