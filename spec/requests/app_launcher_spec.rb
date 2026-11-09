@@ -2,10 +2,12 @@
 
 require "rails_helper"
 
-# The app launcher on /profile (see AppLauncher): the apps a member may use,
+# The app launcher on the member home (/) (see AppLauncher): the apps a member may use,
 # the ones they may ask for, and their open requests.
 RSpec.describe "App launcher", type: :request do
-  let(:member) { create(:user, :verified, :accepted_code_of_conduct) }
+  let(:member) do
+    create(:user, :verified, :accepted_code_of_conduct, slack_id: "U1", slack_membership: "member")
+  end
   let(:group) { create(:group, name: "Reviewers") }
 
   def launcher_app(name, **attributes)
@@ -19,7 +21,7 @@ RSpec.describe "App launcher", type: :request do
   it "lists the apps the member can use, with links" do
     launcher_app("Open App", launcher_description: "For everyone")
 
-    get profile_path
+    get root_path
 
     expect(response.body).to include("Your apps", "Open App", "For everyone", "https://open-app.example.com")
   end
@@ -28,7 +30,7 @@ RSpec.describe "App launcher", type: :request do
     Doorkeeper::Application.create!(name: "Hidden App", redirect_uri: "https://hidden.example.com/callback",
                                     launch_url: "https://hidden.example.com")
 
-    get profile_path
+    get root_path
 
     expect(response.body).not_to include("Hidden App")
     expect(response.body).not_to include("Your apps")
@@ -37,7 +39,7 @@ RSpec.describe "App launcher", type: :request do
   it "leaves out restricted apps that take no requests" do
     launcher_app("Secret App", access_policy: "restricted")
 
-    get profile_path
+    get root_path
 
     expect(response.body).not_to include("Secret App")
   end
@@ -47,7 +49,7 @@ RSpec.describe "App launcher", type: :request do
     ApplicationAccessGrant.create!(application:, grantee: group)
     application.update!(access_request_group: group)
 
-    get profile_path
+    get root_path
 
     expect(response.body).to include("Krater", "Request access", new_access_request_path(application: application.to_param))
     expect(response.body).not_to include("https://krater.example.com\"")
@@ -60,7 +62,7 @@ RSpec.describe "App launcher", type: :request do
       application.update!(access_request_group: group)
     end
 
-    get profile_path
+    get root_path
 
     expect(response.body.scan("Request access").size).to eq(2)
   end
@@ -71,17 +73,58 @@ RSpec.describe "App launcher", type: :request do
     application.update!(access_request_group: group)
     AccessRequest.create!(user: member, application:, group:, reason: "Please")
 
-    get profile_path
+    get root_path
 
     expect(response.body).to include("Request pending")
     expect(response.body).not_to include(new_access_request_path(application: application.to_param))
   end
 
-  it "links a manager to the groups they manage" do
+  it "asks a manager to review a waiting access request" do
     create(:group_membership, group:, user: member, role: "manager")
+    application = launcher_app("Krater", access_policy: "restricted")
+    ApplicationAccessGrant.create!(application:, grantee: group)
+    application.update!(access_request_group: group)
+    AccessRequest.create!(user: create(:user, :verified), application:, group:, reason: "Please")
+
+    get root_path
+
+    expect(response.body).to include("To do", "1 access request waits for you", groups_path)
+  end
+
+  it "does not ask a manager to review their own request" do
+    create(:group_membership, group:, user: member, role: "manager")
+    application = launcher_app("Krater", access_policy: "restricted")
+    ApplicationAccessGrant.create!(application:, grantee: group)
+    application.update!(access_request_group: group)
+    AccessRequest.create!(user: member, application:, group:, reason: "Please")
+
+    get root_path
+
+    expect(response.body).not_to include("To do")
+    expect(response.body).not_to include("Request pending")
+  end
+
+  it "shows no to do list to a manager with nothing waiting" do
+    create(:group_membership, group:, user: member, role: "manager")
+
+    get root_path
+
+    expect(response.body).not_to include("To do")
+  end
+
+  it "asks a member to confirm their email address" do
+    member.update!(email_confirmed_at: nil)
+
+    get root_path
+
+    expect(response.body).to include("Confirm your email address", email_confirmation_path)
+  end
+
+  it "keeps the launcher off the account page" do
+    launcher_app("Open App")
 
     get profile_path
 
-    expect(response.body).to include("Groups you manage", groups_path)
+    expect(response.body).not_to include("Your apps")
   end
 end

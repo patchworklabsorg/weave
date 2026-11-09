@@ -1,0 +1,53 @@
+<%# The app launcher on the member home (see AppLauncher). Tiles in a grid
+    that takes any number of apps. Hidden when there is nothing to show. %>
+<% unless launcher.empty? %>
+  <section id="apps" aria-labelledby="apps-title">
+    <h2 class="section-title" id="apps-title">Your apps</h2>
+
+    <% if launcher.usable.any? || launcher.pending.any? %>
+      <div class="app-grid">
+        <% launcher.usable.each do |application| %>
+          <%= link_to application.launch_url, class: "app-tile", rel: "noopener" do %>
+            <span class="app-tile-corner"><%= icon(:arrow_up_right, size: 16) %></span>
+            <%= app_icon(application, size: nil) %>
+            <div class="min-w-0">
+              <p class="app-tile-name"><%= application.name %></p>
+              <% if application.launcher_description.present? %>
+                <p class="app-tile-desc"><%= application.launcher_description %></p>
+              <% end %>
+            </div>
+          <% end %>
+        <% end %>
+
+        <% launcher.pending.each do |access_request| %>
+          <div class="app-tile app-tile-request">
+            <%= app_icon(access_request.application, size: nil) %>
+            <div class="min-w-0">
+              <p class="app-tile-name"><%= access_request.application.name %></p>
+              <p class="app-tile-desc">You asked for access <%= time_label(access_request.created_at, :relative) %>.</p>
+            </div>
+            <div class="app-tile-foot"><%= badge("Request pending", tone: :warning, icon: :clock) %></div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="text-sm text-ink-soft">You don't have access to an app yet. Ask for access below.</p>
+    <% end %>
+
+    <% if launcher.requestable.any? %>
+      <h2 class="section-title mt-6" id="more-apps-title">More apps</h2>
+      <div class="app-grid" aria-labelledby="more-apps-title">
+        <% launcher.requestable.each do |application| %>
+          <%= link_to new_access_request_path(application: application.to_param), class: "app-tile app-tile-request" do %>
+            <%= app_icon(application, size: nil) %>
+            <div class="min-w-0">
+              <p class="app-tile-name"><%= application.name %></p>
+              <p class="app-tile-desc"><%= application.launcher_description.presence || "You don't have access to this app yet." %></p>
+            </div>
+            <span class="app-tile-foot link text-sm inline-flex items-center gap-1"><%= icon(:key_round, size: 14) %>Request access</span>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </section>
+<% end %>

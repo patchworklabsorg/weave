@@ -252,13 +252,14 @@ RSpec.describe "Slack onboarding", type: :request do
       expect(response).to redirect_to(slack_onboarding_path)
     end
 
-    it "sends a full member to their account" do
+    it "shows a full member their home" do
       user.update!(slack_id: "U1", slack_membership: "member", slack_coc_accepted_at: 1.day.ago)
       sign_in_via_magic_link(user)
 
       get root_path
 
-      expect(response).to redirect_to(profile_path)
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Hi, ")
     end
 
     it "sends a full member who never accepted the code of conduct to onboarding" do

@@ -1,0 +1,72 @@
+<% content_for :title, "Home" %>
+
+<div class="page">
+  <%= page_header("Hi, #{@user.full_name.split.first || "there"}",
+                  lede: "Your Patchwork Labs account and the apps it opens.") %>
+
+  <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_20rem] gap-6 items-start">
+    <div class="min-w-0 flex flex-col gap-6">
+      <%# What waits for this member (MemberTasks). Hidden when nothing does. %>
+      <% if @tasks.any? %>
+        <section class="card" aria-labelledby="todo-title">
+          <div class="card-header">
+            <h2 class="card-title" id="todo-title">To do</h2>
+          </div>
+          <div class="card-body">
+            <div class="record-list">
+              <% @tasks.each do |task| %>
+                <div class="record">
+                  <div class="record-main flex items-start gap-3">
+                    <span class="text-grape mt-0.5"><%= icon(task.icon, size: 18) %></span>
+                    <div class="min-w-0">
+                      <p class="record-title"><%= task.title %></p>
+                      <p class="record-meta"><%= task.body %></p>
+                    </div>
+                  </div>
+                  <div class="record-actions">
+                    <%= link_to task.action, task.path, class: "btn btn-secondary btn-sm" %>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </section>
+      <% end %>
+
+      <%= render "home/apps", launcher: @launcher %>
+    </div>
+
+    <%# A short view of the account. The full page is /profile. %>
+    <aside class="card" aria-labelledby="account-title">
+      <div class="card-body flex flex-col gap-4">
+        <div class="flex items-center gap-3 min-w-0">
+          <%= avatar(@user, size: :lg) %>
+          <div class="min-w-0">
+            <h2 class="card-title" id="account-title"><%= @user.full_name %></h2>
+            <p class="text-sm text-ink-soft truncate"><%= @user.email %></p>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-xs font-medium text-ink-soft mb-1">Weave ID</p>
+          <%= copy_button(@user.p_id, label: "Copy your Weave ID") %>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <% status = @user.verification_status %>
+          <%= link_to verification_path, class: "link-quiet text-sm inline-flex items-center gap-2" do %>
+            <%= t("verification.page.title") %>
+            <%= badge(t("verification.statuses.#{status}"), tone: status == "verified" ? :success : :grape) %>
+          <% end %>
+        </div>
+
+        <nav class="flex flex-col gap-0.5 -mx-2" aria-label="Account shortcuts">
+          <%= nav_link "Account details", profile_path, icon: :user, active: false %>
+          <%= nav_link "Sessions", profile_sessions_path, icon: :monitor, active: false %>
+          <%= nav_link "Passkeys", passkeys_path, icon: :fingerprint, active: false %>
+          <%= nav_link "Social profiles", social_profiles_path, icon: :link, active: false %>
+        </nav>
+      </div>
+    </aside>
+  </div>
+</div>

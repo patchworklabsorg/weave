@@ -43,7 +43,7 @@ RSpec.describe "Access requests", type: :request do
     expect(response.body).to include("You can ask for access", "Request access")
 
     perform_enqueued_jobs { ask_for_access }
-    expect(response).to redirect_to(profile_path)
+    expect(response).to redirect_to(root_path)
     request_record = AccessRequest.sole
     expect(request_record).to have_attributes(user: member, application:, group:, status: "pending")
     expect(ActionMailer::Base.deliveries.map(&:to)).to contain_exactly([manager.email])
@@ -101,7 +101,7 @@ RSpec.describe "Access requests", type: :request do
     sign_in_via_magic_link(member)
 
     get new_access_request_path(application: application.to_param)
-    expect(response).to redirect_to(profile_path)
+    expect(response).to redirect_to(root_path)
 
     ask_for_access
     expect(AccessRequest.count).to eq(0)
@@ -113,7 +113,7 @@ RSpec.describe "Access requests", type: :request do
 
     get new_access_request_path(application: application.to_param)
 
-    expect(response).to redirect_to(profile_path)
+    expect(response).to redirect_to(root_path)
     expect(flash[:notice]).to include("You already have access")
   end
 
