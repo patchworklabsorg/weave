@@ -27,6 +27,7 @@ class Identity::VerificationsController < Identity::BaseController
     @team = User.identity_team.where.not(id: [current_user.id, @verification.user_id].compact).order(:first_name)
     @break_glass_records = @verification.break_glass_records.includes(:requested_by, :approvers).order(created_at: :desc)
     @residency_check = ResidencyFlow.check_for(@verification)
+    @guardian_consent = call_guardian_consent
   end
 
   def start_pre_review
@@ -147,6 +148,15 @@ class Identity::VerificationsController < Identity::BaseController
   end
 
   private
+
+  # The guardian to contact for a minor's call: the granted consent (the one
+  # the call outcome records), or else the pending request. Only while the
+  # call is being arranged.
+  def call_guardian_consent
+    return unless @user&.minor? && (@verification.awaiting_call? || @verification.call_scheduled?)
+
+    @user.guardian_consents.granted.order(:granted_at).last || @user.current_guardian_consent
+  end
 
   def set_verification
     @verification = Verification.find_by_public_param!(params[:id])

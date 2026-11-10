@@ -221,6 +221,46 @@ RSpec.describe "Identity verification pages", type: :request do
     end
   end
 
+  describe "arranging the call" do
+    before { sign_in_via_magic_link(verifier) }
+
+    it "shows the member's email to agree a call time" do
+      verification = create(:verification, :awaiting_call, user: member)
+
+      get identity_verification_path(verification)
+
+      expect(response.body).to include("Member email", member.email)
+      expect(response.body).not_to include("Parent or guardian")
+    end
+
+    it "shows a minor's parent or guardian and their email" do
+      minor = create(:user, :verified, :minor)
+      create(:guardian_consent, :granted, user: minor, guardian_name: "Grace Hopper", guardian_email: "grace@example.org")
+      verification = create(:verification, :call_scheduled, user: minor)
+
+      get identity_verification_path(verification)
+
+      expect(response.body).to include("Parent or guardian", "Grace Hopper", "grace@example.org", minor.email)
+    end
+
+    it "says when a minor has no guardian email on file" do
+      minor = create(:user, :verified, :minor)
+      verification = create(:verification, :awaiting_call, user: minor)
+
+      get identity_verification_path(verification)
+
+      expect(response.body).to include("No guardian email on file")
+    end
+
+    it "does not show the emails before the document is OK" do
+      verification = create(:verification, user: member)
+
+      get identity_verification_path(verification)
+
+      expect(response.body).not_to include("Member email")
+    end
+  end
+
   describe "recording the call outcome" do
     let(:member) { create(:user, :verified, first_name: "Ada", legal_first_name: "Erika", legal_last_name: "Mustermann", birthday: Date.new(1990, 8, 12)) }
     let(:verification) { create(:verification, :call_scheduled, user: member) }
