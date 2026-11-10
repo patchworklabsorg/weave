@@ -40,7 +40,7 @@
         <%= link_to "Go to your Weave account", root_path, class: "btn btn-secondary btn-block" %>
       <% elsif @pending_request %>
         <p class="text-sm text-ink-soft text-center">
-          You asked for access <%= time_ago_in_words(@pending_request.created_at) %> ago. You get an email when the managers of <%= @pending_request.group.name %> decide.
+          You asked for access <%= time_label(@pending_request.created_at, :relative) %>. You get an email when the managers of <%= @pending_request.group.name %> decide.
         </p>
 
         <%= link_to "Go to your Weave account", root_path, class: "btn btn-secondary btn-block" %>

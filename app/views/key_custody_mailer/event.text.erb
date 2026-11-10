@@ -1,6 +1,6 @@
 <%= @event.summary %>
 
-When: <%= @event.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>
+When: <%= TimeHelper.time_text(@event.created_at) %>
 <% if @event.data["reason"].present? -%>
 Reason: <%= @event.data["reason"] %>
 <% end -%>

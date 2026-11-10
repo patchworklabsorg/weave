@@ -1,6 +1,6 @@
 Your break-glass request <%= @record.public_id %> is granted.
 
-Open the image once, in the same browser you asked from, before <%= @record.handoff_expires_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>. Click "Open" on the break-glass page:
+Open the image once, in the same browser you asked from, before <%= TimeHelper.time_text(@record.handoff_expires_at) %>. Click "Open" on the break-glass page:
 
 <%= @admin_url %>
 

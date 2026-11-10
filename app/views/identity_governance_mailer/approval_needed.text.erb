@@ -7,6 +7,6 @@ Every board member at the time of the proposal must approve a key holder change.
 <% else -%>
 One board member who did not make the proposal must approve it.
 <% end -%>
-The proposal expires on <%= @proposal.expires_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>.
+The proposal expires on <%= TimeHelper.time_text(@proposal.expires_at) %>.
 
 <%= @url %>

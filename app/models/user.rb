@@ -518,11 +518,12 @@ class User < ApplicationRecord
     user_sessions.maximum(:last_seen_at)
   end
 
-  # The member's time zone: the browser time zone of their newest own sign-in
-  # (not an impersonation). UTC when no sign-in gave a zone Weave knows.
+  # The member's time zone for email and Slack: the browser time zone of
+  # their newest own sign-in (not an impersonation) with a zone Weave knows.
+  # UTC when there is none.
   def time_zone
-    name = user_sessions.not_impersonated.where.not(timezone: [nil, ""]).order(created_at: :desc).pick(:timezone)
-    (ActiveSupport::TimeZone[name] if name.present?) || ActiveSupport::TimeZone["UTC"]
+    names = user_sessions.not_impersonated.where.not(timezone: [nil, ""]).order(created_at: :desc).limit(20).pluck(:timezone)
+    names.lazy.filter_map { |name| TimeHelper.find_zone(name) }.first || ActiveSupport::TimeZone["UTC"]
   end
 
   def last_login_at

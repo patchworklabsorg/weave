@@ -37,7 +37,7 @@
                 data-break-glass-request-id-value="<%= record.public_id %>">
               <p class="text-sm text-ink">
                 <span class="mono"><%= record.public_id %></span>: <%= record.reason %>. Open it once, in the browser you asked from, before
-                <%= record.handoff_expires_at.utc.strftime("%H:%M UTC") %>.
+                <%= time_label(record.handoff_expires_at, :datetime) %>.
               </p>
               <div>
                 <button type="button" class="btn <%= index.zero? ? 'btn-primary' : 'btn-secondary' %>" data-break-glass-target="button" data-action="break-glass#open"><%= icon(:eye) %>Open</button>

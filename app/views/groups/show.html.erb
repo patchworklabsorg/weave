@@ -34,7 +34,7 @@
                 </p>
                 <p class="record-meta">
                   Asks for <strong class="text-ink"><%= access_request.application.name %></strong>
-                  <%= time_ago_in_words(access_request.created_at) %> ago
+                  <%= time_label(access_request.created_at, :relative) %>
                 </p>
                 <p class="mt-2 text-sm text-ink whitespace-pre-line break-words"><%= access_request.reason %></p>
               </div>
@@ -94,7 +94,7 @@
                 <span class="record-meta"><%= membership.user.email %></span>
                 <%= badge("Manager", tone: :grape) if membership.role_manager? %>
                 <% if membership.expires_at %>
-                  <span class="record-meta">Until <%= membership.expires_at.strftime("%b %-d, %Y") %></span>
+                  <span class="record-meta">Until <%= time_label(membership.expires_at) %></span>
                 <% end %>
               </div>
               <% if policy(membership).destroy? %>
@@ -126,7 +126,7 @@
                 <p class="record-meta">
                   <%= access_request.status.humanize %>
                   <% if access_request.decided_by %>by <%= access_request.decided_by.full_name %><% end %>
-                  <%= time_ago_in_words(access_request.decided_at) %> ago
+                  <%= time_label(access_request.decided_at, :relative) %>
                 </p>
               </div>
               <div class="record-actions">

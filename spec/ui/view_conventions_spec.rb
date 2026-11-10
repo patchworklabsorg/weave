@@ -36,9 +36,17 @@ RSpec.describe "View conventions" do # rubocop:disable RSpec/DescribeClass
   it "shows every date and time through time_label" do
     bad = offenders(views, root, strip_comments) do |line, _|
       line.match?(/strftime\(|to_fs\(:|time_ago_in_words|(?<![a-z_])l\(/) &&
-        !line.include?("TimeHelper::FORMATS") && !line.include?("%H:%M UTC")
+        !line.include?("TimeHelper::FORMATS")
     end
     expect(bad).to be_empty, "use time_label (app/helpers/time_helper.rb) in:\n#{bad.join("\n")}"
+  end
+
+  # Times show in the reader's zone (TimeHelper). Converting to UTC in a
+  # view, an email included, shows the wrong zone to most readers.
+  it "never turns a time into UTC in a view or an email" do
+    all_views = Dir.glob(root.join("app/views/**/*.erb")).map { |path| Pathname(path).relative_path_from(root).to_s }.sort
+    bad = offenders(all_views, root, strip_comments) { |line, _| line.match?(/\.utc\b|\.getutc\b/) }
+    expect(bad).to be_empty, "use time_label, or TimeHelper.time_text in an email, in:\n#{bad.join("\n")}"
   end
 
   it "calls the public identifier the Weave ID" do

@@ -14,6 +14,8 @@ class ApplicationController < ActionController::Base
   # Tells the permanent log of privileged attributes who acts in this request
   # (see PrivilegedChangeActor).
   around_action :attribute_privileged_changes
+  # Times on the page in the viewer's zone (see the concern).
+  include ViewerTimeZone
 
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   # allow_browser versions: :modern
