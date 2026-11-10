@@ -58,6 +58,26 @@ RSpec.describe NotifyIdentityTeamJob do
       expect(IdentitySlackThread.find_by(user: member, channel: "CIDENTITY").ts).to eq("2")
     end
 
+    it "starts a new thread when the parent message is gone" do
+      thread = IdentitySlackThread.create!(user: member, channel: "CIDENTITY", ts: "1")
+      allow(service).to receive(:post_to_identity_channel) do |text, thread_ts: nil, **|
+        raise Slack::Web::Api::Errors::SlackError, "thread_not_found" if thread_ts == "1"
+
+        text.include?("Weave ID") ? "2" : raise("not a new thread")
+      end
+
+      described_class.perform_now("escalated", verification)
+
+      expect(thread.reload.ts).to eq("2")
+    end
+
+    it "posts to the channel, with no thread, for an attempt whose account was deleted" do
+      verification.update!(user: nil)
+      expect(service).to receive(:post_to_identity_channel).with(a_string_including(verification.public_id))
+
+      described_class.perform_now("escalated", verification)
+    end
+
     it "keeps no thread when the first post fails, so the next notice starts it" do
       allow(service).to receive(:post_to_identity_channel).and_raise(Slack::Web::Api::Errors::SlackError.new("not_in_channel"))
 
@@ -79,9 +99,10 @@ RSpec.describe NotifyIdentityTeamJob do
     described_class.perform_now("residency_submitted", check)
   end
 
-  it "has text for every kind" do
+  it "renders the text of every kind with the values its callers pass" do
+    values = { link: "x", actor: "y", at: "z", outcome: "verified", resolution: "retry allowed" }
     described_class::KINDS.each do |kind|
-      expect(I18n.exists?("verification.slack.team.#{kind}")).to be(true), kind
+      expect { I18n.t("verification.slack.team.#{kind}", raise: true, **values) }.not_to raise_error, kind
     end
   end
 

@@ -49,9 +49,14 @@ class NotifyIdentityTeamJob < ApplicationJob
 
   private
 
+  # Slack errors that mean the parent message is gone (deleted, or removed by
+  # a retention policy).
+  THREAD_GONE = %w[thread_not_found invalid_thread_ts message_not_found].freeze
+
   # The first notice about a member starts the thread. The row lock keeps two
-  # jobs from starting two threads for the same member.
-  def post(service, user, text, broadcast:)
+  # jobs from starting two threads for the same member. When the parent
+  # message is gone, the notice starts a new thread.
+  def post(service, user, text, broadcast:, restarted: false)
     return service.post_to_identity_channel(text) if user.nil?
 
     thread = IdentitySlackThread.for(user, service.identity_channel)
@@ -63,6 +68,11 @@ class NotifyIdentityTeamJob < ApplicationJob
       true
     end
     service.post_to_identity_channel(text, thread_ts: thread.ts, broadcast:) unless started
+  rescue Slack::Web::Api::Errors::SlackError => e
+    raise if restarted || started || THREAD_GONE.exclude?(e.message)
+
+    thread.update!(ts: nil)
+    post(service, user, text, broadcast:, restarted: true)
   end
 
   def link(record)
