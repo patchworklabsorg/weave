@@ -51,7 +51,7 @@
                   <span class="min-w-0 break-words"><%= external_link profile.username, profile.profile_url %></span>
                 </div>
                 <div class="record-meta">
-                  <%= profile.provider_name %> · linked <%= profile.created_at.to_date.to_fs(:long) %>
+                  <%= profile.provider_name %> · linked <%= time_label(profile.created_at) %>
                 </div>
               </div>
               <% unless impersonating? %>

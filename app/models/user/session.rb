@@ -127,7 +127,7 @@ class User
       parts = []
       parts << "IP: #{ip}" if ip.present?
       parts << "Device: #{device_info}" if device_info.present?
-      parts << "Created: #{created_at.strftime('%m/%d/%Y %I:%M %p')}"
+      parts << "Created: #{TimeHelper.time_text(created_at)}"
       parts << "Status: #{expired? || signed_out_at ? 'Expired' : 'Active'}"
       parts.join("<br>")
     end

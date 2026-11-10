@@ -15,7 +15,7 @@ class VerificationMailer < ApplicationMailer
               first_name: @user.first_name,
               note: verification.resubmission_note.to_s,
               call_time: verification.call_time_for_member,
-              retry_date: verification.retry_available_at&.to_date&.to_fs(:long).to_s,
+              retry_date: verification.retry_available_at&.in_time_zone(@user.time_zone)&.to_date&.to_fs(:long).to_s,
               days: VerificationSettings.purge_image_after_pass.in_days.to_i,
               reason: reverification_reason_text(verification))
 

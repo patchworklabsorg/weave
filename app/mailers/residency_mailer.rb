@@ -26,7 +26,7 @@ class ResidencyMailer < ApplicationMailer
     @status_url = verification_url
     @body = t("residency.mailer.#{key}.body",
               first_name: @user.first_name, state: check.us_state_name.to_s, note: check.resubmission_note.to_s,
-              date: check.expires_at&.to_date&.to_fs(:long).to_s,
+              date: check.expires_at&.in_time_zone(@user.time_zone)&.to_date&.to_fs(:long).to_s,
               days: VerificationSettings.purge_image_after_pass.in_days.to_i)
 
     mail(to: @user.email, subject: env_subject(t("residency.mailer.#{key}.subject")), template_name: "status_changed")

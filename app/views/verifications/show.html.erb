@@ -9,7 +9,7 @@
     elsif @latest.failed? && @blocker == :cooldown then t("verification.page.failed", retry_date: @latest.retry_available_at.to_date.strftime(TimeHelper::FORMATS[:date]))
     elsif @latest.failed? then t("verification.page.failed_can_retry")
     elsif @latest.needs_resubmission? then t("verification.page.needs_resubmission", note: @latest.resubmission_note)
-    elsif @latest.call_scheduled? then t("verification.page.call_scheduled", call_time: @latest.call_time_for_member)
+    elsif @latest.call_scheduled? then t("verification.page.call_scheduled", call_time: @latest.call_time_for_member(Time.zone))
     else t("verification.page.#{@latest.status}")
     end
   accept = "image/jpeg,image/png,image/heic,image/heif,.heic,.heif,application/pdf"

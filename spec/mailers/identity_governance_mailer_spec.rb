@@ -20,6 +20,15 @@ RSpec.describe IdentityGovernanceMailer do
                                          "Every board member", "/identity/governance_proposals/#{proposal.to_param}")
   end
 
+  it "gives the time in the recipient's zone, and in UTC for a recipient with no zone" do
+    member = create(:user, :key_holder, first_name: "Rae", last_name: "Gone")
+    event = travel_to(Time.utc(2026, 11, 3, 15, 30)) { IdentityGovernance.remove_member(member, by: owner, reason: "Left the org.").record }
+    board_member.user_sessions.create!(timezone: "America/Chicago", expiration_at: 1.day.from_now)
+
+    expect(described_class.member_removed(event, board_member).body.encoded).to include("When: Nov 3, 2026, 9:30 AM CST")
+    expect(described_class.member_removed(event, owner).body.encoded).to include("When: Nov 3, 2026, 3:30 PM UTC")
+  end
+
   it "tells a board member about a removal, with the reason" do
     member = create(:user, :key_holder, first_name: "Rae", last_name: "Gone")
     event = IdentityGovernance.remove_member(member, by: owner, reason: "Left the org.").record

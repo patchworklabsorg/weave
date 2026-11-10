@@ -15,7 +15,7 @@ class Admin::GroupMembershipsController < Admin::BaseController
       user: user,
       added_by: current_user,
       source: "manual",
-      expires_at: membership_params[:expires_at].presence
+      expires_at: form_time(membership_params[:expires_at])
     )
 
     if membership.save

@@ -9,7 +9,7 @@ Weave is the reference implementation of the Patchwork design system. The guide 
 | Tokens and component classes | `app/assets/tailwind/application.css` |
 | Fonts (self-hosted Geist, Shantell Sans) | `app/assets/tailwind/fonts.css`, `public/fonts` |
 | View helpers (`badge`, `page_header`, `nav_link`, `empty_state`, `form_errors`, `copy_button`, `avatar`, `dl_row`) | `app/helpers/ui_helper.rb` |
-| Dates and times (`time_label(time, style)`, styles `:date`, `:datetime`, `:relative`, `:month`, `:day`) | `app/helpers/time_helper.rb` |
+| Dates and times (`time_label(time, style)`, styles `:date`, `:datetime`, `:relative`, `:month`, `:day`; `TimeHelper.time_text` in emails), in the viewer's or recipient's zone | `app/helpers/time_helper.rb`, `app/controllers/concerns/viewer_time_zone.rb` |
 | Icons (`icon(:name)`, Lucide through `lucide-rails`) | `app/helpers/icon_helper.rb` |
 | Layouts | `app/views/layouts/application.html.erb` (member), `admin.html.erb` (admin), `sessions.html.erb` and `doorkeeper/application.html.erb` (focus) |
 | Shared partials | `app/views/shared/`: `_head`, `_topbar`, `_account_tabs`, `_sidebar`, `_wordmark`, `_theme`, `_theme_toggle`, `_flash`, `_form_errors`, `_search_form`, `_command_bar`, `_impersonation_banner`, `_staging_badge` |
@@ -40,6 +40,7 @@ Weave is the reference implementation of the Patchwork design system. The guide 
 `spec/ui/view_conventions_spec.rb` checks the rules below that a file scan can hold (dates, the identifier name, tokens, inline styles, emoji and em dashes, confirms on Turbo-off forms, titles, skip links, table wrappers, light-dark tokens). Run it before you commit a view, and add a check when you add a rule.
 
 - Show every date through `time_label`. No `strftime`, `to_fs`, `l` or `time_ago_in_words` in a view outside the mailers. Inside a `t()` interpolation, where a tag would be escaped, use `TimeHelper::FORMATS`.
+- Times are local (the "Times are local" rule in internal-docs `design/README.md`). `time_label` shows a timestamp in `Time.zone`, names the zone, and puts the UTC time in `title`. On a page, `Time.zone` is the viewer's zone while the view renders, and only then (`ViewerTimeZone`: the `tz` cookie that `application.js` sets, then the session zone, then UTC). Actions, models, webhooks and jobs stay in UTC (`config/initializers/job_time_zone.rb`). A form that takes a time adds the hidden `time_zone` field with the `time-zone` controller, names the zone in the hint, and reads the value with `form_time`. In an email, it is the recipient's zone (`ApplicationMailer#mail`, `User#time_zone`); use `TimeHelper.time_text` there. Never call `.utc` in a view or an email. A `Date` (a birthday) never moves with a zone.
 
 - The public identifier is the "Weave ID" everywhere. Not "PWL ID", not "P_ID".
 - A form with `data: { turbo: false }` never sees `data-turbo-confirm`. Confirm through the `confirm-submit` controller on the form (`admin/users/index` has the pattern).

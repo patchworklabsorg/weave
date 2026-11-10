@@ -235,11 +235,11 @@ class Verification < ApplicationRecord
 
   # The call time as the member reads it: in their own time zone, with the
   # zone named, then in UTC, because some zone names (CST, IST) are ambiguous.
-  # The email and the member page use it.
-  def call_time_for_member
+  # The email uses the member's zone. The member page passes the zone of the
+  # browser in use (Time.zone).
+  def call_time_for_member(zone = user.time_zone)
     return "" if call_scheduled_for.blank?
 
-    zone = user.time_zone
     local = call_scheduled_for.in_time_zone(zone).strftime("%B %-d, %Y at %-I:%M %p %Z")
     zone.name == "UTC" ? local : "#{local} (#{call_scheduled_for.utc.strftime("%H:%M UTC")})"
   end
