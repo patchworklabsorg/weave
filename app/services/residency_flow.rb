@@ -141,6 +141,7 @@ module ResidencyFlow
 
         check.update!(status: "pre_review", pre_reviewer: by, pre_review_started_at: Time.current)
       end
+      NotifyIdentityTeamJob.perform_later("residency_pre_review_started", check, actor: by)
       true
     end
 
@@ -176,6 +177,7 @@ module ResidencyFlow
         ResidencyDocumentVault.seal!(check)
       end
       notify(check)
+      NotifyIdentityTeamJob.perform_later("residency_rejected", check, actor: by)
       true
     rescue KeyCustody::NotSetUp
       check.reload
@@ -199,6 +201,7 @@ module ResidencyFlow
         ResidencyDocumentVault.seal!(check)
       end
       notify(check)
+      NotifyIdentityTeamJob.perform_later("residency_decided", check, actor: by)
       Result.new(verification: check, errors: {})
     rescue KeyCustody::NotSetUp
       check.reload

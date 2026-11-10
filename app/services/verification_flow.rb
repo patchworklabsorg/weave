@@ -116,6 +116,7 @@ module VerificationFlow
         verification.start_pre_review!
         VerificationEvent.record!(verification, :pre_review_started, actor: by)
       end
+      NotifyIdentityTeamJob.perform_later("pre_review_started", verification, actor: by)
       true
     end
 
@@ -134,6 +135,7 @@ module VerificationFlow
         VerificationEvent.record!(verification, :pre_review_taken_over, actor: by, from_pre_reviewer_id: from_id,
                                                                         to_pre_reviewer_id: by.id)
       end
+      NotifyIdentityTeamJob.perform_later("pre_review_taken_over", verification, actor: by)
       true
     end
 
@@ -166,6 +168,7 @@ module VerificationFlow
         ResidencyFlow.identity_pre_review_ended!(verification, note:)
       end
       notify_member(verification)
+      NotifyIdentityTeamJob.perform_later("document_rejected", verification, actor: by)
       true
     rescue KeyCustody::NotSetUp
       verification.reload
@@ -193,6 +196,7 @@ module VerificationFlow
         ResidencyFlow.identity_pre_review_ended!(verification)
       end
       notify_member(verification)
+      NotifyIdentityTeamJob.perform_later("document_approved", verification, actor: by)
       OpenCallSchedulingDmJob.perform_later(verification.id)
       true
     rescue KeyCustody::NotSetUp
@@ -213,6 +217,7 @@ module VerificationFlow
         VerificationEvent.record!(verification, :call_scheduled, actor: by, at: at.iso8601)
       end
       notify_member(verification)
+      NotifyIdentityTeamJob.perform_later("call_scheduled", verification, actor: by, at:)
       true
     end
 
@@ -290,6 +295,7 @@ module VerificationFlow
       end
 
       notify_member(verification)
+      NotifyIdentityTeamJob.perform_later("decided", verification, actor: by, outcome:)
       if escalated
         notify_leads_of_escalation(verification)
         NotifyIdentityTeamJob.perform_later("escalated", verification)
@@ -318,6 +324,7 @@ module VerificationFlow
         VerificationEvent.record!(verification, :escalation_resolved, actor: by, resolution:, note:)
       end
       notify_member(verification)
+      NotifyIdentityTeamJob.perform_later("escalation_resolved", verification, actor: by, resolution: resolution.humanize.downcase)
       true
     end
 

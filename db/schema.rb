@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_08_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_10_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -677,6 +677,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_08_120000) do
     t.index ["external_id"], name: "index_identity_hardware_keys_on_external_id", unique: true
     t.index ["revoked_by_id"], name: "index_identity_hardware_keys_on_revoked_by_id"
     t.index ["user_id"], name: "index_identity_hardware_keys_on_user_id"
+  end
+
+  create_table "identity_slack_threads", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "channel", null: false
+    t.string "ts"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "channel"], name: "index_identity_slack_threads_on_user_id_and_channel", unique: true
   end
 
   create_table "impersonation_actions", force: :cascade do |t|
@@ -1442,6 +1451,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_08_120000) do
   add_foreign_key "identity_governance_proposals", "users", column: "subject_id", on_delete: :nullify
   add_foreign_key "identity_hardware_keys", "users", column: "revoked_by_id", on_delete: :nullify
   add_foreign_key "identity_hardware_keys", "users", on_delete: :cascade
+  add_foreign_key "identity_slack_threads", "users", on_delete: :cascade
   add_foreign_key "impersonation_actions", "impersonations", on_delete: :cascade
   add_foreign_key "impersonations", "users", column: "admin_id", on_delete: :nullify
   add_foreign_key "impersonations", "users", on_delete: :nullify
