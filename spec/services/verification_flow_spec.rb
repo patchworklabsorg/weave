@@ -143,6 +143,7 @@ RSpec.describe VerificationFlow do
 
       expect { described_class.approve_document(verification, by: verifier) }
         .to have_enqueued_mail(VerificationMailer, :status_changed)
+        .and have_enqueued_job(OpenCallSchedulingDmJob).with(verification.id)
       expect(verification.reload).to have_attributes(status: "awaiting_call", call_scheduled_for: nil)
       expect(verification.pre_reviewed_at).to be_present
       expect(verification.events.find_by!(kind: "document_approved").actor).to eq(verifier)

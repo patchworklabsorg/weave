@@ -91,6 +91,8 @@ en:
       escalation_ineligible:
         subject: "Your identity verification"
         body: "Hi %{first_name}, our identity team lead looked at your attempts and closed your verification. Contact us if you have questions."
+    slack:
+      scheduling_dm: "Hi %{member}, our identity team checked your ID document, and it is OK. %{reviewer} will agree a time for your live call with you here. Tell us the days and times that work for you. If you are under 18, a parent or guardian must join the call."
     reverification_reasons:
       birthday_changed: "the birthday on your account changed."
       legal_name_changed: "the legal name on your account changed."

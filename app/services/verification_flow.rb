@@ -173,7 +173,8 @@ module VerificationFlow
 
     # "Document OK": the pre-reviewer ends pre-review. The attempt waits for a
     # call time (awaiting_call). The verifier agrees the time with the member
-    # by email or Slack, and then records it (schedule_call).
+    # by email or Slack, and then records it (schedule_call). When both are in
+    # Slack, OpenCallSchedulingDmJob opens a group DM for this.
     #
     # Pre-review ends here, so the image is sealed to the master public key
     # at once and the Lockbox copy is destroyed (IdDocumentVault.seal!).
@@ -191,6 +192,7 @@ module VerificationFlow
         ResidencyFlow.identity_pre_review_ended!(verification)
       end
       notify_member(verification)
+      OpenCallSchedulingDmJob.perform_later(verification.id)
       true
     rescue KeyCustody::NotSetUp
       verification.reload

@@ -303,6 +303,18 @@ class SlackService
     response
   end
 
+  # Opens a group DM with the given people and the bot, and posts text in it.
+  # Uses the bot token (needs chat:write + mpim:write). Slack gives back the
+  # same group DM for the same people, so a retry does not make a second one.
+  # Returns the channel id.
+  def post_group_dm(slack_user_ids, text)
+    raise ConfigurationError, "Slack client not configured" unless @client
+
+    channel = @client.conversations_open(users: slack_user_ids.join(","))["channel"]["id"]
+    @client.chat_postMessage(channel:, text:)
+    channel
+  end
+
   # Rewrites a code-of-conduct DM that was already sent (channel and ts from
   # users.slack_coc_messages) with the current text and links. Takes the same
   # options as #post_code_of_conduct.
