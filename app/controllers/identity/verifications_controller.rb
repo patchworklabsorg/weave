@@ -150,12 +150,14 @@ class Identity::VerificationsController < Identity::BaseController
   private
 
   # The guardian to contact for a minor's call: the granted consent (the one
-  # the call outcome records), or else the pending request. Only while the
-  # call is being arranged.
+  # the call outcome records), or else the pending request, or else the
+  # latest one (revoked or superseded), so the page can say why a pass is
+  # blocked. Only while the call is being arranged.
   def call_guardian_consent
     return unless @user&.minor? && (@verification.awaiting_call? || @verification.call_scheduled?)
 
-    @user.guardian_consents.granted.order(:granted_at).last || @user.current_guardian_consent
+    @user.guardian_consents.granted.order(:granted_at).last || @user.current_guardian_consent ||
+      @user.guardian_consents.order(:created_at).last
   end
 
   def set_verification

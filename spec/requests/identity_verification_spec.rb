@@ -243,6 +243,48 @@ RSpec.describe "Identity verification pages", type: :request do
       expect(response.body).to include("Parent or guardian", "Grace Hopper", "grace@example.org", minor.email)
     end
 
+    it "shows a pending consent's guardian, and warns that the call can't pass yet" do
+      minor = create(:user, :verified, :minor)
+      create(:guardian_consent, user: minor, guardian_name: "Grace Hopper", guardian_email: "grace@example.org")
+      verification = create(:verification, :awaiting_call, user: minor)
+
+      get identity_verification_path(verification)
+
+      expect(response.body).to include("grace@example.org", "The guardian consent is pending", "pass until a guardian grants consent")
+    end
+
+    it "shows the granted guardian before a newer pending request" do
+      minor = create(:user, :verified, :minor)
+      create(:guardian_consent, :granted, user: minor, guardian_email: "granted@example.org", granted_at: 1.month.ago)
+      create(:guardian_consent, user: minor, guardian_email: "pending@example.org")
+      verification = create(:verification, :awaiting_call, user: minor)
+
+      get identity_verification_path(verification)
+
+      expect(response.body).to include("granted@example.org")
+      expect(response.body).not_to include("pending@example.org", "The guardian consent is")
+    end
+
+    it "says a consent was revoked, not that no email is on file" do
+      minor = create(:user, :verified, :minor)
+      consent = create(:guardian_consent, :granted, user: minor, guardian_email: "grace@example.org")
+      consent.revoke!
+      verification = create(:verification, :awaiting_call, user: minor)
+
+      get identity_verification_path(verification)
+
+      expect(response.body).to include("The guardian consent is revoked")
+      expect(response.body).not_to include("No guardian email on file")
+    end
+
+    it "does not show the emails on a team member's own attempt" do
+      verification = create(:verification, :awaiting_call, user: verifier)
+
+      get identity_verification_path(verification)
+
+      expect(response.body).not_to include("Member email")
+    end
+
     it "says when a minor has no guardian email on file" do
       minor = create(:user, :verified, :minor)
       verification = create(:verification, :awaiting_call, user: minor)
