@@ -326,6 +326,13 @@ class SlackService
     true
   end
 
+  # Slack errors that mean Weave's own Slack setup is wrong (a scope, the
+  # token, the bot not in a channel), not a problem with one member. Jobs log
+  # these at error level, so they are not lost among the warnings.
+  SETUP_ERRORS = %w[missing_scope not_authed invalid_auth account_inactive not_in_channel channel_not_found].freeze
+
+  def self.setup_error?(error) = SETUP_ERRORS.include?(error.message)
+
   def identity_channel
     @identity_channel ||= ENV["SLACK_IDENTITY_CHANNEL"].presence || Rails.application.credentials.dig(:slack, :identity_channel)
   end

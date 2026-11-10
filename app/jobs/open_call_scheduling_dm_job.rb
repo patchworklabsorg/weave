@@ -33,7 +33,8 @@ class OpenCallSchedulingDmJob < ApplicationJob
     # Rate limits and server errors are not SlackErrors, so retry_on gets
     # them. This is a guest the bot can't reach, a missing scope or a deactivated account.
     # The member still has the email, so log it and stop.
-    Rails.logger.warn "OpenCallSchedulingDmJob: no group DM for verification #{verification_id}: #{e.message}"
+    level = SlackService.setup_error?(e) ? :error : :warn
+    Rails.logger.public_send(level, "OpenCallSchedulingDmJob: no group DM for verification #{verification_id}: #{e.message}")
   end
 
 end

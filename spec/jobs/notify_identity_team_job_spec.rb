@@ -37,6 +37,19 @@ RSpec.describe NotifyIdentityTeamJob do
     described_class.perform_now("verification_submitted", verification)
   end
 
+  it "logs a setup problem at error level, so a missing scope or channel is not lost" do
+    allow(service).to receive(:post_to_identity_channel).and_raise(Slack::Web::Api::Errors::SlackError.new("not_in_channel"))
+    expect(Rails.logger).to receive(:error).with(/not_in_channel/)
+
+    described_class.perform_now("escalated", verification)
+  end
+
+  it "retries a Slack rate limit, and does not swallow it" do
+    allow(service).to receive(:post_to_identity_channel).and_raise(Slack::Web::Api::Errors::TooManyRequestsError.new(Struct.new(:headers).new({ "retry-after" => "1" })))
+
+    expect { described_class.perform_now("escalated", verification) }.to have_enqueued_job(described_class)
+  end
+
   it "logs and stops when Slack refuses the post" do
     allow(service).to receive(:post_to_identity_channel).and_raise(Slack::Web::Api::Errors::SlackError.new("not_in_channel"))
 

@@ -30,7 +30,8 @@ class NotifyIdentityTeamJob < ApplicationJob
   rescue Slack::Web::Api::Errors::SlackError => e
     # For example, the bot is not in the channel. The queue pages still list
     # the work, so log it and stop.
-    Rails.logger.warn "NotifyIdentityTeamJob: #{kind} not posted: #{e.message}"
+    level = SlackService.setup_error?(e) ? :error : :warn
+    Rails.logger.public_send(level, "NotifyIdentityTeamJob: #{kind} not posted: #{e.message}")
   end
 
   private
