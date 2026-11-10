@@ -127,6 +127,35 @@ RSpec.describe User, type: :model do
     end
   end
 
+  describe "#time_zone" do
+    let(:user) { create(:user) }
+
+    def sign_in(timezone, at:, impersonated_by: nil)
+      user.user_sessions.create!(timezone:, created_at: at, impersonated_by:, expiration_at: 1.day.from_now)
+    end
+
+    it "is UTC when no sign-in gave a zone" do
+      sign_in(nil, at: 1.hour.ago)
+      sign_in("", at: 1.minute.ago)
+
+      expect(user.time_zone.name).to eq("UTC")
+    end
+
+    it "takes the zone of the newest own sign-in" do
+      sign_in("Europe/Berlin", at: 2.days.ago)
+      sign_in("America/Chicago", at: 1.day.ago)
+      sign_in("Asia/Tokyo", at: 1.hour.ago, impersonated_by: create(:user, :admin))
+
+      expect(user.time_zone.name).to eq("America/Chicago")
+    end
+
+    it "is UTC when the newest zone is not one Weave knows" do
+      sign_in("Etc/Unknown", at: 1.hour.ago)
+
+      expect(user.time_zone.name).to eq("UTC")
+    end
+  end
+
   describe "phone number normalization" do
     it "normalizes US numbers to E.164 on save" do
       user = create(:user, phone_number: "(802) 555-0123")

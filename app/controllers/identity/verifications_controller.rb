@@ -97,9 +97,17 @@ class Identity::VerificationsController < Identity::BaseController
   end
 
   def schedule_call
-    at = parse_time(params[:call_scheduled_for])
+    zone = form_time_zone(params[:time_zone])
+    unless zone
+      return redirect_to identity_verification_path(@verification),
+                         alert: "Weave does not know the time zone #{params[:time_zone].to_s.first(64)}, so it did not record the call time. Tell the Weave team."
+    end
+
+    at = parse_time(params[:call_scheduled_for], zone:)
     if VerificationFlow.schedule_call(@verification, by: current_user, at:)
-      redirect_to identity_verification_path(@verification), notice: "The call time is recorded. We emailed the member."
+      local = at.in_time_zone(zone)
+      redirect_to identity_verification_path(@verification),
+                  notice: "The call is on #{local.strftime("%b %-d, %Y at %-I:%M %p %Z")} (#{at.utc.strftime("%H:%M UTC")}). We emailed the member."
     else
       redirect_to identity_verification_path(@verification),
                   alert: "Give a time in the future. The document must be OK first, or the attempt must have a call."
@@ -171,8 +179,17 @@ class Identity::VerificationsController < Identity::BaseController
     end
   end
 
-  def parse_time(value)
-    Time.zone.parse(value.to_s) if value.present?
+  # The verifier's browser time zone from the form. No zone (no JavaScript)
+  # means the app zone, UTC. A zone that Weave does not know gives nil, so the
+  # time is not read as UTC by mistake.
+  def form_time_zone(name)
+    return Time.zone if name.blank?
+
+    ActiveSupport::TimeZone[name.to_s]
+  end
+
+  def parse_time(value, zone: Time.zone)
+    zone.parse(value.to_s) if value.present?
   rescue ArgumentError
     nil
   end
