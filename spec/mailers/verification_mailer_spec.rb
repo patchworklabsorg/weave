@@ -35,7 +35,7 @@ RSpec.describe VerificationMailer do
       member.user_sessions.create!(timezone: "America/Los_Angeles", expiration_at: 1.day.from_now)
       verification = create(:verification, :call_scheduled, user: member, call_scheduled_for: Time.utc(2026, 11, 3, 15, 30))
 
-      expect(described_class.status_changed(verification).body.encoded).to include("November 3, 2026 at 7:30 AM PST")
+      expect(described_class.status_changed(verification).body.encoded).to include("November 3, 2026 at 7:30 AM PST (15:30 UTC)")
     end
 
     it "gives the retry date after a fail" do

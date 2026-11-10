@@ -86,15 +86,36 @@ RSpec.describe "Identity verification pages", type: :request do
       expect(verification.reload.call_scheduled_for).to eq(local)
     end
 
-    it "reads the call time as UTC when the time zone is unknown" do
+    it "says the recorded time in the verifier's time zone and in UTC" do
+      verification = create(:verification, :awaiting_call, user: member, pre_reviewer: verifier)
+      sign_in_via_magic_link(verifier)
+      local = Time.find_zone("America/New_York").local(2.years.from_now.year, 1, 15, 14, 0)
+
+      patch schedule_call_identity_verification_path(verification),
+            params: { call_scheduled_for: local.strftime("%Y-%m-%dT%H:%M"), time_zone: "America/New_York" }
+
+      expect(flash[:notice]).to include("at 2:00 PM EST (19:00 UTC)")
+    end
+
+    it "reads the call time as UTC when the form sends no time zone" do
       verification = create(:verification, :awaiting_call, user: member, pre_reviewer: verifier)
       sign_in_via_magic_link(verifier)
       at = 2.days.from_now.utc.change(hour: 14, min: 0)
 
-      patch schedule_call_identity_verification_path(verification),
-            params: { call_scheduled_for: at.strftime("%Y-%m-%dT%H:%M"), time_zone: "Mars/Olympus_Mons" }
+      patch schedule_call_identity_verification_path(verification), params: { call_scheduled_for: at.strftime("%Y-%m-%dT%H:%M") }
 
       expect(verification.reload.call_scheduled_for).to eq(at)
+    end
+
+    it "records nothing when Weave does not know the time zone" do
+      verification = create(:verification, :awaiting_call, user: member, pre_reviewer: verifier)
+      sign_in_via_magic_link(verifier)
+
+      patch schedule_call_identity_verification_path(verification),
+            params: { call_scheduled_for: 2.days.from_now.strftime("%Y-%m-%dT%H:%M"), time_zone: "Etc/Unknown" }
+
+      expect(verification.reload).to have_attributes(status: "awaiting_call", call_scheduled_for: nil)
+      expect(flash[:alert]).to include("does not know the time zone Etc/Unknown")
     end
 
     it "no longer serves the old admin paths" do
