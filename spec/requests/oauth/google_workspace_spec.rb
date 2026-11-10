@@ -90,11 +90,13 @@ RSpec.describe "Google Workspace sign-in", type: :request do
       DirectoryPasswords.link(hackboston_user)
     end
 
-    it "signs in with the AD password and lands on the profile, not the Slack onboarding" do
+    it "signs in with the AD password and lands on the member home, not the Slack onboarding" do
       post "/login", params: { user: { email: hackboston_user.email, password: "Hack-password-1" } }
+      expect(response).to redirect_to(root_path)
       follow_redirect!
 
-      expect(response).to redirect_to(profile_path)
+      expect(request.path).to eq(root_path)
+      expect(response).to have_http_status(:ok)
       expect(hackboston_user.reload.slack_member?).to be(false)
       expect(hackboston_user.slack_coc_accepted_at).to be_nil
     end

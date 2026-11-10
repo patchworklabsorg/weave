@@ -17,6 +17,16 @@ RSpec.describe "Demographics vault guard" do # rubocop:disable RSpec/DescribeCla
   ]
   field_terms = -> { DemographicsVault.fields.map { |field| field[:key].to_s } }
 
+  # User#age_band is not vault data: it is the coarse OAuth age claim from
+  # users.birthday (docs/OAUTH.md, "Age band claim"). The scan drops only this
+  # exact expression and Ruby comment lines, so every other "age_band" in a
+  # scanned file still fails.
+  user_age_claim = "{ age_band: @user.age_band }"
+  mentions = lambda do |text, terms|
+    code = text.lines.reject { |line| line.lstrip.start_with?("#") }.join.gsub(user_age_claim, "")
+    terms.select { |term| code.include?(term) }
+  end
+
   # Places that show, serialize or export data about a member.
   member_facing = [
     "app/serializers/**/*.rb",
@@ -51,11 +61,17 @@ RSpec.describe "Demographics vault guard" do # rubocop:disable RSpec/DescribeCla
   it "keeps the vault out of every serializer, admin page, export and console helper" do
     terms = vault_terms + field_terms.call
     offenders = files.flat_map do |path|
-      text = File.read(root.join(path))
-      terms.select { |term| text.include?(term) }.map { |term| "#{path} mentions #{term}" }
+      mentions.call(File.read(root.join(path)), terms).map { |term| "#{path} mentions #{term}" }
     end
 
     expect(offenders).to be_empty
+  end
+
+  it "passes only the user's age claim, not a vault age band" do
+    expect(mentions.call("    { age_band: @user.age_band }.compact\n", vault_terms)).to be_empty
+    expect(mentions.call("band = DemographicsVault.age_band(user.birthday)\n", vault_terms)).to eq(["age_band"])
+    expect(mentions.call("report[:age_band]\n", vault_terms)).to eq(["age_band"])
+    expect(mentions.call("{ age_band: @user.age_band, vault: payload[\"age_band\"] }\n", vault_terms)).to eq(["age_band"])
   end
 
   it "lets the aggregate admin page show only reports" do
