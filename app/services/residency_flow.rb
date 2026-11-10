@@ -93,6 +93,7 @@ module ResidencyFlow
       end
       return failure(check, check.errors.to_hash.transform_values(&:first)) unless check.persisted?
 
+      NotifyIdentityTeamJob.perform_later("residency_submitted", check)
       Result.new(verification: check, errors: {})
     end
 

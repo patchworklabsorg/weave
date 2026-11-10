@@ -42,6 +42,7 @@ RSpec.describe ResidencyFlow do
 
       expect(result).to be_success
       check = result.verification
+      expect(NotifyIdentityTeamJob).to have_been_enqueued.with("residency_submitted", check)
       expect(check).to have_attributes(source: "document_review", status: "submitted", evidence_type: "school_enrollment")
       expect(check.document.filename.to_s).to eq("residency_document.png")
       expect(described_class.status(member)).to eq("pending")

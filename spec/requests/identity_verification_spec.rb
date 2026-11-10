@@ -127,6 +127,22 @@ RSpec.describe "Identity verification pages", type: :request do
       expect(verification.events.where(kind: "document_viewed").count).to eq(1)
     end
 
+    it "shows the pre-reviewer the account's legal name and birthday to compare with the ID" do
+      member.update!(legal_first_name: "Augusta", legal_last_name: "King", birthday: Date.new(2008, 12, 10))
+      patch start_pre_review_identity_verification_path(verification)
+      get identity_verification_path(verification)
+
+      expect(response.body).to include("Compare with the account", "Augusta King", "Dec 10, 2008")
+    end
+
+    it "does not show the account's birthday to a verifier who is not the pre-reviewer" do
+      member.update!(birthday: Date.new(2008, 12, 10))
+      VerificationFlow.start_pre_review(verification, by: create(:user, :identity_team))
+      get identity_verification_path(verification)
+
+      expect(response.body).not_to include("Compare with the account", "Dec 10, 2008")
+    end
+
     it "shows the viewer in the page, with no image link and no new tab" do
       patch start_pre_review_identity_verification_path(verification)
       get identity_verification_path(verification)

@@ -76,6 +76,19 @@
       <div class="card-body space-y-4">
         <% if @verification.pre_reviewer == current_user %>
           <p class="text-sm text-ink-soft">Each view of the image is logged. Open it only to check the document.</p>
+          <% if @user %>
+            <div class="space-y-1.5">
+              <h3 class="field-label">Compare with the account</h3>
+              <dl class="dl">
+                <%= dl_row "Legal name", @user.legal_full_name %>
+                <%= dl_row "Birthday", time_label(@user.birthday) || "Not set" %>
+              </dl>
+              <p class="field-hint">
+                On the call, the name and the birthday from the ID must match these, or the call can't pass.
+                If they differ, send the document back, or ask the member to fix their account first.
+              </p>
+            </div>
+          <% end %>
           <%= render "shared/secure_image_viewer", url: image_identity_verification_path(@verification), label: "Show the ID image" %>
           <% if @residency_check&.document&.attached? %>
             <p class="text-sm text-ink-soft">

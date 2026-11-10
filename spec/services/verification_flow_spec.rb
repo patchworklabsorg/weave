@@ -36,6 +36,13 @@ RSpec.describe VerificationFlow do
       expect(result.verification.events.pluck(:kind)).to eq(["submitted"])
     end
 
+    it "tells the identity team's Slack channel that a document waits for pre-review" do
+      result = nil
+      expect { result = described_class.submit(member, document: image, document_type: "passport") }
+        .to have_enqueued_job(NotifyIdentityTeamJob).with("verification_submitted", anything)
+      expect(NotifyIdentityTeamJob).to have_been_enqueued.with("verification_submitted", result.verification)
+    end
+
     it "stores the image under a neutral file name, so the upload name can't leak the member's name" do
       upload = Rack::Test::UploadedFile.new(Rails.root.join("spec/fixtures/files/id_document.png"), "image/png",
                                             original_filename: "Jane Doe passport.PNG")
@@ -143,6 +150,7 @@ RSpec.describe VerificationFlow do
 
       expect { described_class.approve_document(verification, by: verifier) }
         .to have_enqueued_mail(VerificationMailer, :status_changed)
+        .and have_enqueued_job(OpenCallSchedulingDmJob).with(verification.id)
       expect(verification.reload).to have_attributes(status: "awaiting_call", call_scheduled_for: nil)
       expect(verification.pre_reviewed_at).to be_present
       expect(verification.events.find_by!(kind: "document_approved").actor).to eq(verifier)
@@ -429,6 +437,7 @@ RSpec.describe VerificationFlow do
 
         expect { decide(verification, outcome: "failed", identifiers: nil) }
           .to have_enqueued_mail(VerificationMailer, :escalated).with(verification, lead)
+          .and have_enqueued_job(NotifyIdentityTeamJob).with("escalated", verification)
         expect(verification.reload.escalation_open?).to be(true)
         expect(member.verification_status).to eq("pending")
         expect(described_class.submission_blocker(member)).to eq(:escalated)
