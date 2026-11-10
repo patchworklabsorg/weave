@@ -13,7 +13,11 @@ RSpec.describe "Demographics vault guard" do # rubocop:disable RSpec/DescribeCla
     "DemographicRecord", "DemographicFold", "DemographicDepartedTotal",
     "demographic_record", "demographic_fold", "demographic_departed_total",
     "DemographicsVault::Reader", "DemographicsVault::Envelope", "Envelope.open", ".envelope",
-    "self_description", "age_band"
+    "self_description",
+    # The vault's age band (DemographicsVault.age_band, the "age_band" payload
+    # key). User#age_band is a different value: the coarse OAuth claim from
+    # users.birthday (docs/OAUTH.md, "Age band claim"), not vault data.
+    "DemographicsVault.age_band", "\"age_band\"", "'age_band'", "age_band_starts"
   ]
   field_terms = -> { DemographicsVault.fields.map { |field| field[:key].to_s } }
 
