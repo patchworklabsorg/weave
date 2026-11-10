@@ -24,10 +24,18 @@ RSpec.describe VerificationMailer do
       expect(mail.body.encoded).to include("email or Slack")
     end
 
-    it "gives the call time" do
+    it "gives the call time in UTC when Weave does not know the member's time zone" do
       verification = create(:verification, :call_scheduled, user: member, call_scheduled_for: Time.zone.local(2026, 11, 3, 15, 30))
 
-      expect(described_class.status_changed(verification).body.encoded).to include("November 3, 2026 at 15:30 UTC", "We do not record the call")
+      expect(described_class.status_changed(verification).body.encoded).to include("November 3, 2026 at 3:30 PM UTC", "We do not record the call")
+    end
+
+    it "gives the call time in the time zone of the member's newest sign-in" do
+      member.user_sessions.create!(timezone: "Europe/Berlin", expiration_at: 1.day.from_now, created_at: 2.days.ago)
+      member.user_sessions.create!(timezone: "America/Los_Angeles", expiration_at: 1.day.from_now)
+      verification = create(:verification, :call_scheduled, user: member, call_scheduled_for: Time.utc(2026, 11, 3, 15, 30))
+
+      expect(described_class.status_changed(verification).body.encoded).to include("November 3, 2026 at 7:30 AM PST")
     end
 
     it "gives the retry date after a fail" do

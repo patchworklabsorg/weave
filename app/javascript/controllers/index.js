@@ -6,6 +6,7 @@ import { application } from "./application"
 
 import AddressSyncController from "./address_sync_controller"
 application.register("address-sync", AddressSyncController)
+
 import BreakGlassController from "./break_glass_controller"
 application.register("break-glass", BreakGlassController)
 
@@ -18,8 +19,6 @@ application.register("command-bar", CommandBarController)
 import ConfirmSubmitController from "./confirm_submit_controller"
 application.register("confirm-submit", ConfirmSubmitController)
 
-
-
 import CurrentTabController from "./current_tab_controller"
 application.register("current-tab", CurrentTabController)
 
@@ -31,17 +30,18 @@ application.register("fingerprint", FingerprintController)
 
 import FlashController from "./flash_controller"
 application.register("flash", FlashController)
+
 import KeyCustodyController from "./key_custody_controller"
 application.register("key-custody", KeyCustodyController)
 
 import LoginFormController from "./login_form_controller"
 application.register("login-form", LoginFormController)
 
-import OnboardingStatusController from "./onboarding_status_controller"
-application.register("onboarding-status", OnboardingStatusController)
-
 import MenuController from "./menu_controller"
 application.register("menu", MenuController)
+
+import OnboardingStatusController from "./onboarding_status_controller"
+application.register("onboarding-status", OnboardingStatusController)
 
 import PasskeyRegisterController from "./passkey_register_controller"
 application.register("passkey-register", PasskeyRegisterController)
@@ -60,3 +60,6 @@ application.register("search", SearchController)
 
 import SecureImageController from "./secure_image_controller"
 application.register("secure-image", SecureImageController)
+
+import TimeZoneController from "./time_zone_controller"
+application.register("time-zone", TimeZoneController)

@@ -97,7 +97,7 @@ class Identity::VerificationsController < Identity::BaseController
   end
 
   def schedule_call
-    at = parse_time(params[:call_scheduled_for])
+    at = parse_time(params[:call_scheduled_for], zone: params[:time_zone])
     if VerificationFlow.schedule_call(@verification, by: current_user, at:)
       redirect_to identity_verification_path(@verification), notice: "The call time is recorded. We emailed the member."
     else
@@ -171,8 +171,13 @@ class Identity::VerificationsController < Identity::BaseController
     end
   end
 
-  def parse_time(value)
-    Time.zone.parse(value.to_s) if value.present?
+  # zone is the verifier's browser time zone from the form. An unknown or
+  # missing zone falls back to the app zone (UTC).
+  def parse_time(value, zone: nil)
+    return if value.blank?
+
+    time_zone = (ActiveSupport::TimeZone[zone.to_s] if zone.present?) || Time.zone
+    time_zone.parse(value.to_s)
   rescue ArgumentError
     nil
   end

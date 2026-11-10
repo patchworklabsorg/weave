@@ -233,6 +233,14 @@ class Verification < ApplicationRecord
     decided_at + VerificationSettings.failed_call_cooldown
   end
 
+  # The call time as the member reads it: in their own time zone, with the
+  # zone named. The email and the member page use it.
+  def call_time_for_member
+    return "" if call_scheduled_for.blank?
+
+    call_scheduled_for.in_time_zone(user.time_zone).strftime("%B %-d, %Y at %-I:%M %p %Z")
+  end
+
   def document_stored? = (id_document.attached? || document_sealed?) && document_purged_at.nil?
 
   # Sealed to the master public key: only break-glass opens it.

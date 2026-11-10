@@ -14,7 +14,7 @@ class VerificationMailer < ApplicationMailer
     @body = t("verification.mailer.#{@key}.body",
               first_name: @user.first_name,
               note: verification.resubmission_note.to_s,
-              call_time: verification.call_scheduled_for&.utc&.strftime("%B %-d, %Y at %H:%M UTC").to_s,
+              call_time: verification.call_time_for_member,
               retry_date: verification.retry_available_at&.to_date&.to_fs(:long).to_s,
               days: VerificationSettings.purge_image_after_pass.in_days.to_i,
               reason: reverification_reason_text(verification))

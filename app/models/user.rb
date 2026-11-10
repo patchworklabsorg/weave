@@ -518,6 +518,13 @@ class User < ApplicationRecord
     user_sessions.maximum(:last_seen_at)
   end
 
+  # The member's time zone: the browser time zone of their newest own sign-in
+  # (not an impersonation). UTC when no sign-in gave a zone Weave knows.
+  def time_zone
+    name = user_sessions.not_impersonated.where.not(timezone: [nil, ""]).order(created_at: :desc).pick(:timezone)
+    (ActiveSupport::TimeZone[name] if name.present?) || ActiveSupport::TimeZone["UTC"]
+  end
+
   def last_login_at
     user_sessions.maximum(:created_at)
   end

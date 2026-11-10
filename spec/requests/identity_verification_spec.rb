@@ -75,6 +75,28 @@ RSpec.describe "Identity verification pages", type: :request do
       expect(verification.reload).to have_attributes(status: "failed", verifier: plain_verifier)
     end
 
+    it "reads the call time in the verifier's time zone" do
+      verification = create(:verification, :awaiting_call, user: member, pre_reviewer: verifier)
+      sign_in_via_magic_link(verifier)
+      local = 2.days.from_now.in_time_zone("America/New_York").change(hour: 14, min: 0)
+
+      patch schedule_call_identity_verification_path(verification),
+            params: { call_scheduled_for: local.strftime("%Y-%m-%dT%H:%M"), time_zone: "America/New_York" }
+
+      expect(verification.reload.call_scheduled_for).to eq(local)
+    end
+
+    it "reads the call time as UTC when the time zone is unknown" do
+      verification = create(:verification, :awaiting_call, user: member, pre_reviewer: verifier)
+      sign_in_via_magic_link(verifier)
+      at = 2.days.from_now.utc.change(hour: 14, min: 0)
+
+      patch schedule_call_identity_verification_path(verification),
+            params: { call_scheduled_for: at.strftime("%Y-%m-%dT%H:%M"), time_zone: "Mars/Olympus_Mons" }
+
+      expect(verification.reload.call_scheduled_for).to eq(at)
+    end
+
     it "no longer serves the old admin paths" do
       sign_in_via_magic_link(verifier)
 

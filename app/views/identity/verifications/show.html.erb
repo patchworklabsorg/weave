@@ -157,12 +157,13 @@
             <% end %>
           </dl>
         <% end %>
-        <div class="space-y-1.5">
+        <div class="space-y-1.5" data-controller="time-zone">
           <%= form_with url: schedule_call_identity_verification_path(@verification), method: :patch, class: "flex flex-col sm:flex-row gap-2" do |form| %>
-            <%= form.datetime_local_field :call_scheduled_for, required: true, aria: { label: "Call time (UTC)" }, class: "field sm:flex-1" %>
+            <%= hidden_field_tag :time_zone, "UTC", id: nil, data: { time_zone_target: "field" } %>
+            <%= form.datetime_local_field :call_scheduled_for, required: true, aria: { label: "Call time", describedby: "call-time-hint" }, class: "field sm:flex-1" %>
             <%= form.submit "Record the call time", class: "btn btn-secondary" %>
           <% end %>
-          <p class="field-hint">Times are UTC. We email the member to confirm.</p>
+          <p class="field-hint" id="call-time-hint">Give the time in your time zone: <span data-time-zone-target="label">UTC</span>. We email the member the time in their own time zone.</p>
         </div>
       </div>
     </section>
