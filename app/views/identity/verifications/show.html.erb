@@ -137,12 +137,33 @@
           <% end %>
         </div>
       </div>
-      <div class="card-body space-y-1.5">
-        <%= form_with url: schedule_call_identity_verification_path(@verification), method: :patch, class: "flex flex-col sm:flex-row gap-2" do |form| %>
-          <%= form.datetime_local_field :call_scheduled_for, required: true, aria: { label: "Call time (UTC)" }, class: "field sm:flex-1" %>
-          <%= form.submit "Record the call time", class: "btn btn-secondary" %>
+      <div class="card-body space-y-4">
+        <% if @user %>
+          <dl class="dl">
+            <%= dl_row("Member email") { copy_button(@user.email, label: "Copy the member's email") } %>
+            <% if @user.minor? %>
+              <% if @guardian_consent&.guardian_email.present? %>
+                <%= dl_row("Parent or guardian") do %>
+                  <span class="block mb-1"><%= @guardian_consent.guardian_name %></span>
+                  <%= copy_button(@guardian_consent.guardian_email, label: "Copy the guardian's email") %>
+                  <% unless @guardian_consent.granted? %>
+                    <% state = @guardian_consent.pending? && @guardian_consent.link_expired? ? "pending, and the link expired" : @guardian_consent.status %>
+                    <p class="field-hint mt-1">The guardian consent is <%= state %>. The call can't pass until a guardian grants consent.</p>
+                  <% end %>
+                <% end %>
+              <% else %>
+                <%= dl_row "Parent or guardian", "No guardian email on file. A parent or guardian must join the call." %>
+              <% end %>
+            <% end %>
+          </dl>
         <% end %>
-        <p class="field-hint">Times are UTC. We email the member to confirm.</p>
+        <div class="space-y-1.5">
+          <%= form_with url: schedule_call_identity_verification_path(@verification), method: :patch, class: "flex flex-col sm:flex-row gap-2" do |form| %>
+            <%= form.datetime_local_field :call_scheduled_for, required: true, aria: { label: "Call time (UTC)" }, class: "field sm:flex-1" %>
+            <%= form.submit "Record the call time", class: "btn btn-secondary" %>
+          <% end %>
+          <p class="field-hint">Times are UTC. We email the member to confirm.</p>
+        </div>
       </div>
     </section>
   <% end %>
