@@ -151,6 +151,7 @@ RSpec.describe VerificationFlow do
       expect { described_class.approve_document(verification, by: verifier) }
         .to have_enqueued_mail(VerificationMailer, :status_changed)
         .and have_enqueued_job(OpenCallSchedulingDmJob).with(verification.id)
+        .and have_enqueued_job(NotifyIdentityTeamJob).with("document_approved", verification, actor: verifier)
       expect(verification.reload).to have_attributes(status: "awaiting_call", call_scheduled_for: nil)
       expect(verification.pre_reviewed_at).to be_present
       expect(verification.events.find_by!(kind: "document_approved").actor).to eq(verifier)
@@ -211,6 +212,7 @@ RSpec.describe VerificationFlow do
       other = create(:user, :identity_team)
       expect { described_class.schedule_call(verification, by: other, at:) }
         .to have_enqueued_mail(VerificationMailer, :status_changed)
+        .and have_enqueued_job(NotifyIdentityTeamJob).with("call_scheduled", verification, actor: other, at:)
       expect(verification.reload).to have_attributes(status: "call_scheduled", call_scheduled_for: at, call_scheduled_by: other)
 
       expect(described_class.schedule_call(verification, by: other, at: at + 1.day)).to be(true)

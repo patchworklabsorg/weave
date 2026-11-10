@@ -29,6 +29,7 @@ class OpenCallSchedulingDmJob < ApplicationJob
     text = I18n.t("verification.slack.scheduling_dm", member: "<@#{member.slack_id}>", reviewer: "<@#{reviewer.slack_id}>")
     channel = service.post_group_dm([member.slack_id, reviewer.slack_id], text)
     VerificationEvent.record!(verification, :scheduling_dm_opened, actor: reviewer, channel:)
+    NotifyIdentityTeamJob.perform_later("scheduling_dm_opened", verification, actor: reviewer)
   rescue Slack::Web::Api::Errors::SlackError => e
     # Rate limits and server errors are not SlackErrors, so retry_on gets
     # them. This is a guest the bot can't reach, a missing scope or a deactivated account.

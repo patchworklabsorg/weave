@@ -316,14 +316,16 @@ class SlackService
   end
 
   # Posts text to the identity team's private channel (SLACK_IDENTITY_CHANNEL
-  # or credentials slack.identity_channel). The bot must be a member of the
-  # channel. Returns false when no channel is set.
-  def post_to_identity_channel(text)
+  # or credentials slack.identity_channel), as a reply in thread_ts when
+  # given. broadcast: true also shows the reply in the channel. The bot must
+  # be a member of the channel. Returns the message ts, or nil when no channel
+  # is set.
+  def post_to_identity_channel(text, thread_ts: nil, broadcast: false)
     raise ConfigurationError, "Slack client not configured" unless @client
-    return false if identity_channel.blank?
+    return if identity_channel.blank?
 
-    @client.chat_postMessage(channel: identity_channel, text:, unfurl_links: false)
-    true
+    options = thread_ts ? { thread_ts:, reply_broadcast: broadcast } : {}
+    @client.chat_postMessage(channel: identity_channel, text:, unfurl_links: false, **options)["ts"]
   end
 
   # Slack errors that mean Weave's own Slack setup is wrong (a scope, the

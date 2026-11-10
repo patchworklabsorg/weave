@@ -48,11 +48,24 @@ stateDiagram-v2
 - Scheduling is manual. The pre-reviewer ends pre-review with "Document OK" (`VerificationFlow.approve_document`, event `document_approved`). At once, `IdDocumentVault.seal!` seals the image (see "The ID image and break-glass"), and nobody can see it in pre-review. The attempt waits in `awaiting_call`, and the member gets an email that says the team will contact them. A verifier agrees a time with the member by email or Slack. Then the verifier records the time as a separate step (`VerificationFlow.schedule_call`). This step does not touch the image. "Send back" (`reject_document`) still works during pre-review.
 - The pre-review card shows the legal name and the birthday on the member's account next to the image, so the pre-reviewer can compare them with the ID. The call outcome needs them to match (`VerificationFlow.account_mismatches`).
 - Slack group DM: after "Document OK", `OpenCallSchedulingDmJob` opens a group DM with the member, the pre-reviewer and the Weave bot, to agree the call time. The bot stays in the DM, so a team member never has a private one-to-one DM with a member who can be under 18. It runs only when both people have a `slack_id`, once per attempt (event `scheduling_dm_opened`). If Slack refuses (for example a guest the bot can't reach, or a missing scope), the job logs it and stops: the member still has the email. The bot token needs `mpim:write`.
-- Team notices: `NotifyIdentityTeamJob` posts to the identity team's private Slack channel when work waits: a new ID attempt (`verification_submitted`), a new residency document without a call (`residency_submitted`) and an escalation (`escalated`). Each message has a link to the page in the identity area and names the attempt by its public id only, with no member name. Set the channel id in `SLACK_IDENTITY_CHANNEL` or the credential `slack.identity_channel`, and invite the Weave bot to the channel. With no channel set, the job does nothing.
+- Team notices: `NotifyIdentityTeamJob` posts each step of a member's checks to the identity team's private Slack channel: a new ID attempt, pre-review taken or taken over, document OK or sent back, the group DM, the call time, the call result, an escalation and its resolution, and the steps of a residency document review. All notices about one member go into one thread (`IdentitySlackThread`, one row per member and channel): the first notice is the parent message, under the member's Weave ID, and the next ones are replies. Notices that ask for new work (a new ID attempt, a new residency document, an escalation) are also sent to the channel (`reply_broadcast`), so they are not lost in an old thread. Each message has a link to the page in the identity area and names the member by Weave ID only, with no name, no document details and no note to the member. Team members are named. Set the channel id in `SLACK_IDENTITY_CHANNEL` or the credential `slack.identity_channel`, and invite the Weave bot to the channel. With no channel set, the job does nothing. A new channel starts new threads, and so does a deleted parent message. The heading keeps the Weave ID that the member had when the thread started: a regenerated Weave ID does not move the thread.
+- Slack retention: the threads keep a record of each member's steps and results under the Weave ID, which is personal data (it is the OIDC `sub`). Weave's purge jobs do not delete Slack messages. Set a message retention policy on the identity channel that is no longer than the verification audit window.
 - Hand-over: any other identity team member can click "Take over pre-review" on an attempt in pre-review (`VerificationFlow.take_over_pre_review`). They become the pre-reviewer. The `pre_review_taken_over` event logs the old and the new pre-reviewer. Only the current pre-reviewer can see the image and mark "Document OK".
 - `verification_method` is `document_call` (an ID image, then a live call) or `digital_id_call` (a digital ID, then a live call). See "Digital ID" below.
 - The member page is `/verification`. The profile page links to it.
 - The member gets an email at each step (`VerificationMailer#status_changed`). The text is in `config/locales/verification.en.yml`.
+
+```mermaid
+sequenceDiagram
+  participant W as Weave
+  participant C as Identity channel
+  W->>C: Weave ID X: a new ID document waits (parent message)
+  W-->>C: reply: Robin took it for pre-review
+  W-->>C: reply: document OK
+  W-->>C: reply: call set for 12 Nov, 15:30
+  W-->>C: reply: call recorded: verified
+  Note over W,C: A later attempt or an escalation replies in the same thread and is also sent to the channel.
+```
 
 ### The audit record
 
