@@ -315,6 +315,21 @@ class SlackService
     channel
   end
 
+  # Posts text to the identity team's private channel (SLACK_IDENTITY_CHANNEL
+  # or credentials slack.identity_channel). The bot must be a member of the
+  # channel. Returns false when no channel is set.
+  def post_to_identity_channel(text)
+    raise ConfigurationError, "Slack client not configured" unless @client
+    return false if identity_channel.blank?
+
+    @client.chat_postMessage(channel: identity_channel, text:, unfurl_links: false)
+    true
+  end
+
+  def identity_channel
+    @identity_channel ||= ENV["SLACK_IDENTITY_CHANNEL"].presence || Rails.application.credentials.dig(:slack, :identity_channel)
+  end
+
   # Rewrites a code-of-conduct DM that was already sent (channel and ts from
   # users.slack_coc_messages) with the current text and links. Takes the same
   # options as #post_code_of_conduct.

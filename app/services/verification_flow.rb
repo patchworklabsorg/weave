@@ -96,6 +96,7 @@ module VerificationFlow
       end
       return failure(verification, verification.errors.to_hash.transform_values(&:first)) unless verification.persisted?
 
+      NotifyIdentityTeamJob.perform_later("verification_submitted", verification)
       Result.new(verification:, errors: {})
     rescue IdDocumentConverter::Refused, ActiveRecord::RecordInvalid => e
       Rails.logger.info("Residency upload refused: #{e.message}")
@@ -289,7 +290,10 @@ module VerificationFlow
       end
 
       notify_member(verification)
-      notify_leads_of_escalation(verification) if escalated
+      if escalated
+        notify_leads_of_escalation(verification)
+        NotifyIdentityTeamJob.perform_later("escalated", verification)
+      end
       Result.new(verification:, errors: {})
     # The Knot subscriber raises inside the transaction when a pass at the
     # same time took the same document. The pass rolls back, and the verifier
