@@ -20,7 +20,7 @@ class Identity::BreakGlassNoticesController < Identity::BaseController
   def sign_off_delay
     if BreakGlass.sign_off_delay(@notice, by: current_user)
       redirect_to identity_break_glass_records_path,
-                  notice: "You signed off the delay. It holds the notice until #{@notice.delay_ends_at.utc.strftime('%b %-d %H:%M UTC')} at the latest."
+                  notice: "You signed off the delay. It holds the notice until #{TimeHelper.time_text(@notice.delay_ends_at)} (#{@notice.delay_ends_at.utc.strftime('%H:%M UTC')}) at the latest."
     else
       redirect_to identity_break_glass_records_path,
                   alert: "Only an owner or the identity team lead can sign off a delay, and never the person who asked for the delay or the access."
