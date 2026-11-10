@@ -80,7 +80,9 @@ class Admin::ServiceKeysController < Admin::BaseController
   end
 
   def key_params
-    params.require(:service_key).permit(:name, :expires_at)
+    permitted = params.require(:service_key).permit(:name, :expires_at)
+    permitted[:expires_at] = form_time(permitted[:expires_at]) if permitted.key?(:expires_at)
+    permitted
   end
 
 end

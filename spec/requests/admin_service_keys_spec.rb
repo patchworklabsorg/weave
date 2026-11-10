@@ -33,6 +33,17 @@ RSpec.describe "Admin service keys", type: :request do
       expect(response.body).to include("GET /api/v1/directory/users")
     end
 
+    it "reads the expiry in the admin's time zone, and refuses a zone Weave does not know" do
+      patch admin_service_key_path(service, key),
+            params: { time_zone: "America/New_York", service_key: { name: "Production", expires_at: "2027-01-15T09:00" } }
+      expect(key.reload.expires_at).to eq(Time.utc(2027, 1, 15, 14, 0))
+
+      patch admin_service_key_path(service, key),
+            params: { time_zone: "Etc/Unknown", service_key: { name: "Production", expires_at: "2027-02-01T09:00" } }
+      expect(flash[:alert]).to include("does not know the time zone Etc/Unknown")
+      expect(key.reload.expires_at).to eq(Time.utc(2027, 1, 15, 14, 0))
+    end
+
     it "renames, deprecates, revokes and activates a key" do
       get edit_admin_service_key_path(service, key)
       expect(response).to have_http_status(:ok)

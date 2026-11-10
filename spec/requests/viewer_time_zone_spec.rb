@@ -37,6 +37,19 @@ RSpec.describe "Times in the viewer's time zone", type: :request do
     expect(response.body).to include("January 12, 2027 at 8:00 PM UTC")
   end
 
+  it "runs the action in UTC, so jobs enqueued in the request run in UTC" do
+    cookies["tz"] = "Asia/Tokyo"
+    zones = []
+    allow(VerificationFlow).to receive(:submission_blocker).and_wrap_original do |original, *args, **kwargs|
+      zones << Time.zone.name
+      original.call(*args, **kwargs)
+    end
+
+    get verification_path
+
+    expect(zones).to all(eq("UTC"))
+  end
+
   it "does not keep the zone after the request" do
     cookies["tz"] = "Asia/Tokyo"
 

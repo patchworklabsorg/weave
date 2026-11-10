@@ -1,6 +1,7 @@
 <%= form_with model: key, scope: :service_key,
       url: key.persisted? ? admin_service_key_path(service, key) : admin_service_keys_path(service),
-      local: true, data: { turbo: false }, class: "card" do |form| %>
+      local: true, data: { turbo: false, controller: "time-zone" }, class: "card" do |form| %>
+  <%= hidden_field_tag :time_zone, "UTC", id: nil, data: { time_zone_target: "field" } %>
   <div class="card-body space-y-5">
     <%= form_errors(key) %>
 
@@ -12,8 +13,8 @@
 
     <div class="field-group">
       <%= form.label :expires_at, class: "field-label" do %>Expires <span class="optional">(optional)</span><% end %>
-      <%= form.datetime_local_field :expires_at, class: "field" %>
-      <p class="field-hint">After this time Weave refuses the key. Leave it empty for a key that does not expire.</p>
+      <%= form.datetime_local_field :expires_at, class: "field", aria: { describedby: "key-expiry-hint" } %>
+      <p class="field-hint" id="key-expiry-hint">Give the time in your time zone: <span data-time-zone-target="label">UTC</span>. After this time Weave refuses the key. Leave it empty for a key that does not expire.</p>
     </div>
 
     <div class="form-actions">

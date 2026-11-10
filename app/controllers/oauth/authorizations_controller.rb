@@ -34,6 +34,8 @@ module Oauth
     # Doorkeeper's controllers don't inherit from ApplicationController, so
     # consent given while an admin impersonates the user is recorded here.
     include RecordsImpersonationActions
+    # Times on the consent pages in the viewer's zone.
+    include ViewerTimeZone
     include OauthClientRedirectOrigins
 
     before_action :require_app_access, only: [:new, :create] # rubocop:disable Rails/LexicallyScopedActionFilter -- both are defined by Doorkeeper::AuthorizationsController

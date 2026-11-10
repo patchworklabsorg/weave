@@ -64,14 +64,16 @@
     <% if can_change %>
       <div class="px-5 pt-4">
         <%= form_with model: @membership, scope: :group_membership, url: admin_group_memberships_path(@group), local: true,
-            class: "well grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_auto] items-end gap-3" do |form| %>
+            class: "well grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_auto] items-end gap-3", data: { controller: "time-zone" } do |form| %>
+          <%= hidden_field_tag :time_zone, "UTC", id: nil, data: { time_zone_target: "field" } %>
           <div class="field-group">
             <%= form.label :email, "Email", class: "field-label" %>
             <%= form.email_field :email, required: true, class: "field", placeholder: "person@example.com" %>
           </div>
           <div class="field-group">
             <%= form.label :expires_at, class: "field-label" do %>Expires <span class="optional">(optional)</span><% end %>
-            <%= form.datetime_local_field :expires_at, class: "field" %>
+            <%= form.datetime_local_field :expires_at, class: "field", aria: { describedby: "membership-expiry-hint" } %>
+            <p class="field-hint" id="membership-expiry-hint">Give the time in your time zone: <span data-time-zone-target="label">UTC</span>.</p>
           </div>
           <%= form.submit "Add member", class: "btn btn-primary" %>
 
