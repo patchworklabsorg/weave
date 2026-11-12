@@ -535,4 +535,56 @@ RSpec.describe User, type: :model do
       expect(user.reload.p_id).to eq(new_pid)
     end
   end
+
+  describe "#guardian_verified?" do
+    let(:minor) { create(:user, :verified, :minor) }
+    let!(:consent) { create(:guardian_consent, :granted, user: minor) }
+
+    def pass!(guardian_attended: true, **attrs)
+      create(:verification, :verified, user: minor, guardian_attended:, guardian_consent: consent, **attrs)
+    end
+
+    it "is false with only the email consent" do
+      expect(minor.guardian_verified?).to be(false)
+    end
+
+    it "is true once an admin records a verified guardian" do
+      consent.update!(verified_at: 1.day.ago)
+
+      expect(minor.guardian_verified?).to be(true)
+    end
+
+    it "is true once the member passes identity verification with the guardian on the call" do
+      pass!
+
+      expect(minor.reload.guardian_verified?).to be(true)
+      expect(minor.guardian_attended_standing_pass?).to be(true)
+    end
+
+    it "is false for a pass without the guardian on the call" do
+      pass!(guardian_attended: false)
+
+      expect(minor.reload.guardian_verified?).to be(false)
+    end
+
+    it "ends when the consent is revoked" do
+      pass!
+      consent.record_revoke!
+
+      expect(minor.reload.guardian_verified?).to be(false)
+    end
+
+    it "ends when the pass no longer stands" do
+      pass!(reverification_required_at: Time.current, reverification_reason: "birthday_changed")
+
+      expect(minor.reload.guardian_verified?).to be(false)
+    end
+
+    it "is false for an adult" do
+      adult = create(:user, :verified)
+      create(:verification, :verified, user: adult, guardian_attended: true)
+
+      expect(adult.guardian_verified?).to be(false)
+    end
+  end
 end
