@@ -379,11 +379,20 @@ A superadmin defines the roles of each patch, the same way as app roles (see
 unexpired group membership. An app reads the keys it knows and ignores the
 rest, so a new role on a patch never breaks an app.
 
-The claim does not open an app. When an app is restricted, give its access to
-the `patch-leads` system group to let every patch lead sign in. Weave keeps
-that group in line with the `patch_lead` role: a lead joins it when the role
-is granted, for any patch, and leaves it when the last one is revoked. The app
-then reads the `patches` claim to show each lead only their own patches.
+The claim does not open an app. When an app is restricted, add the
+`patch-leads` system group to the app's access list to let every patch lead
+sign in. Weave keeps that group in line with the `patch_lead` role: a lead
+joins it when the role is granted, for a program in the Knot settings, and
+leaves it when the last one is revoked. The app then reads the `patches` claim
+to show each lead only their own patches.
+
+Use the access list, not an app role. An app role on `patch-leads` also opens
+the app, but it gives that role to every lead. For Quilt, the `viewer` app
+role on this group would let each lead read every patch.
+
+After the deploy that adds the group, run `bin/rails groups:sync_system` once.
+Until then, or until the hourly sync, the group does not exist and existing
+leads are not in it.
 
 Give a role that is meant for one app that app's prefix, so another app never
 reads it by mistake. Quilt reads only `lead` and `quilt:viewer`: a bare

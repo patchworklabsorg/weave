@@ -84,6 +84,16 @@ RSpec.describe SystemGroups do
 
       expect(slugs_for(user)).to include("patch-leads")
     end
+
+    it "drops a lead whose program is no longer in the Knot settings" do
+      user = create(:user)
+      RoleGrants.grant!(user, "patch_lead", scope: "ganymede", by: owner, reason: "spec")
+      allow(KnotSettings).to receive(:program_keys).and_return([])
+
+      described_class.sync_all
+
+      expect(slugs_for(user)).not_to include("patch-leads")
+    end
   end
 
   it "leaves a membership that was added by hand" do

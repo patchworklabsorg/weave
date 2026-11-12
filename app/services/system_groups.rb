@@ -50,10 +50,11 @@ module SystemGroups
     ),
     # Every patch lead, of any patch. For apps that every lead may use, such
     # as Quilt, which then shows each lead only their own patch (the `patches`
-    # claim). It gives nothing by itself.
+    # claim). It gives nothing by itself. Only programs that still exist count,
+    # the same rule as the Knot check (KnotGrants.any_patch_lead?).
     Definition.new(
       slug: "patch-leads", name: "Patch Leads", description: "Users with the patch lead role, for any patch.",
-      attributes: [], rule: ->(user) { user.role_scopes("patch_lead").any? }
+      attributes: [], rule: ->(user) { KnotGrants.any_patch_lead?(user) }
     )
   ].freeze
 
