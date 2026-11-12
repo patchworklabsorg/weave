@@ -1,0 +1,243 @@
+<% content_for :title, "Call for #{@verification.public_id}" %>
+<%
+  values = @decision_values || {}
+  typed = values[:identifiers] || {}
+  mismatch = @mismatch || {}
+  knot_match = %w[birth_match flagged_match].include?(@verification.knot_review_reason)
+  step = 0
+%>
+
+<header class="page-header">
+  <div class="min-w-0">
+    <p class="text-sm"><%= link_to "Back to #{@verification.public_id}", identity_verification_path(@verification), class: "link-quiet text-ink-soft" %></p>
+    <h1 class="page-title">Call with <%= @user.full_name %></h1>
+    <p class="page-lede">
+      Booked for <%= time_label(@verification.call_scheduled_for, :datetime) %>. Go through the steps in order, then record the outcome at the end.
+    </p>
+  </div>
+</header>
+
+<div class="space-y-6">
+  <div class="callout callout-info">
+    <%= icon(:info, size: 18) %>
+    <div class="callout-body">
+      <p class="callout-title">On every call</p>
+      <ul class="list-disc pl-5 space-y-0.5">
+        <li>Do not record the call.</li>
+        <li>Never check gender. Never ask about citizenship.</li>
+        <li>Write down only what this form asks for.</li>
+      </ul>
+    </div>
+  </div>
+
+  <% if @verification.knot_review_reason %>
+    <div class="callout callout-warning">
+      <%= icon(:triangle_alert, size: 18) %>
+      <div class="callout-body">
+        <p class="callout-title">Manual review</p>
+        <p><%= t("knot.review_reasons.#{@verification.knot_review_reason}") %></p>
+      </div>
+    </div>
+  <% end %>
+
+  <%= form_with url: decide_identity_verification_path(@verification), method: :patch, class: "space-y-6", html: { autocomplete: "off" } do |form| %>
+    <section class="card" aria-labelledby="call-who">
+      <div class="card-header">
+        <h2 class="card-title" id="call-who"><%= step += 1 %>. Who is on the call</h2>
+      </div>
+      <div class="card-body space-y-4">
+        <dl class="dl">
+          <%= dl_row "Member" do %><%= @user.full_name %> (<span class="mono"><%= @user.p_id %></span>)<% end %>
+          <%= dl_row("Member email") { copy_button(@user.email, label: "Copy the member's email") } %>
+          <% if @user.minor? %>
+            <%= dl_row "Parent or guardian" do %>
+              <% if @guardian_consent&.guardian_email.present? %>
+                <span class="block"><%= @guardian_consent.guardian_name %>, <%= @guardian_consent.guardian_email %></span>
+                <% unless @guardian_consent.granted? %>
+                  <% state = @guardian_consent.pending? && @guardian_consent.link_expired? ? "pending, and the link expired" : @guardian_consent.status %>
+                  <span class="field-hint block mt-1">The guardian consent is <%= state %>. The call can't pass until a guardian grants consent.</span>
+                <% end %>
+              <% else %>
+                No guardian email on file. A parent or guardian must join the call.
+              <% end %>
+            <% end %>
+          <% end %>
+        </dl>
+        <div class="form-grid form-grid-2">
+          <div class="field-group">
+            <%= form.label :second_verifier, class: "field-label" do %>Second verifier <span class="optional">(optional)</span><% end %>
+            <%= form.select :second_verifier, @team.reject { |member| @excluded_ids.include?(member.id) }.map { |member| [member.full_name, member.p_id] },
+                  { include_blank: "None", selected: values[:second_verifier] }, class: "field" %>
+          </div>
+          <% if @user.minor? %>
+            <label class="choice sm:mt-7">
+              <%= form.check_box :guardian_attended, checked: values[:guardian_attended], class: "checkbox" %>
+              <span>A parent or guardian attended (a pass needs this)</span>
+            </label>
+          <% end %>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="call-compare">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title" id="call-compare"><%= step += 1 %>. Compare the ID with the account</h2>
+          <p class="card-lede">Ask the member to hold the ID up to the camera. Check the face, then each line below.</p>
+        </div>
+      </div>
+      <div class="card-body space-y-4">
+        <dl class="dl">
+          <%= dl_row "Legal name", @user.legal_full_name %>
+          <%= dl_row "Birthday" do %>
+            <% if @user.birthday %><%= time_label(@user.birthday) %> (age <%= @user.age_in_years %>)<% else %>Not set<% end %>
+          <% end %>
+          <%= dl_row "Lives in", @user.self_reported_region || "Not set. Ask the member where they live." %>
+        </dl>
+        <p class="field-hint">
+          The name and the birthday on the ID must match the account, or the call can't pass.
+          If they differ, fail the call at the end with "Failed: details don't match the account", or ask the member to fix their account first.
+        </p>
+        <div class="form-grid form-grid-2">
+          <% { age_consistent: "The age on the account does not contradict the ID", region_consistent: "Where the member lives does not contradict the ID" }.each do |field, label| %>
+            <div class="field-group">
+              <%= form.label field, label, class: "field-label" %>
+              <%= form.select field, [["Yes", "yes"], ["No", "no"]], { include_blank: "Choose", selected: values[field] }, required: true, class: "field" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="call-identifiers">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title" id="call-identifiers"><%= step += 1 %>. Type what the ID shows</h2>
+          <p class="card-lede">
+            Read each value from the ID. Weave keeps the document and national ID numbers, the name, the birthday and the country of birth
+            only as one-way hashes for the fraud check. When you record a pass, Weave compares the name and the birthday with the account.
+          </p>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-grid form-grid-2">
+          <%= fields_for :identifiers do |ids| %>
+            <div class="field-group">
+              <%= ids.label :legal_name, "Legal name on the ID", class: "field-label" %>
+              <%= ids.text_field :legal_name, value: typed[:legal_name], aria: { invalid: mismatch.key?(:identifiers_legal_name) }, class: "field" %>
+              <% if mismatch.key?(:identifiers_legal_name) %><p class="field-error">The name does not match the account.</p><% end %>
+            </div>
+            <div class="field-group">
+              <%= ids.label :date_of_birth, "Date of birth on the ID", class: "field-label" %>
+              <%= ids.date_field :date_of_birth, value: typed[:date_of_birth], aria: { invalid: mismatch.key?(:identifiers_date_of_birth) }, class: "field" %>
+              <% if mismatch.key?(:identifiers_date_of_birth) %><p class="field-error">The birthday does not match the account.</p><% end %>
+            </div>
+            <div class="field-group">
+              <%= ids.label :document_type, "Document type", class: "field-label" %>
+              <%= ids.select :document_type, Verification::DOCUMENT_TYPES.map { |type| [type.humanize, type] },
+                    { selected: typed[:document_type].presence || @verification.document_type }, class: "field" %>
+            </div>
+            <div class="field-group">
+              <%= ids.label :issuing_country, "Issuing country (two letters)", class: "field-label" %>
+              <%= ids.text_field :issuing_country, value: typed[:issuing_country], maxlength: 2, class: "field" %>
+            </div>
+            <div class="field-group">
+              <%= ids.label :document_number, "Document number", class: "field-label" %>
+              <%= ids.text_field :document_number, value: typed[:document_number], class: "field" %>
+            </div>
+            <div class="field-group">
+              <%= ids.label :issuing_region, class: "field-label" do %>US state (two letters) <span class="optional">(US driving licence only)</span><% end %>
+              <%= ids.text_field :issuing_region, value: typed[:issuing_region], maxlength: 2, aria: { describedby: "issuing_region_hint" }, class: "field" %>
+              <p id="issuing_region_hint" class="field-hint">Each state numbers its own licences.</p>
+            </div>
+            <div class="field-group">
+              <%= ids.label :country_of_birth, "Country of birth (two letters)", class: "field-label" %>
+              <%= ids.text_field :country_of_birth, value: typed[:country_of_birth], maxlength: 2, aria: { describedby: "country_of_birth_hint" }, class: "field" %>
+              <p id="country_of_birth_hint" class="field-hint">From the place of birth on the ID. For a city, type its country.</p>
+              <label class="flex items-center gap-2 text-sm">
+                <%= ids.check_box :country_of_birth_absent, { checked: typed[:country_of_birth_absent] == "1", class: "checkbox" }, "1", nil %>
+                This document does not show a place of birth
+              </label>
+            </div>
+            <div class="field-group">
+              <%= ids.label :national_id, class: "field-label" do %>National identity number <span class="optional">(if any)</span><% end %>
+              <%= ids.text_field :national_id, value: typed[:national_id], aria: { describedby: "national_id_hint" }, class: "field" %>
+              <p id="national_id_hint" class="field-hint">Required for an ID from <%= KnotSettings.lifetime_national_id_countries.to_sentence %>, unless the document does not show it.</p>
+              <label class="flex items-center gap-2 text-sm">
+                <%= ids.check_box :national_id_absent, { checked: typed[:national_id_absent] == "1", class: "checkbox" }, "1", nil %>
+                This document does not show a national identity number
+              </label>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </section>
+
+    <% if knot_match %>
+      <section class="card" aria-labelledby="call-same-person">
+        <div class="card-header">
+          <h2 class="card-title" id="call-same-person"><%= step += 1 %>. Same person?</h2>
+        </div>
+        <div class="card-body">
+          <div class="field-group">
+            <%= label_tag :different_person_reason, class: "field-label" do %>Not the same person <span class="optional">(optional)</span><% end %>
+            <%= text_area_tag :different_person_reason, values[:different_person_reason], rows: 2, class: "field", aria: { describedby: "different_person_hint" } %>
+            <p id="different_person_hint" class="field-hint"><%= t("knot.different_person_hint") %></p>
+          </div>
+        </div>
+      </section>
+    <% end %>
+
+    <section class="card" aria-labelledby="call-residency">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title" id="call-residency"><%= step += 1 %>. US residency</h2>
+          <p class="card-lede">A pass needs a result. Check where the member lives. Never ask about citizenship.</p>
+        </div>
+      </div>
+      <div class="card-body space-y-4">
+        <p class="field-hint">
+          Yes needs a US driver's license, learner's permit or state ID with a current US address, or the proof document the member uploaded
+          <%= @residency_check&.document_stored? ? "(#{@residency_check.evidence_label.downcase})" : "(none uploaded)" %>.
+          A US passport alone does not show where the member lives. Weave keeps only the result, the state, the evidence type and the date.
+        </p>
+        <div class="form-grid form-grid-3">
+          <div class="field-group">
+            <%= form.label :us_resident, "Lives in the US", class: "field-label" %>
+            <%= form.select :us_resident, [["Yes", "yes"], ["No", "no"]], { include_blank: "Choose", selected: values[:us_resident] }, class: "field" %>
+          </div>
+          <div class="field-group">
+            <%= form.label :us_state, class: "field-label" do %>US state <span class="optional">(for yes)</span><% end %>
+            <%= form.select :us_state, ResidencyCheck::US_STATES.map { |code, name| [name, code] }, { include_blank: true, selected: values[:us_state] }, class: "field" %>
+          </div>
+          <div class="field-group">
+            <%= form.label :residency_evidence, class: "field-label" do %>Evidence <span class="optional">(for yes)</span><% end %>
+            <%= form.select :residency_evidence, (["id_document"] + ResidencyCheck::UPLOAD_EVIDENCE).map { |type| [ResidencyCheck::EVIDENCE_TYPES[type], type] },
+                  { include_blank: true, selected: values[:residency_evidence] }, class: "field" %>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="call-outcome">
+      <div class="card-header">
+        <h2 class="card-title" id="call-outcome"><%= step += 1 %>. Record the outcome</h2>
+      </div>
+      <div class="card-body space-y-4">
+        <div class="field-group">
+          <%= form.label :reason, "Written reason", class: "field-label" %>
+          <%= form.text_area :reason, value: values[:reason], required: true, rows: 3, aria: { describedby: "reason_hint" }, class: "field" %>
+          <p id="reason_hint" class="field-hint">What you checked on the call and why you decided. Do not copy values from the ID.</p>
+        </div>
+        <div class="btn-row border-t border-hairline pt-4">
+          <%= form.button "Verified", name: "outcome", value: "verified", class: "btn btn-primary",
+                data: { turbo_confirm: "Record a pass?" } %>
+          <%= form.button "Failed", name: "outcome", value: "failed", class: "btn btn-danger",
+                data: { turbo_confirm: "Record a fail? The member waits for the cooldown, and you can't verify them again." } %>
+          <%= form.button "Failed: details don't match the account", name: "details_mismatch", value: "1", formnovalidate: true,
+                class: "btn btn-danger", data: { turbo_confirm: "Record a fail because the details on the ID don't match the account?" } %>
+        </div>
+      </div>
+    </section>
+  <% end %>
+</div>

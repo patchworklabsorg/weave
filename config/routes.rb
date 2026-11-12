@@ -124,6 +124,7 @@
 #        reject_document_identity_verification PATCH  /identity/verifications/:id/reject_document(.:format)                                             identity/verifications#reject_document
 #       approve_document_identity_verification PATCH  /identity/verifications/:id/approve_document(.:format)                                            identity/verifications#approve_document
 #          schedule_call_identity_verification PATCH  /identity/verifications/:id/schedule_call(.:format)                                               identity/verifications#schedule_call
+#                   call_identity_verification GET    /identity/verifications/:id/call(.:format)                                                        identity/verifications#call
 #                 decide_identity_verification PATCH  /identity/verifications/:id/decide(.:format)                                                      identity/verifications#decide
 #     resolve_escalation_identity_verification PATCH  /identity/verifications/:id/resolve_escalation(.:format)                                          identity/verifications#resolve_escalation
 #        residency_image_identity_verification POST   /identity/verifications/:id/residency_image(.:format)                                             identity/verifications#residency_image
@@ -664,6 +665,7 @@ Rails.application.routes.draw do
         patch :reject_document
         patch :approve_document
         patch :schedule_call
+        get :call
         patch :decide
         patch :resolve_escalation
         post :residency_image

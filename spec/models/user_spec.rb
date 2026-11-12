@@ -217,6 +217,25 @@ RSpec.describe User, type: :model do
     end
   end
 
+  describe "#self_reported_region" do
+    it "uses the profile location first" do
+      user = build(:user, slack_city: "Boston", slack_state: "MA", slack_country: "US")
+
+      expect(user.self_reported_region).to eq("Boston, MA, US")
+    end
+
+    it "falls back to the state and country of the shipping address" do
+      user = create(:user)
+      user.create_shipping_address!(line1: "1 Main St", city: "Austin", state: "TX", postal_code: "73301", country: "US")
+
+      expect(user.reload.self_reported_region).to eq("TX, United States of America")
+    end
+
+    it "is nil when the account has neither" do
+      expect(build(:user).self_reported_region).to be_nil
+    end
+  end
+
   describe "#legal_full_name" do
     it "falls back to the preferred full name when no legal name is set" do
       user = build(:user, first_name: "John", last_name: "Doe")

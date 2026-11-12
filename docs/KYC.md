@@ -162,12 +162,12 @@ A pass needs all of these:
 
 ### Name and birthday match
 
-The verifier types the legal name and the date of birth from the ID. The form does not show the account values. On a pass, `VerificationFlow.account_mismatches` compares them with the account:
+The verifier runs the call from the call page (`GET /identity/verifications/:id/call`, "Start the call" on the attempt page). It shows the steps in order: who is on the call, the account values to compare with the ID, the ID fields, US residency and the outcome. The account values are the legal name, the birthday with the age, and the self-reported region (`User#self_reported_region`: the profile location, else the shipping address). Only a verifier who may decide the call can open the page. The pre-reviewer sees the name and the birthday too. The verifier types the legal name and the date of birth from the ID. On a pass, `VerificationFlow.account_mismatches` compares them with the account:
 
 - The name must match `User#legal_full_name` (the preferred name when the account has no legal name) after `KnotHasher.normalize_name`. Case, accents, punctuation and word order do not count.
 - The date of birth must match `users.birthday` exactly.
 
-A mismatch blocks the pass. The form shows again with what the verifier typed and says which field differs (the name, the birthday or both). It never shows the account value. The verifier can correct the entry, or fail the call with "Failed: details don't match the account" (`details_mismatch`). A fail is always allowed: this fail needs no attestation, and its reason starts with `VerificationFlow::DETAILS_MISMATCH_REASON`. The `decided` event records `details_mismatch`.
+A mismatch blocks the pass. The form shows again with what the verifier typed and says which field differs (the name, the birthday or both). The verifier can correct the entry, or fail the call with "Failed: details don't match the account" (`details_mismatch`). A fail is always allowed: this fail needs no attestation, and its reason starts with `VerificationFlow::DETAILS_MISMATCH_REASON`. The `decided` event records `details_mismatch`.
 
 Weave keeps document and national ID numbers only as one-way hashes for the fraud check (the Knot). It does not store the typed name or birth date.
 

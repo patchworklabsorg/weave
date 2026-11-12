@@ -2,6 +2,8 @@
 <%
   own = @user && @user == current_user
   excluded = @excluded_ids.include?(current_user.id)
+  stages = ["Member sends the ID", "Pre-review of the document", "Agree a call time", "The call", "Decision"]
+  stage_index = { "submitted" => 0, "needs_resubmission" => 0, "pre_review" => 1, "awaiting_call" => 2, "call_scheduled" => 3 }.fetch(@verification.status, 4)
   status_tone = { "verified" => :success, "failed" => :danger, "ineligible" => :danger, "escalated" => :warning }.fetch(@verification.status, :neutral)
 %>
 
@@ -51,8 +53,17 @@
     <div class="card-header">
       <h2 class="card-title">Attempt</h2>
     </div>
-    <div class="card-body">
-      <dl class="dl">
+    <div class="card-body grid gap-6 md:grid-cols-2">
+      <ol class="steps" aria-label="Where this attempt is">
+        <% stages.each_with_index do |label, index| %>
+          <% state = index < stage_index || @verification.decided? ? :done : (index == stage_index ? :current : :todo) %>
+          <%= tag.li class: ["step", ("is-done" if state == :done), ("is-current" if state == :current)], aria: { current: ("step" if state == :current) } do %>
+            <span class="step-marker"><% if state == :done %><%= icon(:check) %><% else %><%= index + 1 %><% end %></span>
+            <span><%= label %></span>
+          <% end %>
+        <% end %>
+      </ol>
+      <dl class="dl dl-stack">
         <%= dl_row "Method", @verification.verification_method.humanize %>
         <%= dl_row "Document", @verification.document_type&.humanize || "none" %>
         <%= dl_row "Image" do %><% if @verification.document_stored? %>stored, encrypted<% elsif @verification.document_purged_at %>purged <%= time_label(@verification.document_purged_at) %><% else %>none<% end %><% end %>
@@ -115,8 +126,9 @@
           </div>
         <% end %>
         <%= form_with url: reject_document_identity_verification_path(@verification), method: :patch, class: "field-group border-t border-hairline pt-4" do |form| %>
-          <%= form.text_area :note, required: true, rows: 2, placeholder: "What must the member fix? The member sees this note.",
-                aria: { label: "What must the member fix?" }, class: "field" %>
+          <%= form.label :note, "What must the member fix?", class: "field-label", for: "reject_note" %>
+          <%= form.text_area :note, id: "reject_note", required: true, rows: 2, aria: { describedby: "reject_note_hint" }, class: "field" %>
+          <p id="reject_note_hint" class="field-hint">The member sees this note.</p>
           <div>
             <%= form.submit "Send back: ask for a new document", class: "btn btn-secondary" %>
           </div>
@@ -158,10 +170,13 @@
           </dl>
         <% end %>
         <div class="space-y-1.5" data-controller="time-zone">
-          <%= form_with url: schedule_call_identity_verification_path(@verification), method: :patch, class: "flex flex-col sm:flex-row gap-2" do |form| %>
+          <%= form_with url: schedule_call_identity_verification_path(@verification), method: :patch, class: "space-y-1.5" do |form| %>
             <%= hidden_field_tag :time_zone, "UTC", id: nil, data: { time_zone_target: "field" } %>
-            <%= form.datetime_local_field :call_scheduled_for, required: true, aria: { label: "Call time", describedby: "call-time-hint" }, class: "field sm:flex-1" %>
-            <%= form.submit "Record the call time", class: "btn btn-secondary" %>
+            <%= form.label :call_scheduled_for, "Call time", class: "field-label" %>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <%= form.datetime_local_field :call_scheduled_for, required: true, aria: { describedby: "call-time-hint" }, class: "field sm:flex-1" %>
+              <%= form.submit "Record the call time", class: "btn btn-secondary" %>
+            </div>
           <% end %>
           <p class="field-hint" id="call-time-hint">Give the time in your time zone: <span data-time-zone-target="label">UTC</span>. We email the member the time in their own time zone.</p>
         </div>
@@ -169,148 +184,29 @@
     </section>
   <% end %>
 
-  <% if !own && @verification.call_scheduled? %>
+  <% if @user && !own && @verification.call_scheduled? %>
     <section class="card">
       <div class="card-header">
         <div>
-          <h2 class="card-title">Record the call outcome</h2>
-          <p class="card-lede">
-            Call on <%= time_label(@verification.call_scheduled_for, :datetime) %>. You are the verifier.
-            Do not record the call. Write what you checked.
-          </p>
+          <h2 class="card-title">The call</h2>
+          <p class="card-lede">Booked for <%= time_label(@verification.call_scheduled_for, :datetime) %>.</p>
         </div>
       </div>
-      <div class="card-body">
+      <div class="card-body space-y-3">
         <% if excluded %>
           <div class="callout callout-warning">
             <%= icon(:triangle_alert, size: 18) %>
             <div class="callout-body"><p>You failed this member before. A different verifier must run this call.</p></div>
           </div>
         <% else %>
-          <% values = @decision_values || {} %>
-          <% typed = values[:identifiers] || {} %>
-          <% mismatch = @mismatch || {} %>
-          <%= form_with url: decide_identity_verification_path(@verification), method: :patch, class: "space-y-6", html: { autocomplete: "off" } do |form| %>
-            <div class="form-grid form-grid-2">
-              <div class="field-group">
-                <%= form.label :second_verifier, class: "field-label" do %>Second verifier <span class="optional">(optional)</span><% end %>
-                <%= form.select :second_verifier, @team.reject { |member| @excluded_ids.include?(member.id) }.map { |member| [member.full_name, member.p_id] },
-                      { include_blank: "None", selected: values[:second_verifier] }, class: "field" %>
-              </div>
-              <% if @user&.minor? %>
-                <label class="choice sm:mt-7">
-                  <%= form.check_box :guardian_attended, checked: values[:guardian_attended], class: "checkbox" %>
-                  <span>A parent or guardian attended (a pass needs this)</span>
-                </label>
-              <% end %>
-            </div>
-
-            <fieldset class="space-y-3">
-              <legend class="field-label mb-3">Consistency attestation. Do not write down values from the ID. Never check gender.</legend>
-              <div class="form-grid form-grid-2">
-                <% { age_consistent: "The self-reported age does not contradict the ID", region_consistent: "The self-reported region does not contradict the ID" }.each do |field, label| %>
-                  <div class="field-group">
-                    <%= form.label field, label, class: "field-label font-normal" %>
-                    <%= form.select field, [["Yes", "yes"], ["No", "no"]], { include_blank: "Choose", selected: values[field] }, required: true, class: "field" %>
-                  </div>
-                <% end %>
-              </div>
-            </fieldset>
-
-            <fieldset class="space-y-3">
-              <legend class="field-label">Weave keeps the document and national ID numbers, the name, the birthday and the country of birth only as one-way hashes for the fraud check. The name and birthday must match the member's account.</legend>
-              <p class="field-hint">Type the legal name and the birthday from the ID. Weave compares them with the account when you record a pass.</p>
-              <div class="form-grid form-grid-2">
-                <%= fields_for :identifiers do |ids| %>
-                  <%= ids.select :document_type, Verification::DOCUMENT_TYPES.map { |type| [type.humanize, type] },
-                        { selected: typed[:document_type].presence || @verification.document_type }, aria: { label: "Document type" }, class: "field" %>
-                  <%= ids.text_field :issuing_country, value: typed[:issuing_country], maxlength: 2, placeholder: "Issuing country (two letters)", aria: { label: "Issuing country" }, class: "field" %>
-                  <div class="field-group">
-                    <%= ids.text_field :document_number, value: typed[:document_number], placeholder: "Document number", aria: { label: "Document number" }, class: "field" %>
-                  </div>
-                  <div class="field-group">
-                    <%= ids.text_field :issuing_region, value: typed[:issuing_region], maxlength: 2, placeholder: "US state (two letters)",
-                          aria: { label: "US state", describedby: "issuing_region_hint" }, class: "field" %>
-                    <p id="issuing_region_hint" class="field-hint">Required for a US driving licence. Each state numbers its own licences.</p>
-                  </div>
-                  <div class="field-group">
-                    <%= ids.text_field :country_of_birth, value: typed[:country_of_birth], maxlength: 2, placeholder: "Country of birth (two letters)",
-                          aria: { label: "Country of birth", describedby: "country_of_birth_hint" }, class: "field" %>
-                    <p id="country_of_birth_hint" class="field-hint">From the place of birth on the ID. For a city, type its country.</p>
-                    <label class="flex items-center gap-2 text-sm">
-                      <%= ids.check_box :country_of_birth_absent, { checked: typed[:country_of_birth_absent] == "1", class: "checkbox" }, "1", nil %>
-                      This document does not show a place of birth
-                    </label>
-                  </div>
-                  <div class="field-group">
-                    <%= ids.text_field :national_id, value: typed[:national_id], placeholder: "National identity number (if any)",
-                          aria: { label: "National identity number", describedby: "national_id_hint" }, class: "field" %>
-                    <p id="national_id_hint" class="field-hint">Required for an ID from <%= KnotSettings.lifetime_national_id_countries.to_sentence %>, unless the document does not show it.</p>
-                    <label class="flex items-center gap-2 text-sm">
-                      <%= ids.check_box :national_id_absent, { checked: typed[:national_id_absent] == "1", class: "checkbox" }, "1", nil %>
-                      This document does not show a national identity number
-                    </label>
-                  </div>
-                  <div class="field-group">
-                    <%= ids.text_field :legal_name, value: typed[:legal_name], placeholder: "Legal name on the ID", aria: { label: "Legal name", invalid: mismatch.key?(:identifiers_legal_name) },
-                          class: "field" %>
-                    <% if mismatch.key?(:identifiers_legal_name) %><p class="field-error">The name does not match the account.</p><% end %>
-                  </div>
-                  <div class="field-group">
-                    <%= ids.date_field :date_of_birth, value: typed[:date_of_birth], aria: { label: "Date of birth", invalid: mismatch.key?(:identifiers_date_of_birth) },
-                          class: "field" %>
-                    <% if mismatch.key?(:identifiers_date_of_birth) %><p class="field-error">The birthday does not match the account.</p><% end %>
-                  </div>
-                <% end %>
-              </div>
-            </fieldset>
-
-            <% if %w[birth_match flagged_match].include?(@verification.knot_review_reason) %>
-              <div class="field-group">
-                <%= label_tag :different_person_reason, class: "field-label" do %>Not the same person <span class="optional">(optional)</span><% end %>
-                <%= text_area_tag :different_person_reason, values[:different_person_reason], rows: 2, class: "field", aria: { describedby: "different_person_hint" } %>
-                <p id="different_person_hint" class="field-hint"><%= t("knot.different_person_hint") %></p>
-              </div>
+          <p class="text-sm text-ink-soft">
+            When the call starts, open the call page. It shows the account details to check against the ID, and the outcome form, step by step.
+          </p>
+          <div>
+            <%= link_to call_identity_verification_path(@verification), class: "btn btn-primary" do %>
+              <%= icon(:video) %>Start the call
             <% end %>
-
-            <fieldset class="space-y-3">
-              <legend class="field-label">US residency (a pass needs a result). Check where the member lives. Never ask about citizenship.</legend>
-              <p class="field-hint">
-                Yes needs a US driver's license, learner's permit or state ID with a current US address, or the proof document the member uploaded
-                <%= @residency_check&.document_stored? ? "(#{@residency_check.evidence_label.downcase})" : "(none uploaded)" %>.
-                A US passport alone does not show where the member lives. Weave keeps only the result, the state, the evidence type and the date.
-              </p>
-              <div class="form-grid form-grid-3">
-                <div class="field-group">
-                  <%= form.label :us_resident, "Lives in the US", class: "field-label font-normal" %>
-                  <%= form.select :us_resident, [["Yes", "yes"], ["No", "no"]], { include_blank: "Choose", selected: values[:us_resident] }, class: "field" %>
-                </div>
-                <div class="field-group">
-                  <%= form.label :us_state, "US state (for yes)", class: "field-label font-normal" %>
-                  <%= form.select :us_state, ResidencyCheck::US_STATES.map { |code, name| [name, code] }, { include_blank: true, selected: values[:us_state] }, class: "field" %>
-                </div>
-                <div class="field-group">
-                  <%= form.label :residency_evidence, "Evidence (for yes)", class: "field-label font-normal" %>
-                  <%= form.select :residency_evidence, (["id_document"] + ResidencyCheck::UPLOAD_EVIDENCE).map { |type| [ResidencyCheck::EVIDENCE_TYPES[type], type] },
-                        { include_blank: true, selected: values[:residency_evidence] }, class: "field" %>
-                </div>
-              </div>
-            </fieldset>
-
-            <div class="field-group">
-              <%= form.text_area :reason, value: values[:reason], required: true, rows: 3, placeholder: "Written reason: what you checked on the call and why you decided",
-                    aria: { label: "Written reason" }, class: "field" %>
-            </div>
-
-            <div class="btn-row border-t border-hairline pt-4">
-              <%= form.button "Verified", name: "outcome", value: "verified", class: "btn btn-primary",
-                    data: { turbo_confirm: "Record a pass?" } %>
-              <%= form.button "Failed", name: "outcome", value: "failed", class: "btn btn-danger",
-                    data: { turbo_confirm: "Record a fail? The member waits for the cooldown, and you can't verify them again." } %>
-              <%= form.button "Failed: details don't match the account", name: "details_mismatch", value: "1", formnovalidate: true,
-                    class: "btn btn-danger", data: { turbo_confirm: "Record a fail because the details on the ID don't match the account?" } %>
-            </div>
-          <% end %>
+          </div>
         <% end %>
       </div>
     </section>
@@ -329,7 +225,8 @@
       <div class="card-body">
         <% if current_user.identity_lead %>
           <%= form_with url: resolve_escalation_identity_verification_path(@verification), method: :patch, class: "field-group" do |form| %>
-            <%= form.text_area :note, required: true, rows: 2, placeholder: "Why?", aria: { label: "Why?" }, class: "field" %>
+            <%= form.label :note, "Why?", class: "field-label", for: "escalation_note" %>
+            <%= form.text_area :note, id: "escalation_note", required: true, rows: 2, class: "field" %>
             <div class="btn-row mt-1">
               <%= form.button "Allow one more round", name: "resolution", value: "retry_allowed", class: "btn btn-secondary" %>
               <%= form.button "Close the case (ineligible)", name: "resolution", value: "ineligible", class: "btn btn-danger",
@@ -389,8 +286,8 @@
                       data: { controller: "break-glass", action: "submit->break-glass#ask",
                               break_glass_url_value: identity_verification_break_glass_records_path(@verification),
                               break_glass_redirect_url_value: identity_break_glass_records_path } do |form| %>
-          <%= form.text_area :reason, required: true, rows: 2, minlength: 10, placeholder: "Why do you need the image itself?",
-                aria: { label: "Why do you need the image?" }, class: "field", data: { break_glass_target: "reason" } %>
+          <%= form.label :reason, "Why do you need the image itself?", class: "field-label", for: "break_glass_reason" %>
+          <%= form.text_area :reason, id: "break_glass_reason", required: true, rows: 2, minlength: 10, class: "field", data: { break_glass_target: "reason" } %>
           <div class="mt-1">
             <%= form.submit "Ask for break-glass access", class: "btn btn-secondary", data: { break_glass_target: "button" } %>
           </div>
