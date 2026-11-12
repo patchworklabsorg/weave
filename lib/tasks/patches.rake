@@ -14,7 +14,7 @@ namespace :patches do
 
   desc "Copy the roles of an OAuth app into a patch (see PatchRoleImport). " \
        "APP=<public id or uid> PATCH=<slug> PREFIX=<prefix> ACTOR=<superadmin email> " \
-       "[GROUP_MAP=slug:role_key,...] [APPLY=1]. A dry run unless APPLY=1."
+       "[GROUP_MAP=slug:role_key,...] [MERGE=1] [RESTORE=1] [APPLY=1]. A dry run unless APPLY=1."
   task import_app_roles: :environment do
     app_param = ENV["APP"].to_s
     application = Doorkeeper::Application.find_by_public_param(app_param) if app_param.present?
@@ -31,7 +31,9 @@ namespace :patches do
       prefix: ENV["PREFIX"].to_s,
       actor: User.find_for_any_email(ENV["ACTOR"].to_s),
       group_map:,
-      apply: ENV["APPLY"] == "1"
+      apply: ENV["APPLY"] == "1",
+      merge: ENV["MERGE"] == "1",
+      restore: ENV["RESTORE"] == "1"
     )
     puts result.lines
   rescue PatchRoleImport::Error => error

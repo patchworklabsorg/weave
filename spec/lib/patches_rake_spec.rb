@@ -13,7 +13,7 @@ RSpec.describe "patches rake tasks", type: :task do
   let(:krater) { Doorkeeper::Application.create!(name: "Krater", redirect_uri: "https://krater.example.com/cb") }
 
   before do
-    create(:patch, slug: "ganymede", name: "Project Ganymede")
+    krater.update!(patch: create(:patch, slug: "ganymede", name: "Project Ganymede"))
     role = ApplicationRole.create!(application: krater, key: "reviewer", name: "Reviewer")
     ApplicationRoleAssignment.create!(role:, assignee: create(:group, name: "Krater Admins", slug: "krater-admins"))
   end
@@ -29,7 +29,7 @@ RSpec.describe "patches rake tasks", type: :task do
   def env(**extra) = { "APP" => krater.public_id, "PATCH" => "ganymede", "PREFIX" => "krater", "ACTOR" => superadmin.email, **extra }
 
   it "prints the plan and writes nothing without APPLY=1" do
-    expect { run(env) }.to output(/Dry run.*create  role krater:reviewer.*Warning.*krater-admins/m).to_stdout
+    expect { run(env) }.to output(/App: Krater.*Dry run.*create +role krater:reviewer.*Warning.*krater-admins/m).to_stdout
     expect(PatchRole.count).to eq(0)
   end
 
