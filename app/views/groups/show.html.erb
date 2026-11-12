@@ -81,7 +81,11 @@
       <% end %>
     </div>
     <% else %>
-      <p class="px-5 pt-4 text-sm text-ink-soft">This group is a sponsored project that waives onboarding steps, so only a superadmin adds members.</p>
+      <% if @group.holds_patch_roles? %>
+        <p class="px-5 pt-4 text-sm text-ink-soft">This group holds patch roles, so only a superadmin adds members.</p>
+      <% else %>
+        <p class="px-5 pt-4 text-sm text-ink-soft">This group is a sponsored project that waives onboarding steps, so only a superadmin adds members.</p>
+      <% end %>
     <% end %>
 
     <% if @memberships.any? %>

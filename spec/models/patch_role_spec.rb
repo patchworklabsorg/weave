@@ -13,6 +13,7 @@ RSpec.describe PatchRole do
       expect(patch.roles.build(key:, name: "Viewer")).not_to be_valid, "expected #{key.inspect} to be refused"
     end
     expect(patch.roles.build(key: "finance:read", name: "Finance")).to be_valid
+    expect(patch.roles.build(key: "quilt:viewer", name: "Quilt viewer")).to be_valid
   end
 
   it "refuses the reserved key lead" do
@@ -45,6 +46,15 @@ RSpec.describe PatchRole do
 
     expect(PatchRoleAssignment.new(role:, assignee: user)).not_to be_valid
     expect { role.destroy! }.to change(PatchRoleAssignment, :count).by(-1)
+  end
+
+  it "refuses a system group, and takes a manual group" do
+    role = patch.roles.create!(key: "quilt:viewer", name: "Quilt viewer")
+    assignment = PatchRoleAssignment.new(role:, assignee: create(:group, :system, name: "Everyone", slug: "everyone-test"))
+
+    expect(assignment).not_to be_valid
+    expect(assignment.errors[:assignee]).to include("must be a manual group: a system group follows user attributes")
+    expect(PatchRoleAssignment.new(role:, assignee: create(:group))).to be_valid
   end
 
   it "goes when the user or the group goes" do

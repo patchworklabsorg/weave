@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
 # Gives a role of a patch to a user or a group, or takes it away (see
-# PatchRoleAssignment). Superadmin only, like the roles themselves.
+# PatchRoleAssignment). Only a superadmin gives a role, like the roles
+# themselves. Any admin takes one away, so access is quick to remove.
 class Admin::PatchRoleAssignmentsController < Admin::BaseController
   before_action :set_role
-  before_action :require_superadmin
+  before_action :require_superadmin, only: [:create]
 
   def create
     assignee = find_assignee

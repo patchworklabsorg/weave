@@ -16,11 +16,12 @@ class GroupPolicy < ApplicationPolicy
   end
 
   # A sponsored project group waives the code of conduct or the Slack for its
-  # members, so only a superadmin adds people to it (see Group).
+  # members, and a group that holds a patch role gives that role to every
+  # member. So only a superadmin adds people to either (see Group).
   def add_member?
     return false unless manage?
 
-    user.superadmin? || !(record.waives_code_of_conduct || record.waives_slack)
+    user.superadmin? || !(record.waives_code_of_conduct || record.waives_slack || record.holds_patch_roles?)
   end
 
   # The groups listed on /groups: the ones the user manages.

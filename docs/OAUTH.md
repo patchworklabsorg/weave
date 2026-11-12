@@ -371,7 +371,7 @@ hold roles for a patch:
 | Key | Where it comes from | Who gives it |
 |---|---|---|
 | `lead` | the `patch_lead` governance role, scoped to the patch slug | an owner proposes, a board member approves (see `docs/KYC.md` "Roles") |
-| any other key, for example `viewer` | a role that the patch defines (`PatchRole`) | a superadmin, in the "Roles" panel on the patch page (`/admin/patches/:slug`), to a user or a group |
+| any other key, for example `quilt:viewer` or `reviewer` | a role that the patch defines (`PatchRole`) | a superadmin, in the "Roles" panel on the patch page (`/admin/patches/:slug`), to a user or a manual group |
 
 A superadmin defines the roles of each patch, the same way as app roles (see
 "App roles"). A role key never changes after the role is created, and the key
@@ -379,13 +379,24 @@ A superadmin defines the roles of each patch, the same way as app roles (see
 unexpired group membership. An app reads the keys it knows and ignores the
 rest, so a new role on a patch never breaks an app.
 
+Give a role that is meant for one app that app's prefix, so another app never
+reads it by mistake. Quilt reads only `lead` and `quilt:viewer`: a bare
+`viewer` that a patch app uses does not open the patch's finances in Quilt.
+
+Who changes what:
+
+- Only a superadmin creates, renames and deletes a patch role, and gives one to a user or a group.
+- Any admin removes an assignment, so access is quick to take away.
+- Only a manual group can hold a patch role. A system group (`everyone`, `staff`, `admins` and the others) follows user attributes, so Weave refuses it.
+- When a group holds a patch role, only a superadmin adds a member to it. A group manager and an approved access request can't.
+
 Request the `patches` scope to get a `patches` claim in the ID token and the
 userinfo response. The value is a JSON object. Each key is a patch slug, and
 each value is the sorted list of the role keys that the user holds for that
 patch, each key once:
 
 ```json
-"patches": {"europa": ["viewer"], "ganymede": ["lead", "reviewer"]}
+"patches": {"europa": ["reviewer"], "ganymede": ["lead", "quilt:viewer", "reviewer"]}
 ```
 
 Rules:
@@ -405,13 +416,13 @@ list `patches` (see "Directory API").
 ```mermaid
 flowchart LR
   P[(patches: ganymede)] --> UR[user_roles: patch_lead, scope ganymede]
-  P --> R[patch_roles: viewer]
+  P --> R[patch_roles: quilt:viewer]
   U[User] -->|direct| A[patch_role_assignments]
   U -->|member| G[Group] -->|assignee| A
   A --> R
   UR -->|lead| PR[PatchRoles]
-  R -->|viewer| PR
-  PR --> C["patches claim: {ganymede: [lead, viewer]}"]
+  R -->|quilt:viewer| PR
+  PR --> C["patches claim: {ganymede: [lead, quilt:viewer]}"]
   PR --> D[Directory API: patches]
 ```
 

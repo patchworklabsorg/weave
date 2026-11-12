@@ -71,6 +71,7 @@ class Group::Membership < ApplicationRecord
   validates :user_id, uniqueness: { scope: :group_id, message: "is already in this group" }
   validate :expires_in_the_future, if: -> { expires_at.present? && will_save_change_to_expires_at? }
   validate :manager_is_manual, if: :role_manager?
+  validate :patch_role_group_added_by_superadmin, if: :joins_group?
 
   def expired? = expires_at.present? && expires_at <= Time.current
 
@@ -100,6 +101,22 @@ class Group::Membership < ApplicationRecord
 
   def expires_in_the_future
     errors.add(:expires_at, "must be in the future") if expires_at <= Time.current
+  end
+
+  # A new row, or an expired row that starts again.
+  def joins_group?
+    return true if new_record?
+
+    will_save_change_to_expires_at? && expires_at_in_database.present? && expires_at_in_database <= Time.current
+  end
+
+  # Every path that adds a member (a group manager, an approved access
+  # request, the admin panel, a rake task) passes here.
+  def patch_role_group_added_by_superadmin
+    return unless group&.holds_patch_roles?
+    return if added_by&.superadmin?
+
+    errors.add(:base, "Only a superadmin can add a member to #{group.name}, because the group holds patch roles")
   end
 
   def manager_is_manual

@@ -7,7 +7,7 @@
 # a JSON object that maps a patch slug to the sorted, unique role keys the
 # person holds for that patch, for example
 #
-#   {"europa": ["viewer"], "ganymede": ["lead", "reviewer"]}
+#   {"europa": ["reviewer"], "ganymede": ["lead", "quilt:viewer", "reviewer"]}
 #
 # - "lead" comes from an active patch_lead role (config/roles.yml, granted
 #   through identity governance) scoped to the slug.

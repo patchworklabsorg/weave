@@ -1,7 +1,13 @@
 # frozen_string_literal: true
 
 # Gives a user, or every active member of a group, one role of one patch (see
-# PatchRole). Only a superadmin makes or removes one.
+# PatchRole). Only a superadmin makes one. Any admin removes one, so access is
+# quick to take away.
+#
+# The group must be a manual group. A system group follows user attributes
+# (everyone, staff, admins), so a patch role on it would open the patch to
+# anyone who gets the attribute. A superadmin adds the members of a group that
+# holds a patch role (see Group#holds_patch_roles?).
 # == Schema Information
 #
 # Table name: patch_role_assignments
@@ -40,5 +46,14 @@ class PatchRoleAssignment < ApplicationRecord
 
   validates :assignee_type, inclusion: { in: ASSIGNEE_TYPES }
   validates :assignee_id, uniqueness: { scope: [:role_id, :assignee_type], message: "already has this role" }
+  validate :group_is_manual
+
+  private
+
+  def group_is_manual
+    return unless assignee.is_a?(Group) && !assignee.manual?
+
+    errors.add(:assignee, "must be a manual group: a system group follows user attributes")
+  end
 
 end

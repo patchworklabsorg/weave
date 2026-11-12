@@ -86,6 +86,7 @@
             Roles this patch defines. Apps read the keys from the <code class="code-chip">patches</code> claim,
             and a role can open the patch's finances in Quilt.
           </p>
+          <p class="card-lede">Quilt reads <code class="code-chip">quilt:viewer</code>. Use an app prefix for a role meant for one app.</p>
         </div>
       </div>
 
@@ -124,13 +125,12 @@
                           <span class="record-meta"><%= assignment.assignee.email %></span>
                         <% end %>
                       </div>
-                      <% if current_user.superadmin? %>
-                        <div class="record-actions">
-                          <%= button_to "Remove", admin_patch_role_assignment_path(@patch, role, assignment), method: :delete,
-                              class: "btn btn-danger btn-sm",
-                              data: { turbo_confirm: "Remove this role assignment?" } %>
-                        </div>
-                      <% end %>
+                      <%# Any admin removes an assignment, so access is quick to take away. %>
+                      <div class="record-actions">
+                        <%= button_to "Remove", admin_patch_role_assignment_path(@patch, role, assignment), method: :delete,
+                            class: "btn btn-danger btn-sm",
+                            data: { turbo_confirm: "Remove this role assignment?" } %>
+                      </div>
                     </div>
                   <% end %>
                 </div>
@@ -143,7 +143,7 @@
                   <%= form_with scope: :assignment, url: admin_patch_role_assignments_path(@patch, role), local: true,
                       class: "flex items-end gap-2" do |form| %>
                     <div class="field-group flex-1 min-w-0">
-                      <%= form.label :group_id, "Give to a group", class: "field-label", for: "patch_role_#{role.id}_group_id" %>
+                      <%= form.label :group_id, "Give to a manual group", class: "field-label", for: "patch_role_#{role.id}_group_id" %>
                       <%= form.select :group_id, @groups.map { |group| [group.name, group.public_id] },
                           { include_blank: "Choose a group" }, required: true, id: "patch_role_#{role.id}_group_id", class: "field field-sm" %>
                     </div>
@@ -190,7 +190,7 @@
               <div class="form-grid form-grid-3 flex-1">
                 <div class="field-group">
                   <%= form.label :key, "Key", class: "field-label", for: "new_patch_role_key" %>
-                  <%= form.text_field :key, required: true, placeholder: "viewer", id: "new_patch_role_key", class: "field" %>
+                  <%= form.text_field :key, required: true, placeholder: "quilt:viewer", id: "new_patch_role_key", class: "field" %>
                 </div>
                 <div class="field-group">
                   <%= form.label :name, "Name", class: "field-label", for: "new_patch_role_name" %>
@@ -206,7 +206,7 @@
             <p class="mt-2 field-hint">
               The key can't change after the role is created. Use lowercase letters, digits, <code class="code-chip">-</code>,
               <code class="code-chip">_</code> or <code class="code-chip">:</code>. The key <code class="code-chip">lead</code> is
-              reserved for the patch lead.
+              reserved for the patch lead. Quilt reads <code class="code-chip">quilt:viewer</code>. Use an app prefix for a role meant for one app.
             </p>
           </div>
         <% end %>

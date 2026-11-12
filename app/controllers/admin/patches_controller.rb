@@ -24,7 +24,8 @@ class Admin::PatchesController < Admin::BaseController
     @applications = @patch.applications.order(:name)
     @leads = RoleGrants.assignments("patch_lead").where(scope: @patch.slug).includes(:granted_by).to_a
     @roles = @patch.roles.includes(assignments: :assignee).order(:key)
-    @groups = Group.order(:name) if current_user.superadmin?
+    # Only a manual group can hold a patch role (see PatchRoleAssignment).
+    @groups = Group.manual.order(:name) if current_user.superadmin?
   end
 
   def new

@@ -46,6 +46,13 @@ RSpec.describe PatchRoles do
     expect(claim.to_json).to eq('{"europa":["viewer"],"ganymede":["lead","reviewer","viewer"]}')
   end
 
+  it "sends an app-prefixed key such as quilt:viewer as it is" do
+    give(ganymede, "quilt:viewer")
+    give(ganymede, "viewer")
+
+    expect(claim).to eq("ganymede" => %w[quilt:viewer viewer])
+  end
+
   it "is an empty object for a person with no patch role" do
     user.update!(is_staff: true)
 

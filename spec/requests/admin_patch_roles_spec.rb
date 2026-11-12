@@ -53,6 +53,20 @@ RSpec.describe "Admin patch roles", type: :request do
       expect(PatchRoles.for(member)).to eq({})
     end
 
+    it "lists only manual groups, refuses a system group, and shows the Quilt key hint" do
+      system = create(:group, :system, name: "Everyone else", slug: "everyone-else")
+      create(:group, name: "Finance team")
+      role
+
+      get admin_patch_path(ganymede)
+      expect(response.body).to include("Finance team", "Quilt reads", "quilt:viewer")
+      expect(response.body).not_to include("Everyone else")
+
+      post admin_patch_role_assignments_path(ganymede, role), params: { assignment: { group_id: system.public_id } }
+      expect(flash[:alert]).to include("must be a manual group")
+      expect(role.assignments).to be_empty
+    end
+
     it "says when the user or the group does not exist" do
       post admin_patch_role_assignments_path(ganymede, role), params: { assignment: { email: "nobody@example.com" } }
       expect(flash[:alert]).to eq("No user has that email address.")
@@ -75,11 +89,11 @@ RSpec.describe "Admin patch roles", type: :request do
   context "when signed in as a plain admin" do
     before { sign_in_via_magic_link(admin) }
 
-    it "sees the roles and refuses every change" do
-      assignment = PatchRoleAssignment.create!(role:, assignee: member)
+    it "sees the roles, and is refused every change but a removal" do
+      PatchRoleAssignment.create!(role:, assignee: member)
 
       get admin_patch_path(ganymede)
-      expect(response.body).to include("Viewer", member.full_name)
+      expect(response.body).to include("Viewer", member.full_name, "Remove")
       expect(response.body).not_to include("Add role", "Delete role", "Give to a user")
 
       post admin_patch_roles_path(ganymede), params: { role: { key: "reviewer", name: "Reviewer" } }
@@ -87,11 +101,20 @@ RSpec.describe "Admin patch roles", type: :request do
       patch admin_patch_role_path(ganymede, role), params: { role: { name: "Renamed" } }
       delete admin_patch_role_path(ganymede, role)
       post admin_patch_role_assignments_path(ganymede, role), params: { assignment: { email: admin.email } }
-      delete admin_patch_role_assignment_path(ganymede, role, assignment)
 
       expect(ganymede.roles.reload.map(&:key)).to eq(["viewer"])
       expect(role.reload.name).to eq("Viewer")
       expect(role.assignments.map(&:assignee)).to eq([member])
+    end
+
+    it "removes an assignment, so access is quick to take away" do
+      assignment = PatchRoleAssignment.create!(role:, assignee: member)
+
+      delete admin_patch_role_assignment_path(ganymede, role, assignment)
+
+      expect(response).to redirect_to(admin_patch_path(ganymede, anchor: "roles"))
+      expect(role.assignments.reload).to be_empty
+      expect(PatchRoles.for(member)).to eq({})
     end
   end
 

@@ -242,7 +242,7 @@ Doorkeeper::OpenidConnect.configure do
 
     # The user's roles for each patch (see PatchRoles): a JSON object that
     # maps a patch slug to the sorted role keys, for example
-    # {"ganymede": ["lead", "viewer"]}: "lead" for a patch lead, and the keys of
+    # {"ganymede": ["lead", "quilt:viewer"]}: "lead" for a patch lead, and the keys of
     # the roles the patch defines (PatchRole). An empty object when none. Quilt
     # depends on this shape: keep it.
     # Only an app whose scopes field lists `patches` gets it. Doorkeeper lets
