@@ -422,6 +422,31 @@ RSpec.describe "Identity verification pages", type: :request do
       expect(response).to redirect_to(identity_verification_path(verification))
     end
 
+    it "has no call page for a deleted account" do
+      verification.update!(user: nil)
+      get identity_verification_path(verification)
+      expect(response.body).not_to include("Start the call")
+
+      get call_identity_verification_path(verification)
+      expect(response).to redirect_to(identity_verification_path(verification))
+      expect(flash[:alert]).to eq("The member's account was deleted. There is no call to run.")
+    end
+
+    it "has no call page for the member's own verification" do
+      sign_in_via_magic_link(member.tap { |user| user.update!(identity_team: true) })
+      get call_identity_verification_path(verification)
+
+      expect(response).to redirect_to(identity_verification_path(verification))
+      expect(flash[:alert]).to start_with("This is your own verification.")
+    end
+
+    it "goes back to the call page when the outcome is not recorded" do
+      patch decide_identity_verification_path(verification), params: params.merge(reason: "")
+
+      expect(response).to redirect_to(call_identity_verification_path(verification))
+      expect(flash[:alert]).to start_with("Outcome not recorded")
+    end
+
     it "has no call page before a call is booked" do
       waiting = create(:verification, :awaiting_call, user: member)
       get call_identity_verification_path(waiting)

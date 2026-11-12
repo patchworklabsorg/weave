@@ -171,16 +171,17 @@ class Identity::VerificationsController < Identity::BaseController
     @guardian_consent = call_guardian_consent
   end
 
-  # Only a scheduled call, run by someone who is not the member and did not
-  # fail the member before. VerificationFlow.decide checks this again.
-  def can_run_call?
-    @verification.call_scheduled? && @user != current_user && @excluded_ids.exclude?(current_user.id)
-  end
+  # Only a scheduled call of an account that exists, run by someone who is
+  # not the member, did not fail the member before and passes the bootstrap
+  # rule. VerificationFlow.decide checks these again.
+  def can_run_call? = call_blocked_message.nil?
 
   def call_blocked_message
     if !@verification.call_scheduled? then "This attempt has no call to run now."
+    elsif @user.nil? then "The member's account was deleted. There is no call to run."
     elsif @user == current_user then "This is your own verification. Another identity team member must run the call."
-    else "You failed this member before. A different verifier must run this call."
+    elsif @excluded_ids.include?(current_user.id) then "You failed this member before. A different verifier must run this call."
+    else IdentityGovernance.bootstrap_decision_error(current_user, @user)
     end
   end
 

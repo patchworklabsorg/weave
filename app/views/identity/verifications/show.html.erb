@@ -184,7 +184,7 @@
     </section>
   <% end %>
 
-  <% if !own && @verification.call_scheduled? %>
+  <% if @user && !own && @verification.call_scheduled? %>
     <section class="card">
       <div class="card-header">
         <div>
