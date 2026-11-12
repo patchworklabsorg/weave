@@ -61,6 +61,41 @@ RSpec.describe SystemGroups do
     end
   end
 
+  describe "patch-leads" do
+    let(:owner) { create(:user, :owner) }
+
+    it "follows the patch lead role, for any patch" do
+      user = create(:user)
+
+      RoleGrants.grant!(user, "patch_lead", scope: "ganymede", by: owner, reason: "spec")
+      expect(slugs_for(user)).to include("patch-leads")
+      expect(user.group_memberships.find_by!(group: group("patch-leads"))).to be_system
+
+      RoleGrants.revoke!(user, "patch_lead", scope: "ganymede", by: owner, reason: "spec")
+      expect(slugs_for(user)).not_to include("patch-leads")
+    end
+
+    it "is filled by sync_all for a lead whose role was written without RoleGrants" do
+      user = create(:user)
+      UserRole.create!(user:, role: Role.fetch!("patch_lead"), scope: "ganymede", granted_at: Time.current)
+      expect(slugs_for(user)).not_to include("patch-leads")
+
+      described_class.sync_all
+
+      expect(slugs_for(user)).to include("patch-leads")
+    end
+
+    it "drops a lead whose program is no longer in the Knot settings" do
+      user = create(:user)
+      RoleGrants.grant!(user, "patch_lead", scope: "ganymede", by: owner, reason: "spec")
+      allow(KnotSettings).to receive(:program_keys).and_return([])
+
+      described_class.sync_all
+
+      expect(slugs_for(user)).not_to include("patch-leads")
+    end
+  end
+
   it "leaves a membership that was added by hand" do
     user = create(:user)
     described_class.ensure_groups!

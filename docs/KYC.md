@@ -431,7 +431,7 @@ flowchart TD
   I[Immediate rule: board, staff, contractor, patch lead removal, verifier removal] -->|RoleGrants.grant or .revoke| G
   G -->|insert or set revoked_at| UR[(user_roles)]
   UR -->|trigger log_user_role_changes| L[(privileged_attribute_changes)]
-  UR -->|after commit| SG[SystemGroups: staff, board, contractors, identity-team]
+  UR -->|after commit| SG[SystemGroups: staff, board, contractors, identity-team, patch-leads]
   SG --> D[Directory API and userinfo claims]
 ```
 

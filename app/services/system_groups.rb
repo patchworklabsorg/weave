@@ -11,8 +11,8 @@
 # rows only, so it never touches a membership that was added by hand.
 #
 # `attributes` are the user columns that can change a membership: a save that
-# changes one syncs the user. The staff, board, contractors and identity team
-# groups follow roles instead (see RoleGrants), which sync the user after
+# changes one syncs the user. The staff, board, contractors, identity team
+# and patch leads groups follow roles instead (see RoleGrants), which sync the user after
 # each grant or revoke.
 module SystemGroups
   Definition = Data.define(:slug, :name, :description, :attributes, :rule)
@@ -47,6 +47,14 @@ module SystemGroups
     Definition.new(
       slug: "identity-team", name: "Identity Team", description: "Users who run identity verification.",
       attributes: [], rule: ->(user) { user.identity_team }
+    ),
+    # Every patch lead, of any patch. For apps that every lead may use, such
+    # as Quilt, which then shows each lead only their own patch (the `patches`
+    # claim). It gives nothing by itself. Only programs that still exist count,
+    # the same rule as the Knot check (KnotGrants.any_patch_lead?).
+    Definition.new(
+      slug: "patch-leads", name: "Patch Leads", description: "Users with the patch lead role, for any patch.",
+      attributes: [], rule: ->(user) { KnotGrants.any_patch_lead?(user) }
     )
   ].freeze
 
