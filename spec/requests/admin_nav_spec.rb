@@ -110,6 +110,24 @@ RSpec.describe "Admin sidebar", type: :request do
     expect(Nokogiri::HTML(response.body).at_css(".admin-topbar-crumb a[href='#{admin_oauth_applications_path}']")).to be_nil
   end
 
+  it "keeps the section crumb when a failed form re-renders at the list URL" do
+    sign_in_via_magic_link(create(:user, :admin, :verified))
+
+    post admin_users_path, params: { user: { first_name: "", email: "" } }
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(crumbs).to include("Users")
+  end
+
+  it "leaves out a section crumb that would repeat the home crumb" do
+    sign_in_via_magic_link(create(:user, :verified, identity_team: true))
+
+    get identity_verification_path(create(:verification))
+
+    expect(crumbs.first).to eq("Identity")
+    expect(crumbs).not_to include("Verification")
+  end
+
   it "highlights the group link for a page under it" do
     sign_in_via_magic_link(create(:user, :identity_team, :verified))
 
