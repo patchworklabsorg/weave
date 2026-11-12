@@ -4,6 +4,30 @@ require "rails_helper"
 
 # A role that a superadmin defines for one patch. Apps see the key, so it never
 # changes, and "lead" belongs to the patch_lead governance role.
+# == Schema Information
+#
+# Table name: patch_roles
+# Database name: primary
+#
+#  id            :bigint           not null, primary key
+#  description   :text
+#  key           :string           not null
+#  name          :string           not null
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#  created_by_id :bigint
+#  patch_id      :bigint           not null
+#
+# Indexes
+#
+#  index_patch_roles_on_created_by_id     (created_by_id)
+#  index_patch_roles_on_patch_id_and_key  (patch_id,key) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (created_by_id => users.id) ON DELETE => nullify
+#  fk_rails_...  (patch_id => patches.id) ON DELETE => cascade
+#
 RSpec.describe PatchRole do
   let(:patch) { create(:patch, slug: "ganymede") }
 
