@@ -16,7 +16,7 @@ RSpec.describe "OpenID Connect", type: :request do
     Doorkeeper::Application.create!(
       name: "Test Client",
       redirect_uri: redirect_uri,
-      scopes: "openid profile email phone admin slack groups roles verification residency age social",
+      scopes: "openid profile email phone admin slack groups roles verification residency age social patches",
       confidential: false
     )
   end
@@ -160,7 +160,15 @@ RSpec.describe "OpenID Connect", type: :request do
         "email_verified"     => true
       )
       expect(claims).not_to include("phone_number", "phone_number_verified", "admin", "slack_member", "slack_id", "groups", "roles")
-      expect(claims).not_to include("age_band")
+      expect(claims).not_to include("age_band", "patches")
+    end
+
+    it "carries the patch roles when the patches scope is granted" do
+      create(:patch, slug: "ganymede", name: "Project Ganymede")
+      RoleGrants.grant!(user, "patch_lead", scope: "ganymede", reason: "spec")
+      patch_claims = verify_id_token(obtain_tokens(scope: "openid patches")["id_token"]).first
+
+      expect(patch_claims).to include("patches" => { "ganymede" => ["lead"] })
     end
 
     it "carries the Slack membership claims when the slack scope is granted" do
@@ -346,6 +354,40 @@ RSpec.describe "OpenID Connect", type: :request do
       expect(userinfo(scope: "openid social"))
         .to include("social_profiles" => [{ "provider" => "github", "id" => "583231", "username" => "octocat" }])
       expect(userinfo(scope: "openid profile")).not_to include("social_profiles")
+    end
+
+    describe "the patches claim" do
+      let(:owner) { create(:user, :owner, :verified) }
+
+      before do
+        create(:patch, slug: "ganymede", name: "Project Ganymede")
+        create(:patch, slug: "europa", name: "Europa")
+      end
+
+      it "maps each patch slug to the user's sorted short role names" do
+        RoleGrants.grant!(user, "patch_lead", scope: "ganymede", by: owner, reason: "spec")
+        RoleGrants.grant!(user, "patch_viewer", scope: "ganymede", by: owner, reason: "spec")
+        RoleGrants.grant!(user, "patch_viewer", scope: "europa", by: owner, reason: "spec")
+
+        expect(userinfo(scope: "openid patches")).to include("patches" => { "europa" => ["viewer"], "ganymede" => %w[lead viewer] })
+      end
+
+      it "is an empty object when the user has no patch role" do
+        expect(userinfo(scope: "openid patches")).to include("patches" => {})
+      end
+
+      it "leaves out a revoked role" do
+        RoleGrants.grant!(user, "patch_viewer", scope: "europa", by: owner, reason: "spec")
+        RoleGrants.revoke!(user, "patch_viewer", scope: "europa", by: owner, reason: "spec")
+
+        expect(userinfo(scope: "openid patches")).to include("patches" => {})
+      end
+
+      it "is not sent without the patches scope" do
+        RoleGrants.grant!(user, "patch_viewer", scope: "europa", by: owner, reason: "spec")
+
+        expect(userinfo(scope: "openid profile")).not_to have_key("patches")
+      end
     end
 
     describe "the groups claim" do

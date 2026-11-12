@@ -54,6 +54,29 @@ RSpec.describe "OAuth token introspection", type: :request do
       end
     end
 
+    it "sees the patch of the calling app, for an app linked to a patch" do
+      krater.update!(patch: create(:patch, slug: "ganymede", name: "Project Ganymede"))
+      token = client_credentials_token(krater, scope: "quilt")
+
+      expect(introspect(token, as: quilt)).to include("active" => true, "client_id" => krater.uid, "patch" => "ganymede")
+    end
+
+    it "gets no patch field for an app with no patch" do
+      token = client_credentials_token(krater, scope: "quilt")
+
+      expect(introspect(token, as: quilt)).not_to have_key("patch")
+    end
+
+    it "gets no patch field for a user's token" do
+      krater.update!(patch: create(:patch, slug: "ganymede", name: "Project Ganymede"))
+      token = Doorkeeper::AccessToken.create!(application: krater, resource_owner_id: user.id, scopes: "openid profile")
+
+      body = introspect(token.plaintext_token, as: krater)
+
+      expect(body).to include("active" => true)
+      expect(body).not_to have_key("patch")
+    end
+
     it "does not see a user's token of another app" do
       token = Doorkeeper::AccessToken.create!(application: krater, resource_owner_id: user.id, scopes: "openid profile")
 

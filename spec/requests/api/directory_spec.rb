@@ -42,6 +42,16 @@ RSpec.describe "Directory API", type: :request do
       )
     end
 
+    it "gives the patch roles only to an app allowed the patches scope" do
+      create(:patch, slug: "ganymede", name: "Project Ganymede")
+      RoleGrants.grant!(reviewer, "patch_viewer", scope: "ganymede", reason: "spec")
+
+      expect(directory_get(api_v1_directory_user_path(reviewer.p_id))).not_to have_key("patches")
+
+      application.update!(scopes: "openid profile groups roles directory patches")
+      expect(directory_get(api_v1_directory_user_path(reviewer.p_id))).to include("patches" => { "ganymede" => ["viewer"] })
+    end
+
     it "says when a sponsored project's group waives Slack and the code of conduct" do
       sponsored = create(:group, waives_code_of_conduct: true, waives_slack: true)
       create(:group_membership, group: sponsored, user: reviewer)

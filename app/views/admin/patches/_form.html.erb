@@ -1,0 +1,34 @@
+<%= form_with model: [:admin, patch], local: true, class: "card" do |form| %>
+  <div class="card-body space-y-5">
+    <%= form_errors(patch) %>
+
+    <div class="field-group">
+      <%= form.label :name, class: "field-label" %>
+      <%= form.text_field :name, class: "field", placeholder: "Project Ganymede" %>
+    </div>
+
+    <div class="field-group">
+      <%= form.label :slug, class: "field-label" %>
+      <% if patch.persisted? %>
+        <span class="field-static mono"><%= patch.slug %></span>
+        <p class="field-hint">The slug can't be changed after the patch is created.</p>
+      <% else %>
+        <%= form.text_field :slug, class: "field", placeholder: "ganymede", aria: { describedby: "patch-slug-hint" } %>
+        <p class="field-hint" id="patch-slug-hint">
+          Lowercase letters, numbers and dashes. Apps and Quilt see this name. Use the same slug as in Quilt.
+          You can't change it later.
+        </p>
+      <% end %>
+    </div>
+
+    <div class="field-group">
+      <%= form.label :description, class: "field-label" do %>Description <span class="optional">(optional)</span><% end %>
+      <%= form.text_area :description, rows: 3, class: "field" %>
+    </div>
+
+    <div class="form-actions">
+      <%= link_to "Cancel", patch.persisted? ? admin_patch_path(patch) : admin_patches_path, class: "btn btn-secondary" %>
+      <%= form.submit patch.persisted? ? "Save patch" : "Create patch", class: "btn btn-primary" %>
+    </div>
+  </div>
+<% end %>

@@ -818,6 +818,10 @@ Rails.application.routes.draw do
         end
       end
 
+      # Patches: the grant programs (see Patch). No destroy: the slug is
+      # named by role assignments, Quilt and app tokens.
+      resources :patches, only: [:index, :show, :new, :create, :edit, :update]
+
       resources :groups do
         resources :memberships, controller: "group_memberships", only: [:create, :destroy] do
           patch :role, on: :member

@@ -299,7 +299,7 @@ Doorkeeper.configure do
   # - `introspect`: introspect the `client_credentials` tokens of other apps
   #   (see `allow_token_introspection` below). Only a superadmin may allow it
   #   on an app (see Admin::OauthApplicationsController).
-  user_scopes = %i[profile openid email phone admin slack groups roles verification residency age social]
+  user_scopes = %i[profile openid email phone admin slack groups roles verification residency age social patches]
   app_scopes = %i[directory fulfillment quilt stash introspect]
 
   default_scopes :profile
@@ -405,6 +405,15 @@ Doorkeeper.configure do
   # or
   #
   # custom_introspection_response CustomIntrospectionResponder
+  #
+  # Weave adds `patch`: the slug of the patch the token's app belongs to (see
+  # OauthApplicationPatchLink), for an app token (client_credentials, no
+  # user) of an app linked to a patch. A resource server such as Quilt reads
+  # it to tell which patch the calling app belongs to. Left out otherwise.
+  custom_introspection_response do |token, _context|
+    slug = token.resource_owner_id.nil? ? token.application&.patch&.slug : nil
+    slug ? { patch: slug } : {}
+  end
 
   # Specify what grant flows are enabled in array of Strings. The valid
   # strings and the flows they enable are:

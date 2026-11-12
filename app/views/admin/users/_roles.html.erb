@@ -46,14 +46,15 @@
             <% end %>
           <% end %>
 
-          <% if !held || definition.scopable? %>
+          <% open_scopes = definition.scopable? ? RoleRegistry.scopes_for(definition.key) - scopes : [] %>
+          <% if definition.scopable? ? open_scopes.any? : !held %>
             <% if RoleGrants.allowed_now?(current_user, user, definition.key, :grant) %>
               <%= form_with url: admin_role_assignments_path, method: :post, class: "flex flex-col sm:flex-row gap-2" do |form| %>
                 <%= form.hidden_field :user_id, value: user.p_id %>
                 <%= form.hidden_field :role, value: definition.key %>
                 <%= form.hidden_field :return_to, value: "user" %>
                 <% if definition.scopable? %>
-                  <%= form.select :scope, RoleRegistry.scopes_for(definition.key) - scopes, {}, class: "field field-sm sm:w-48",
+                  <%= form.select :scope, open_scopes, {}, class: "field field-sm sm:w-48",
                         aria: { label: "Scope of #{definition.name}" } %>
                 <% end %>
                 <%= form.text_field :reason, placeholder: "Reason (optional)",

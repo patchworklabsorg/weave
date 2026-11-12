@@ -16,12 +16,13 @@ RSpec.describe RoleRegistry do
   delegate :parse, to: :described_class
 
   it "loads every role of the locked set from config/roles.yml" do
-    expect(described_class.keys).to eq(%w[verifier identity_lead key_holder board staff contractor patch_lead])
+    expect(described_class.keys).to eq(%w[verifier identity_lead key_holder board staff contractor patch_lead patch_viewer])
     expect(described_class.fetch("patch_lead")).to have_attributes(scopable: true, scope_source: "knot_programs")
+    expect(described_class.fetch("patch_viewer")).to have_attributes(scopable: true, scope_source: "patches")
     expect(described_class.fetch("key_holder").requires).to eq(["verifier"])
   end
 
-  it "holds the locked grant rules" do
+  it "holds the locked grant rules" do # rubocop:disable RSpec/ExampleLength
     rules = described_class.definitions.transform_values { |definition| [definition.grant.rule, definition.revoke.rule] }
 
     expect(rules).to eq(
@@ -31,7 +32,8 @@ RSpec.describe RoleRegistry do
       "board"         => %w[any_owner any_owner],
       "staff"         => %w[admin admin],
       "contractor"    => %w[admin admin],
-      "patch_lead"    => %w[owner_proposes_board_approves owner]
+      "patch_lead"    => %w[owner_proposes_board_approves owner],
+      "patch_viewer"  => %w[admin admin]
     )
     expect(described_class.fetch("verifier").grant.preconditions_at_approval).to eq(%w[verified_by_another adult])
     expect(described_class.fetch("verifier").grant.preconditions_at_proposal).to eq([])
@@ -125,6 +127,24 @@ RSpec.describe RoleRegistry do
       expect(described_class.valid_scope?("patch_lead", nil)).to be(false)
       expect(described_class.valid_scope?("staff", nil)).to be(true)
       expect(described_class.valid_scope?("staff", "ganymede")).to be(false)
+    end
+
+    it "takes the patch viewer scopes from the patches table" do
+      expect(described_class.scopes_for("patch_viewer")).to eq([])
+
+      create(:patch, slug: "europa")
+      create(:patch, slug: "ganymede")
+
+      expect(described_class.scopes_for("patch_viewer")).to eq(%w[europa ganymede])
+      expect(described_class.valid_scope?("patch_viewer", "europa")).to be(true)
+      expect(described_class.valid_scope?("patch_viewer", "callisto")).to be(false)
+      expect(described_class.valid_scope?("patch_viewer", nil)).to be(false)
+    end
+
+    it "gives every Knot program a patch with the same slug, so both scope sources agree" do
+      Patch.sync_programs!
+
+      expect(described_class.scopes_for("patch_viewer")).to include(*described_class.scopes_for("patch_lead"))
     end
   end
 

@@ -19,10 +19,10 @@ module RoleRegistry
   RULES = (PROPOSAL_RULES + IMMEDIATE_RULES).freeze
 
   PRECONDITIONS = %w[verified_by_another verified_or_bootstrap adult].freeze
-  SCOPE_SOURCES = %w[knot_programs].freeze
+  SCOPE_SOURCES = %w[knot_programs patches].freeze
 
   # Code reads these roles by key, so the config must define each of them.
-  REQUIRED_KEYS = %w[verifier identity_lead key_holder board staff contractor patch_lead].freeze
+  REQUIRED_KEYS = %w[verifier identity_lead key_holder board staff contractor patch_lead patch_viewer].freeze
 
   ROLE_KEYS = %w[name description scopable scope_source requires grant revoke].freeze
   RULE_KEYS = %w[rule preconditions_at_proposal preconditions_at_approval].freeze
@@ -60,6 +60,8 @@ module RoleRegistry
 
       case definition.scope_source
       when "knot_programs" then KnotSettings.program_keys
+      # Read from the database each time: an admin can add a patch.
+      when "patches" then Patch.order(:slug).pluck(:slug)
       else []
       end
     end

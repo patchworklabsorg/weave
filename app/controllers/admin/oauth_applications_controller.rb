@@ -203,7 +203,7 @@ class Admin::OauthApplicationsController < Admin::BaseController
   end
 
   def application_params
-    params.require(:doorkeeper_application).permit(:name, :redirect_uri, :scopes, :confidential,
+    params.require(:doorkeeper_application).permit(:name, :redirect_uri, :scopes, :confidential, :patch_id,
                                                    :show_in_launcher, :launch_url, :launcher_icon_url, :launcher_description)
   end
 

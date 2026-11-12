@@ -15,4 +15,7 @@ puts "Seeding data..."
 
 # To create an owner user, run: rails user:create_owner
 
+# A patch for each program in config/kyc/knot.yml (see Patch).
+Patch.sync_programs!
+
 puts "Seed data successfully created!"

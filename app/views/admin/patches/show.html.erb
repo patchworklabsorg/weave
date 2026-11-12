@@ -1,0 +1,110 @@
+<% content_for :title, @patch.name %>
+
+<header class="page-header">
+  <div>
+    <p class="text-sm"><%= link_to "Patches", admin_patches_path, class: "link-quiet text-ink-soft" %></p>
+    <h1 class="page-title"><%= @patch.name %></h1>
+    <p class="page-lede mono"><%= @patch.slug %></p>
+  </div>
+  <% if current_user.superadmin? %>
+    <div class="page-actions">
+      <%= link_to edit_admin_patch_path(@patch), class: "btn btn-secondary" do %><%= icon(:pencil) %>Edit<% end %>
+    </div>
+  <% end %>
+</header>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Details</h2>
+    </div>
+    <div class="card-body">
+      <dl class="dl">
+        <%= dl_row("Slug") { tag.span(@patch.slug, class: "mono") } %>
+        <% if @patch.description.present? %>
+          <%= dl_row "Description", @patch.description %>
+        <% end %>
+        <%= dl_row("Created") do %>
+          <%= time_label(@patch.created_at) %>
+          <% if @patch.created_by %>by <%= @patch.created_by.full_name %><% end %>
+        <% end %>
+      </dl>
+      <p class="mt-3 text-sm text-ink-soft">
+        Apps that ask for the <code class="code-chip">patches</code> scope get each person's roles for this patch.
+      </p>
+    </div>
+  </div>
+
+  <div class="lg:col-span-2 space-y-6">
+    <section class="card">
+      <div class="card-header">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="card-title">People</h2>
+            <%= badge(@assignments.values.sum(&:size).to_s) %>
+          </div>
+          <p class="card-lede">Grant or revoke a patch role in the roles section of the user's admin page.</p>
+        </div>
+      </div>
+      <% if @assignments.values.any?(&:any?) %>
+        <div class="card-body">
+          <ul class="record-list">
+            <% @assignments.each do |key, assignments| %>
+              <% definition = RoleRegistry.fetch(key) %>
+              <% assignments.each do |assignment| %>
+                <% user = assignment.user %>
+                <li class="record">
+                  <div class="record-main">
+                    <p class="record-title">
+                      <% if user %>
+                        <%= link_to user.full_name, admin_user_path(user, anchor: "roles"), class: "link-quiet" %>
+                        <span class="mono text-ink-faint font-normal">(<%= user.p_id %>)</span>
+                      <% else %>
+                        A deleted user
+                      <% end %>
+                    </p>
+                    <p class="record-meta">
+                      Since <%= time_label(assignment.granted_at) %>.
+                      Granted by <%= assignment.granted_by&.full_name || "Weave" %>.
+                    </p>
+                  </div>
+                  <%= badge(definition.name, tone: key == "patch_lead" ? :info : :neutral) %>
+                </li>
+              <% end %>
+            <% end %>
+          </ul>
+        </div>
+      <% else %>
+        <%= empty_state("Nobody has a role for this patch.", icon: :user_round) %>
+      <% end %>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="card-title">Apps</h2>
+            <%= badge(@applications.size.to_s) %>
+          </div>
+          <p class="card-lede">OAuth apps that belong to this patch. Set the patch on the app's edit page.</p>
+        </div>
+      </div>
+      <% if @applications.any? %>
+        <div class="card-body">
+          <ul class="record-list">
+            <% @applications.each do |application| %>
+              <li class="record">
+                <div class="record-main">
+                  <p class="record-title"><%= link_to application.name, admin_oauth_application_path(application), class: "link-quiet" %></p>
+                  <p class="record-meta mono"><%= application.uid %></p>
+                </div>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      <% else %>
+        <%= empty_state("No app belongs to this patch.", icon: :app_window) %>
+      <% end %>
+    </section>
+  </div>
+</div>

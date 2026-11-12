@@ -77,6 +77,7 @@ The OAuth provider supports the following scopes:
 - `roles`: the user's roles in this app (`roles`)
 - `age`: the user's age group, not the birthday (`age_band`, see "Age band claim")
 - `social`: the accounts the user linked on other sites (`social_profiles`, see "Social profile claims")
+- `patches`: the user's roles for each patch (`patches`, see "Patch claims")
 - `directory`: the directory API, for `client_credentials` tokens only (see "Directory API")
 - `fulfillment`: read a user's shipping address, for `client_credentials` tokens only (see "Shipping address API")
 - `quilt`: the Quilt patch API, for `client_credentials` tokens only (see "Resource servers")
@@ -360,6 +361,46 @@ link a group to an app that is open to everyone, to send the claim without
 limiting access. The list is empty when no linked group matches. Slugs never
 change after a group is created, so clients can compare them safely.
 
+### Patch claims
+
+A patch is a grant program of Patchwork Labs, for example Project Ganymede.
+Weave keeps the patches in `/admin/patches`. Each patch has a slug, such as
+`ganymede`, that never changes. It is the same slug as in Quilt. A person can
+hold a role for a patch:
+
+| Role | Short name | Who grants it |
+|---|---|---|
+| Patch lead (`patch_lead`) | `lead` | an owner proposes, a board member approves (see `docs/KYC.md` "Roles") |
+| Patch viewer (`patch_viewer`) | `viewer` | any admin, on the user's admin page |
+
+Request the `patches` scope to get a `patches` claim in the ID token and the
+userinfo response. The value is a JSON object. Each key is a patch slug, and
+each value is the sorted list of the short names of the roles that the user
+holds for that patch:
+
+```json
+"patches": {"europa": ["viewer"], "ganymede": ["lead"]}
+```
+
+Rules:
+
+- The object is empty (`{}`) when the user holds no patch role.
+- Only active roles count. A revoked role is left out at once, at the next token or userinfo call.
+- Only patches that exist in Weave are listed.
+- The keys are sorted. A slug never changes, so clients can compare it safely.
+- `PatchRoles` (`app/services/patch_roles.rb`) builds the value. Quilt depends on this shape. Do not change it without a change in Quilt.
+
+The directory API sends the same object as `patches` when the app's scopes
+list `patches` (see "Directory API").
+
+```mermaid
+flowchart LR
+  P[(patches: ganymede)] --> UR[user_roles: patch_lead, scope ganymede]
+  UR --> PR[PatchRoles]
+  PR --> C["patches claim: {ganymede: [lead]}"]
+  PR --> D[Directory API: patches]
+```
+
 ### App roles
 
 An app can define its own roles, for example `member`, `reviewer` and `admin`.
@@ -438,6 +479,7 @@ Rules:
 - `minor` is `true` when the user is under 18, from their birthday. It is `false` when Weave does not know the birthday yet. Weave asks for a missing birthday at the next sign-in. Only the directory sends this field. It is not a claim.
 - `guardian_verified` is `true` for a minor whose guardian was checked beyond the email link: a Weave admin recorded a signed form and a call or video check, or the minor passed identity verification with the guardian on the call (a pass needs a granted consent). The email consent alone does not set it. A revoked consent or a pass that no longer stands ends it. Ask for it before your app gives a minor money or other risk. It is `false` for adults.
 - `age_band` is in the response only when the app's scopes list `age` and Weave knows the birthday (see "Age band claim").
+- `patches` is in the response only when the app's scopes list `patches` (see "Patch claims").
 - `demographics_answered` is `true` when the user saved answers to the demographics form. Weave never sends the answers. Ask for it before a user's first grant application. To send the user to the form, link to `/profile/demographics?return_to=<url>`. After a save, Weave sends the user back to `return_to` when its origin matches a redirect URI of a registered app. Weave ignores any other `return_to`.
 - `?group=` works only for a group linked to the app. `?role=` works only for a role of the app. Other values give `404`.
 - Pass exactly one of `role` and `group`, or the API answers `400`.
@@ -558,7 +600,7 @@ Rules for the resource server:
 
 - Refuse the request unless `active` is `true`. An inactive, revoked, expired, unknown or hidden token gives only `{"active": false}`.
 - Refuse the request unless `scope` (a space-separated list) includes the resource server's own scope (`quilt` for Quilt, `stash` for Stash).
-- Use `client_id` to find the calling app, for example the patch it belongs to. Keep this mapping in the resource server.
+- Use `client_id` to find the calling app. When an admin linked the calling app to a patch (the Patch field on the app's edit page), the response also has `patch`: the patch slug, for example `"patch": "ganymede"`. Weave sends `patch` only for a token with no user. It is not in the response when the app has no patch.
 - Keep a result for up to 60 seconds, keyed by a hash of the token, and never past `exp`. A revoked token can then work for up to 60 seconds.
 - Authenticate with HTTP Basic. A bearer token can introspect only tokens of its own app.
 
