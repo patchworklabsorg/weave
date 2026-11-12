@@ -250,6 +250,7 @@ class User < ApplicationRecord
   has_many :application_access_grants, as: :grantee, dependent: :destroy
   # OAuth app roles given to this user directly (see ApplicationRole).
   has_many :application_role_assignments, as: :assignee, dependent: :destroy
+  has_many :patch_role_assignments, as: :assignee, dependent: :destroy
 
   # Records this user created. Nullify on delete so the records survive.
   has_many :created_services, class_name: "Service",

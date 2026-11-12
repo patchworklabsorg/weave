@@ -56,7 +56,7 @@ module AdminNavHelper
                                         %w[role_assignments], :admin)
                       end),
                      (admin_nav_entry("Groups", admin_groups_path, :users_round, "admin teams", %w[groups group_memberships], :admin) if admin),
-                     (admin_nav_entry("Patches", admin_patches_path, :rocket, "admin grant programs ganymede quilt", %w[patches], :admin) if admin),
+                     (admin_nav_entry("Patches", admin_patches_path, :rocket, "admin grant programs ganymede quilt", %w[patches patch_roles patch_role_assignments], :admin) if admin),
                      (if admin
                         admin_nav_entry("Consents", admin_guardian_consents_path, :shield_check, "admin guardian minors review queue",
                                         %w[guardian_consents], :admin)

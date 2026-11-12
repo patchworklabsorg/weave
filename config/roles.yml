@@ -16,10 +16,6 @@
 #                      program key). false: the role is global.
 #   scope_source       For a scopable role: where the valid scopes come from.
 #                      knot_programs = the program keys in config/kyc/knot.yml.
-#                      patches = the slugs of the patches table (see Patch).
-#                      Each knot.yml program has a patch with the same slug
-#                      (Patch.sync_programs!), so both sources name the same
-#                      program the same way.
 #   requires           Roles the person must hold first. Revoking a required
 #                      role revokes this role too.
 #   grant, revoke      The rule for each direction:
@@ -109,14 +105,15 @@ roles:
     revoke:
       rule: admin
 
-  # The patch roles go to apps in the `patches` claim (see PatchRoles).
+  # A patch lead goes to apps as "lead" in the `patches` claim (see
+  # PatchRoles). Other patch roles are not here: a superadmin defines them for
+  # each patch (PatchRole).
   patch_lead:
     name: Patch lead
     description: Leads a grant program. Records grants and asks for a grant over the cap.
     scopable: true
-    # knot_programs, not patches: the Knot records grants by program key, and
-    # a program key is valid without a patches row. Each program key also has
-    # a patch (Patch.sync_programs!).
+    # The Knot records grants by program key. Each program key also has a
+    # patch with the same slug (Patch.sync_programs!).
     scope_source: knot_programs
     # LOCKED (2026-10-20): a patch lead must be ID-verified, like a key holder.
     grant:
@@ -125,17 +122,3 @@ roles:
       preconditions_at_approval: [verified_by_another]
     revoke:
       rule: owner
-
-  # Added 2026-11-12 by Jasper: a read-only role for one patch. Quilt shows
-  # the patch's finances to a patch viewer. An owner grants it, because it
-  # opens finance data in Quilt, like a Quilt app role (superadmin only). Any
-  # admin can revoke it, so access is quick to take away.
-  patch_viewer:
-    name: Patch viewer
-    description: Sees one patch's finances in apps such as Quilt. Read only.
-    scopable: true
-    scope_source: patches
-    grant:
-      rule: owner
-    revoke:
-      rule: admin

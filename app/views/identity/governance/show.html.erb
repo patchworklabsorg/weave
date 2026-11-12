@@ -59,7 +59,7 @@
         <p class="card-lede">
           Each role, who has it, and its grant rule. Staff and contractor change on the
           <%= link_to "staff and contractors page", admin_role_assignments_path, class: "link" %>,
-          and board member, patch viewer and the removal of a patch lead on the roles section of a user's admin page.
+          and board member and the removal of a patch lead on the roles section of a user's admin page.
         </p>
       </div>
     </div>
@@ -69,7 +69,7 @@
           <% assignments = @role_assignments.fetch(definition.key, []) %>
           <li class="record flex-col items-stretch gap-1">
             <div class="flex flex-wrap justify-between gap-x-4 gap-y-1">
-              <span class="record-title"><%= definition.name %><%= " (scoped by patch)" if definition.scopable? %></span>
+              <span class="record-title"><%= definition.name %><%= " (scoped by program)" if definition.scopable? %></span>
               <span class="record-meta">Grant: <%= RoleGrants.rule_text(definition.key, :grant) %> Revoke: <%= RoleGrants.rule_text(definition.key, :revoke) %></span>
             </div>
             <p class="text-sm text-ink-soft">

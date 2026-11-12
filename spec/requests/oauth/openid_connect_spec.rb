@@ -357,17 +357,15 @@ RSpec.describe "OpenID Connect", type: :request do
     end
 
     describe "the patches claim" do
-      let(:owner) { create(:user, :owner, :verified) }
+      let(:ganymede) { create(:patch, slug: "ganymede", name: "Project Ganymede") }
+      let(:europa) { create(:patch, slug: "europa", name: "Europa") }
 
-      before do
-        create(:patch, slug: "ganymede", name: "Project Ganymede")
-        create(:patch, slug: "europa", name: "Europa")
-      end
+      def give(patch, key, to: user) = PatchRoleAssignment.create!(role: patch.roles.find_or_create_by!(key:) { |role| role.name = key.titleize }, assignee: to)
 
-      it "maps each patch slug to the user's sorted short role names" do
-        RoleGrants.grant!(user, "patch_lead", scope: "ganymede", by: owner, reason: "spec")
-        RoleGrants.grant!(user, "patch_viewer", scope: "ganymede", by: owner, reason: "spec")
-        RoleGrants.grant!(user, "patch_viewer", scope: "europa", by: owner, reason: "spec")
+      it "maps each patch slug to the lead key and the patch's own role keys, sorted" do
+        RoleGrants.grant!(user, "patch_lead", scope: ganymede.slug, reason: "spec")
+        give(ganymede, "viewer")
+        give(europa, "viewer")
 
         expect(userinfo(scope: "openid patches")).to include("patches" => { "europa" => ["viewer"], "ganymede" => %w[lead viewer] })
       end
@@ -376,22 +374,21 @@ RSpec.describe "OpenID Connect", type: :request do
         expect(userinfo(scope: "openid patches")).to include("patches" => {})
       end
 
-      it "leaves out a revoked role" do
-        RoleGrants.grant!(user, "patch_viewer", scope: "europa", by: owner, reason: "spec")
-        RoleGrants.revoke!(user, "patch_viewer", scope: "europa", by: owner, reason: "spec")
+      it "leaves out a removed role" do
+        give(europa, "viewer").destroy!
 
         expect(userinfo(scope: "openid patches")).to include("patches" => {})
       end
 
       it "is an empty object for an app whose scopes field does not list patches" do
         application.update!(scopes: "")
-        RoleGrants.grant!(user, "patch_viewer", scope: "europa", by: owner, reason: "spec")
+        give(europa, "viewer")
 
         expect(userinfo(scope: "openid patches")).to include("patches" => {})
       end
 
       it "is not sent without the patches scope" do
-        RoleGrants.grant!(user, "patch_viewer", scope: "europa", by: owner, reason: "spec")
+        give(europa, "viewer")
 
         expect(userinfo(scope: "openid profile")).not_to have_key("patches")
       end

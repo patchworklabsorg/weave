@@ -43,8 +43,8 @@ RSpec.describe "Directory API", type: :request do
     end
 
     it "gives the patch roles only to an app allowed the patches scope" do
-      create(:patch, slug: "ganymede", name: "Project Ganymede")
-      RoleGrants.grant!(reviewer, "patch_viewer", scope: "ganymede", reason: "spec")
+      ganymede = create(:patch, slug: "ganymede", name: "Project Ganymede")
+      PatchRoleAssignment.create!(role: ganymede.roles.create!(key: "viewer", name: "Viewer"), assignee: reviewer)
 
       expect(directory_get(api_v1_directory_user_path(reviewer.p_id))).not_to have_key("patches")
 

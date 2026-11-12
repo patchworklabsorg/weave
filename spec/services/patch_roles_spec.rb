@@ -6,54 +6,75 @@ require "rails_helper"
 RSpec.describe PatchRoles do
   let(:owner) { create(:user, :owner, :verified) }
   let(:user) { create(:user, :verified) }
+  let!(:ganymede) { create(:patch, slug: "ganymede", name: "Project Ganymede") }
+  let!(:europa) { create(:patch, slug: "europa", name: "Europa") }
 
-  before do
-    create(:patch, slug: "ganymede", name: "Project Ganymede")
-    create(:patch, slug: "europa", name: "Europa")
+  def role(patch, key) = patch.roles.find_or_create_by!(key:) { |record| record.name = key.titleize }
+
+  def give(patch, key, to: user) = PatchRoleAssignment.create!(role: role(patch, key), assignee: to)
+
+  def claim = described_class.for(user.reload_roles!)
+
+  it "gives a role held directly" do
+    give(europa, "viewer")
+
+    expect(claim).to eq("europa" => ["viewer"])
   end
 
-  def grant(key, scope) = RoleGrants.grant!(user, key, scope:, by: owner, reason: "spec")
+  it "gives a role held through an active group membership, and not through an expired one" do
+    finance = create(:group, name: "Finance")
+    create(:group_membership, group: finance, user:)
+    give(ganymede, "finance", to: finance)
+    alumni = create(:group, name: "Alumni")
+    create(:group_membership, group: alumni, user:, expires_at: 1.day.from_now)
+    give(europa, "viewer", to: alumni)
 
-  it "maps each patch slug to the sorted short role names, with the slugs sorted" do
-    grant("patch_viewer", "europa")
-    grant("patch_viewer", "ganymede")
-    grant("patch_lead", "ganymede")
+    travel 2.days do
+      expect(claim).to eq("ganymede" => ["finance"])
+    end
+  end
 
-    result = described_class.for(user.reload_roles!)
+  it "merges the lead key with the patch's own roles, sorted and unique, with the slugs sorted" do
+    RoleGrants.grant!(user, "patch_lead", scope: "ganymede", by: owner, reason: "spec")
+    give(ganymede, "viewer")
+    give(ganymede, "reviewer")
+    group = create(:group, name: "Reviewers")
+    create(:group_membership, group:, user:)
+    give(ganymede, "reviewer", to: group)
+    give(europa, "viewer")
 
-    expect(result).to eq("europa" => ["viewer"], "ganymede" => %w[lead viewer])
-    expect(result.keys).to eq(%w[europa ganymede])
-    expect(result.to_json).to eq('{"europa":["viewer"],"ganymede":["lead","viewer"]}')
+    expect(claim.to_json).to eq('{"europa":["viewer"],"ganymede":["lead","reviewer","viewer"]}')
   end
 
   it "is an empty object for a person with no patch role" do
     user.update!(is_staff: true)
 
-    expect(described_class.for(user.reload_roles!)).to eq({})
+    expect(claim).to eq({})
     expect(described_class.for(nil)).to eq({})
   end
 
-  it "leaves out a revoked role" do
-    grant("patch_viewer", "europa")
-    grant("patch_lead", "ganymede")
-    RoleGrants.revoke!(user, "patch_viewer", scope: "europa", by: owner, reason: "spec")
+  it "leaves out a removed assignment and a deleted role" do
+    give(europa, "viewer").destroy!
+    give(ganymede, "reviewer")
+    role(ganymede, "reviewer").destroy!
 
-    expect(described_class.for(user.reload_roles!)).to eq("ganymede" => ["lead"])
+    expect(claim).to eq({})
   end
 
-  it "leaves out a patch that does not exist" do
-    # A patch lead is scoped by a knot.yml program key, which is valid with no
-    # patches row.
-    Patch.find_by!(slug: "ganymede").then { |patch| ActiveRecord::Base.connection.execute("DELETE FROM patches WHERE id = #{patch.id}") }
-    grant("patch_lead", "ganymede")
-    grant("patch_viewer", "europa")
+  it "does not leak a role of another patch or another person" do
+    give(europa, "viewer", to: create(:user, :verified))
+    give(ganymede, "viewer")
 
-    expect(described_class.for(user.reload_roles!)).to eq("europa" => ["viewer"])
+    expect(claim).to eq("ganymede" => ["viewer"])
   end
 
-  it "names only scopable roles of config/roles.yml" do
-    described_class::NAMES.each_key do |key|
-      expect(RoleRegistry.fetch(key)).to be_scopable
-    end
+  it "leaves out a revoked lead, and a lead of a program with no patch" do
+    RoleGrants.grant!(user, "patch_lead", scope: "ganymede", by: owner, reason: "spec")
+    RoleGrants.revoke!(user, "patch_lead", scope: "ganymede", by: owner, reason: "spec")
+    expect(claim).to eq({})
+
+    ActiveRecord::Base.connection.execute("DELETE FROM patches WHERE id = #{ganymede.id}")
+    RoleGrants.grant!(user, "patch_lead", scope: "ganymede", by: owner, reason: "spec")
+    expect(claim).to eq({})
   end
 end

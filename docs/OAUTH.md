@@ -366,31 +366,37 @@ change after a group is created, so clients can compare them safely.
 A patch is a grant program of Patchwork Labs, for example Project Ganymede.
 Weave keeps the patches in `/admin/patches`. Each patch has a slug, such as
 `ganymede`, that never changes. It is the same slug as in Quilt. A person can
-hold a role for a patch:
+hold roles for a patch:
 
-| Role | Short name | Who grants it |
+| Key | Where it comes from | Who gives it |
 |---|---|---|
-| Patch lead (`patch_lead`) | `lead` | an owner proposes, a board member approves (see `docs/KYC.md` "Roles") |
-| Patch viewer (`patch_viewer`) | `viewer` | an owner grants it and any admin revokes it, on the user's admin page |
+| `lead` | the `patch_lead` governance role, scoped to the patch slug | an owner proposes, a board member approves (see `docs/KYC.md` "Roles") |
+| any other key, for example `viewer` | a role that the patch defines (`PatchRole`) | a superadmin, in the "Roles" panel on the patch page (`/admin/patches/:slug`), to a user or a group |
+
+A superadmin defines the roles of each patch, the same way as app roles (see
+"App roles"). A role key never changes after the role is created, and the key
+`lead` is reserved. A person holds a patch role directly or through an
+unexpired group membership. An app reads the keys it knows and ignores the
+rest, so a new role on a patch never breaks an app.
 
 Request the `patches` scope to get a `patches` claim in the ID token and the
 userinfo response. The value is a JSON object. Each key is a patch slug, and
-each value is the sorted list of the short names of the roles that the user
-holds for that patch:
+each value is the sorted list of the role keys that the user holds for that
+patch, each key once:
 
 ```json
-"patches": {"europa": ["viewer"], "ganymede": ["lead"]}
+"patches": {"europa": ["viewer"], "ganymede": ["lead", "reviewer"]}
 ```
 
 Rules:
 
 - The object is empty (`{}`) when the user holds no patch role.
-- Only active roles count. A revoked role is left out at once, at the next token or userinfo call.
+- Only active roles count. A revoked lead, a removed assignment, a deleted role and an expired group membership are left out at once, at the next token or userinfo call.
 - Only patches that exist in Weave are listed.
 - The keys are sorted. A slug never changes, so clients can compare it safely.
 - The app's scopes field must list `patches`. An app with an empty scopes field gets `{}`.
 - A patch role does not open an app whose access policy is restricted. Give the person an access grant too, or keep the app open to everyone and let it refuse people with no role.
-- An app reads the claim at sign-in. A revoked role stays in the app's session until the person signs in again.
+- An app reads the claim at sign-in. A removed role stays in the app's session until the person signs in again. Check the directory API again before an action that matters.
 - `PatchRoles` (`app/services/patch_roles.rb`) builds the value. Quilt depends on this shape. Do not change it without a change in Quilt.
 
 The directory API sends the same object as `patches` when the app's scopes
@@ -399,8 +405,13 @@ list `patches` (see "Directory API").
 ```mermaid
 flowchart LR
   P[(patches: ganymede)] --> UR[user_roles: patch_lead, scope ganymede]
-  UR --> PR[PatchRoles]
-  PR --> C["patches claim: {ganymede: [lead]}"]
+  P --> R[patch_roles: viewer]
+  U[User] -->|direct| A[patch_role_assignments]
+  U -->|member| G[Group] -->|assignee| A
+  A --> R
+  UR -->|lead| PR[PatchRoles]
+  R -->|viewer| PR
+  PR --> C["patches claim: {ganymede: [lead, viewer]}"]
   PR --> D[Directory API: patches]
 ```
 

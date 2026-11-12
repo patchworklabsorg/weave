@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_12_120100) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_12_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -897,6 +897,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_12_120100) do
     t.index ["access_grant_id"], name: "index_oauth_openid_requests_on_access_grant_id"
   end
 
+  create_table "patch_role_assignments", force: :cascade do |t|
+    t.bigint "role_id", null: false
+    t.string "assignee_type", null: false
+    t.bigint "assignee_id", null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["assignee_type", "assignee_id"], name: "index_patch_role_assignments_on_assignee"
+    t.index ["created_by_id"], name: "index_patch_role_assignments_on_created_by_id"
+    t.index ["role_id", "assignee_type", "assignee_id"], name: "index_patch_role_assignments_uniqueness", unique: true
+  end
+
+  create_table "patch_roles", force: :cascade do |t|
+    t.bigint "patch_id", null: false
+    t.string "key", null: false
+    t.string "name", null: false
+    t.text "description"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_patch_roles_on_created_by_id"
+    t.index ["patch_id", "key"], name: "index_patch_roles_on_patch_id_and_key", unique: true
+  end
+
   create_table "patches", force: :cascade do |t|
     t.string "slug", null: false
     t.string "name", null: false
@@ -1493,6 +1517,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_12_120100) do
   add_foreign_key "oauth_applications", "groups", column: "access_request_group_id", on_delete: :nullify
   add_foreign_key "oauth_applications", "patches"
   add_foreign_key "oauth_openid_requests", "oauth_access_grants", column: "access_grant_id", on_delete: :cascade
+  add_foreign_key "patch_role_assignments", "patch_roles", column: "role_id", on_delete: :cascade
+  add_foreign_key "patch_role_assignments", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "patch_roles", "patches", on_delete: :cascade
+  add_foreign_key "patch_roles", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "patches", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "program_grants", "knots"
   add_foreign_key "program_participations", "users", on_delete: :nullify

@@ -20,7 +20,7 @@ RSpec.describe "Roles pages", type: :request do
       get identity_governance_path
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Roles", "Patch lead (scoped by patch)", "Adam Doe (ganymede)",
+      expect(response.body).to include("Roles", "Patch lead (scoped by program)", "Adam Doe (ganymede)",
                                        "Grant: An owner proposes. Every board member approves.",
                                        "Grant: Any admin, at once.", "Revoke: One owner or identity lead, at once.",
                                        "· key holder", "· lead")
@@ -65,64 +65,6 @@ RSpec.describe "Roles pages", type: :request do
 
       expect(response.body).to include("Revoke staff", "Revoke patch lead (ganymede)", "Grant board member", "Grant contractor",
                                        "To grant it, an owner proposes the change on the identity governance page.")
-    end
-
-    it "lets an owner grant and revoke a patch viewer role for a patch that exists" do
-      user = create(:user, :verified)
-      create(:patch, slug: "ganymede", name: "Project Ganymede")
-      sign_in_via_magic_link(owner)
-
-      get admin_user_path(user)
-      expect(response.body).to include("Grant patch viewer")
-
-      post admin_role_assignments_path, params: { user_id: user.p_id, role: "patch_viewer", scope: "ganymede", return_to: "user" }
-      expect(response).to redirect_to(admin_user_path(user, anchor: "roles"))
-      expect(user.reload_roles!.role_scopes("patch_viewer")).to eq(["ganymede"])
-
-      post revoke_admin_role_assignments_path, params: { user_id: user.p_id, role: "patch_viewer", scope: "ganymede", reason: "Done." }
-      expect(user.reload_roles!.role_scopes("patch_viewer")).to eq([])
-    end
-
-    it "does not let an admin who is not an owner grant a patch viewer role, to anyone or to themselves" do
-      admin = create(:user, :admin, :verified)
-      user = create(:user, :verified)
-      create(:patch, slug: "ganymede", name: "Project Ganymede")
-      sign_in_via_magic_link(admin)
-
-      get admin_user_path(user)
-      expect(response.body).not_to include("Grant patch viewer")
-
-      [user, admin].each do |target|
-        post admin_role_assignments_path, params: { user_id: target.p_id, role: "patch_viewer", scope: "ganymede" }
-        expect(target.reload_roles!.role_scopes("patch_viewer")).to eq([])
-      end
-    end
-
-    it "lets an admin revoke a patch viewer role" do
-      user = create(:user, :verified)
-      create(:patch, slug: "ganymede", name: "Project Ganymede")
-      RoleGrants.grant(user, "patch_viewer", by: owner, scope: "ganymede", reason: "Ganymede finances.")
-      sign_in_via_magic_link(create(:user, :admin, :verified))
-
-      post revoke_admin_role_assignments_path, params: { user_id: user.p_id, role: "patch_viewer", scope: "ganymede", reason: "Done." }
-      expect(user.reload_roles!.role_scopes("patch_viewer")).to eq([])
-    end
-
-    it "refuses a patch viewer role for a patch that does not exist, and to a member" do
-      user = create(:user, :verified)
-      sign_in_via_magic_link(owner)
-
-      get admin_user_path(user)
-      expect(response.body).not_to include("Grant patch viewer")
-
-      post admin_role_assignments_path, params: { user_id: user.p_id, role: "patch_viewer", scope: "europa" }
-      expect(flash[:alert]).to include("Not granted")
-
-      create(:patch, slug: "europa")
-      sign_in_via_magic_link(create(:user, :verified))
-      post admin_role_assignments_path, params: { user_id: user.p_id, role: "patch_viewer", scope: "europa" }
-      expect(response).to have_http_status(:not_found)
-      expect(user.reload_roles!.role_scopes("patch_viewer")).to eq([])
     end
   end
 end

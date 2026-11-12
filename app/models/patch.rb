@@ -7,8 +7,9 @@
 # the patch is created: the model refuses the change, and a database trigger
 # refuses it too. Renaming a patch changes only its display name.
 #
-# A patch has per-patch roles (patch_lead, patch_viewer in config/roles.yml),
-# scoped by the slug, and OAuth apps linked to it (oauth_applications.patch_id).
+# A patch has roles: the patch_lead governance role (config/roles.yml),
+# scoped by the slug, and the roles a superadmin defines for the patch
+# (PatchRole). It also has OAuth apps linked to it (oauth_applications.patch_id).
 # The `patches` claim sends a person's patch roles to apps (see PatchRoles).
 #
 # There is no delete: role assignments, Quilt and app tokens name the slug.
@@ -44,6 +45,7 @@ class Patch < ApplicationRecord
 
   belongs_to :created_by, class_name: "User", optional: true
   has_many :applications, class_name: "Doorkeeper::Application", inverse_of: :patch, dependent: :restrict_with_exception
+  has_many :roles, class_name: "PatchRole", inverse_of: :patch, dependent: :destroy
 
   validates :name, presence: true, length: { maximum: 100 }
   validates :description, length: { maximum: 2000 }

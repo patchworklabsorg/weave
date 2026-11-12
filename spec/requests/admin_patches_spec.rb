@@ -23,12 +23,16 @@ RSpec.describe "Admin patches", type: :request do
   context "when signed in as a plain admin" do
     before { sign_in_via_magic_link(admin) }
 
-    it "lists and shows patches, with the linked apps and the people with a patch role, with no N+1" do
+    it "lists and shows patches, with the leads, the roles and their holders, and the linked apps, with no N+1" do # rubocop:disable RSpec/ExampleLength
       krater = Doorkeeper::Application.create!(name: "Krater", redirect_uri: "https://krater.example.com/cb", patch: ganymede)
       Doorkeeper::Application.create!(name: "Stash", redirect_uri: "https://stash.example.com/cb")
-      create_list(:user, 2, :verified, :patch_lead)
+      leads = create_list(:user, 2, :verified, :patch_lead)
       viewers = create_list(:user, 2, :verified)
-      viewers.each { |viewer| RoleGrants.grant!(viewer, "patch_viewer", scope: "ganymede", by: owner, reason: "spec") }
+      %w[viewer reviewer].each do |key|
+        role = ganymede.roles.create!(key:, name: key.titleize)
+        viewers.each { |viewer| PatchRoleAssignment.create!(role:, assignee: viewer) }
+        PatchRoleAssignment.create!(role:, assignee: create(:group, name: "#{key.titleize} group"))
+      end
 
       get admin_patches_path
       expect(response).to have_http_status(:ok)
@@ -37,8 +41,9 @@ RSpec.describe "Admin patches", type: :request do
 
       get admin_patch_path(ganymede)
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Project Ganymede", krater.name, "Patch lead", "Patch viewer", viewers.first.full_name)
-      expect(response.body).not_to include("Stash", edit_admin_patch_path(ganymede))
+      expect(response.body).to include("Project Ganymede", krater.name, "Patch leads", leads.first.full_name, "Reviewer",
+                                       "viewer", viewers.first.full_name, "Viewer group")
+      expect(response.body).not_to include("Stash", edit_admin_patch_path(ganymede), "Add role", "Delete role")
     end
 
     it "can't create or edit a patch" do

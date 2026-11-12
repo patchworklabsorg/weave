@@ -36,47 +36,181 @@
   </div>
 
   <div class="lg:col-span-2 space-y-6">
-    <section class="card">
+    <section id="leads" class="card">
       <div class="card-header">
         <div>
           <div class="flex items-center gap-2">
-            <h2 class="card-title">People</h2>
-            <%= badge(@assignments.values.sum(&:size).to_s) %>
+            <h2 class="card-title">Patch leads</h2>
+            <%= badge(@leads.size.to_s) %>
           </div>
-          <p class="card-lede">Grant or revoke a patch role in the roles section of the user's admin page.</p>
+          <p class="card-lede">
+            Apps get the key <code class="code-chip">lead</code> for them. A patch lead changes through the
+            <%= link_to "identity governance page", identity_governance_path, class: "link" %>.
+          </p>
         </div>
       </div>
-      <% if @assignments.values.any?(&:any?) %>
+      <% if @leads.any? %>
         <div class="card-body">
           <ul class="record-list">
-            <% @assignments.each do |key, assignments| %>
-              <% definition = RoleRegistry.fetch(key) %>
-              <% assignments.each do |assignment| %>
-                <% user = assignment.user %>
-                <li class="record">
-                  <div class="record-main">
-                    <p class="record-title">
-                      <% if user %>
-                        <%= link_to user.full_name, admin_user_path(user, anchor: "roles"), class: "link-quiet" %>
-                        <span class="mono text-ink-faint font-normal">(<%= user.p_id %>)</span>
-                      <% else %>
-                        A deleted user
-                      <% end %>
-                    </p>
-                    <p class="record-meta">
-                      Since <%= time_label(assignment.granted_at) %>.
-                      Granted by <%= assignment.granted_by&.full_name || "Weave" %>.
-                    </p>
-                  </div>
-                  <%= badge(definition.name, tone: key == "patch_lead" ? :info : :neutral) %>
-                </li>
-              <% end %>
+            <% @leads.each do |assignment| %>
+              <% user = assignment.user %>
+              <li class="record">
+                <div class="record-main">
+                  <p class="record-title">
+                    <% if user %>
+                      <%= link_to user.full_name, admin_user_path(user, anchor: "roles"), class: "link-quiet" %>
+                      <span class="mono text-ink-faint font-normal">(<%= user.p_id %>)</span>
+                    <% else %>
+                      A deleted user
+                    <% end %>
+                  </p>
+                  <p class="record-meta">
+                    Since <%= time_label(assignment.granted_at) %>.
+                    Granted by <%= assignment.granted_by&.full_name || "Weave" %>.
+                  </p>
+                </div>
+              </li>
             <% end %>
           </ul>
         </div>
       <% else %>
-        <%= empty_state("Nobody has a role for this patch.", icon: :user_round) %>
+        <%= empty_state("This patch has no lead.", icon: :user_round) %>
       <% end %>
+    </section>
+
+    <section id="roles" class="card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Roles</h2>
+          <p class="card-lede">
+            Roles this patch defines. Apps read the keys from the <code class="code-chip">patches</code> claim,
+            and a role can open the patch's finances in Quilt.
+          </p>
+        </div>
+      </div>
+
+      <div class="card-body space-y-4">
+        <% if @roles.any? %>
+          <% @roles.each do |role| %>
+            <div class="well space-y-3">
+              <div class="flex flex-wrap items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="flex flex-wrap items-center gap-2">
+                    <span class="font-medium text-ink"><%= role.name %></span>
+                    <code class="code-chip"><%= role.key %></code>
+                  </p>
+                  <% if role.description.present? %>
+                    <p class="mt-1 text-sm text-ink-soft"><%= role.description %></p>
+                  <% end %>
+                </div>
+                <% if current_user.superadmin? %>
+                  <%= button_to "Delete role", admin_patch_role_path(@patch, role), method: :delete,
+                      class: "btn btn-danger btn-sm",
+                      data: { turbo_confirm: "Delete the #{role.name} role? Everyone loses it." } %>
+                <% end %>
+              </div>
+
+              <% if role.assignments.any? %>
+                <div class="record-list">
+                  <% role.assignments.sort_by { |assignment| [assignment.assignee_type, assignment.created_at] }.each do |assignment| %>
+                    <div class="record">
+                      <div class="record-main flex flex-wrap items-center gap-2">
+                        <% if assignment.assignee.is_a?(Group) %>
+                          <%= badge "Group", tone: :teal %>
+                          <%= link_to assignment.assignee.name, admin_group_path(assignment.assignee), class: "record-title link-quiet" %>
+                        <% else %>
+                          <%= badge "User", tone: :sky %>
+                          <%= link_to assignment.assignee.full_name, admin_user_path(assignment.assignee), class: "record-title link-quiet" %>
+                          <span class="record-meta"><%= assignment.assignee.email %></span>
+                        <% end %>
+                      </div>
+                      <% if current_user.superadmin? %>
+                        <div class="record-actions">
+                          <%= button_to "Remove", admin_patch_role_assignment_path(@patch, role, assignment), method: :delete,
+                              class: "btn btn-danger btn-sm",
+                              data: { turbo_confirm: "Remove this role assignment?" } %>
+                        </div>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+              <% else %>
+                <p class="text-sm text-ink-faint">Nobody has this role.</p>
+              <% end %>
+
+              <% if current_user.superadmin? %>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <%= form_with scope: :assignment, url: admin_patch_role_assignments_path(@patch, role), local: true,
+                      class: "flex items-end gap-2" do |form| %>
+                    <div class="field-group flex-1 min-w-0">
+                      <%= form.label :group_id, "Give to a group", class: "field-label", for: "patch_role_#{role.id}_group_id" %>
+                      <%= form.select :group_id, @groups.map { |group| [group.name, group.public_id] },
+                          { include_blank: "Choose a group" }, required: true, id: "patch_role_#{role.id}_group_id", class: "field field-sm" %>
+                    </div>
+                    <%= form.submit "Add", class: "btn btn-secondary btn-sm" %>
+                  <% end %>
+                  <%= form_with scope: :assignment, url: admin_patch_role_assignments_path(@patch, role), local: true,
+                      class: "flex items-end gap-2" do |form| %>
+                    <div class="field-group flex-1 min-w-0">
+                      <%= form.label :email, "Give to a user", class: "field-label", for: "patch_role_#{role.id}_email" %>
+                      <%= form.email_field :email, required: true, placeholder: "person@example.com", id: "patch_role_#{role.id}_email", class: "field field-sm" %>
+                    </div>
+                    <%= form.submit "Add", class: "btn btn-secondary btn-sm" %>
+                  <% end %>
+                </div>
+
+                <details>
+                  <summary class="text-sm link">Rename <%= role.name %></summary>
+                  <%= form_with scope: :role, url: admin_patch_role_path(@patch, role), method: :patch, local: true,
+                      class: "mt-3 flex flex-col md:flex-row md:items-end gap-3" do |form| %>
+                    <div class="form-grid form-grid-2 flex-1">
+                      <div class="field-group">
+                        <%= form.label :name, "Name", class: "field-label", for: "patch_role_#{role.id}_name" %>
+                        <%= form.text_field :name, value: role.name, required: true, id: "patch_role_#{role.id}_name", class: "field field-sm" %>
+                      </div>
+                      <div class="field-group">
+                        <%= form.label :description, class: "field-label", for: "patch_role_#{role.id}_description" do %>Description <span class="optional">(optional)</span><% end %>
+                        <%= form.text_field :description, value: role.description, id: "patch_role_#{role.id}_description", class: "field field-sm" %>
+                      </div>
+                    </div>
+                    <%= form.submit "Save role", class: "btn btn-secondary btn-sm" %>
+                  <% end %>
+                </details>
+              <% end %>
+            </div>
+          <% end %>
+        <% else %>
+          <p class="text-sm text-ink-faint">This patch has no roles.</p>
+        <% end %>
+
+        <% if current_user.superadmin? %>
+          <div>
+            <%= form_with scope: :role, url: admin_patch_roles_path(@patch), local: true,
+                class: "flex flex-col md:flex-row md:items-end gap-3" do |form| %>
+              <div class="form-grid form-grid-3 flex-1">
+                <div class="field-group">
+                  <%= form.label :key, "Key", class: "field-label", for: "new_patch_role_key" %>
+                  <%= form.text_field :key, required: true, placeholder: "viewer", id: "new_patch_role_key", class: "field" %>
+                </div>
+                <div class="field-group">
+                  <%= form.label :name, "Name", class: "field-label", for: "new_patch_role_name" %>
+                  <%= form.text_field :name, required: true, placeholder: "Viewer", id: "new_patch_role_name", class: "field" %>
+                </div>
+                <div class="field-group">
+                  <%= form.label :description, class: "field-label", for: "new_patch_role_description" do %>Description <span class="optional">(optional)</span><% end %>
+                  <%= form.text_field :description, id: "new_patch_role_description", class: "field" %>
+                </div>
+              </div>
+              <%= form.submit "Add role", class: "btn btn-secondary" %>
+            <% end %>
+            <p class="mt-2 field-hint">
+              The key can't change after the role is created. Use lowercase letters, digits, <code class="code-chip">-</code>,
+              <code class="code-chip">_</code> or <code class="code-chip">:</code>. The key <code class="code-chip">lead</code> is
+              reserved for the patch lead.
+            </p>
+          </div>
+        <% end %>
+      </div>
     </section>
 
     <section class="card">

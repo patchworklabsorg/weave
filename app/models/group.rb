@@ -66,6 +66,7 @@ class Group < ApplicationRecord
   has_many :access_requests, dependent: nil
   has_many :application_access_grants, as: :grantee, dependent: :destroy
   has_many :application_role_assignments, as: :assignee, dependent: :destroy
+  has_many :patch_role_assignments, as: :assignee, dependent: :destroy
 
   before_validation :generate_slug, on: :create
 

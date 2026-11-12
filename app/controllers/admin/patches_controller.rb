@@ -6,9 +6,11 @@
 # change its name and description, like groups. The slug never changes, and
 # there is no delete: role assignments, Quilt and app tokens name the slug.
 #
-# The show page lists the apps linked to the patch and the people with a patch
-# role. Grant and revoke a patch role on the user's admin page (see
-# Admin::RoleAssignmentsController).
+# The show page lists the patch leads, the patch's own roles with who holds
+# them, and the apps linked to the patch. A patch lead changes through
+# identity governance. The patch's own roles change through
+# Admin::PatchRolesController and Admin::PatchRoleAssignmentsController
+# (superadmin only).
 class Admin::PatchesController < Admin::BaseController
   before_action :set_patch, only: [:show, :edit, :update]
   before_action :require_superadmin, except: [:index, :show]
@@ -20,9 +22,9 @@ class Admin::PatchesController < Admin::BaseController
 
   def show
     @applications = @patch.applications.order(:name)
-    @assignments = PatchRoles::NAMES.keys.index_with do |key|
-      RoleGrants.assignments(key).where(scope: @patch.slug).includes(:granted_by).to_a
-    end
+    @leads = RoleGrants.assignments("patch_lead").where(scope: @patch.slug).includes(:granted_by).to_a
+    @roles = @patch.roles.includes(assignments: :assignee).order(:key)
+    @groups = Group.order(:name) if current_user.superadmin?
   end
 
   def new
