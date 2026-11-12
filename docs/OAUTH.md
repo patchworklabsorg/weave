@@ -426,6 +426,33 @@ flowchart LR
   PR --> D[Directory API: patches]
 ```
 
+### Moving app roles to a patch
+
+An app that kept its patch roles as app roles (see "App roles") can move them
+to a patch. For example, Krater's app roles `reviewer` and `admin` become the
+Ganymede patch roles `krater:reviewer` and `krater:admin`. `PatchRoleImport`
+does the work, and a rake task runs it:
+
+```bash
+bin/rails patches:import_app_roles APP=<app public id or client id> PATCH=ganymede PREFIX=krater \
+  ACTOR=<superadmin email> GROUP_MAP=krater-reviewers:reviewer,krater-admins:admin
+```
+
+- Each app role becomes the patch role `<PREFIX>:<key>`, with the same name and description.
+- Each user who holds the app role gets the patch role. A manual group that holds it gets the patch role too. A system group is skipped and reported: it can't hold a patch role.
+- `GROUP_MAP` gives the patch role of an app role key to a manual group, also when no app role assignment exists for it.
+- `ACTOR` must be a superadmin. Weave records them as the creator and in the change history.
+- The task never changes the app roles or their assignments.
+- It prints a warning with each group that holds a patch role. After the move, only a superadmin can add members to those groups.
+- Without `APPLY=1` it is a dry run: it prints the plan and writes nothing. With `APPLY=1` it writes the plan in one transaction. A second run creates nothing and reports each item as already present.
+
+The switch order:
+
+1. Run the task without `APPLY=1`, and read the plan.
+2. Run it again with `APPLY=1`.
+3. Add `patches` to the app's scopes, and switch the app to read the `patches` claim (or the directory field).
+4. When no running copy of the app reads its app roles, remove the app roles in the app's "Roles" panel.
+
 ### App roles
 
 An app can define its own roles, for example `member`, `reviewer` and `admin`.
