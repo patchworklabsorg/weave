@@ -83,6 +83,17 @@ module AdminNavHelper
 
   def admin_nav_link_active?(link) = link.active?(controller_path, request.path)
 
+  # The middle crumb of the top bar: the sidebar link of the section this page
+  # is under, so a detail page leads back to its list. Nil on the section's
+  # own page and on the home page, where the crumb would repeat the title or
+  # the first crumb.
+  def admin_section_crumb
+    link = admin_nav_groups.flat_map(&:links).find { |entry| admin_nav_link_active?(entry) }
+    return if link.nil? || link.path == request.path || link.path == admin_home_path
+
+    link
+  end
+
   # The identity area entry for the top bar and the home page, as
   # [label, path, icon], or nil.
   def identity_home_link(user = current_user)

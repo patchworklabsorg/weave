@@ -89,6 +89,27 @@ RSpec.describe "Admin sidebar", type: :request do
     expect(response.body).not_to include(identity_verifications_path, identity_governance_path)
   end
 
+  def crumbs = Nokogiri::HTML(response.body).css(".admin-topbar-crumb a, .admin-topbar-crumb strong").map { |node| node.text.strip }
+
+  it "puts the section in the top bar crumbs of a page under it" do
+    sign_in_via_magic_link(create(:user, :admin, :verified))
+    application = Doorkeeper::Application.create!(name: "Quilt Staging", redirect_uri: "https://quilt.example.com/cb", scopes: "profile")
+
+    get admin_oauth_application_path(application)
+
+    expect(crumbs).to eq(["Admin", "OAuth apps", "Quilt Staging"])
+    expect(Nokogiri::HTML(response.body).at_css(".admin-topbar-crumb a[href='#{admin_oauth_applications_path}']")).to be_present
+  end
+
+  it "leaves the section out of the crumbs on the section's own page" do
+    sign_in_via_magic_link(create(:user, :admin, :verified))
+
+    get admin_oauth_applications_path
+
+    expect(crumbs).to eq(["Admin", "OAuth apps"])
+    expect(Nokogiri::HTML(response.body).at_css(".admin-topbar-crumb a[href='#{admin_oauth_applications_path}']")).to be_nil
+  end
+
   it "highlights the group link for a page under it" do
     sign_in_via_magic_link(create(:user, :identity_team, :verified))
 
