@@ -25,6 +25,10 @@
           </button>
           <div class="admin-topbar-crumb">
             <%= link_to (controller_path.start_with?("identity/") ? "Identity" : "Admin"), admin_home_path, class: "link-quiet" %>
+            <% if (section = admin_section_crumb) %>
+              <span class="mx-1 text-ink-faint">/</span>
+              <%= link_to section.label, section.path, class: "link-quiet" %>
+            <% end %>
             <% if content_for?(:title) %>
               <span class="mx-1 text-ink-faint">/</span>
               <strong><%= content_for(:title) %></strong>

@@ -21,6 +21,12 @@ module AdminNavHelper
 
   # The groups the user can see, each with at least one link.
   def admin_nav_groups(user = current_user)
+    # The sidebar, the command bar and the crumb all read the groups, so build
+    # them once per request and user.
+    (@admin_nav_groups ||= {})[user&.id] ||= build_admin_nav_groups(user)
+  end
+
+  def build_admin_nav_groups(user)
     # An impersonating admin acts as the member, and the identity area
     # refuses impersonation, so the links would only refuse.
     return [] if user.nil? || impersonating?
@@ -82,6 +88,19 @@ module AdminNavHelper
   end
 
   def admin_nav_link_active?(link) = link.active?(controller_path, request.path)
+
+  # The middle crumb of the top bar: the sidebar link of the section this page
+  # is under, so a detail page leads back to its list. Nil on the section's
+  # own page and on the home page, where the crumb would repeat the title or
+  # the first crumb. A form that fails re-renders at the list URL by POST, so
+  # only a GET of the list URL counts as the section's own page.
+  def admin_section_crumb
+    link = admin_nav_groups.flat_map(&:links).find { |entry| admin_nav_link_active?(entry) }
+    return if link.nil? || link.path == admin_home_path
+    return if request.get? && link.path == request.path
+
+    link
+  end
 
   # The identity area entry for the top bar and the home page, as
   # [label, path, icon], or nil.
