@@ -25,11 +25,13 @@
       <p class="record-meta">
         <% if current.verified? %>
           Verified guardian: <%= time_label(current.verified_at) %> by <%= current.verified_by&.full_name || "a deleted user" %>. <%= current.verification_note %>
+        <% elsif user.guardian_attended_standing_pass? %>
+          Verified guardian: on the identity verification call, <%= time_label(user.latest_verification.decided_at) %>. Apps that ask for a verified guardian accept this member.
         <% else %>
           Not verified. Apps that ask for a verified guardian (for example Krater budgets) will refuse this member.
         <% end %>
       </p>
-      <% if !current.verified? && current_user.superadmin? && can_manage %>
+      <% if !current.verified? && !user.guardian_attended_standing_pass? && current_user.superadmin? && can_manage %>
         <details>
           <summary class="link text-sm cursor-pointer">Record a verified guardian</summary>
           <%= form_with url: verify_admin_user_guardian_consent_path(user, current), method: :patch, class: "well mt-2 space-y-2" do |form| %>

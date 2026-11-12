@@ -739,9 +739,25 @@ class User < ApplicationRecord
 
   def guardian_consent_missing? = minor? && !guardian_consent_granted?
 
-  # A minor whose guardian an admin verified with a signed form and a call
-  # (see GuardianConsent#verified?).
-  def guardian_verified? = minor? && guardian_consents.granted.where.not(verified_at: nil).exists?
+  # A minor whose guardian was checked beyond the email link: an admin
+  # recorded a signed form and a call (see GuardianConsent#verified?), or the
+  # member passed identity verification with the guardian on the call, which
+  # a minor can't pass without a granted consent (see VerificationFlow). Either
+  # way it belongs to a consent that is still granted, so a revoke or a new
+  # guardian ends it.
+  def guardian_verified?
+    return false unless minor?
+
+    guardian_consents.granted.where.not(verified_at: nil).exists? || guardian_attended_standing_pass?
+  end
+
+  # The pass that stands had the guardian on the call, on a consent still granted.
+  def guardian_attended_standing_pass?
+    pass = latest_verification
+    return false unless pass&.standing_pass? && pass.guardian_attended
+
+    pass.guardian_consent&.granted? || false
+  end
 
   # The request that stands: pending or granted.
   def current_guardian_consent = guardian_consents.live.order(created_at: :desc).first

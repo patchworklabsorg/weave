@@ -131,6 +131,17 @@ RSpec.describe "Admin guardian consent", type: :request do
       expect(consent.reload.verified_at).to be_nil
     end
 
+    it "counts a pass with the guardian on the call, and offers no form to record one" do
+      create(:verification, :verified, user: member, guardian_attended: true, guardian_consent: consent)
+      sign_in_via_magic_link(superadmin)
+
+      get admin_user_path(member)
+
+      expect(response.body).to include("Verified guardian: on the identity verification call")
+      expect(response.body).not_to include("Record a verified guardian")
+      expect(member.reload.guardian_verified?).to be(true)
+    end
+
     it "ends with a revoke" do
       consent.update!(verified_at: 1.day.ago)
       consent.record_revoke!
