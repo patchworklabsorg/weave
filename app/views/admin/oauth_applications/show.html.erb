@@ -52,6 +52,14 @@
             <span class="text-ink-faint">Using default scopes: profile</span>
           <% end %>
         <% end %>
+        <%= dl_row("Patch") do %>
+          <% if @application.patch %>
+            <%= link_to @application.patch.name, admin_patch_path(@application.patch), class: "link" %>
+            <span class="mono text-ink-faint">(<%= @application.patch.slug %>)</span>
+          <% else %>
+            <span class="text-ink-faint">None</span>
+          <% end %>
+        <% end %>
         <%= dl_row("Launcher") do %>
           <% if @application.show_in_launcher && @application.launch_url.present? %>
             <%= badge "Shown", tone: :success %>

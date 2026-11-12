@@ -38,6 +38,9 @@
           <% if @group.created_by %>by <%= @group.created_by.full_name %><% end %>
         <% end %>
       </dl>
+      <% if @group.holds_patch_roles? %>
+        <p class="mt-3 text-sm text-ink-soft">This group holds patch roles, so only a superadmin adds members. A manager or an access request can't.</p>
+      <% end %>
       <% if @group.system? %>
         <p class="mt-3 text-sm text-ink-soft">Weave keeps this group in sync from user attributes. You can't change it by hand.</p>
       <% elsif current_user.superadmin? %>

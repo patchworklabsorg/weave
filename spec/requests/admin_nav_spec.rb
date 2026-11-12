@@ -30,7 +30,7 @@ RSpec.describe "Admin sidebar", type: :request do
     get admin_root_path
 
     expect(sidebar).to eq(
-      "People" => ["Users", "Staff and contractors", "Groups", "Consents"],
+      "People" => ["Users", "Staff and contractors", "Groups", "Patches", "Consents"],
       "Data"   => ["Demographics", "Funder reports"],
       "System" => ["Dashboard", "OAuth apps", "Services", "Jobs", "Feature flags", "Blazer", "Console audits", "Console sign-in"]
     )
@@ -44,7 +44,7 @@ RSpec.describe "Admin sidebar", type: :request do
 
     expect(sidebar).to eq(
       "Identity" => ["Verification", "US residency", "Key custody", "Knot"],
-      "People"   => ["Users", "Staff and contractors", "Groups", "Consents"],
+      "People"   => ["Users", "Staff and contractors", "Groups", "Patches", "Consents"],
       "Data"     => ["Deletion", "Demographics", "Funder reports"],
       "System"   => ["Dashboard", "OAuth apps", "Services", "Jobs", "Feature flags", "Blazer", "Console audits", "Console sign-in"]
     )

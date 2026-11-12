@@ -415,6 +415,7 @@ Jasper locked this design on 2026-10-20. Staff and identity roles are rows in a 
 | Contractor | `contractor` | none | any admin, at once | any admin, at once |
 | Patch lead | `patch_lead` | a program key from `config/kyc/knot.yml` | an owner proposes, a different board member approves. Verified by another verifier | one owner, at once |
 
+- Patches and their roles (added 2026-11-12): a patch (`Patch`, `/admin/patches`) is a grant program. Its slug is the program key in `config/kyc/knot.yml` and the patch slug in Quilt, and it never changes. `Patch.sync_programs!` makes a patch for each program key: the migration `CreatePatches`, `db/seeds.rb` and `bin/rails patches:sync` run it. The patch lead is scoped by program key (`knot_programs`), because the Knot records grants by program key and a program key is valid with no `patches` row. Apps get the patch lead as the key `lead` in the `patches` claim. The other patch roles are not in `config/roles.yml`: a superadmin defines them for each patch on the patch page (`PatchRole`, `PatchRoleAssignment`), and gives them to users or manual groups (see `docs/OAUTH.md` "Patch claims" and `PatchRoles`).
 - The identity lead and the key holder need the verifier role first (`requires`). A revoke of the verifier role also revokes them.
 - The rules `owner` and `admin` also need the actor to manage the person in the admin panel (`UserAdminPermissions#manage?`): an admin changes only people below them, or themselves. The board role uses `any_owner` instead (locked 2026-10-20): any owner changes the board role of any person, other owners too.
 - A new identity lead, key holder or patch lead must be ID-verified by another verifier. Weave checks this at the proposal and again at the approval (`preconditions_at_proposal` and `preconditions_at_approval`).
@@ -438,7 +439,7 @@ flowchart TD
 
 - A proposal role (verifier, identity lead, key holder, a new patch lead) changes on `/identity/governance`. A patch lead proposal (`add_patch_lead`) names the program.
 - Staff and contractor change on `/admin/role_assignments` (the staff and contractors page), or in the roles section of the admin user page (`/admin/users/:id`).
-- Board member and the removal of a patch lead change in the roles section of `/admin/users/:id`. Only an owner sees the forms. The roles section is on the user page, not the edit page, because an owner can open the page of another owner but not edit it.
+- Board member and the removal of a patch lead change in the roles section of `/admin/users/:id`. Only an owner sees the forms. The patch page (`/admin/patches/:slug`) lists the leads of the patch. The roles section is on the user page, not the edit page, because an owner can open the page of another owner but not edit it.
 - A verifier is removed with the removal form on `/identity/governance`. `RoleGrants.revoke` sends a verifier removal to `IdentityGovernance.remove_member`.
 - The governance page lists each role, its holders (with the scope) and its rules.
 

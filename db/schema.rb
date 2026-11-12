@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_10_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_12_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -885,7 +885,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_10_120000) do
     t.string "launcher_icon_url"
     t.text "launcher_description"
     t.bigint "access_request_group_id"
+    t.bigint "patch_id"
     t.index ["access_request_group_id"], name: "index_oauth_applications_on_access_request_group_id"
+    t.index ["patch_id"], name: "index_oauth_applications_on_patch_id"
     t.index ["uid"], name: "index_oauth_applications_on_uid", unique: true
   end
 
@@ -893,6 +895,42 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_10_120000) do
     t.bigint "access_grant_id", null: false
     t.string "nonce", null: false
     t.index ["access_grant_id"], name: "index_oauth_openid_requests_on_access_grant_id"
+  end
+
+  create_table "patch_role_assignments", force: :cascade do |t|
+    t.bigint "role_id", null: false
+    t.string "assignee_type", null: false
+    t.bigint "assignee_id", null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["assignee_type", "assignee_id"], name: "index_patch_role_assignments_on_assignee"
+    t.index ["created_by_id"], name: "index_patch_role_assignments_on_created_by_id"
+    t.index ["role_id", "assignee_type", "assignee_id"], name: "index_patch_role_assignments_uniqueness", unique: true
+  end
+
+  create_table "patch_roles", force: :cascade do |t|
+    t.bigint "patch_id", null: false
+    t.string "key", null: false
+    t.string "name", null: false
+    t.text "description"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_patch_roles_on_created_by_id"
+    t.index ["patch_id", "key"], name: "index_patch_roles_on_patch_id_and_key", unique: true
+  end
+
+  create_table "patches", force: :cascade do |t|
+    t.string "slug", null: false
+    t.string "name", null: false
+    t.text "description"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_patches_on_created_by_id"
+    t.index ["slug"], name: "index_patches_on_slug", unique: true
+    t.check_constraint "slug::text ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text", name: "patches_slug_format"
   end
 
   create_table "pg_search_documents", force: :cascade do |t|
@@ -1477,7 +1515,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_10_120000) do
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "users", column: "resource_owner_id"
   add_foreign_key "oauth_applications", "groups", column: "access_request_group_id", on_delete: :nullify
+  add_foreign_key "oauth_applications", "patches"
   add_foreign_key "oauth_openid_requests", "oauth_access_grants", column: "access_grant_id", on_delete: :cascade
+  add_foreign_key "patch_role_assignments", "patch_roles", column: "role_id", on_delete: :cascade
+  add_foreign_key "patch_role_assignments", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "patch_roles", "patches", on_delete: :cascade
+  add_foreign_key "patch_roles", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "patches", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "program_grants", "knots"
   add_foreign_key "program_participations", "users", on_delete: :nullify
   add_foreign_key "residency_checks", "users", column: "decided_by_id", on_delete: :nullify
@@ -1662,6 +1706,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_10_120000) do
       $function$
   SQL
 
+  create_function :refuse_patch_slug_change, sql_definition: <<-'SQL'
+      CREATE OR REPLACE FUNCTION public.refuse_patch_slug_change()
+       RETURNS trigger
+       LANGUAGE plpgsql
+       SET search_path TO 'pg_catalog'
+      AS $function$
+      BEGIN
+        IF NEW.slug IS DISTINCT FROM OLD.slug THEN
+          RAISE EXCEPTION 'patches: the slug of a patch never changes';
+        END IF;
+        RETURN NEW;
+      END;
+      $function$
+  SQL
+
   create_trigger :log_privileged_attribute_changes, sql_definition: <<-SQL
       CREATE TRIGGER log_privileged_attribute_changes AFTER INSERT OR UPDATE OF role ON public.users FOR EACH ROW EXECUTE FUNCTION log_privileged_attribute_changes()
   SQL
@@ -1684,5 +1743,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_10_120000) do
 
   create_trigger :user_roles_no_truncate, sql_definition: <<-SQL
       CREATE TRIGGER user_roles_no_truncate BEFORE TRUNCATE ON public.user_roles FOR EACH STATEMENT EXECUTE FUNCTION refuse_user_role_edits()
+  SQL
+
+  create_trigger :patches_slug_fixed, sql_definition: <<-SQL
+      CREATE TRIGGER patches_slug_fixed BEFORE UPDATE OF slug ON public.patches FOR EACH ROW EXECUTE FUNCTION refuse_patch_slug_change()
   SQL
 end

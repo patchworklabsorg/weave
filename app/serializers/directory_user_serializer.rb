@@ -45,7 +45,7 @@ class DirectoryUserSerializer
       # The member saved demographics answers. Never the answers themselves.
       # Krater asks for it before a member's first grant application.
       demographics_answered: DemographicsVault.answered?(@user)
-    }.merge(age_fields)
+    }.merge(age_fields).merge(patch_fields)
   end
 
   private
@@ -56,6 +56,14 @@ class DirectoryUserSerializer
     return {} unless @application.scopes.exists?("age")
 
     { age_band: @user.age_band }.compact
+  end
+
+  # Only for an app allowed the patches scope, like the patches claim. Quilt
+  # checks a person's patch roles again before an action (see PatchRoles).
+  def patch_fields
+    return {} unless @application.scopes.exists?("patches")
+
+    { patches: PatchRoles.for(@user) }
   end
 
 end

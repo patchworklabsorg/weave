@@ -105,10 +105,15 @@ roles:
     revoke:
       rule: admin
 
+  # A patch lead goes to apps as "lead" in the `patches` claim (see
+  # PatchRoles). Other patch roles are not here: a superadmin defines them for
+  # each patch (PatchRole).
   patch_lead:
     name: Patch lead
     description: Leads a grant program. Records grants and asks for a grant over the cap.
     scopable: true
+    # The Knot records grants by program key. Each program key also has a
+    # patch with the same slug (Patch.sync_programs!).
     scope_source: knot_programs
     # LOCKED (2026-10-20): a patch lead must be ID-verified, like a key holder.
     grant:

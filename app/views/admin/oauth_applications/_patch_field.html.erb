@@ -1,0 +1,9 @@
+<%# The patch the app belongs to (see OauthApplicationPatchLink). Superadmin only. %>
+<div class="field-group">
+  <%= form.label :patch_id, class: "field-label" do %>Patch <span class="optional">(optional)</span><% end %>
+  <%= form.select :patch_id, Patch.order(:name).map { |patch| ["#{patch.name} (#{patch.slug})", patch.id] },
+        { include_blank: "No patch" }, class: "field", aria: { describedby: "application-patch-hint" } %>
+  <p class="field-hint" id="application-patch-hint">
+    The patch this app belongs to. Introspection of the app's own tokens names it as <code class="code-chip">patch</code>, so Quilt knows the patch of the calling app.
+  </p>
+</div>

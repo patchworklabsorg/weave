@@ -203,6 +203,19 @@
 #                     admin_break_glass_report GET    /admin/break_glass_report(.:format)                                                               admin/break_glass_reports#show
 #                review_admin_guardian_consent PATCH  /admin/guardian_consents/:id/review(.:format)                                                     admin/guardian_consents#review
 #                      admin_guardian_consents GET    /admin/guardian_consents(.:format)                                                                admin/guardian_consents#index
+#                 admin_patch_role_assignments POST   /admin/patches/:patch_id/roles/:role_id/assignments(.:format)                                     admin/patch_role_assignments#create
+#                  admin_patch_role_assignment DELETE /admin/patches/:patch_id/roles/:role_id/assignments/:id(.:format)                                 admin/patch_role_assignments#destroy
+#                            admin_patch_roles POST   /admin/patches/:patch_id/roles(.:format)                                                          admin/patch_roles#create
+#                             admin_patch_role PATCH  /admin/patches/:patch_id/roles/:id(.:format)                                                      admin/patch_roles#update
+#                                              PUT    /admin/patches/:patch_id/roles/:id(.:format)                                                      admin/patch_roles#update
+#                                              DELETE /admin/patches/:patch_id/roles/:id(.:format)                                                      admin/patch_roles#destroy
+#                                admin_patches GET    /admin/patches(.:format)                                                                          admin/patches#index
+#                                              POST   /admin/patches(.:format)                                                                          admin/patches#create
+#                              new_admin_patch GET    /admin/patches/new(.:format)                                                                      admin/patches#new
+#                             edit_admin_patch GET    /admin/patches/:id/edit(.:format)                                                                 admin/patches#edit
+#                                  admin_patch GET    /admin/patches/:id(.:format)                                                                      admin/patches#show
+#                                              PATCH  /admin/patches/:id(.:format)                                                                      admin/patches#update
+#                                              PUT    /admin/patches/:id(.:format)                                                                      admin/patches#update
 #                  role_admin_group_membership PATCH  /admin/groups/:group_id/memberships/:id/role(.:format)                                            admin/group_memberships#role
 #                      admin_group_memberships POST   /admin/groups/:group_id/memberships(.:format)                                                     admin/group_memberships#create
 #                       admin_group_membership DELETE /admin/groups/:group_id/memberships/:id(.:format)                                                 admin/group_memberships#destroy
@@ -815,6 +828,15 @@ Rails.application.routes.draw do
       resources :guardian_consents, only: [:index] do
         member do
           patch :review
+        end
+      end
+
+      # Patches: the grant programs (see Patch). No destroy: the slug is
+      # named by role assignments, Quilt and app tokens.
+      resources :patches, only: [:index, :show, :new, :create, :edit, :update] do
+        # The roles a superadmin defines for the patch (see PatchRole).
+        resources :roles, controller: "patch_roles", only: [:create, :update, :destroy] do
+          resources :assignments, controller: "patch_role_assignments", only: [:create, :destroy]
         end
       end
 

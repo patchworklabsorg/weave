@@ -239,5 +239,17 @@ Doorkeeper::OpenidConnect.configure do
     normal_claim :social_profiles, scope: :social, response: [:id_token, :user_info] do |user|
       user.social_profiles.order(:provider).map { |profile| { provider: profile.provider, id: profile.uid, username: profile.username } }
     end
+
+    # The user's roles for each patch (see PatchRoles): a JSON object that
+    # maps a patch slug to the sorted role keys, for example
+    # {"ganymede": ["lead", "quilt:viewer"]}: "lead" for a patch lead, and the keys of
+    # the roles the patch defines (PatchRole). An empty object when none. Quilt
+    # depends on this shape: keep it.
+    # Only an app whose scopes field lists `patches` gets it. Doorkeeper lets
+    # an app with an empty scopes field ask for any user scope, and the patch
+    # roster must not reach such an app.
+    normal_claim :patches, scope: :patches, response: [:id_token, :user_info] do |user, _scopes, access_token|
+      access_token.application&.scopes&.exists?("patches") ? PatchRoles.for(user) : {}
+    end
   end
 end

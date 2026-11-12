@@ -9,4 +9,6 @@ Rails.application.config.to_prepare do
   Doorkeeper::Application.set_public_id_prefix :app
   # The app launcher and access requests (see OauthApplicationLauncher).
   Doorkeeper::Application.include OauthApplicationLauncher
+  # The patch the app belongs to (see OauthApplicationPatchLink).
+  Doorkeeper::Application.include OauthApplicationPatchLink
 end

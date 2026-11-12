@@ -1,0 +1,12 @@
+<% content_for :title, "Edit #{@patch.name}" %>
+
+<div class="page-narrow mx-auto">
+  <header class="page-header">
+    <div>
+      <p class="text-sm"><%= link_to @patch.name, admin_patch_path(@patch), class: "link-quiet text-ink-soft" %></p>
+      <h1 class="page-title">Edit <%= @patch.name %></h1>
+    </div>
+  </header>
+
+  <%= render "form", patch: @patch %>
+</div>

@@ -77,6 +77,7 @@ The OAuth provider supports the following scopes:
 - `roles`: the user's roles in this app (`roles`)
 - `age`: the user's age group, not the birthday (`age_band`, see "Age band claim")
 - `social`: the accounts the user linked on other sites (`social_profiles`, see "Social profile claims")
+- `patches`: the user's roles for each patch (`patches`, see "Patch claims")
 - `directory`: the directory API, for `client_credentials` tokens only (see "Directory API")
 - `fulfillment`: read a user's shipping address, for `client_credentials` tokens only (see "Shipping address API")
 - `quilt`: the Quilt patch API, for `client_credentials` tokens only (see "Resource servers")
@@ -360,6 +361,123 @@ link a group to an app that is open to everyone, to send the claim without
 limiting access. The list is empty when no linked group matches. Slugs never
 change after a group is created, so clients can compare them safely.
 
+### Patch claims
+
+A patch is a grant program of Patchwork Labs, for example Project Ganymede.
+Weave keeps the patches in `/admin/patches`. Each patch has a slug, such as
+`ganymede`, that never changes. It is the same slug as in Quilt. A person can
+hold roles for a patch:
+
+| Key | Where it comes from | Who gives it |
+|---|---|---|
+| `lead` | the `patch_lead` governance role, scoped to the patch slug | an owner proposes, a board member approves (see `docs/KYC.md` "Roles") |
+| any other key, for example `quilt:viewer` or `reviewer` | a role that the patch defines (`PatchRole`) | a superadmin, in the "Roles" panel on the patch page (`/admin/patches/:slug`), to a user or a manual group |
+
+A superadmin defines the roles of each patch, the same way as app roles (see
+"App roles"). A role key never changes after the role is created, and the key
+`lead` is reserved. A person holds a patch role directly or through an
+unexpired group membership. An app reads the keys it knows and ignores the
+rest, so a new role on a patch never breaks an app.
+
+Give a role that is meant for one app that app's prefix, so another app never
+reads it by mistake. Quilt reads only `lead` and `quilt:viewer`: a bare
+`viewer` that a patch app uses does not open the patch's finances in Quilt.
+
+Who changes what:
+
+- Only a superadmin creates, renames and deletes a patch role, and gives one to a user or a group.
+- Any admin removes an assignment, so access is quick to take away.
+- Only a manual group can hold a patch role. A system group (`everyone`, `staff`, `admins` and the others) follows user attributes, so Weave refuses it.
+- When a group holds a patch role, only a superadmin adds a member to it. A group manager and an approved access request can't.
+
+Request the `patches` scope to get a `patches` claim in the ID token and the
+userinfo response. The value is a JSON object. Each key is a patch slug, and
+each value is the sorted list of the role keys that the user holds for that
+patch, each key once:
+
+```json
+"patches": {"europa": ["reviewer"], "ganymede": ["lead", "quilt:viewer", "reviewer"]}
+```
+
+Rules:
+
+- The object is empty (`{}`) when the user holds no patch role.
+- Only active roles count. A revoked lead, a removed assignment, a deleted role and an expired group membership are left out at once, at the next token or userinfo call.
+- Only patches that exist in Weave are listed.
+- The keys are sorted. A slug never changes, so clients can compare it safely.
+- The app's scopes field must list `patches`. An app with an empty scopes field gets `{}`.
+- A patch role does not open an app whose access policy is restricted. Give the person an access grant too, or keep the app open to everyone and let it refuse people with no role.
+- An app reads the claim at sign-in. A removed role stays in the app's session until the person signs in again. Check the directory API again before an action that matters.
+- `PatchRoles` (`app/services/patch_roles.rb`) builds the value. Quilt depends on this shape. Do not change it without a change in Quilt.
+
+The directory API sends the same object as `patches` when the app's scopes
+list `patches` (see "Directory API").
+
+```mermaid
+flowchart LR
+  P[(patches: ganymede)] --> UR[user_roles: patch_lead, scope ganymede]
+  P --> R[patch_roles: quilt:viewer]
+  U[User] -->|direct| A[patch_role_assignments]
+  U -->|member| G[Group] -->|assignee| A
+  A --> R
+  UR -->|lead| PR[PatchRoles]
+  R -->|quilt:viewer| PR
+  PR --> C["patches claim: {ganymede: [lead, quilt:viewer]}"]
+  PR --> D[Directory API: patches]
+```
+
+### Moving app roles to a patch
+
+An app that kept its patch roles as app roles (see "App roles") can move them
+to a patch. For example, Krater's app roles `reviewer` and `admin` become the
+Ganymede patch roles `krater:reviewer` and `krater:admin`. `PatchRoleImport`
+does the work, and a rake task runs it:
+
+```bash
+bin/rails patches:import_app_roles APP=<app public id or client id> PATCH=ganymede PREFIX=krater \
+  ACTOR=<superadmin email>
+```
+
+- The app must belong to the patch. A superadmin sets the Patch field on the app's edit page first. The plan starts with the app name, its client id and the patch.
+- Each app role becomes the patch role `<PREFIX>:<key>`, with the same name and description.
+- Each user who holds the app role gets the patch role. A manual group that holds it gets the patch role too. A system group is skipped and reported: it can't hold a patch role.
+- `ACTOR` must be a superadmin. Weave records them as the creator and in the change history.
+- The task never changes the app roles or their assignments.
+- It prints a warning with each group that holds a patch role. After the move, only a superadmin can add members to those groups.
+- Without `APPLY=1` it is a dry run: it builds and checks every record, prints the plan and writes nothing. With `APPLY=1` it writes the plan in one transaction.
+
+Each line of the plan has a status:
+
+| Status | Meaning |
+|---|---|
+| `create` | Weave creates the role or the assignment. |
+| `grant` | A `GROUP_MAP` group gets the role with no app role assignment for it. The line gives the group's active member count. |
+| `present` | The role or the assignment already exists. |
+| `conflict` | A patch role with the same key has another name or description. `APPLY=1` refuses. With `MERGE=1`, Weave keeps the patch role as it is and adds the assignments. |
+| `previously removed` | An admin removed this assignment before. Weave skips it. With `RESTORE=1`, Weave gives it back. |
+| `skip` | A system group. It can't hold a patch role. |
+| `invalid` | The record does not pass its checks. `APPLY=1` refuses. |
+
+A second run creates nothing: each item is `present`, or `previously removed`
+when an admin took it away after the first run.
+
+Use `GROUP_MAP=<slug>:<role key>,...` only when the app gives a role to the
+members of a group by itself, outside Weave's app roles (a group fallback
+that the app reads from the `groups` claim). Then each pair gives that
+group the patch role of that app role key. Krater does this for
+`krater-reviewers` and `krater-admins`: add
+`GROUP_MAP=krater-reviewers:reviewer,krater-admins:admin` only if Krater
+still reads those groups for the role.
+
+The switch order:
+
+1. Run the task without `APPLY=1`, and read the plan.
+2. Run it again with `APPLY=1`.
+3. Add `patches` to the app's scopes, and switch the app to read the `patches` claim (or the directory field).
+4. Switch every list of people by role to the patch role filter of the directory API (`?patch=<slug>&patch_role=<key>`, see "Directory API"). The old `?role=<key>` filter gives `404` once the app role is gone.
+5. If the app is restricted, give the holders an access grant (a user or a group). A patch role does not open a restricted app.
+6. When no running copy of the app reads its app roles, remove the app roles in the app's "Roles" panel.
+
 ### App roles
 
 An app can define its own roles, for example `member`, `reviewer` and `admin`.
@@ -402,6 +520,7 @@ curl -u "$CLIENT_ID:$CLIENT_SECRET" -d grant_type=client_credentials -d scope=di
 |---|---|
 | `GET /api/v1/directory/users/:sub` | One user |
 | `GET /api/v1/directory/users?role=<key>` | `{"users": [...]}`: users who hold this app role |
+| `GET /api/v1/directory/users?patch=<slug>&patch_role=<key>` | `{"users": [...]}`: users who hold this role of the app's patch. `patch_role=lead` lists the patch leads |
 | `GET /api/v1/directory/users?group=<slug>` | `{"users": [...]}`: members of a group linked to this app |
 
 Each user has the same fields as the claims:
@@ -438,9 +557,12 @@ Rules:
 - `minor` is `true` when the user is under 18, from their birthday. It is `false` when Weave does not know the birthday yet. Weave asks for a missing birthday at the next sign-in. Only the directory sends this field. It is not a claim.
 - `guardian_verified` is `true` for a minor whose guardian was checked beyond the email link: a Weave admin recorded a signed form and a call or video check, or the minor passed identity verification with the guardian on the call (a pass needs a granted consent). The email consent alone does not set it. A revoked consent or a pass that no longer stands ends it. Ask for it before your app gives a minor money or other risk. It is `false` for adults.
 - `age_band` is in the response only when the app's scopes list `age` and Weave knows the birthday (see "Age band claim").
+- `patches` is in the response only when the app's scopes list `patches` (see "Patch claims").
 - `demographics_answered` is `true` when the user saved answers to the demographics form. Weave never sends the answers. Ask for it before a user's first grant application. To send the user to the form, link to `/profile/demographics?return_to=<url>`. After a save, Weave sends the user back to `return_to` when its origin matches a redirect URI of a registered app. Weave ignores any other `return_to`.
 - `?group=` works only for a group linked to the app. `?role=` works only for a role of the app. Other values give `404`.
-- Pass exactly one of `role` and `group`, or the API answers `400`.
+- Pass exactly one of `role`, `group` and `patch`, or the API answers `400`. `patch` needs `patch_role`, and `patch_role` needs `patch`.
+- `?patch=&patch_role=` needs `patches` in the app's scopes, or the API answers `403` with `insufficient_scope`. It works only for the patch the app belongs to (the Patch field on the app's edit page). Another patch, an app with no patch and an unknown role key give `404`, like `?role=`.
+- `?patch=&patch_role=<key>` lists the users who hold the patch role directly or through an unexpired group membership. `patch_role=lead` lists the users with an active patch lead role for the patch. Like the other lists, it leaves out users the app may not serve, and each user has the `patches` field.
 - A token with a user, a token without the `directory` scope, or a token of an app whose scopes do not list `directory` gives `403`.
 
 ### Shipping address API
@@ -558,7 +680,7 @@ Rules for the resource server:
 
 - Refuse the request unless `active` is `true`. An inactive, revoked, expired, unknown or hidden token gives only `{"active": false}`.
 - Refuse the request unless `scope` (a space-separated list) includes the resource server's own scope (`quilt` for Quilt, `stash` for Stash).
-- Use `client_id` to find the calling app, for example the patch it belongs to. Keep this mapping in the resource server.
+- Use `client_id` to find the calling app. When a superadmin linked the calling app to a patch (the Patch field on the app's edit page), the response also has `patch`: the patch slug, for example `"patch": "ganymede"`. Weave sends `patch` only for a token with no user. It is not in the response when the app has no patch.
 - Keep a result for up to 60 seconds, keyed by a hash of the token, and never past `exp`. A revoked token can then work for up to 60 seconds.
 - Authenticate with HTTP Basic. A bearer token can introspect only tokens of its own app.
 

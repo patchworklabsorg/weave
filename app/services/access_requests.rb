@@ -74,6 +74,12 @@ module AccessRequests
           raise Error, "#{request.application.name} no longer takes requests through #{request.group.name}."
         end
 
+        # A group that holds a patch role takes new members only from a
+        # superadmin (see Group#holds_patch_roles?).
+        if request.group.holds_patch_roles? && !by&.superadmin?
+          raise Error, "Only a superadmin can approve this request: #{request.group.name} holds patch roles."
+        end
+
         membership = request.group.memberships.find_or_initialize_by(user: request.user)
         if membership.new_record? || membership.expired?
           # A renewed row starts again as a plain member: only a superadmin

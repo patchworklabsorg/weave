@@ -66,6 +66,7 @@ class Group < ApplicationRecord
   has_many :access_requests, dependent: nil
   has_many :application_access_grants, as: :grantee, dependent: :destroy
   has_many :application_role_assignments, as: :assignee, dependent: :destroy
+  has_many :patch_role_assignments, as: :assignee, dependent: :destroy
 
   before_validation :generate_slug, on: :create
 
@@ -89,6 +90,11 @@ class Group < ApplicationRecord
   def editable? = manual?
 
   def managed_by?(user) = user.present? && manual? && manager_memberships.exists?(user_id: user.id)
+
+  # A group that holds a patch role gives that role to every member, and a
+  # patch role can open finance data in Quilt. So only a superadmin adds a
+  # member to it (see Group::Membership and GroupPolicy#add_member?).
+  def holds_patch_roles? = patch_role_assignments.exists?
 
   private
 

@@ -1,0 +1,45 @@
+<% content_for :title, "Patches" %>
+
+<%= page_header("Patches", lede: "The grant programs. Each patch has its own leads and viewers, and the apps that belong to it.") do %>
+  <% if current_user.superadmin? %>
+    <%= link_to new_admin_patch_path, class: "btn btn-primary" do %><%= icon(:plus) %>New patch<% end %>
+  <% end %>
+<% end %>
+
+<div class="card card-flush">
+  <div class="card-header">
+    <h2 class="card-title">All patches</h2>
+  </div>
+
+  <% if @patches.any? %>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Slug</th>
+            <th scope="col" class="num">Apps</th>
+            <th scope="col">Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @patches.each do |patch| %>
+            <tr>
+              <td>
+                <%= link_to patch.name, admin_patch_path(patch), class: "link-quiet font-medium" %>
+                <% if patch.description.present? %>
+                  <span class="table-sub"><%= patch.description %></span>
+                <% end %>
+              </td>
+              <td class="mono"><%= patch.slug %></td>
+              <td class="num"><%= @application_counts.fetch(patch.id, 0) %></td>
+              <td class="whitespace-nowrap text-ink-soft"><%= time_label(patch.created_at, :relative) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <%= empty_state("No patches yet", body: "Run bin/rails patches:sync to create the patches of config/kyc/knot.yml, or create one here.", icon: :rocket) %>
+  <% end %>
+</div>

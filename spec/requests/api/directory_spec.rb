@@ -42,6 +42,16 @@ RSpec.describe "Directory API", type: :request do
       )
     end
 
+    it "gives the patch roles only to an app allowed the patches scope" do
+      ganymede = create(:patch, slug: "ganymede", name: "Project Ganymede")
+      PatchRoleAssignment.create!(role: ganymede.roles.create!(key: "viewer", name: "Viewer"), assignee: reviewer)
+
+      expect(directory_get(api_v1_directory_user_path(reviewer.p_id))).not_to have_key("patches")
+
+      application.update!(scopes: "openid profile groups roles directory patches")
+      expect(directory_get(api_v1_directory_user_path(reviewer.p_id))).to include("patches" => { "ganymede" => ["viewer"] })
+    end
+
     it "says when a sponsored project's group waives Slack and the code of conduct" do
       sponsored = create(:group, waives_code_of_conduct: true, waives_slack: true)
       create(:group_membership, group: sponsored, user: reviewer)
@@ -194,6 +204,95 @@ RSpec.describe "Directory API", type: :request do
       expect(response).to have_http_status(:bad_request)
 
       directory_get(api_v1_directory_users_path, params: { role: "reviewer", group: "krater-reviewers" })
+      expect(response).to have_http_status(:bad_request)
+    end
+  end
+
+  describe "GET /api/v1/directory/users?patch=&patch_role=" do
+    let(:viewer_role) { Patch.find_by!(slug: "ganymede").roles.create!(key: "krater:reviewer", name: "Reviewer") }
+
+    # A user the restricted app may serve (an access grant).
+    def servable_user
+      create(:user, :verified, :accepted_code_of_conduct).tap { |user| ApplicationAccessGrant.create!(application:, grantee: user) }
+    end
+
+    def patch_get(patch: "ganymede", key: "krater:reviewer", token: app_token)
+      directory_get(api_v1_directory_users_path, token:, params: { patch:, patch_role: key })
+    end
+
+    before do
+      application.update!(scopes: "openid profile groups roles directory patches",
+                          patch: create(:patch, slug: "ganymede", name: "Project Ganymede"))
+    end
+
+    it "lists users who hold the patch role directly or through an active group membership" do
+      direct = servable_user
+      PatchRoleAssignment.create!(role: viewer_role, assignee: direct)
+      finance = create(:group, name: "Finance")
+      member = servable_user
+      create(:group_membership, group: finance, user: member)
+      expired = servable_user
+      create(:group_membership, group: finance, user: expired, expires_at: 1.hour.from_now)
+      PatchRoleAssignment.create!(role: viewer_role, assignee: finance)
+      servable_user
+
+      travel 2.hours do
+        body = patch_get
+
+        expect(response).to have_http_status(:ok)
+        expect(body["users"].pluck("sub")).to contain_exactly(direct.p_id, member.p_id)
+        expect(body["users"].first.keys).to include("sub", "patches")
+      end
+    end
+
+    it "lists the patch leads for the key lead" do
+      lead = servable_user
+      RoleGrants.grant!(lead, "patch_lead", scope: "ganymede", reason: "spec")
+      revoked = servable_user
+      RoleGrants.grant!(revoked, "patch_lead", scope: "ganymede", reason: "spec")
+      RoleGrants.revoke!(revoked, "patch_lead", scope: "ganymede", reason: "spec")
+
+      expect(patch_get(key: "lead")["users"].pluck("sub")).to eq([lead.p_id])
+    end
+
+    it "leaves out a holder the app may not serve" do
+      PatchRoleAssignment.create!(role: viewer_role, assignee: create(:user, :verified, :accepted_code_of_conduct))
+
+      expect(patch_get["users"]).to eq([])
+    end
+
+    it "is forbidden for an app whose scopes do not list patches" do
+      application.update!(scopes: "openid profile groups roles directory")
+
+      patch_get
+
+      expect(response).to have_http_status(:forbidden)
+      expect(response.parsed_body["error"]).to eq("insufficient_scope")
+    end
+
+    it "is not found for another patch, for an app with no patch, and for an unknown role key" do
+      create(:patch, slug: "europa").roles.create!(key: "krater:reviewer", name: "Reviewer")
+      viewer_role
+
+      patch_get(patch: "europa")
+      expect(response).to have_http_status(:not_found)
+
+      patch_get(key: "krater:nobody")
+      expect(response).to have_http_status(:not_found)
+
+      application.update!(patch: nil)
+      patch_get
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it "needs patch_role with patch, and no other filter" do
+      directory_get(api_v1_directory_users_path, params: { patch: "ganymede" })
+      expect(response).to have_http_status(:bad_request)
+
+      directory_get(api_v1_directory_users_path, params: { patch_role: "lead" })
+      expect(response).to have_http_status(:bad_request)
+
+      directory_get(api_v1_directory_users_path, params: { patch: "ganymede", patch_role: "lead", role: "reviewer" })
       expect(response).to have_http_status(:bad_request)
     end
   end

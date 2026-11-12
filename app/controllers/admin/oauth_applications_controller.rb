@@ -202,9 +202,13 @@ class Admin::OauthApplicationsController < Admin::BaseController
     @application = Doorkeeper::Application.find_by_public_param!(params[:id])
   end
 
+  # Only a superadmin links an app to a patch: introspection names the patch,
+  # and a resource server such as Quilt may trust it to tell which patch calls.
   def application_params
-    params.require(:doorkeeper_application).permit(:name, :redirect_uri, :scopes, :confidential,
-                                                   :show_in_launcher, :launch_url, :launcher_icon_url, :launcher_description)
+    permitted = [:name, :redirect_uri, :scopes, :confidential,
+                 :show_in_launcher, :launch_url, :launcher_icon_url, :launcher_description]
+    permitted << :patch_id if current_user.superadmin?
+    params.require(:doorkeeper_application).permit(*permitted)
   end
 
 end
