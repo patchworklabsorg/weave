@@ -379,6 +379,12 @@ A superadmin defines the roles of each patch, the same way as app roles (see
 unexpired group membership. An app reads the keys it knows and ignores the
 rest, so a new role on a patch never breaks an app.
 
+The claim does not open an app. When an app is restricted, give its access to
+the `patch-leads` system group to let every patch lead sign in. Weave keeps
+that group in line with the `patch_lead` role: a lead joins it when the role
+is granted, for any patch, and leaves it when the last one is revoked. The app
+then reads the `patches` claim to show each lead only their own patches.
+
 Give a role that is meant for one app that app's prefix, so another app never
 reads it by mistake. Quilt reads only `lead` and `quilt:viewer`: a bare
 `viewer` that a patch app uses does not open the patch's finances in Quilt.
