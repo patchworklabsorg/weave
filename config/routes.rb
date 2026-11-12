@@ -203,6 +203,13 @@
 #                     admin_break_glass_report GET    /admin/break_glass_report(.:format)                                                               admin/break_glass_reports#show
 #                review_admin_guardian_consent PATCH  /admin/guardian_consents/:id/review(.:format)                                                     admin/guardian_consents#review
 #                      admin_guardian_consents GET    /admin/guardian_consents(.:format)                                                                admin/guardian_consents#index
+#                                admin_patches GET    /admin/patches(.:format)                                                                          admin/patches#index
+#                                              POST   /admin/patches(.:format)                                                                          admin/patches#create
+#                              new_admin_patch GET    /admin/patches/new(.:format)                                                                      admin/patches#new
+#                             edit_admin_patch GET    /admin/patches/:id/edit(.:format)                                                                 admin/patches#edit
+#                                  admin_patch GET    /admin/patches/:id(.:format)                                                                      admin/patches#show
+#                                              PATCH  /admin/patches/:id(.:format)                                                                      admin/patches#update
+#                                              PUT    /admin/patches/:id(.:format)                                                                      admin/patches#update
 #                  role_admin_group_membership PATCH  /admin/groups/:group_id/memberships/:id/role(.:format)                                            admin/group_memberships#role
 #                      admin_group_memberships POST   /admin/groups/:group_id/memberships(.:format)                                                     admin/group_memberships#create
 #                       admin_group_membership DELETE /admin/groups/:group_id/memberships/:id(.:format)                                                 admin/group_memberships#destroy
