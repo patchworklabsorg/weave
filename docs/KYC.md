@@ -414,7 +414,7 @@ Jasper locked this design on 2026-10-20. Staff and identity roles are rows in a 
 | Staff | `staff` | none | any admin, at once | any admin, at once |
 | Contractor | `contractor` | none | any admin, at once | any admin, at once |
 | Patch lead | `patch_lead` | a program key from `config/kyc/knot.yml` | an owner proposes, a different board member approves. Verified by another verifier | one owner, at once |
-| Patch viewer | `patch_viewer` | a patch slug (the `patches` table) | any admin, at once | any admin, at once |
+| Patch viewer | `patch_viewer` | a patch slug (the `patches` table) | one owner, at once | any admin, at once |
 
 - Patches and their roles: Jasper added the patch viewer role and the `patches` scope source on 2026-11-12. A patch (`Patch`, `/admin/patches`) is a grant program. Its slug is the program key in `config/kyc/knot.yml` and the patch slug in Quilt, and it never changes. `Patch.sync_programs!` makes a patch for each program key: the migration `CreatePatches`, `db/seeds.rb` and `bin/rails patches:sync` run it. The patch lead keeps the `knot_programs` scope source, because the Knot records grants by program key and a program key is valid with no `patches` row. Apps get the patch roles in the `patches` claim (see `docs/OAUTH.md` "Patch claims" and `PatchRoles`).
 - The identity lead and the key holder need the verifier role first (`requires`). A revoke of the verifier role also revokes them.

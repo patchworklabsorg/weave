@@ -127,13 +127,15 @@ roles:
       rule: owner
 
   # Added 2026-11-12 by Jasper: a read-only role for one patch. Quilt shows
-  # the patch's finances to a patch viewer.
+  # the patch's finances to a patch viewer. An owner grants it, because it
+  # opens finance data in Quilt, like a Quilt app role (superadmin only). Any
+  # admin can revoke it, so access is quick to take away.
   patch_viewer:
     name: Patch viewer
     description: Sees one patch's finances in apps such as Quilt. Read only.
     scopable: true
     scope_source: patches
     grant:
-      rule: admin
+      rule: owner
     revoke:
       rule: admin

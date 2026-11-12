@@ -371,7 +371,7 @@ hold a role for a patch:
 | Role | Short name | Who grants it |
 |---|---|---|
 | Patch lead (`patch_lead`) | `lead` | an owner proposes, a board member approves (see `docs/KYC.md` "Roles") |
-| Patch viewer (`patch_viewer`) | `viewer` | any admin, on the user's admin page |
+| Patch viewer (`patch_viewer`) | `viewer` | an owner grants it and any admin revokes it, on the user's admin page |
 
 Request the `patches` scope to get a `patches` claim in the ID token and the
 userinfo response. The value is a JSON object. Each key is a patch slug, and
@@ -388,6 +388,9 @@ Rules:
 - Only active roles count. A revoked role is left out at once, at the next token or userinfo call.
 - Only patches that exist in Weave are listed.
 - The keys are sorted. A slug never changes, so clients can compare it safely.
+- The app's scopes field must list `patches`. An app with an empty scopes field gets `{}`.
+- A patch role does not open an app whose access policy is restricted. Give the person an access grant too, or keep the app open to everyone and let it refuse people with no role.
+- An app reads the claim at sign-in. A revoked role stays in the app's session until the person signs in again.
 - `PatchRoles` (`app/services/patch_roles.rb`) builds the value. Quilt depends on this shape. Do not change it without a change in Quilt.
 
 The directory API sends the same object as `patches` when the app's scopes

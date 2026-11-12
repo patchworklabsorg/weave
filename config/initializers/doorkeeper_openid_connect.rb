@@ -244,8 +244,11 @@ Doorkeeper::OpenidConnect.configure do
     # maps a patch slug to the sorted short role names, for example
     # {"ganymede": ["lead"]}. An empty object when none. Quilt depends on this
     # shape: keep it.
-    normal_claim :patches, scope: :patches, response: [:id_token, :user_info] do |user|
-      PatchRoles.for(user)
+    # Only an app whose scopes field lists `patches` gets it. Doorkeeper lets
+    # an app with an empty scopes field ask for any user scope, and the patch
+    # roster must not reach such an app.
+    normal_claim :patches, scope: :patches, response: [:id_token, :user_info] do |user, _scopes, access_token|
+      access_token.application&.scopes&.exists?("patches") ? PatchRoles.for(user) : {}
     end
   end
 end

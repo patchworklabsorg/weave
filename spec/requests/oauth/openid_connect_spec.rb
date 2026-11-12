@@ -383,6 +383,13 @@ RSpec.describe "OpenID Connect", type: :request do
         expect(userinfo(scope: "openid patches")).to include("patches" => {})
       end
 
+      it "is an empty object for an app whose scopes field does not list patches" do
+        application.update!(scopes: "")
+        RoleGrants.grant!(user, "patch_viewer", scope: "europa", by: owner, reason: "spec")
+
+        expect(userinfo(scope: "openid patches")).to include("patches" => {})
+      end
+
       it "is not sent without the patches scope" do
         RoleGrants.grant!(user, "patch_viewer", scope: "europa", by: owner, reason: "spec")
 

@@ -27,4 +27,11 @@ RSpec.describe KnotSettings do
 
     expect { described_class.programs }.to raise_error(ArgumentError, /patch_lead_p_ids is gone/)
   end
+
+  it "refuses a program key that is not a patch slug" do
+    allow(described_class).to receive(:config)
+      .and_return({ programs: { project_x: { name: "Project X", grant_cap: nil } } })
+
+    expect { described_class.programs }.to raise_error(ArgumentError, /a program key is a patch slug/)
+  end
 end

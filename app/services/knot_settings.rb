@@ -18,6 +18,10 @@ module KnotSettings
           raise ArgumentError, "#{PATH}: programs.#{key}.patch_lead_p_ids is gone. A patch lead is a patch_lead role scoped to the program (see config/roles.yml)."
         end
 
+        unless Patch::SLUG_FORMAT.match?(key.to_s)
+          raise ArgumentError, "#{PATH}: programs.#{key}: a program key is a patch slug (lowercase letters, digits and single dashes)."
+        end
+
         Program.new(key: key.to_s, name: values.fetch(:name), grant_cap: values[:grant_cap])
       end
     end

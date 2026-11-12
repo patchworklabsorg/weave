@@ -33,7 +33,7 @@ RSpec.describe RoleRegistry do
       "staff"         => %w[admin admin],
       "contractor"    => %w[admin admin],
       "patch_lead"    => %w[owner_proposes_board_approves owner],
-      "patch_viewer"  => %w[admin admin]
+      "patch_viewer"  => %w[owner admin]
     )
     expect(described_class.fetch("verifier").grant.preconditions_at_approval).to eq(%w[verified_by_another adult])
     expect(described_class.fetch("verifier").grant.preconditions_at_proposal).to eq([])
