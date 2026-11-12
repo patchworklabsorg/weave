@@ -1,4 +1,4 @@
-<%# The patch the app belongs to (see OauthApplicationPatchLink). %>
+<%# The patch the app belongs to (see OauthApplicationPatchLink). Superadmin only. %>
 <div class="field-group">
   <%= form.label :patch_id, class: "field-label" do %>Patch <span class="optional">(optional)</span><% end %>
   <%= form.select :patch_id, Patch.order(:name).map { |patch| ["#{patch.name} (#{patch.slug})", patch.id] },

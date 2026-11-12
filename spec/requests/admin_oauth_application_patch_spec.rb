@@ -2,9 +2,9 @@
 
 require "rails_helper"
 
-# An OAuth app can belong to one patch. Any admin who can edit apps sets it.
+# An OAuth app can belong to one patch. Only a superadmin sets it.
 RSpec.describe "Admin OAuth application patch", type: :request do
-  let(:admin) { create(:user, :admin, :verified) }
+  let(:admin) { create(:user, :superadmin, :verified) }
   let!(:ganymede) { create(:patch, slug: "ganymede", name: "Project Ganymede") }
   let(:application) { Doorkeeper::Application.create!(name: "Krater", redirect_uri: "https://krater.example.com/cb") }
 
@@ -44,6 +44,17 @@ RSpec.describe "Admin OAuth application patch", type: :request do
     }
 
     expect(Doorkeeper::Application.find_by!(name: "Orbit").patch).to eq(ganymede)
+  end
+
+  it "ignores the patch from an admin who is not a superadmin, and hides the field" do
+    sign_in_via_magic_link(create(:user, :admin, :verified))
+
+    get edit_admin_oauth_application_path(application)
+    expect(response.body).not_to include("Project Ganymede (ganymede)")
+
+    patch admin_oauth_application_path(application), params: { doorkeeper_application: { patch_id: ganymede.id } }
+
+    expect(application.reload.patch).to be_nil
   end
 
   it "is not open to a member" do

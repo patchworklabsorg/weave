@@ -600,7 +600,7 @@ Rules for the resource server:
 
 - Refuse the request unless `active` is `true`. An inactive, revoked, expired, unknown or hidden token gives only `{"active": false}`.
 - Refuse the request unless `scope` (a space-separated list) includes the resource server's own scope (`quilt` for Quilt, `stash` for Stash).
-- Use `client_id` to find the calling app. When an admin linked the calling app to a patch (the Patch field on the app's edit page), the response also has `patch`: the patch slug, for example `"patch": "ganymede"`. Weave sends `patch` only for a token with no user. It is not in the response when the app has no patch.
+- Use `client_id` to find the calling app. When a superadmin linked the calling app to a patch (the Patch field on the app's edit page), the response also has `patch`: the patch slug, for example `"patch": "ganymede"`. Weave sends `patch` only for a token with no user. It is not in the response when the app has no patch.
 - Keep a result for up to 60 seconds, keyed by a hash of the token, and never past `exp`. A revoked token can then work for up to 60 seconds.
 - Authenticate with HTTP Basic. A bearer token can introspect only tokens of its own app.
 

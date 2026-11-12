@@ -48,7 +48,9 @@
         </span>
       </label>
 
-      <%= render "patch_field", form: form %>
+      <% if current_user.superadmin? %>
+        <%= render "patch_field", form: form %>
+      <% end %>
 
       <%= render "launcher_fields", form: form %>
 
