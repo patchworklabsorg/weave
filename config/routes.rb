@@ -664,6 +664,7 @@ Rails.application.routes.draw do
         patch :reject_document
         patch :approve_document
         patch :schedule_call
+        get :call
         patch :decide
         patch :resolve_escalation
         post :residency_image

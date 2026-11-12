@@ -20,14 +20,16 @@ class Identity::VerificationsController < Identity::BaseController
   end
 
   def show
-    @user = @verification.user
-    @events = @verification.events.includes(:actor)
-    @chain = @verification.chain
-    @excluded_ids = VerificationFlow.excluded_verifier_ids(@user)
-    @team = User.identity_team.where.not(id: [current_user.id, @verification.user_id].compact).order(:first_name)
-    @break_glass_records = @verification.break_glass_records.includes(:requested_by, :approvers).order(created_at: :desc)
-    @residency_check = ResidencyFlow.check_for(@verification)
-    @guardian_consent = call_guardian_consent
+    load_page
+  end
+
+  # The call page: the verifier opens it when the call starts. It shows the
+  # account values to check and the outcome form, step by step.
+  def call
+    load_page
+    return if can_run_call?
+
+    redirect_to identity_verification_path(@verification), alert: call_blocked_message
   end
 
   def start_pre_review
@@ -138,10 +140,11 @@ class Identity::VerificationsController < Identity::BaseController
       # they can correct the entry or fail the call.
       @decision_values = decision_form_values
       flash.now[:alert] = mismatch_alert(@mismatch)
-      show
-      render :show, status: :unprocessable_content
+      load_page
+      render :call, status: :unprocessable_content
     else
-      redirect_to identity_verification_path(@verification),
+      back = @verification.reload.call_scheduled? ? call_identity_verification_path(@verification) : identity_verification_path(@verification)
+      redirect_to back,
                   alert: "Outcome not recorded: #{result.errors.map { |key, message| key == :base ? message : "#{key.to_s.humanize} #{message}" }.join('. ')}."
     end
   end
@@ -156,6 +159,30 @@ class Identity::VerificationsController < Identity::BaseController
   end
 
   private
+
+  def load_page
+    @user = @verification.user
+    @events = @verification.events.includes(:actor)
+    @chain = @verification.chain
+    @excluded_ids = VerificationFlow.excluded_verifier_ids(@user)
+    @team = User.identity_team.where.not(id: [current_user.id, @verification.user_id].compact).order(:first_name)
+    @break_glass_records = @verification.break_glass_records.includes(:requested_by, :approvers).order(created_at: :desc)
+    @residency_check = ResidencyFlow.check_for(@verification)
+    @guardian_consent = call_guardian_consent
+  end
+
+  # Only a scheduled call, run by someone who is not the member and did not
+  # fail the member before. VerificationFlow.decide checks this again.
+  def can_run_call?
+    @verification.call_scheduled? && @user != current_user && @excluded_ids.exclude?(current_user.id)
+  end
+
+  def call_blocked_message
+    if !@verification.call_scheduled? then "This attempt has no call to run now."
+    elsif @user == current_user then "This is your own verification. Another identity team member must run the call."
+    else "You failed this member before. A different verifier must run this call."
+    end
+  end
 
   # The guardian to contact for a minor's call: the granted consent (the one
   # the call outcome records), or else the pending request, or else the

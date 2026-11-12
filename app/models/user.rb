@@ -451,6 +451,16 @@ class User < ApplicationRecord
     "#{legal_first_name.presence || first_name} #{legal_last_name.presence || last_name}"
   end
 
+  # Where the member says they live: the profile location, else the state and
+  # country of the shipping address. nil when the account has neither. The
+  # verifier checks it against the ID on the call (region_consistent).
+  def self_reported_region
+    profile = [slack_city, slack_state, slack_country].compact_blank.join(", ")
+    return profile if profile.present?
+
+    [shipping_address&.state, shipping_address&.country].compact_blank.join(", ").presence
+  end
+
   def initials
     "#{first_name&.[](0)}#{last_name&.[](0)}".upcase
   end

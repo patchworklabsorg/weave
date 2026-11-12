@@ -368,19 +368,70 @@ RSpec.describe "Identity verification pages", type: :request do
 
 
 
-    it "shows the attestation form and no recording field" do
+    it "links the attempt page to the call page" do
       get identity_verification_path(verification)
 
-      expect(response.body).to include("Consistency attestation", "Never check gender",
-                                       "Weave keeps the document and national ID numbers, the name, the birthday and the country of birth " \
-                                       "only as one-way hashes for the fraud check. " \
-                                       "The name and birthday must match the member's account.")
-      expect(response.body).not_to include("Mustermann", "1990-08-12")
+      expect(response.body).to include("Start the call", call_identity_verification_path(verification))
+      expect(response.body).not_to include(decide_identity_verification_path(verification))
+    end
+
+    it "shows the call steps and no recording field" do
+      get call_identity_verification_path(verification)
+
+      expect(Nokogiri::HTML(response.body).text.squish).to include(
+        "Do not record the call.", "Never check gender.", "Never ask about citizenship.",
+        "1. Who is on the call", "2. Compare the ID with the account", "3. Type what the ID shows", "4. US residency", "5. Record the outcome",
+        "Weave keeps the document and national ID numbers, the name, the birthday and the country of birth only as one-way hashes for the fraud check."
+      )
       expect(response.body).not_to match(/name="[^"]*(video|recording)/)
     end
 
-    it "names the identifier fields so the decision receives them" do
+    it "gives every field on the call page a visible label" do
+      get call_identity_verification_path(verification)
+
+      page = Nokogiri::HTML(response.body)
+      form = "form[action='#{decide_identity_verification_path(verification)}']"
+      page.css("#{form} input, #{form} select, #{form} textarea").each do |field|
+        next if %w[hidden checkbox submit].include?(field["type"])
+
+        expect(page.css("label[for='#{field['id']}']")).not_to be_empty, "#{field['name']} has no label"
+      end
+    end
+
+    it "shows the account's legal name, birthday, age and region to check on the call" do
+      member.update!(slack_city: "Boston", slack_state: "MA", slack_country: "US")
+      get call_identity_verification_path(verification)
+
+      page = Nokogiri::HTML(response.body)
+      expect(page.text).to include("Erika Mustermann", "Aug 12, 1990", "(age #{member.age_in_years})", "Boston, MA, US")
+    end
+
+    it "tells the verifier to ask where the member lives when the account has no region" do
+      get call_identity_verification_path(verification)
+
+      expect(Nokogiri::HTML(response.body).text).to include("Not set. Ask the member where they live.")
+    end
+
+    it "keeps a verifier who failed the member before off the call page" do
+      create(:verification, :failed, user: member, verifier: verifier, created_at: 1.week.ago)
       get identity_verification_path(verification)
+      expect(response.body).to include("A different verifier must run this call.")
+      expect(response.body).not_to include("Start the call")
+
+      get call_identity_verification_path(verification)
+      expect(response).to redirect_to(identity_verification_path(verification))
+    end
+
+    it "has no call page before a call is booked" do
+      waiting = create(:verification, :awaiting_call, user: member)
+      get call_identity_verification_path(waiting)
+
+      expect(response).to redirect_to(identity_verification_path(waiting))
+      expect(flash[:alert]).to eq("This attempt has no call to run now.")
+    end
+
+    it "names the identifier fields so the decision receives them" do
+      get call_identity_verification_path(verification)
 
       fields = Nokogiri::HTML(response.body).css("[name^='identifiers[']").map { |field| field["name"] }
       expect(fields).to include("identifiers[document_type]", "identifiers[issuing_country]", "identifiers[document_number]",
@@ -388,7 +439,7 @@ RSpec.describe "Identity verification pages", type: :request do
     end
 
     it "gives each attestation select one placeholder, Choose, and no empty option" do
-      get identity_verification_path(verification)
+      get call_identity_verification_path(verification)
 
       page = Nokogiri::HTML(response.body)
       %w[age_consistent region_consistent us_resident].each do |name|
@@ -407,7 +458,7 @@ RSpec.describe "Identity verification pages", type: :request do
       expect(stored).not_to include("C01X00T47", "Mustermann")
     end
 
-    it "shows which field differs after a mismatch, keeps the typed entry and never shows the account value" do
+    it "shows which field differs after a mismatch and keeps the typed entry" do
       patch decide_identity_verification_path(verification),
             params: params.deep_merge(identifiers: { legal_name: "Erika Musterfrau", date_of_birth: "1990-08-13" })
 
@@ -416,7 +467,6 @@ RSpec.describe "Identity verification pages", type: :request do
       expect(response.body).to include("legal name and birthday you typed do not match",
                                        "The name does not match the account.", "The birthday does not match the account.",
                                        'value="Erika Musterfrau"', "Failed: details don&#39;t match the account")
-      expect(response.body).not_to include("Mustermann", "1990-08-12")
     end
 
     it "keeps the chosen attestation answers and the Choose placeholder after a mismatch" do
@@ -440,7 +490,7 @@ RSpec.describe "Identity verification pages", type: :request do
     it "gives a key holder the outcome form" do
       sign_in_via_magic_link(create(:user, :key_holder, :verified))
 
-      get identity_verification_path(verification)
+      get call_identity_verification_path(verification)
 
       expect(response.body).to include(decide_identity_verification_path(verification))
     end
