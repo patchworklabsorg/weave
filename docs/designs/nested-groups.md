@@ -41,8 +41,9 @@ This design answers five questions from #294:
 3.  **Every app learns the same names.** All apps get the same global slug,
     so the slug must make sense to every app and can never change (the
     `Group` model forbids slug changes for this reason).
-4.  **Only admins and group managers can change membership.** A manager can
-    add and remove members of one group. Nobody below admin can connect a
+4.  **Only superadmins and group managers can change membership.** A
+    manager can add and remove members of one group. Nobody below superadmin
+    can connect a
     group to an app, and a manager of a parent team has no say over its
     sub-teams.
 5.  **Groups carry more than membership.** A group can waive the Code of
@@ -87,7 +88,7 @@ This design answers five questions from #294:
 *   **Session revokers (#292).**
 *   **Syncing groups from outside systems** (Google Workspace groups, Slack
     user groups, an HR tool).
-*   **Self-service group creation.** Admins still create groups.
+*   **Self-service group creation.** Superadmins still create groups.
 *   **Changing system group rules.** System groups stay rule-driven. This
     design only decides if they can be parents or children.
 *   **Changing the `patches` claim shape.** It is a contract with Quilt.
@@ -116,7 +117,7 @@ The author's choices during drafting (2026-11-16):
 6.  **System groups**: access groups that are leaves. They can be children of
     a manual access group, and they never hold children.
 7.  **App owners**: new. A `link_apps` holder can link an access group only to
-    apps they own. Admins name app owners.
+    apps they own. Superadmins name app owners.
 
 ## Critical User Journeys (CUJs)
 
@@ -136,8 +137,8 @@ The author's choices during drafting (2026-11-16):
 ### CUJ 2: A reorg does not touch apps
 
 *   **Given**: The same tree.
-*   **When**: An admin moves `design` from `product` into a new team
-    `brand`, and puts `brand` inside `figma-users`.
+*   **When**: A superadmin puts `brand` inside `figma-users`, then moves
+    `design` from `product` into `brand` with one move operation.
 *   **Then**: The diff of effective rows shows no change for `figma-users`,
     so no token is revoked and Figma sees the same claim.
 
@@ -207,7 +208,10 @@ flowchart BT
     `expires_at`, `direct` (boolean). `expires_at` is the latest expiry of
     the direct memberships that reach the group (null if any path never
     expires). Unique on `user_id, group_id`. Readers filter
-    `expires_at IS NULL OR expires_at > now()`.
+    `expires_at IS NULL OR expires_at > now()`. `user_id` and `group_id`
+    are foreign keys with `on_delete: :cascade`, so `user.destroy!` in
+    `DeletionPipeline` removes the rows. `group_closures` has the same
+    cascade on both group columns.
 *   **`group_grants`** (new). `grantee_type` (`User` or `Group`),
     `grantee_id`, `group_id` (the target), `permission` (`view`,
     `manage_members`, `link_apps`), `recursive` (boolean), `created_by_id`,
@@ -241,8 +245,12 @@ sequenceDiagram
 
 *   Every write that changes membership or nesting goes through
     `GroupGraph.mutate!`: `Group::Membership` create, update (expiry) and
-    destroy, `GroupNesting` create and destroy, group delete, the
-    `purpose` change, and `SystemGroups` sync.
+    destroy, `GroupNesting` create, destroy and move, group delete and
+    restore, the `purpose` change, and `SystemGroups` sync.
+*   `Group` uses `acts_as_paranoid`, so a delete is an `UPDATE` and no
+    foreign key cascade fires. The group delete path deletes the group's
+    `group_nestings` rows in the same `mutate!`. The rebuild also ignores
+    soft-deleted groups. A `restore` brings back no nestings.
 *   The rebuild is limited to the subtree above the changed group, and to the
     users in it. A full rebuild (`GroupGraph.rebuild_all!`) runs nightly
     inside the same lock and reports any row it had to change to Sentry.
@@ -272,16 +280,18 @@ sequenceDiagram
 *   `GroupPermissions.can?(user, permission, group)` answers every
     permission check. It looks for a grant on the group or, if recursive, on
     an ancestor, held by the user or by a group the user is effectively in.
-    Admins pass every check. Superadmin-only rules stay (adding members to a
-    group with patch roles).
+    Superadmins pass every check. Plain admins get no new rights. The
+    superadmin-only rule for adding members stays as `GroupPolicy#add_member?`
+    has it today: a group that waives the Code of Conduct, waives Slack or
+    holds patch roles.
 *   `manage_members` lets a person add and remove members, set expiry and
     approve access requests. `view` lets a person see members and the
     "through" rows. `link_apps` lets a person link the group to an app they
     own, and set the app's claim name for it.
 *   Nesting a group needs `manage_members` on both groups (and everything
     under the moved group). Nesting anything inside an access group, or
-    changing `purpose`, is admins only.
-*   Admins name app owners on the app page (OAuth and, later, SAML). App
+    changing `purpose`, is superadmins only.
+*   Superadmins name app owners on the app page (OAuth and, later, SAML). App
     owners see their app's links and claim names on a new `/apps/:id/access`
     page. They can not change the app's access policy, flags or session
     revoker (#292 keeps revokers superadmin-only).
@@ -436,8 +446,12 @@ sequenceDiagram
 *   **Rollout**: Phases 1 and 2 change no claim value. Nesting UI (Phase 3)
     ships behind the Flipper flag `group_nesting`, on for admins first.
 *   **Rollback**: Phase 2 readers can switch back to direct membership by
-    one method (`User#effective_groups` returns `groups`) while the flag is
-    off, because no nesting exists yet.
+    one method (`User#effective_groups` returns `groups`) until Phase 3,
+    because no nesting exists yet. Readers that join
+    `effective_group_memberships` directly (`ApplicationRole.held_by`,
+    `AppAccess.group_slugs`) go through one scope,
+    `EffectiveGroupMembership.for_readers`, so the same switch covers
+    them.
 
 --------------------------------------------------------------------------------
 
@@ -516,7 +530,8 @@ one before it merges.
 *   **Type / Scope**: Models, services, jobs, controllers.
 *   **Proposed Changes**: Wrap each write in `GroupGraph.mutate!`:
     `Group::Membership` (create, update of `expires_at`, destroy),
-    `Group` destroy, `SystemGroups.sync!`, `ExpireGroupMembershipsJob`,
+    `Group` destroy and restore, `SystemGroups.sync` and
+    `SystemGroups.sync_all`, `ExpireGroupMembershipsJob`,
     `DeletionPipeline`, `PatchRoleImport`, `Admin::GroupMembershipsController`,
     `GroupMembersController`, `AccessRequests` (approve adds a member), and
     the `one_time_fixes` rake task if it writes memberships. The membership
@@ -535,8 +550,9 @@ one before it merges.
 *   **Type / Scope**: Services, models, controllers.
 *   **Proposed Changes**: `AppAccess.grant_decision` and `.group_slugs`,
     `ApplicationRole.held_by`, `Api::V1::Directory::UsersController`
-    (`users_in_group` and role holders via groups). `PatchRole.held_by`
-    stays direct with a comment.
+    (`users_in_group` and role holders via groups). Each reader uses the
+    scope `EffectiveGroupMembership.for_readers`, which is the one rollback
+    switch. `PatchRole.held_by` stays direct with a comment.
 
 #### 12. `GroupGraphCheckJob` (Create) and `config/recurring.yml` (Modify)
 
@@ -562,7 +578,10 @@ one before it merges.
 #### 15. `Admin::GroupNestingsController`, `GroupNestingsController` (Create) and routes
 
 *   **Type / Scope**: Controllers.
-*   **Proposed Changes**: Add and remove a child group. Admins anywhere.
+*   **Proposed Changes**: Add, remove and move a child group. A move
+    (remove from one parent, add to another) is one `mutate!`, so the diff
+    and `RevokeLostAppAccessJob` see only the end state. Superadmins
+    anywhere.
     Others need `manage_members` on both groups and on every descendant of
     the moved group, and can not touch an access group parent. Both go
     through `GroupGraph.mutate!`.
@@ -614,7 +633,7 @@ one before it merges.
 *   **Type / Scope**: `Admin::GroupGrantsController` and a section on the
     admin group page.
 *   **Proposed Changes**: Add and remove grants (user or group grantee,
-    permission, recursive). Admins only. Each change is in PaperTrail.
+    permission, recursive). Superadmins only. Each change is in PaperTrail.
 
 ### Phase 5: app owners and claim names
 

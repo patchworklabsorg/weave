@@ -19,8 +19,8 @@ An SP is an OAuth app row in Weave with a SAML extension. So an SP gets the
 same access rules, access grants, app roles, launcher tile and access
 requests as an OAuth app, with no copy of that code.
 
-Admins add and change SPs in Weave. A new SP needs no code change and no
-deploy. Weave signs each SAML response with a key from encrypted
+Superadmins add SPs and change their SAML fields in Weave. A new SP needs
+no code change and no deploy. Weave signs each SAML response with a key from encrypted
 credentials, in the same way as the OIDC signing key.
 
 ### Terms
@@ -71,7 +71,7 @@ stay until the SP ends them. Session revokers
 *   Weave sends only the attributes that an admin selects for the SP. Weave
     sends `email` only when the address is verified or the SP has email
     domains.
-*   Admins create SPs by pasting or uploading the SP's metadata XML, or by
+*   Superadmins create SPs by pasting or uploading the SP's metadata XML, or by
     typing the entity ID and the ACS URL.
 *   Weave publishes its IdP metadata at `/saml/metadata`. The metadata lists
     the current signing certificate and, during a rotation, the next one.
@@ -88,7 +88,7 @@ stay until the SP ends them. Session revokers
 *   **Checking the SPs' request signatures.** Weave posts responses only to
     the ACS URL it stores for the SP, so a request signature adds little.
     Add it when a real SP requires it.
-*   **Fetching SP metadata from a URL.** Admins paste or upload it.
+*   **Fetching SP metadata from a URL.** Superadmins paste or upload it.
 *   **An `emailAddress` NameID format.**
 *   **Weave as a SAML service provider.** Weave does not accept sign-in from
     another SAML IdP.
@@ -308,9 +308,11 @@ flowchart LR
 7.  **Post.** Weave deletes the `saml_requests` row and writes a
     `saml_sign_ins` row. Then it renders an auto-submit form that posts
     `SAMLResponse` and `RelayState` to the stored `acs_url`. The page sets
-    the CSP `form-action` to `'self'` and the origin of the stored `acs_url`,
-    with the pattern of `OauthClientRedirectOrigins`. The submit script uses
-    the CSP nonce.
+    the CSP `form-action` to `'self'` and `https:`. Chrome and Safari apply
+    `form-action` to each redirect hop, and many SPs answer the ACS post with
+    a redirect to a different origin. The page has no user input, and the
+    form action is the stored `acs_url`. The submit script uses the CSP
+    nonce.
 
 ### Attributes
 
@@ -371,11 +373,21 @@ saml:
 *   `/saml/metadata` is always public. It holds only certificates.
 *   The SAML section on the admin app pages shows when the flag is on for
     the viewer.
+*   The launcher shows a SAML tile only when the flag is on for the viewer.
+    Without this rule, a member without the flag gets a 404 from the
+    tile.
 
 ### Admin pages
 
 *   The new app page gets a protocol choice: OAuth or SAML. It can not change
-    after create.
+    after create. Only a superadmin can create a SAML row, and only a
+    superadmin can change its SAML fields (`entity_id`, `acs_url`,
+    `attribute_keys`, `enabled`). SAML has no consent screen and no client
+    secret, so a changed `acs_url` sends signed assertions with member data
+    to that URL with no member action. This is the same tier as
+    `access_policy` and the access grants.
+*   A new SAML row starts with `access_policy: "restricted"`. The superadmin
+    opens it to members with a grant or a policy change.
 *   For a SAML row, the app page shows a SAML section: entity ID, ACS URL,
     attributes, enabled, and the metadata paste or upload field. It hides the
     client ID, the secret, the redirect URIs and the scopes.
@@ -507,7 +519,10 @@ saml:
 *   **Rollout:** Phase 1 and Phase 2 change nothing for members. Phase 3
     ships with the flag on for `admins` only. The flag goes on for everyone
     after one real SP passes the manual test.
-*   **Rollback:** turn the flag off. SAML rows stay as disabled apps.
+*   **Rollback:** turn the flag off. The resume page returns 404 and the
+    launcher hides SAML tiles. `/saml/sso` still stores requests, and the
+    sweep job deletes them. To stop an SP fully, a superadmin clears its
+    `enabled` field.
 
 --------------------------------------------------------------------------------
 
@@ -614,7 +629,11 @@ work starts.
 #### 11. `app/controllers/admin/oauth_applications_controller.rb` (Modify)
 
 *   `new`: a `protocol` parameter (`oauth` or `saml`). Show the SAML choice
-    only when the `saml_idp` flag is on for the admin.
+    only when the `saml_idp` flag is on for the admin and the admin is a
+    superadmin.
+*   `require_superadmin` for `create` with `protocol=saml`, and for `update`
+    of a SAML row when the params change `saml_service_provider_attributes`.
+    A plain admin can still change the name and the launcher fields.
 *   `create`:
     *   With `import=1` and a metadata field: run `Saml::MetadataImport`,
         fill `saml_service_provider_attributes`, and render `new` again
@@ -622,7 +641,8 @@ work starts.
     *   For `protocol=saml`: build the row with `confidential: true`, blank
         `redirect_uri`, blank `scopes`, and the nested
         `saml_service_provider_attributes` (`entity_id`, `acs_url`,
-        `enabled`, `attribute_keys: []`). On success redirect to the app
+        `enabled`, `attribute_keys: []`) and `access_policy: "restricted"`.
+        On success redirect to the app
         page with a notice. Do not call `show_secret_once`.
     *   For `protocol=oauth`: as today.
 *   `update`: for a SAML row, permit only `name`, the launcher fields, the
@@ -798,10 +818,18 @@ work starts.
 
 #### 26. `app/services/saml/request_validator.rb` (Create)
 
-*   Decode with `SamlIdp::Request.from_deflated_request` for both bindings.
-    It inflates a deflated value (Redirect binding) and uses the plain
-    decoded value when inflate fails (POST binding)
-    (`lib/saml_idp/request.rb` L8-23).
+*   Refuse a `SAMLRequest` value above 64 KB before any decode
+    (`request_too_large`). The endpoint has no authentication, so one large
+    request must not use much memory.
+*   Do not call `SamlIdp::Request.from_deflated_request` on raw input. It
+    inflates with no output limit (`lib/saml_idp/request.rb` L8-23), so a
+    small deflate value can expand to gigabytes. Decode in Weave:
+    *   POST binding: Base64 only, with no inflate.
+    *   Redirect binding: Base64, then `Zlib::Inflate` in chunks. Stop and
+        refuse at 256 KB of output.
+*   Parse the XML with `Nokogiri::XML(xml) { |config| config.strict.nonet }`
+    and refuse a document with an internal DTD, as `Saml::MetadataImport`
+    does. Then give the XML to `SamlIdp::Request.new`.
 *   Checks, each with an error key in `config/locales/saml.en.yml`:
     *   `unknown_issuer`: no enabled SP with that entity ID;
     *   `bad_destination`: `Destination` present and not
@@ -885,10 +913,10 @@ work starts.
     *   Impersonation: render `error` (403) with `data_handling.impersonating`.
     *   Then steps 5 to 7: `SamlRequest.consume!`, the response, the
         `SamlSignIn` row, render `post`.
-*   `include OauthClientRedirectOrigins` and
-    `content_security_policy(only: :show) { |policy|
-    policy.form_action(:self, *[redirect_origin_of(@saml_request&.saml_service_provider&.acs_url)].compact) }`.
-    The origin comes from the stored SP, never from a request parameter.
+*   `content_security_policy(only: :show) { |policy| policy.form_action(:self, :https) }`.
+    Rails runs this block as a `before_action`, so it can not use a value
+    that the action body loads. See "Request flow", step 7, for why the
+    page allows `https:`.
 *   `app/views/saml/sso/post.html.erb` (Create): a form with the hidden
     `SAMLResponse` and `RelayState` fields, a `<noscript>` submit button,
     and `<script nonce>` that submits it.
