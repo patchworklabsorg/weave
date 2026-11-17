@@ -7,6 +7,22 @@
 
 --------------------------------------------------------------------------------
 
+## Review status
+
+An EGM review and an adversarial review on 2026-11-16 rated this design not ready. These findings are open. Resolve them before implementation:
+
+1.  **Account deletion sends no call.** At deletion time the user is still permitted, so `AppSessionCheck` creates nothing. "Skip on the unique index" inside the `DeletionPipeline` transaction aborts that transaction on Postgres. Use `ON CONFLICT DO NOTHING` or a savepoint.
+2.  **The discovery metadata has no hook.** The `doorkeeper-openid_connect` discovery controller builds a fixed hash. Name the override.
+3.  **The webhook secret lifecycle is not defined.** It does not say who sets the secret, how it is shown or how it is rotated.
+4.  **The implementation plan has no phases.**
+5.  **The re-check must use one predicate:** `user.can_authenticate? && AppAccess.permitted?`. `permitted?` alone passes for a locked user, so the CUJ 4 call is cancelled.
+6.  **The failure budget fails open.** A short outage can turn the revoker off, and the sweep then skips the app.
+7.  **`reason` leaks private state.** Raw `AppAccess::Decision` reasons include age, guardian consent and verification. Send a coarse reason or none.
+8.  **`end!` can close a sign-in that was just reopened.** A late 2xx arrives after the user signed in again. End the row only if `last_signed_in_at <= revoker_call.created_at`.
+9.  **The logout token `iss` must be `Doorkeeper::OpenidConnect.resolve_issuer`,** not `Weave.url`.
+10. **`belongs_to :app_sign_in` must be `optional: true`.** `OutboundPost` must keep the `DeliverWebhookJob` constants and the stored `body` key.
+11. **A simpler variant is undecided:** Back-Channel Logout only, the URL as a column on `oauth_applications`, and `app_sign_ins` as the outbox.
+
 ## Overview
 
 Weave decides who can use each OAuth app (`AppAccess`). When a user loses
