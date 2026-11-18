@@ -5,31 +5,31 @@
 # Table name: addresses
 # Database name: primary
 #
-#  id                          :bigint           not null, primary key
-#  address_type                :enum             default("shipping"), not null
-#  addressable_type            :string           not null
-#  city                        :string
-#  contact_email               :string
-#  contact_first_name          :string
-#  contact_last_name           :string
-#  contact_name                :string
-#  contact_phone_number        :string
-#  country                     :string(2)
-#  latitude                    :float
-#  line1                       :string
-#  line2                       :string
-#  line3                       :string
-#  longitude                   :float
-#  nickname                    :string
-#  postal_code                 :string
-#  residential                 :boolean          default(FALSE), not null
-#  shipping_notes              :text
-#  state                       :string
-#  supports_weekend_deliveries :boolean          default(FALSE), not null
-#  type                        :string           default("Address"), not null
-#  created_at                  :datetime         not null
-#  updated_at                  :datetime         not null
-#  addressable_id              :bigint           not null
+#  id                              :bigint           not null, primary key
+#  address_type                    :enum             default("shipping"), not null
+#  addressable_type                :string           not null
+#  city_ciphertext                 :text
+#  contact_email_ciphertext        :text
+#  contact_first_name_ciphertext   :text
+#  contact_last_name_ciphertext    :text
+#  contact_name_ciphertext         :text
+#  contact_phone_number_ciphertext :text
+#  country                         :string(2)
+#  latitude_ciphertext             :text
+#  line1_ciphertext                :text
+#  line2_ciphertext                :text
+#  line3_ciphertext                :text
+#  longitude_ciphertext            :text
+#  nickname_ciphertext             :text
+#  postal_code_ciphertext          :text
+#  residential                     :boolean          default(FALSE), not null
+#  shipping_notes_ciphertext       :text
+#  state                           :string
+#  supports_weekend_deliveries     :boolean          default(FALSE), not null
+#  type                            :string           default("Address"), not null
+#  created_at                      :datetime         not null
+#  updated_at                      :datetime         not null
+#  addressable_id                  :bigint           not null
 #
 # Indexes
 #
@@ -53,5 +53,30 @@ RSpec.describe Address, type: :model do
 
   it "defines the address_type enum values" do
     expect(described_class.address_types.keys).to include("shipping", "billing")
+  end
+
+  describe "encryption at rest" do
+    let(:address) do
+      create(:shipping_address, line1: "1 Main St", postal_code: "05401", contact_name: "Ada",
+                                contact_phone_number: "+18025550100", latitude: 44.47, longitude: -73.21)
+    end
+
+    def row = ActiveRecord::Base.connection.select_one("SELECT * FROM addresses WHERE id = #{address.id}")
+
+    it "writes the street, contact and coordinates only as ciphertext" do
+      expect(row).to include("line1" => nil, "postal_code" => nil, "contact_name" => nil, "contact_phone_number" => nil,
+                             "latitude" => nil, "longitude" => nil)
+      expect(row["line1_ciphertext"]).to be_present
+      expect(row["line1_ciphertext"]).not_to include("Main")
+    end
+
+    it "keeps state and country in plain text" do
+      expect(row).to include("state" => "IL", "country" => "US")
+    end
+
+    it "reads the values back" do
+      expect(described_class.find(address.id)).to have_attributes(line1: "1 Main St", postal_code: "05401",
+                                                                  latitude: 44.47, longitude: -73.21)
+    end
   end
 end

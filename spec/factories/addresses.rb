@@ -5,31 +5,31 @@
 # Table name: addresses
 # Database name: primary
 #
-#  id                          :bigint           not null, primary key
-#  address_type                :enum             default("shipping"), not null
-#  addressable_type            :string           not null
-#  city                        :string
-#  contact_email               :string
-#  contact_first_name          :string
-#  contact_last_name           :string
-#  contact_name                :string
-#  contact_phone_number        :string
-#  country                     :string(2)
-#  latitude                    :float
-#  line1                       :string
-#  line2                       :string
-#  line3                       :string
-#  longitude                   :float
-#  nickname                    :string
-#  postal_code                 :string
-#  residential                 :boolean          default(FALSE), not null
-#  shipping_notes              :text
-#  state                       :string
-#  supports_weekend_deliveries :boolean          default(FALSE), not null
-#  type                        :string           default("Address"), not null
-#  created_at                  :datetime         not null
-#  updated_at                  :datetime         not null
-#  addressable_id              :bigint           not null
+#  id                              :bigint           not null, primary key
+#  address_type                    :enum             default("shipping"), not null
+#  addressable_type                :string           not null
+#  city_ciphertext                 :text
+#  contact_email_ciphertext        :text
+#  contact_first_name_ciphertext   :text
+#  contact_last_name_ciphertext    :text
+#  contact_name_ciphertext         :text
+#  contact_phone_number_ciphertext :text
+#  country                         :string(2)
+#  latitude_ciphertext             :text
+#  line1_ciphertext                :text
+#  line2_ciphertext                :text
+#  line3_ciphertext                :text
+#  longitude_ciphertext            :text
+#  nickname_ciphertext             :text
+#  postal_code_ciphertext          :text
+#  residential                     :boolean          default(FALSE), not null
+#  shipping_notes_ciphertext       :text
+#  state                           :string
+#  supports_weekend_deliveries     :boolean          default(FALSE), not null
+#  type                            :string           default("Address"), not null
+#  created_at                      :datetime         not null
+#  updated_at                      :datetime         not null
+#  addressable_id                  :bigint           not null
 #
 # Indexes
 #

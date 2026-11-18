@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_12_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_18_120100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -90,6 +90,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_12_130000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.text "shipping_notes"
+    t.text "nickname_ciphertext"
+    t.text "contact_name_ciphertext"
+    t.text "contact_first_name_ciphertext"
+    t.text "contact_last_name_ciphertext"
+    t.text "contact_email_ciphertext"
+    t.text "contact_phone_number_ciphertext"
+    t.text "line1_ciphertext"
+    t.text "line2_ciphertext"
+    t.text "line3_ciphertext"
+    t.text "city_ciphertext"
+    t.text "postal_code_ciphertext"
+    t.text "shipping_notes_ciphertext"
+    t.text "latitude_ciphertext"
+    t.text "longitude_ciphertext"
     t.index ["addressable_id"], name: "index_addresses_on_addressable_id"
     t.index ["addressable_type", "addressable_id", "type", "address_type"], name: "unique_address_per_addressable_type_and_address_type", unique: true
     t.index ["addressable_type", "addressable_id"], name: "index_addresses_on_addressable"
