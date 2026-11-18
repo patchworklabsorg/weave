@@ -65,6 +65,10 @@ module Weave
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
 
+    # How long a finished job row stays (see clear_finished_jobs in
+    # config/recurring.yml). The row holds the job arguments.
+    config.solid_queue.clear_finished_jobs_after = 1.day
+
   end
 end
 

@@ -115,3 +115,13 @@ expire_identity_governance_proposals:
 sweep_pending_shares:
   class: SweepPendingSharesJob
   schedule: every minute
+
+# Delete the rows of finished jobs after one day
+# (config.solid_queue.clear_finished_jobs_after). A finished row keeps the job
+# arguments, and for a magic link or a guardian consent email that includes
+# the raw link token. /admin/jobs shows finished jobs only for that day, and
+# the last run of a recurring task goes with its job row. A failed job is not
+# finished: it stays until a person retries or discards it.
+clear_finished_jobs:
+  command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
+  schedule: every hour at minute 12
