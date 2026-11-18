@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_18_120100) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_18_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
   enable_extension "pg_catalog.plpgsql"
@@ -67,29 +67,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_120100) do
 
   create_table "addresses", force: :cascade do |t|
     t.string "type", default: "Address", null: false
-    t.string "nickname"
-    t.string "contact_name"
-    t.string "contact_first_name"
-    t.string "contact_last_name"
-    t.string "contact_email"
-    t.string "contact_phone_number"
     t.enum "address_type", default: "Shipping", null: false, enum_type: "address_type"
-    t.string "line1"
-    t.string "line2"
-    t.string "line3"
-    t.string "city"
     t.string "state"
     t.string "country", limit: 2
-    t.string "postal_code"
-    t.float "latitude"
-    t.float "longitude"
     t.boolean "residential", default: false, null: false
     t.boolean "supports_weekend_deliveries", default: false, null: false
     t.string "addressable_type", null: false
     t.bigint "addressable_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.text "shipping_notes"
     t.text "nickname_ciphertext"
     t.text "contact_name_ciphertext"
     t.text "contact_first_name_ciphertext"

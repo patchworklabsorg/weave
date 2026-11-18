@@ -64,8 +64,7 @@ RSpec.describe Address, type: :model do
     def row = ActiveRecord::Base.connection.select_one("SELECT * FROM addresses WHERE id = #{address.id}")
 
     it "writes the street, contact and coordinates only as ciphertext" do
-      expect(row).to include("line1" => nil, "postal_code" => nil, "contact_name" => nil, "contact_phone_number" => nil,
-                             "latitude" => nil, "longitude" => nil)
+      expect(row.keys).not_to include("line1", "postal_code", "contact_name", "contact_phone_number", "latitude", "longitude")
       expect(row["line1_ciphertext"]).to be_present
       expect(row["line1_ciphertext"]).not_to include("Main")
     end

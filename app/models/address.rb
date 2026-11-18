@@ -50,13 +50,10 @@ class Address < ApplicationRecord
   self.inheritance_column = "type"
 
   # Encrypted with Lockbox. state and country stay in plain text for residency
-  # checks and aggregates. The plain-text columns are ignored until a later
-  # migration drops them.
+  # checks and aggregates.
   ENCRYPTED_FIELDS = %i[nickname contact_name contact_first_name contact_last_name contact_email
                         contact_phone_number line1 line2 line3 city postal_code shipping_notes].freeze
   ENCRYPTED_COORDINATES = %i[latitude longitude].freeze
-
-  self.ignored_columns += (ENCRYPTED_FIELDS + ENCRYPTED_COORDINATES).map(&:to_s)
 
   has_encrypted(*ENCRYPTED_FIELDS)
   has_encrypted(*ENCRYPTED_COORDINATES, type: :float)
