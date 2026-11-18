@@ -4,7 +4,6 @@
 *   **Status:** Proposed (revised after review and re-audit)
 *   **Date:** 2026-11-16
 *   **Issue:** [#104](https://github.com/patchworklabsorg/weave/issues/104)
-*   **Review:** `design_drafts/saml-idp/consolidated_review_report.md`
 
 --------------------------------------------------------------------------------
 
