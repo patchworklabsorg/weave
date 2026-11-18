@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class MagicLinkMailer < ApplicationMailer
+  self.delivery_job = TokenMailDeliveryJob
+
   def login_link(user, token)
     @user = user
     @magic_link_url = magic_link_login_url(token: token)

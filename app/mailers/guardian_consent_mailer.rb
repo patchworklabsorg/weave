@@ -4,6 +4,8 @@
 # guardian gets the request and a receipt. The member hears when consent is
 # given or ends.
 class GuardianConsentMailer < ApplicationMailer
+  self.delivery_job = TokenMailDeliveryJob
+
   # token is the raw link token. It exists only in this email and in the job
   # arguments, as with MagicLinkMailer.
   def request_consent(consent, token)

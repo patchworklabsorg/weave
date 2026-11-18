@@ -118,7 +118,7 @@ module Api
         return unless @usage_record
 
         # Filter sensitive data from headers and params
-        filtered_headers = filter_sensitive_headers(request.headers.to_h)
+        filtered_headers = filter_sensitive_headers(request_http_headers)
         filtered_params = filter_sensitive_params(request.params)
         filtered_response_headers = filter_sensitive_headers(response.headers.to_h) if response
 
@@ -190,6 +190,23 @@ module Api
         Rails.logger.error("Failed to send metrics to StatsD: #{e.message}")
       end
 
+      # The HTTP headers of the request, by their Rack names (HTTP_ACCEPT).
+      # request.headers.to_h is the whole Rack env: it also holds the app's
+      # own objects and keys (action_dispatch.secret_key_base among them),
+      # which must never be stored. A value that is not valid UTF-8 would
+      # make the JSON fail, and the row would lose every other field.
+      HEADER_KEYS = /\A(?:HTTP_|CONTENT_TYPE\z|CONTENT_LENGTH\z)/
+
+      # A proxy or a client can send a credential in a header that is not in
+      # the list below (Proxy-Authorization, Cf-Access-Jwt-Assertion,
+      # X-Auth-Token), so a name with one of these words is dropped too.
+      CREDENTIAL_HEADER = /auth|secret|token|key|jwt|cookie|session|signature|password|credential/
+
+      def request_http_headers
+        request.headers.env.select { |key, _| key.is_a?(String) && key.match?(HEADER_KEYS) }
+               .transform_values { |value| value.to_s.dup.force_encoding(Encoding::UTF_8).scrub }
+      end
+
       def filter_sensitive_headers(headers)
         # Remove sensitive headers.
         #
@@ -203,7 +220,10 @@ module Api
           x-csrf-token x-forwarded-for x-real-ip
         ]
 
-        headers.reject { |key, _| sensitive_headers.include?(normalize_header_name(key)) }
+        headers.reject do |key, _|
+          name = normalize_header_name(key)
+          sensitive_headers.include?(name) || name.match?(CREDENTIAL_HEADER)
+        end
       end
 
       def normalize_header_name(key)

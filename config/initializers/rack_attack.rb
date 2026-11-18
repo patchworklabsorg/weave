@@ -194,7 +194,7 @@ class Rack::Attack
   ActiveSupport::Notifications.subscribe("rack.attack") do |name, start, finish, request_id, payload|
     req = payload[:request]
     if [:throttle].include?(req.env["rack.attack.match_type"])
-      Rails.logger.warn "Rack::Attack THROTTLED: #{req.env['rack.attack.matched']} - IP: #{req.ip} - Path: #{req.path}"
+      Rails.logger.warn "Rack::Attack THROTTLED: #{req.env['rack.attack.matched']} - IP: #{req.ip} - Path: #{LinkTokenPath.redact(req.path)}"
     end
   end
 

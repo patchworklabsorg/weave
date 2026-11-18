@@ -1,6 +1,13 @@
 # frozen_string_literal: true
 
 class Ahoy::Store < Ahoy::DatabaseStore
+  # A visit can start on a link from an email. The landing page must not
+  # keep the raw link token.
+  def track_visit(data)
+    data[:landing_page] = LinkTokenPath.redact(data[:landing_page]) if data[:landing_page]
+    super
+  end
+
 end
 
 # set to true for JavaScript tracking
