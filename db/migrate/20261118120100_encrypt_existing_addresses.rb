@@ -19,7 +19,10 @@ class EncryptExistingAddresses < ActiveRecord::Migration[8.1]
 
   def up
     MigrationAddress.reset_column_information
-    Lockbox.migrate(MigrationAddress, restart: true)
+    # restart: false fills only the rows with no ciphertext yet. A row that the
+    # new code has written already has ciphertext and NULL plain text, and a
+    # restart would wipe it.
+    Lockbox.migrate(MigrationAddress, restart: false)
   end
 
   def down

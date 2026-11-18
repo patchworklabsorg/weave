@@ -19,5 +19,8 @@ Rails.application.config.filter_parameters += [
   :reason, :evidence_url, :voucher, :outcome,
   # Key custody: a key holder's share of the master key, the wrapped copies
   # and the WebAuthn answers must never reach the logs (see KeyCustody).
-  :share, :ciphertext, :prf, :credential, :wrapped
+  :share, :ciphertext, :prf, :credential, :wrapped,
+  # Postal addresses (shipping_address_attributes, billing_address_attributes)
+  # are encrypted at rest, so they must not reach the logs either.
+  :address_attributes
 ]

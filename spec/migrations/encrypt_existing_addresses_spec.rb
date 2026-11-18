@@ -33,4 +33,21 @@ RSpec.describe EncryptExistingAddresses do
     )
     expect(connection.select_value("SELECT line1 FROM addresses WHERE id = #{address.id}")).to eq("1 Main St")
   end
+
+  it "leaves a row that the new code wrote alone on a second run" do
+    address = create(:shipping_address, line1: "2 Elm St")
+
+    migrate
+
+    expect(Address.find(address.id).line1).to eq("2 Elm St")
+  end
+
+  it "keeps the address fields out of the log" do
+    filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
+
+    expect(filter.filter("user" => { "shipping_address_attributes" => { "line1" => "1 Main St" },
+                                     "billing_address_attributes"  => { "postal_code" => "05401" }
+}))
+      .to eq("user" => { "shipping_address_attributes" => "[FILTERED]", "billing_address_attributes" => "[FILTERED]" })
+  end
 end
