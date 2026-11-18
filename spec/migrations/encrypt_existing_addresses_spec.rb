@@ -45,9 +45,12 @@ RSpec.describe EncryptExistingAddresses do
   it "keeps the address fields out of the log" do
     filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
 
-    expect(filter.filter("user" => { "shipping_address_attributes" => { "line1" => "1 Main St" },
-                                     "billing_address_attributes"  => { "postal_code" => "05401" }
-}))
+    params = {
+      "shipping_address_attributes" => { "line1" => "1 Main St" },
+      "billing_address_attributes"  => { "postal_code" => "05401" }
+    }
+
+    expect(filter.filter("user" => params))
       .to eq("user" => { "shipping_address_attributes" => "[FILTERED]", "billing_address_attributes" => "[FILTERED]" })
   end
 end
