@@ -581,7 +581,7 @@ class User < ApplicationRecord
   # User::MagicLink for why.
   def send_magic_link(requested_ip: nil, return_to: nil)
     link = User::MagicLink.issue!(self, requested_ip: requested_ip, return_to: return_to)
-    MagicLinkJob.perform_later(self, link.token)
+    MagicLinkJob.perform_later(self, LinkToken.new(link.token))
     true
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.error "Failed to issue magic link for user #{email}: #{e.record.errors.full_messages.join(', ')}"

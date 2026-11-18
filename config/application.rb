@@ -6,6 +6,7 @@ require "rails/all"
 require_relative "../lib/credentials_paths"
 require_relative "../lib/weave"
 require_relative "../lib/link_token_path"
+require_relative "../lib/link_token"
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
@@ -34,7 +35,7 @@ module Weave
     # Zeitwerk exists. config/initializers/flipper.rb requires feature_flags by
     # hand, because an initializer cannot use a reloadable constant. So does
     # config/initializers/console_access.rb for console_access.
-    config.autoload_lib(ignore: %w[assets tasks credentials_paths.rb weave.rb link_token_path.rb feature_flags.rb feature_flags console_access.rb console_access])
+    config.autoload_lib(ignore: %w[assets tasks credentials_paths.rb weave.rb link_token_path.rb link_token.rb feature_flags.rb feature_flags console_access.rb console_access])
 
     # Keep the credentials file and the key that opens it in lockstep; Rails
     # resolves them independently and will otherwise pair a per-environment
@@ -64,6 +65,9 @@ module Weave
     #
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
+
+    # Store a link token encrypted in the job arguments (see lib/link_token.rb).
+    config.active_job.custom_serializers << LinkToken::Serializer
 
     # How long a finished job row stays (see clear_finished_jobs in
     # config/recurring.yml). The row holds the job arguments.

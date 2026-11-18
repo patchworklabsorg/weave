@@ -21,7 +21,7 @@ module GuardianConsentFlow
       consent = GuardianConsent.issue!(user, guardian_name:, guardian_email:)
       return Result.new(consent:, errors: consent.errors.to_hash.transform_values(&:first)) unless consent.persisted?
 
-      GuardianConsentMailer.request_consent(consent, consent.token).deliver_later
+      GuardianConsentMailer.request_consent(consent, LinkToken.new(consent.token)).deliver_later
       Result.new(consent:, errors: {})
     end
 
@@ -31,7 +31,7 @@ module GuardianConsentFlow
       return false unless consent.pending? && consent.resend_allowed?
 
       consent.reissue!
-      GuardianConsentMailer.request_consent(consent, consent.token).deliver_later
+      GuardianConsentMailer.request_consent(consent, LinkToken.new(consent.token)).deliver_later
       true
     end
 
@@ -42,7 +42,7 @@ module GuardianConsentFlow
 
       flag(consent)
 
-      GuardianConsentMailer.receipt(consent, token).deliver_later
+      GuardianConsentMailer.receipt(consent, LinkToken.new(token)).deliver_later
       GuardianConsentMailer.granted(consent).deliver_later
       true
     end

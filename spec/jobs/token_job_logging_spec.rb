@@ -21,7 +21,7 @@ RSpec.describe "Jobs that carry a link token", type: :job do
   it "keeps the magic link token out of the job log" do
     user = create(:user)
 
-    perform_enqueued_jobs { MagicLinkJob.perform_later(user, "raw-magic-token") }
+    perform_enqueued_jobs { MagicLinkJob.perform_later(user, LinkToken.new("raw-magic-token")) }
 
     expect(log.string).to include("MagicLinkJob")
     expect(log.string).not_to include("raw-magic-token")
@@ -31,8 +31,8 @@ RSpec.describe "Jobs that carry a link token", type: :job do
     consent = create(:guardian_consent)
 
     perform_enqueued_jobs do
-      GuardianConsentMailer.request_consent(consent, "raw-consent-token").deliver_later
-      GuardianConsentMailer.receipt(consent, "raw-receipt-token").deliver_later
+      GuardianConsentMailer.request_consent(consent, LinkToken.new("raw-consent-token")).deliver_later
+      GuardianConsentMailer.receipt(consent, LinkToken.new("raw-receipt-token")).deliver_later
     end
 
     expect(log.string).to include("TokenMailDeliveryJob")
